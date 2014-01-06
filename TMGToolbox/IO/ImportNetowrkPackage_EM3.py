@@ -23,6 +23,8 @@ Import Network Package
     
     0.1.2 Updated to import NWP v2 files (see the main branch)
     
+    0.1.3 Minor update to check for null export file
+    
 '''
 
 import inro.modeller as _m
@@ -43,7 +45,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ImportNetworkPackage(_m.Tool()):
     
-    version = '0.1.2'
+    version = '0.1.3'
     tool_run_msg = ""
     number_of_tasks = 8 # For progress reporting, enter the integer number of tasks here
     
@@ -99,6 +101,9 @@ class ImportNetworkPackage(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
+        
+        if self.NetworkPackageFile == None:
+            raise IOError("Import file not specified")
         
         if self.ScenarioId < 0:
             self.ScenarioId = _util.getAvailableScenarioNumber()

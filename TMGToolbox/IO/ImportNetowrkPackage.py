@@ -27,6 +27,8 @@ Import Network Package
             
     0.4.0 Major update to support NWP V3.0 format, which includes database functions. This tool calls on
         TMG2.IO.MergeFunctions to merge in a functions file.
+        
+    0.4.1 Minor update to check for null export file
     
 '''
 
@@ -48,7 +50,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ImportNetworkPackage(_m.Tool()):
     
-    version = '0.4.0'
+    version = '0.4.1'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -117,6 +119,9 @@ class ImportNetworkPackage(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
+        
+        if self.NetworkPackageFile == None:
+            raise IOError("Import file not specified")
         
         if self.ScenarioId < 0:
             self.ScenarioId = _util.getAvailableScenarioNumber()

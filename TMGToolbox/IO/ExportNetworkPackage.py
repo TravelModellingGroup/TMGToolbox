@@ -33,6 +33,8 @@ Export Network Package
         
     0.4.0 Major update to export database functions, to ensure no information is lost in
             transferring networks.
+            
+    0.4.1 Minor update to check for null export file
     
 '''
 
@@ -54,7 +56,7 @@ _inroExportUtil = _MODELLER.module("inro.emme.utility.export_utilities")
 
 class ExportNetworkPackage(_m.Tool()):
     
-    version = '0.4.0'
+    version = '0.4.1'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -123,6 +125,9 @@ class ExportNetworkPackage(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
+        
+        if self.ExportFile == None:
+            raise IOError("Export file not specified")
         
         self.ExportFile = _path.splitext(self.ExportFile)[0] + ".nwp"
         
