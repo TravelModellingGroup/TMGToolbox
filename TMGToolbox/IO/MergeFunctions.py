@@ -19,6 +19,8 @@ Merge Functions
     
     0.1.1 Bug fix to work properly with exported functions in a NWP file
     
+    0.1.2 Minor update to check for null export file
+    
 '''
 
 import inro.modeller as _m
@@ -36,7 +38,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class MergeFunctions(_m.Tool()):
     
-    version = '0.1.1'
+    version = '0.1.2'
     tool_run_msg = ""
     number_of_tasks = 3 # For progress reporting, enter the integer number of tasks here
     
@@ -81,6 +83,9 @@ class MergeFunctions(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
+        
+        if self.FunctionFile == None:
+            raise IOError("Import file not specified")
         
         try:
             self._Execute()

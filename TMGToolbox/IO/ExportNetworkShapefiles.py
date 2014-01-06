@@ -14,6 +14,8 @@ Export Network Shapefiles
 '''
     0.0.1 Created
     
+    0.0.2 Minor update to check for null export file
+    
 '''
 
 import inro.modeller as _m
@@ -31,7 +33,7 @@ _geo = _MODELLER.module('TMG2.Common.Geometry')
 
 class ExportNetworkShapefiles(_m.Tool()):
     
-    version = '0.0.1'
+    version = '0.0.2'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -84,6 +86,9 @@ class ExportNetworkShapefiles(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
+        
+        if self.ShapefileFolder == None:
+            raise IOError("Export file not specified")
         
         try:
             self._Execute()
