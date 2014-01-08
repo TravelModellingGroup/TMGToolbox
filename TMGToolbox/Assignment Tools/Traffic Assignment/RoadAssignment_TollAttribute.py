@@ -46,6 +46,8 @@ Toll-Based Road Assignment
         - Optional arguments added.
         
     1.1.1 Bug fixes. Should actually run now.
+    
+    2.0.0 Forked  a new version to use a link extra attribute 
 '''
 
 import inro.modeller as _m
@@ -61,7 +63,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '1.1.1'
+    version = '2.0.0'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -75,7 +77,8 @@ class TollBasedRoadAssignment(_m.Tool()):
     Scenario = _m.Attribute(_m.InstanceType)
     xtmf_DemandMatrixNumber = _m.Attribute(int)
     DemandMatrix = _m.Attribute(_m.InstanceType)
-    SelectTollLinkExpression = _m.Attribute(str)    
+    
+    LinkTollAttributeId = _m.Attribute(str)
     
     TimesMatrixId = _m.Attribute(str)
     CostMatrixId = _m.Attribute(str)
@@ -117,9 +120,10 @@ class TollBasedRoadAssignment(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Toll Based Road Assignment v%s" %self.version,
                      description="Executes a standard Emme traffic assignment using tolls for link \
-                         costs converted to a time penalty. The actual times and costs are recovered \
+                         costs converted to a time penalty, using a specified link extra attribute \
+                         containing the toll value. The actual times and costs are recovered \
                          by running a second 'all-or-nothing' assignment.\
-                         <br><br><b>Temporary Storage Requirements:</b> 2 extra \
+                         <br><br><b>Temporary Storage Requirements:</b> 1 extra \
                          link attributes, 1 full matrix, 1 scenario.",
                      branding_text="TMG")
         
@@ -143,9 +147,15 @@ class TollBasedRoadAssignment(_m.Tool()):
                              filter="FULL", note=demandMatrixNote,
                              allow_none=False)
         
-        pb.add_text_box(tool_attribute_name='SelectTollLinkExpression',
-                        size=100, multi_line=True,
-                        title="Toll Link Selector")
+        keyval = {}
+        for att in self.Scenario.extra_attributes():
+            if not att.type == 'LINK': continue
+            label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
+            keyval[att.name] = label
+            
+        pb.add_select(tool_attribute_name='LinkTollAttributeId',
+                        keyvalues=keyval,
+                        title="Link Toll Attribute")
         
         pb.add_header("OUTPUT MATRICES")
         
@@ -204,18 +214,6 @@ class TollBasedRoadAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
-                pb.add_html("<b>Toll Unit Cost</b>")
-        
-            with t.table_cell():
-                pb.add_text_box(tool_attribute_name="TollCost", 
-                        size=10)
-            
-            with t.table_cell():
-                pb.add_html("Toll base cost, in $/km. Applied to selected links.")
-            
-            t.new_row()
-            
-            with t.table_cell():
                 pb.add_html("<b>Toll Perception</b>")
             
             with t.table_cell():
@@ -256,6 +254,24 @@ class TollBasedRoadAssignment(_m.Tool()):
                         label="Enable high performance mode?",
                         note="This mode will use more cores for assignment,<br>\
                             at the cost of slowing down other processes.")
+        
+        pb.add_html("""
+<script type="text/javascript">
+    $(document).ready( function ()
+    {
+        var tool = new inro.modeller.util.Proxy(%s) ;
+
+        $("#Scenario").bind('change', function()
+        {
+            $(this).commit();
+            $("#LinkTollAttributeId")
+                .empty()
+                .append(tool._GetSelectAttributeOptionsHTML())
+            inro.modeller.page.preload("#LinkTollAttributeId");
+            $("#LinkTollAttributeId").trigger('change');
+        });
+    });
+</script>""" % pb.tool_proxy_tag)
         
         return pb.render()
     
@@ -335,8 +351,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             
             self._tracker.startProcess(4)
             
-            with nested(self._costAttributeMANAGER(), self._tollAttributeMANAGER())\
-                    as (costAttribute, tollAttribute): 
+            with self._costAttributeMANAGER() as costAttribute: 
                 with _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix:
                     
                     self._initOutputMatrices()
@@ -344,10 +359,6 @@ class TollBasedRoadAssignment(_m.Tool()):
                     
                     with _m.logbook_trace("Calculating link costs"):
                         networkCalculationTool(self._getLinkCostCalcSpec(costAttribute.id), scenario=self.Scenario)
-                        self._tracker.completeSubtask()
-                    
-                    with _m.logbook_trace("Calculating link tolls"):
-                        networkCalculationTool(self._getLinkTollCalcSpec(tollAttribute.id), scenario=self.Scenario)
                         self._tracker.completeSubtask()
                     
                     with _m.logbook_trace("Calculating peak hour matrix"):
@@ -360,7 +371,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                     
                     with _m.logbook_trace("Running primary road assignment."):
                         spec = self._getPrimaryRoadAssignmentSpec(peakHourMatrix.id, costAttribute.id, 
-                                                                  tollAttribute.id, appliedTollFactor)
+                                                                  appliedTollFactor)
                         self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
                     
                     self._tracker.startProcess(3)
@@ -445,41 +456,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             if attributeCreated: 
                 _m.logbook_write("Deleting temporary link cost attribute.")
                 self.Scenario.delete_extra_attribute(costAttribute.id)
-                 # Delete the extra cost attribute only if it didn't exist before.
-        
-    @contextmanager
-    def _tollAttributeMANAGER(self):
-        #Code here is executed upon entry
-        
-        attributeCreated = False
-        
-        tollAttribute = self.Scenario.extra_attribute('@toll')
-        if tollAttribute == None:
-            #@lkcst hasn't been defined
-            _m.logbook_write("Creating temporary link cost attribute '@toll'.")
-            tollAttribute = self.Scenario.create_extra_attribute('LINK', '@toll', default_value=0)
-            attributeCreated = True
-            
-        elif self.Scenario.extra_attribute('@toll').type != 'LINK':
-            #for some reason '@lkcst' is not a link attribute
-            _m.logbook_write("Creating temporary link cost attribute '@toll2'.")
-            tollAttribute = self.Scenario.create_extra_attribute('LINK', '@toll2', default_value=0)
-            attributeCreated = True
-        
-        if not attributeCreated:
-            tollAttribute.initialize()
-            _m.logbook_write("Initialized toll attribute to 0.")
-        
-        try:
-            yield tollAttribute
-            # Code here is executed upon clean exit
-        finally:
-            # Code here is executed in all cases.
-            if attributeCreated: 
-                _m.logbook_write("Deleting temporary toll attribute.")
-                self.Scenario.delete_extra_attribute(tollAttribute.id)
-                 # Delete the extra cost attribute only if it didn't exist before.
-    
+                 # Delete the extra cost attribute only if it didn't exist before.    
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
@@ -516,17 +493,6 @@ class TollBasedRoadAssignment(_m.Tool()):
                                },
                 "type": "NETWORK_CALCULATION"
                 }
-        
-    def _getLinkTollCalcSpec(self, tollAttributeId):
-        return {
-                "result": tollAttributeId,
-                "expression": "length * %f" %self.TollCost,
-                "aggregation": None,
-                "selections": {
-                               "link": self.SelectTollLinkExpression
-                               },
-                "type": "NETWORK_CALCULATION"
-                }
     
     def _getPeakHourSpec(self, peakHourMatrixId):
         return {
@@ -549,7 +515,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             appliedTollFactor = 60.0 / self.TollWeight #Toll weight is in $/hr, needs to be converted to min/$
         return appliedTollFactor
             
-    def _getPrimaryRoadAssignmentSpec(self, peakHourMatrixId,costAttributeId, tollAttributeId, appliedTollFactor):
+    def _getPrimaryRoadAssignmentSpec(self, peakHourMatrixId, costAttributeId, appliedTollFactor):
         
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
@@ -563,7 +529,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                              "mode": "c",
                              "demand": peakHourMatrixId,
                              "generalized_cost": {
-                                                  "link_costs": tollAttributeId,
+                                                  "link_costs": self.LinkTollAttributeId,
                                                   "perception_factor": appliedTollFactor
                                                   },
                              "results": {
@@ -709,6 +675,17 @@ class TollBasedRoadAssignment(_m.Tool()):
     @_m.method(return_type=unicode)
     def tool_run_msg_status(self):
         return self.tool_run_msg
+    
+    @_m.method(return_type=unicode)
+    def _GetSelectAttributeOptionsHTML(self):
+        list = []
+        
+        for att in self.Scenario.extra_attributes():
+            if not att.type == 'LINK': continue
+            label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
+            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
+            list.append(html)
+        return "\n".join(list)
     
     
     
