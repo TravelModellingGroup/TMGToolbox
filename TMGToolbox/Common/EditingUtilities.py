@@ -1,3 +1,22 @@
+'''
+    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+
+    This file is part of the TMG Toolbox.
+
+    The TMG Toolbox is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    The TMG Toolbox is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
+'''
+
 import inro.modeller as _m
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('TMG2.Common.Utilities')
@@ -15,17 +34,6 @@ class Face(_m.Tool()):
         pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
         
         return pb.render()
-
-#-------------------------------------------------------------------------------------------
-
-def getTempLineId(network):
-    ID = 'AAAAAA'
-    
-    while network.transit_line(ID) != None:
-        pass
-        
-    return ID
-
 
 #-------------------------------------------------------------------------------------------
 
@@ -281,7 +289,7 @@ def mergeLinks(node, deleteStop=False, linkOverride={}, segmentOverride={}):
             newLinks.append(mergedLink)
             
             for segment in link1.segments():
-                proxy = TransitLineProxy(segment1.line)
+                proxy = TransitLineProxy(segment.line)
                 proxySegment1 = proxy.segments[segment.number] #This will become the merged segment
                 proxySegment2 = proxy.segments.pop(segment.number + 1) #Remove the following segment from the proxy
                 
