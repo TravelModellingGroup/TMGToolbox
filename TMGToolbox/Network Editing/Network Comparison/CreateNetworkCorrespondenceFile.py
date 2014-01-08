@@ -13,7 +13,11 @@ Create Network Correspondence File
 '''
 #---VERSION HISTORY
 '''
-    0.1.0 [Description]
+    0.1.0 Created
+    
+    0.1.1 Updated to catch null export file error
+    
+    0.1.2 Added CorrespondenceFileReader class for easy loading in of correspondence file data
     
 '''
 
@@ -36,7 +40,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class CreateNetworkCorrespondenceFile(_m.Tool()):
     
-    version = '0.1.0'
+    version = '0.1.2'
     tool_run_msg = ""
     number_of_tasks = 7 # For progress reporting, enter the integer number of tasks here
     
@@ -132,6 +136,9 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
+        
+        if self.CorrespondenceFile == None:
+            raise IOError("Export file not specified")
         
         self.CorrespondenceFile = _path.splitext(self.CorrespondenceFile)[0] + ".zip"
         
@@ -407,10 +414,91 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    
+######################################################
 
+class CorrespondenceFileReader():
     
+    def __init__(self, filename, emmebank=_MODELLER.emmebank):
+        self.__fn = filename
+        self.emmebank = emmebank
+        self.TRACKER = _util.ProgressTracker(5) #init the ProgressTracker
     
+    def __enter__(self):
+        self.__zf = _zipfile.ZipFile(filename)
+        return self
+    
+    def __exit__(self, *args):
+        self.__zf.close()
+    
+    def __call__(self):        
+        #Load config file
+        cFile = zf.open('config.txt')
+        config = {}
+        for line in cFile:
+            cells = line.split(':', 1)
+            cells = [s.strip() for s in cells]
+            config[cells[0]] = cells[1]
+        cFile.close() 
+        self.TRACKER.completeTask()
+        
+        #Get the scenarios
+        pScenario = self.emmebank.scenario(config['primary_scenario'])
+        if pScenario == None: raise IOError("Primary scenario %s doesn't exist." %config['primary_scenario'])
+        sScenario = self.emmebank.scenario(config['secondary_scenario'])
+        if sScenario == None: raise IOError("Secondary scenario %s doesn't exist." %config['secondary_scenario'])
+        
+        #Load the networks into RAM
+        primaryNetwork = pScenario.get_network()
+        self.TRACKER.completeTask()
+        secondaryNetwork = sScenario.get_network()
+        self.TRACKER.completeTask()
+        
+        #Load node twins
+        primaryNetwork.create_attribute('NODE', 'twin', None)
+        secondaryNetwork.create_attribute('NODE', 'twin', None)
+        nodeFile = zf.open('nodes.txt')
+        for line in nodeFile:
+            line = line.strip()
+            cells = line.split(',')
+            if 'null' in cells: continue #Skip null matching
+            pNode = primaryNetwork.node(cells[0])
+            sNode = secondaryNetwork.node(cells[1])
+            pNode.twin = sNode
+            sNode.twin = pNode
+        nodeFile.close()
+        self.TRACKER.completeTask()
+        
+        def parseLinkId(s):
+            cells = s.strip(')').strip('(').split('-')
+            return (int(cells[0]), int(cells[1]))
+        def getLink(id, network):
+            iNode, jNode = parseLinkId(id)
+            return network.link(iNode, jNode)
+            
+        #Load link twins
+        primaryNetwork.create_attribute('LINK', 'twins', None)
+        for link in primaryNetwork.links(): link.twins = set()
+        secondaryNetwork.create_attribute('LINK', 'twins', None)
+        for link in secondaryNetwork.links(): link.twins = set()
+        linksFile = zf.open('links.txt')
+        for line in linksFile:
+            line = line.strip()
+            cells = [id for id in line.split(',') if id != 'null']
+            if len(cells) == 1: continue #Skip links with no twins
+            
+            iter = cells.__iter__()
+            pLink = getLink(iter.next(), primaryNetwork)
+            for id in iter:
+                sLink = getLink(id, secondaryNetwork)
+                pLink.twins.add(sLink)
+                sLink.twins.add(pLink)
+                
+        self.TRACKER.completeTask()
+        return (primaryNetwork, secondaryNetwork)
+        
+    @_m.method(return_type=_m.TupleType)
+    def percent_completed(self):
+        return self.TRACKER.getProgress()
     
     
     
