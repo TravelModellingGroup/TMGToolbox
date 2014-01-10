@@ -442,5 +442,7 @@ class Record():
         for i in range(1, len(self)):
             s += "," + self[i]
         return s
-    
+
+class NullPointerException(Exception):
+    pass
     

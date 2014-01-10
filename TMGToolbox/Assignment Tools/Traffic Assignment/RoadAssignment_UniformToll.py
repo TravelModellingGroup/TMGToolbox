@@ -56,6 +56,7 @@ from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+NullPointerException = _util.NullPointerException
 
 ##########################################################################################################
 
@@ -118,7 +119,8 @@ class TollBasedRoadAssignment(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Toll Based Road Assignment v%s" %self.version,
                      description="Executes a standard Emme traffic assignment using tolls for link \
                          costs converted to a time penalty. The actual times and costs are recovered \
-                         by running a second 'all-or-nothing' assignment.\
+                         by running a second 'all-or-nothing' assignment. This version applies a \
+                         uniform toll cost to links meeting a selector expression.\
                          <br><br><b>Temporary Storage Requirements:</b> 2 extra \
                          link attributes, 1 full matrix, 1 scenario.",
                      branding_text="TMG")
@@ -267,6 +269,18 @@ class TollBasedRoadAssignment(_m.Tool()):
         '''Run is called from Modeller.'''
         self.isRunningFromXTMF = False
         
+        if self.DemandMatrix == None: raise NullPointerException("Demand matrix not specified")
+        if self.PeakHourFactor == None: raise NullPointerException("Peak hour factor not specified")
+        if self.LinkCost == None: raise NullPointerException("Link unit cost not specified")
+        if self.TollCost == None: raise NullPointerException("Toll unit cost not specified")
+        if self.TollWeight == None: raise NullPointerException("Toll perception not specified")
+        if self.Iterations == None: raise NullPointerException("Max iterations not specified")
+        if self.rGap == None: raise NullPointerException("Relative gap not specified")
+        if self.brGap == None: raise NullPointerException("Best relative gap not specified")
+        if self.normGap == None: raise NullPointerException("Normalized gap not specified")
+        
+        
+        
         try:
             self._execute()
         except Exception, e:
@@ -346,9 +360,14 @@ class TollBasedRoadAssignment(_m.Tool()):
                         networkCalculationTool(self._getLinkCostCalcSpec(costAttribute.id), scenario=self.Scenario)
                         self._tracker.completeSubtask()
                     
-                    with _m.logbook_trace("Calculating link tolls"):
-                        networkCalculationTool(self._getLinkTollCalcSpec(tollAttribute.id), scenario=self.Scenario)
-                        self._tracker.completeSubtask()
+                    if self.SelectTollLinkExpression and not self.SelectTollLinkExpression.isspace():
+                        #Only calculate tolls if the selector expression isn't empty or whitespace
+                        with _m.logbook_trace("Calculating link tolls"):
+                            try:
+                                networkCalculationTool(self._getLinkTollCalcSpec(tollAttribute.id), scenario=self.Scenario)
+                                self._tracker.completeSubtask()
+                            except Exception, e:
+                                raise Exception("Error applying toll link selector expression: %s" %e)
                     
                     with _m.logbook_trace("Calculating peak hour matrix"):
                         matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))

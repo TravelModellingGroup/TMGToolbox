@@ -122,7 +122,8 @@ class TollBasedRoadAssignment(_m.Tool()):
                      description="Executes a standard Emme traffic assignment using tolls for link \
                          costs converted to a time penalty, using a specified link extra attribute \
                          containing the toll value. The actual times and costs are recovered \
-                         by running a second 'all-or-nothing' assignment.\
+                         by running a second 'all-or-nothing' assignment. This version uses a link \
+                         extra attribute already containing the link toll cost.\
                          <br><br><b>Temporary Storage Requirements:</b> 1 extra \
                          link attributes, 1 full matrix, 1 scenario.",
                      branding_text="TMG")
@@ -282,6 +283,17 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         '''Run is called from Modeller.'''
         self.isRunningFromXTMF = False
+        
+        if self.DemandMatrix == None: raise NullPointerException("Demand matrix not specified")
+        if self.LinkTollAttributeId == None: raise NullPointerException("Link toll attribute not specified")
+        if self.PeakHourFactor == None: raise NullPointerException("Peak hour factor not specified")
+        if self.LinkCost == None: raise NullPointerException("Link unit cost not specified")
+        if self.TollCost == None: raise NullPointerException("Toll unit cost not specified")
+        if self.TollWeight == None: raise NullPointerException("Toll perception not specified")
+        if self.Iterations == None: raise NullPointerException("Max iterations not specified")
+        if self.rGap == None: raise NullPointerException("Relative gap not specified")
+        if self.brGap == None: raise NullPointerException("Best relative gap not specified")
+        if self.normGap == None: raise NullPointerException("Normalized gap not specified")
         
         try:
             self._execute()
