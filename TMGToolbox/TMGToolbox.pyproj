@@ -17,6 +17,8 @@
     <SccProvider>SAK</SccProvider>
     <SccAuxPath>SAK</SccAuxPath>
     <SccLocalPath>SAK</SccLocalPath>
+    <InterpreterId>{f9883f3b-0e7f-4f07-89f3-8bbd9a3a0614}</InterpreterId>
+    <InterpreterVersion>2.7</InterpreterVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -26,5 +28,18 @@
     <DebugSymbols>true</DebugSymbols>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Assignment Tools\" />
+    <Folder Include="Assignment Tools\Pre Processing\" />
+    <Folder Include="Assignment Tools\Transit Assignments\" />
+    <Folder Include="Assignment Tools\Traffic Assignments\" />
+    <Folder Include="Analysis Tools\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Assignment Tools\Pre Processing\Calc407ETRTolls.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="{f9883f3b-0e7f-4f07-89f3-8bbd9a3a0614}\2.7" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
 </Project>
