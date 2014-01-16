@@ -57,7 +57,8 @@ TEMP_LINE_ID = '999999'
 def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor=None, stopOnNewNodes=False):
     '''
     Splits a link at a given node (or nodes). Uses geometry to determine which vertices
-    get assigned to which subsequently-created new link (and in what order).     
+    get assigned to which subsequently-created new link (and in what order). Returns
+    a list of all subsequently created links.
     
     twoWay: bool flag whether to also split the reverse link
     onLink: bool flag whether the new nodes should be adjusted to occur on the link.
