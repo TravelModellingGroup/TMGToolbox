@@ -140,12 +140,17 @@ class ExportCountpostResults(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         
-        if not self.Scenario.has_traffic_results:
-            raise Exception("Scenario %s has no traffic assignment results" %self.Scenario.number)
-        
-        if self.CountpostAttributeId == None: raise NullPointerException("Countpost Attribute not specified")
-        if self.AlternateCountpostAttributeId == None: raise NullPointerException("Alternate Countpost Attribute not specified")
-        if self.ExportFile == None: raise NullPointerException("Export File not specified")
+        try:
+            if not self.Scenario.has_traffic_results:
+                raise Exception("Scenario %s has no traffic assignment results" %self.Scenario.number)
+            
+            if self.CountpostAttributeId == None: raise NullPointerException("Countpost Attribute not specified")
+            if self.AlternateCountpostAttributeId == None: raise NullPointerException("Alternate Countpost Attribute not specified")
+            if self.ExportFile == None: raise NullPointerException("Export File not specified")
+        except Exception, e:
+            self.tool_run_msg = _m.PageBuilder.format_exception(
+                e, _traceback.format_exc(e))
+            raise    
         
         try:
             self._Execute()

@@ -48,6 +48,9 @@ Toll-Based Road Assignment
     1.1.1 Bug fixes. Should actually run now.
     
     2.0.0 Forked  a new version to use a link extra attribute 
+    
+    2.0.1 Fixed bug which occurs when a new matrix is selected for output.
+    
 '''
 
 import inro.modeller as _m
@@ -63,7 +66,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '2.0.0'
+    version = '2.0.1'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -104,7 +107,6 @@ class TollBasedRoadAssignment(_m.Tool()):
         if mf10 != None:
             self.DemandMatrix = mf10
         
-        self.SelectTollLinkExpression = "vdf=14"
         self.PeakHourFactor = 0.43
         self.LinkCost = 0
         self.TollCost = 0
@@ -115,6 +117,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.normGap = 0.05
         self.PerformanceFlag = False
         self.RunTitle = ""
+        self.LinkTollAttributeId = "@toll"
         
 
     def page(self):
@@ -363,11 +366,11 @@ class TollBasedRoadAssignment(_m.Tool()):
             
             self._tracker.startProcess(4)
             
+            self._initOutputMatrices()
+            self._tracker.completeSubtask()
+            
             with self._costAttributeMANAGER() as costAttribute: 
                 with _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix:
-                    
-                    self._initOutputMatrices()
-                    self._tracker.completeSubtask()
                     
                     with _m.logbook_trace("Calculating link costs"):
                         networkCalculationTool(self._getLinkCostCalcSpec(costAttribute.id), scenario=self.Scenario)
@@ -479,7 +482,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                 "Times Matrix" : str(self.TimesMatrixId),
                 "Cost Matrix" : str(self.CostMatrixId),
                 "Toll Matrix" : str(self.TollsMatrixId),
-                "Toll Selector": self.SelectTollLinkExpression,
+                "Toll Attribute": self.LinkTollAttributeId,
                 "Peak Hour Factor" : str(self.PeakHourFactor),
                 "Link Cost" : str(self.LinkCost),
                 "Toll Cost" : str(self.TollCost),
@@ -566,7 +569,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                          },
                 "background_traffic": None,
                 "path_analysis": {
-                                  "link_component": tollAttributeId,
+                                  "link_component": self.LinkTollAttributeId,
                                   "turn_component": None,
                                   "operator": "+",
                                   "selection_threshold": {
@@ -699,5 +702,31 @@ class TollBasedRoadAssignment(_m.Tool()):
             list.append(html)
         return "\n".join(list)
     
-    
+    def mm(self):
+        q = {
+             "traversal_analysis": null,
+             "classes": [
+                         {
+                          "generalized_cost": 
+                            {
+                             "link_costs": "@z407",
+                             "perception_factor": 2.0
+                             },
+                          "results": 
+                                {"link_volumes": null,
+                                 "od_travel_times": 
+                                    {
+                                     "shortest_paths": "mf1"
+                                    },
+                                  "turn_volumes": null
+                                  },
+                          "mode": "c",
+                          "analysis": {
+                                       "analyzed_demand": "mf1",
+                                       "results": {
+                                                   "selected_turn_volumes": null,
+                                                   "selected_link_volumes": null,
+                                                   "od_values": "mf3"
+                                                   }
+                                       }, "demand": "mf1"}], "background_traffic": null, "path_analysis": {"operator": "+", "selection_threshold": {"upper": 999999, "lower": -999999}, "turn_component": null, "path_to_od_composition": {"multiply_path_proportions_by": {"path_value": true, "analyzed_demand": false}, "considered_paths": "ALL"}, "link_component": "@z407"}, "performance_settings": {"number_of_processors": 8}, "cutoff_analysis": null, "type": "STANDARD_TRAFFIC_ASSIGNMENT", "stopping_criteria": {"normalized_gap": 0.0, "best_relative_gap": 0.0, "relative_gap": 0.0, "max_iterations": 100}}
     

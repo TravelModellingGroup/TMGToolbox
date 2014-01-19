@@ -46,6 +46,8 @@ Toll-Based Road Assignment
         - Optional arguments added.
         
     1.1.1 Bug fixes. Should actually run now.
+    
+    1.1.2 Fixed bug which occurs when a new matrix is selected for output.
 '''
 
 import inro.modeller as _m
@@ -349,12 +351,12 @@ class TollBasedRoadAssignment(_m.Tool()):
             
             self._tracker.startProcess(4)
             
+            self._initOutputMatrices()
+            self._tracker.completeSubtask()
+            
             with nested(self._costAttributeMANAGER(), self._tollAttributeMANAGER())\
                     as (costAttribute, tollAttribute): 
                 with _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix:
-                    
-                    self._initOutputMatrices()
-                    self._tracker.completeSubtask()
                     
                     with _m.logbook_trace("Calculating link costs"):
                         networkCalculationTool(self._getLinkCostCalcSpec(costAttribute.id), scenario=self.Scenario)
