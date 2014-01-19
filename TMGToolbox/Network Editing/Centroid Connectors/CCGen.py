@@ -429,7 +429,7 @@ class CCGen(_m.Tool()):
                 "Boundary File" : self.BoundaryFile,
                 "Beta Gravity" : self.BetaGravity,
                 "Zones File" : self.ZonesFile,
-                "Mass Attribute" : self.MassAttribute,
+                "Mass Attribute" : self.MassAttribute.id,
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts
