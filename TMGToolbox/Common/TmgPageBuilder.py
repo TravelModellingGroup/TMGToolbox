@@ -41,7 +41,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
         self.root = super(TmgToolPageBuilder, self)
         self.root.__init__(tool, runnable=runnable, title=title, description=description, branding_text=branding_text,
                            help_path=help_path, footer_help_links=footer_help_links)
-        self.description = "<p class=tmg_left>%s</p>" %self.description
+        self.description = "<div class=tmg_left>%s</div>" %self.description
     
     def _addHiddenHTML(self):
         return '''
@@ -55,9 +55,13 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
     def render(self):
         return self._addHiddenHTML() + self.root.render()
     
-    def add_header(self,text):      
+    def add_header(self,text, note=None):      
         s = '<div class="hdr1 t_element"><br><b>%s</b></div>' %text
+        if note != None:
+            s += '<div class="t_element">%s</div>' %note
         self.root.add_html(s)
+        
+            
     
     def add_plain_text(self, text):
         self.root.add_html('<div class="t_element">%s</div>' %text)

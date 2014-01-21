@@ -211,12 +211,14 @@ class ExportCountpostResults(_m.Tool()):
                     
                     if post1 > 0:
                         data = [post1, link.id, link.auto_volume, link.additional_volume, link.auto_time]
+                        data = [str(d) for d in data]
                         writer.write("\n" + ",".join(data))
-                        post += 1
+                        posts += 1
                     if post2 > 0:
                         data = [post2, link.id, link.auto_volume, link.additional_volume, link.auto_time]
+                        data = [str(d) for d in data]
                         writer.write("\n" + ",".join(data))
-                        post += 1
+                        posts += 1
                     
                     self.TRACKER.completeSubtask()
             
