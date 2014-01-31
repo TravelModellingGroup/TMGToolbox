@@ -257,7 +257,28 @@ class _boolField():
 
 class Shapely2ESRI():
     '''
-    Object for interacting between shapefiles and Shapely Geometry.
+    Object for interacting between shapefiles and Shapely Geometry. Reads shapefiles
+    as shapely geometry objects, and writes shapely geometry objects to shapefiles.
+    
+    ---Usage---
+    Reading:
+    
+    with Shapely2ESRI("C:/MyDocuments/zone_centroids.shp", mode = 'read') as reader:
+        for point in reader.readThrough():
+            zoneId = point['Zone'] #Zone is the name of a defined field in the associated DBF
+            ...
+            
+    Writing:
+    
+    with Shapely2ESRI("C:/MyDocuments/emme_nodes.shp", mode = 'write', 
+            geometryType = Shapely2ESRI.SHP_POINT_TYPE) as writer:
+        writer.addField('UI1', type=float)
+        
+        for node in network.nodes():
+            point = nodeToShape(node)
+            writer.writeNext(point)
+            ...
+    
     '''
     
     SHP_POINT_TYPE = _shp.SHPT_POINT

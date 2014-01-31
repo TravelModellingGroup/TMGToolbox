@@ -33,12 +33,15 @@ Export Countpost Results
 '''
     0.0.1 Created on 2014-01-16 by pkucirek
     
+    0.0.2 Modified to properly append the file extension.
+    
 '''
 
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from os.path import splitext
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
@@ -48,7 +51,7 @@ NullPointerException = _util.NullPointerException
 
 class ExportCountpostResults(_m.Tool()):
     
-    version = '0.0.1'
+    version = '0.0.2'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -104,7 +107,7 @@ class ExportCountpostResults(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name='ExportFile',
                            window_type='save_file',
-                           file_filter="*.txt; *.csv",
+                           file_filter="*.csv",
                            title="Export File")
         
         pb.add_html("""
@@ -196,6 +199,8 @@ class ExportCountpostResults(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             self.TRACKER.reset()
+            
+            self.ExportFile = splitext(self.ExportFile)[0] + ".csv"
             
             network = self.Scenario.get_network()
             self.tool_run_msg = "Network loaded. Processing traffic results"

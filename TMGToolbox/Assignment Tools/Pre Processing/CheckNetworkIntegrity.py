@@ -376,7 +376,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                             that they are fixed before running any assignments." %(errCount, self.Scenario.number))
         
         doc = '''
-        <table>
+        <table align="center">
             <tr>
                 <th>Element Type</th>
                 <th>ID</th>
