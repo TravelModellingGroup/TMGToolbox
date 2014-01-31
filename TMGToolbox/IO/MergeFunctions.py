@@ -40,6 +40,8 @@ Merge Functions
     
     0.1.2 Minor update to check for null export file
     
+    0.1.3 Conflicted functions are now sorted in alphabetical order
+    
 '''
 
 import inro.modeller as _m
@@ -57,7 +59,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class MergeFunctions(_m.Tool()):
     
-    version = '0.1.2'
+    version = '0.1.3'
     tool_run_msg = ""
     number_of_tasks = 3 # For progress reporting, enter the integer number of tasks here
     
@@ -241,6 +243,7 @@ class MergeFunctions(_m.Tool()):
                     conflicts.append((id, database_expression, file_expression))
             
             if len(conflicts) > 0:
+                conflicts.sort()
                 dialog = FunctionConflictDialog(conflicts)
                 result = dialog.exec_()
                 
