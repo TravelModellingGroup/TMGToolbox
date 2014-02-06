@@ -162,6 +162,51 @@ def getExtents(network):
           maxY = max(maxY, node.y)
      return Extents(minX - 1.0, minY - 1.0, maxX + 1.0, maxY + 1.0)
 
+class IntRange():
+    '''
+    A smaller object to represent a range of integer values.
+    Does NOT simplify to a list!
+    '''
+       
+    def __init__(self, min, max):
+        min = int(min)
+        max = int(max)
+        
+        if min > max:
+            self.__reversed = True
+            self.min = max
+            self.max = min
+        else:
+            self.__reversed = False
+            self.min = min
+            self.max = max
+    
+    def __contains__(self, val):
+        return (val >= self.min and val < self.max)
+    
+    def __str__(self):
+        return "%s - %s" %(self.min, self.max)
+    
+    def __iter__(self):
+        i = self.min
+        while (i < self.max):
+            yield i
+            i += 1 - 2 * self.__reversed #Count down if reversed
+    
+    def __len__(self):
+        return abs(self.max - self.min)
+    
+    def contains(self, val):
+        return val in self
+    
+    def length(self):
+        return len(self)
+    
+    def overlaps(self, otherRange):
+        return otherRange.min in self or otherRange.max in self or self.max in otherRange or self.min in otherRange
+    
+
+
 class FloatRange():
     
     def __init__(self, min, max):
@@ -181,7 +226,7 @@ class FloatRange():
         return otherRange.min in self or otherRange.max in self or self.max in otherRange or self.min in otherRange
     
     def __str__(self):
-        return "[%s - %s]" %(self.min, self.max)
+        return "%s - %s" %(self.min, self.max)
 
 def buildSearchGridFromNetwork(network, gridSize=100, loadNodes=True, loadCentroids=False):
     extents = getExtents(network)
@@ -445,4 +490,5 @@ class Record():
 
 class NullPointerException(Exception):
     pass
+
     
