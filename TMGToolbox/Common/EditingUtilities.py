@@ -39,7 +39,12 @@ class Face(_m.Tool()):
 
 def isLinkParallel(link):
     '''
-    Tests if a link is parallel with its reverse, based on vertices. 
+    Tests if a link is parallel with its reverse, based on vertices.
+    
+    Args:
+        - link: The link to test
+        
+    Returns: True if link's reverse exists and is parallel, False otherwise.
     '''
     
     reverse = link.reverse_link
@@ -57,13 +62,16 @@ TEMP_LINE_ID = '999999'
 def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor=None, stopOnNewNodes=False):
     '''
     Splits a link at a given node (or nodes). Uses geometry to determine which vertices
-    get assigned to which subsequently-created new link (and in what order). Returns
-    a list of all subsequently created links.
+    get assigned to which subsequently-created new link (and in what order).
     
-    twoWay: bool flag whether to also split the reverse link
-    onLink: bool flag whether the new nodes should be adjusted to occur on the link.
-    coordFactor: conversion between coordinate unit and link length
-    stopOnNewNodes: flag to indicate if the new nodes should be used as transit stops.
+    Args:
+        - newNodes: A new node (or iterable of nodes) to be inserted into the link
+        - twoWay (=True): bool flag whether to also split the reverse link
+        - onLink (=True): bool flag whether the new nodes should be adjusted to occur on the link.
+        - coordFactor (=None): conversion between coordinate unit and link length
+        - stopOnNewNodes (=False): flag to indicate if the new nodes should be used as transit stops.
+    
+    Returns: A list of all subsequently created links.
     '''
     if "__iter__" in dir(newNodes):
         nodeGeoms = [_geolib.nodeToShape(n) for n in newNodes]
@@ -201,6 +209,11 @@ def addReverseLink(link):
     '''
     For a link without a reverse, this function creates a 
     parallel (e.g. vertices copied) reverse link.
+    
+    Args:
+        - link= The link to copy
+    
+    Returns: The new link 
     '''
     if link.reverse_link != None:
         return link.reverse_link
@@ -221,6 +234,13 @@ def addReverseLink(link):
 def changeTransitLineId(line, newId):
     '''
     Modifies an existing line's ID
+    
+    Args:
+        - line= The transit line object to modify
+        - newId= The transit line's new ID string. This new ID
+            must be unique.
+    
+    Returns: the modified transit line object
     '''
     network = line.segment(0).link.network
     proxy = TransitLineProxy(line)
@@ -233,21 +253,63 @@ def changeTransitLineId(line, newId):
 
 #-------------------------------------------------------------------------------------------
 
+def renumberTransitVehicle(oldVehicle, newId):
+    '''
+    Changes the ID of a transit vehicle object, updating all dependent transit lines.
+    The new ID must not be in use.
+    
+    Args:
+        - oldVehicle: The transit vehicle object to re-number
+        - newId: The new ID. Must not be in use
+     
+     Returns: The new Transit Vehicle object
+    '''
+    
+    net = oldVehicle.network
+    
+    if net.transit_vehicle(newId) != None:
+        raise Exception("Cannot change transit vehicle %s to %s as this ID already exists in the scenario" %(oldVehicle, newId))
+    
+    created = False
+    changedLines = []
+    try:
+        newVehicle = net.create_transit_vehicle(newId, oldVehicle.mode.id)
+        created = True
+        
+        dependants = [line for line in net.transit_lines() if line.vehicle.number == oldVehicle.number]
+        for line in dependants:
+            line.vehicle = newVehicle
+            changedLines.append(line)
+        net.delete_transit_vehicle(oldVehicle.number)
+    except Exception, e:
+        if created:
+            net.delete_transit_vehicle(newId)
+        for line in changedLines:
+            line.vehicle = oldVehicle
+        raise
+    
+    return newVehicle
+    
+#-------------------------------------------------------------------------------------------
+
 def mergeLinks(node, deleteStop=False, linkOverride={}, segmentOverride={}):
     '''
-    Deletes a 2-degree node and merges its connected links.
+    Deletes a 2-degree node and merges its connected links. The merged link will 
+    always permit the union of modes between its candidate links.
     
-    Optional deleteStop argument allows all incident transit stops to be deleted.
-        Nodes at the end of lines CANNOT ever be deleted.
-    Optional linkOverride dictionary allows the user to specify a dict of
-        [attribute_name: lambda(double => val1, val2)] to override the default
-        operation for merging the two attributes (SUM for link length, AVG for
-        everything else)
-    Optional segmentOverride dictionary is used the same as the linkOverride
-        argument, except applied to all merging segments
+    Args:
+        - node: A Node object to delete. This node must connect to exactly two
+            other nodes. 
+        - deleteStop (=False): Allows all incident transit stops to be deleted.
+            Nodes at the end of lines CANNOT ever be deleted.
+        - linkOverride (={}): Dictionary allows the user to specify a dict of
+            [attribute_name: lambda(double => val1, val2)] to override the default
+            operation for merging the two attributes (SUM for link length, AVG for
+            everything else)
+        - segmentOverride (={}): Dictionary is used the same as the linkOverride
+            argument, except applied to all merging segments
         
-    The merged link will always permit the union of modes between its candidate
-        links.
+    Returns: None
     '''
     neighbourSet = set([link.j_node for link in node.outgoing_links()])
     if len(neighbourSet) != 2:
@@ -307,8 +369,6 @@ def mergeLinks(node, deleteStop=False, linkOverride={}, segmentOverride={}):
         for line in newLines:
             network.delete_transit_line(line.id)
         raise
-    
-    pass
 
 def _getLinkPairs(node):
     oLinks = [link for link in node.outgoing_links()]
@@ -384,7 +444,11 @@ def _mergeSegments(segmentOverride, proxySegment1, proxySegment2):
 
 class TransitLineProxy():
     '''
-    Data container for copying transit line data
+    Data container for copying transit line data. For easy line itinerary modification,
+    the line's segments are stored in a simple list made up of TransitSegmentProxy
+    objects. This class's copyToNetwork method can then be used to 'save' the changes
+    to the network. If errors are encountered, this class will safely roll back all
+    saved changes.
     '''
     
     DEFAULT_ATTS = set(['description', 'layover_time', 'speed', 'headway', 'data1', 'data2', 'data3'])
@@ -433,7 +497,7 @@ class TransitLineProxy():
 
 class TransitSegmentProxy():
     '''
-    Data container for copying transit segment data
+    Data container for copying & modifying transit segment data
     '''
     
     DEFAULT_ATTS = set(['allow_boardings', 'allow_alightings', 'transit_time', 'dwell_time',
@@ -441,6 +505,10 @@ class TransitSegmentProxy():
                         'transit_time_func', 'data1', 'data2', 'data3'])
     
     def __init__(self, segment, iNode=None):
+        '''
+        By default, a new segment takes the iNode of the segment to copy,
+        but this can be set manually for transit line itinerary modifications.
+        '''
         self.iNode = segment.i_node
         if iNode != None:
             self.iNode = iNode
