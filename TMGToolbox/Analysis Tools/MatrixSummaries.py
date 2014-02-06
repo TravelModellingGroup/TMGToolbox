@@ -19,19 +19,26 @@
 '''
 #---METADATA---------------------
 '''
-[TITLE]
+Export Matrix Summary
 
     Authors: pkucirek
 
     Latest revision by: pkucirek
     
     
-    [Description]
+    Computes using numpy a several aggregate statistics 
+    for a given matrix: average, median, standard deviation, and 
+    a histogram of values. Users can also specify an optional matrix 
+    of weights, and the tool will also compute weighted average, 
+    standard deviation, and histogram values.
         
 '''
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2014-01-30 by pkucirek
+    
+    1.0.0 Added description/better documentation for release. Could not get logbook
+        reporting to work properly, so this feature will be added in a later release.
     
 '''
 
@@ -43,6 +50,7 @@ from numpy import average, histogram, array, min, max, std, median
 from math import sqrt
 from inro.emme.matrix import submatrix as get_submatrix
 from datetime import datetime as dt
+from os import path
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
@@ -51,9 +59,9 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class MatrixSummary(_m.Tool()):
     
-    version = '0.0.1'
+    version = '1.0.0'
     tool_run_msg = ""
-    number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 8 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -76,7 +84,8 @@ class MatrixSummary(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     xtmf_ValueMatrixNumber = _m.Attribute(int)
     xtmf_WeightingMatrixNumber = _m.Attribute(int)
-    
+    xtmf_OriginRangeSetString = _m.Attribute(str)
+    xtmf_DestinationRangeSetString = _m.Attribute(str)
     
     
     def __init__(self):
@@ -92,8 +101,12 @@ class MatrixSummary(_m.Tool()):
         self.CellFilterExpression = "return pq < 1000.0"
         
     def page(self):
-        pb = _tmgTPB.TmgToolPageBuilder(self, title="[TOOL NAME] v%s" %self.version,
-                     description="[DESCRIPTION]",
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Matrix Summary v%s" %self.version,
+                     description="Computes using <em>numpy</em> a several aggregate statistics \
+                         for a given matrix: average, median, standard deviation, and \
+                         a histogram of values. Users can also specify an optional matrix \
+                         of weights, and the tool will also compute weighted average, \
+                         standard deviation, and histogram values.",
                      branding_text="TMG")
         
         if self.tool_run_msg != "": # to display messages in the page
@@ -106,29 +119,32 @@ class MatrixSummary(_m.Tool()):
         pb.add_select_matrix(tool_attribute_name='WeightingMatrix',
                              filter=['FULL'], allow_none=True,
                              title="Weighting Matrix",
-                             note="<font color='blue'><b>Optional:</b> Matrix of weights</font>")
+                             note="<font color='green'><b>Optional:</b></font> Matrix of weights")
         
         pb.add_select_file(tool_attribute_name='ReportFile',
                            window_type='save_file',
                            file_filter='*.txt',
                            title="Report File",
-                           note="<font color='blue'><b>Optional</b></font>")
+                           note="<font color='green'><b>Optional.</b></font> Matrix data will be \
+                               saved to the logbook.")
         
         pb.add_select_scenario(tool_attribute_name='Scenario',
                                title='Scenario:',
-                               allow_none=True)
+                               allow_none=True,
+                               note="<font color='green'><b>Optional:</b></font> Only required if \
+                                   scenarios have differing zone systems.")
         
         pb.add_header('FILTERS')
         
         pb.add_text_box(tool_attribute_name='OriginFilterExpression',
                         size=100, multi_line=False,
                         title="def OriginFilter(p):",
-                        note="Enter a Python expression.")
+                        note="Enter a Python expression. Include the return statement.")
         
         pb.add_text_box(tool_attribute_name='DestinationFilterExpression',
                         size=100, multi_line=False,
                         title="def DestinationFilter(q):",
-                        note="Enter a Python expression.")
+                        note="Enter a Python expression. Include the return statement")
         
         #TODO: Figure out how to apply the filter expression
         #simultaeneously to both the value and weight matrix
@@ -164,7 +180,10 @@ class MatrixSummary(_m.Tool()):
         self.TRACKER.reset()
         
         try:
-            self._Execute()
+            originFilter = self._GetOriginFilterFunction()
+            destinationFilter = self._GetDestinationFilterFunction()
+            
+            self._Execute(originFilter, destinationFilter)
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
@@ -173,7 +192,8 @@ class MatrixSummary(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     def __call__(self, xtmf_ValueMatrixNumber, xtmf_WeightingMatrixNumber, xtmf_ScenarioNumber,
-                 ReportFile, HistogramMin, HistogramMax, HistogramStepSize):
+                 ReportFile, HistogramMin, HistogramMax, HistogramStepSize, xtmf_OriginRangeSetString,
+                 xtmf_DestinationRangeSetString):
         
         
         self.ValueMatrix = _MODELLER.emmebank.matrix('mf%s' %xtmf_ValueMatrixNumber)
@@ -194,13 +214,16 @@ class MatrixSummary(_m.Tool()):
             if (self.Scenario == None):
                 raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
+        originFilter = self._ParseRangeSetString(xtmf_OriginRangeSetString)
+        destinationFilter = self._ParseRangeSetString(xtmf_DestinationRangeSetString)
+        
         self.ReportFile = ReportFile
         self.HistogramMin = HistogramMin
         self.HistogramMax = HistogramMax
         self.HistogramStepSize = HistogramStepSize
         
         try:
-            self._Execute()
+            self._Execute(originFilter, destinationFilter)
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
@@ -208,36 +231,36 @@ class MatrixSummary(_m.Tool()):
     ##########################################################################################################    
     
     
-    def _Execute(self):
+    def _Execute(self, originFilter, destinationFilter):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-            
-            originFilter = self._GetOriginFilterFunction()
-            destinationFilter = self._GetDestinationFilterFunction()
-            #print "Loaded filters"
             
             if self.Scenario:
                 valueData = self.ValueMatrix.get_data(self.Scenario.number)
             else:
                 valueData = self.ValueMatrix.get_data()
-            #print "Got value matrix data"
+            self.TRACKER.completeTask() #1
             
             validIndices = [[p for p in valueData.indices[0] if originFilter(p)],
                             [q for q in valueData.indices[1] if destinationFilter(q)]]
-            #print "Filtered indices"
+            self.TRACKER.completeTask() #2
             
             valueSubmatrix = get_submatrix(valueData, validIndices)
-            #print "Prepared value submatrix"
-            
             valueArray = array(valueSubmatrix.raw_data).flatten()
+            self.TRACKER.completeTask() #3
             
+            self.TRACKER.startProcess(6)
             #Start getting the relevant data from the matrix
             unweightedAverage = average(valueArray)
+            self.TRACKER.completeSubtask()
             minVal = min(valueArray)
+            self.TRACKER.completeSubtask()
             maxVal = max(valueArray)
+            self.TRACKER.completeSubtask()
             unweightedStdDev = std(valueArray)
+            self.TRACKER.completeSubtask()
             unweightedMedian = median(valueArray)
-            #print "Calculated unweighted stats."
+            self.TRACKER.completeSubtask()
             
             #Create the array of bins
             bins = [self.HistogramMin]
@@ -248,11 +271,10 @@ class MatrixSummary(_m.Tool()):
                 c += self.HistogramStepSize
             bins.append(self.HistogramMax)
             if maxVal > self.HistogramMax: bins.append(maxVal)
-            #print "Bins:"
-            #print bins
             
-            unweightedHistogram, ranges = histogram(valueArray)
-            #print "Extracted unweighted histogram"
+            unweightedHistogram, ranges = histogram(valueArray, bins)
+            self.TRACKER.completeSubtask()
+            self.TRACKER.completeTask() #4
             
             #Get weighted values if neccessary
             if self.WeightingMatrix != None:
@@ -260,18 +282,21 @@ class MatrixSummary(_m.Tool()):
                     weightData = self.WeightingMatrix.get_data(self.Scenario.number)
                 else:
                     weightData = self.WeightingMatrix.get_data()
-                #print "Loaded weighting data"
+                self.TRACKER.completeTask() #5
                 
                 weightSubmatrix = get_submatrix(weightData, validIndices)
-                #print "Prepared weighting submatrix"
-                
                 weightArray = array(weightSubmatrix.raw_data).flatten()
+                self.TRACKER.completeTask() #6
                 
+                self.TRACKER.startProcess(3)
                 weightedAverage = average(valueArray, weights= weightArray)
+                self.TRACKER.completeSubtask()
                 weightedStdDev = self._WtdStdDev(valueArray, weightArray)
+                self.TRACKER.completeSubtask()
+                weightedHistogram, ranges = histogram(valueArray, weights= weightArray, bins = bins)
+                self.TRACKER.completeSubtask()
+                self.TRACKER.completeTask() #7
                 
-                weightedHistogram, ranges = histogram(valueArray, weights= weightArray)
-                #print "Extracted weighted histogram"
                 
                 if self.ReportFile:
                     self._WriteReportToFile(unweightedAverage,
@@ -279,11 +304,32 @@ class MatrixSummary(_m.Tool()):
                                             unweightedMedian, unweightedHistogram, 
                                             bins, weightedAverage, weightedStdDev, 
                                             weightedHistogram)
+                    print "Report written to %s" %self.ReportFile
+                
+                self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
+                                           unweightedMedian, unweightedHistogram, bins, 
+                                           weightedAverage, weightedStdDev, weightedHistogram)
+                #print "Report written to logbook."
+                
             elif self.ReportFile:
+                for i in range(3): self.TRACKER.completeTask()
                 self._WriteReportToFile(unweightedAverage, minVal, 
                                         maxVal, unweightedStdDev, unweightedMedian, 
                                         unweightedHistogram, bins)
-            print "Done writing report."
+                print "Report written to %s" %self.ReportFile
+                
+                self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
+                                           unweightedMedian, unweightedHistogram, bins)
+                #print "Report written to logbook."
+                
+            else:
+                self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
+                                           unweightedMedian, unweightedHistogram, bins)
+                #print "Report written to logbook."
+            
+            
+            
+            self.TRACKER.completeTask() #8
 
     ##########################################################################################################
     
@@ -297,6 +343,23 @@ class MatrixSummary(_m.Tool()):
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts
+    
+    def _ParseRangeSetString(self, rss):
+        ranges = []
+        cells = rss.split(',')
+        for c in cells:
+            r = c.split('-')
+            start = int(r[0])
+            end = int(r[1])
+            rs = _util.IntRange(start, end)
+            ranges.append(rs)
+        
+        def filter(v):
+            for r in ranges:
+                if v in r: return True
+            return False
+        
+        return filter
     
     def _GetOriginFilterFunction(self):
         exec('''def filter(p):
@@ -326,9 +389,83 @@ class MatrixSummary(_m.Tool()):
                             weightedAverage=None,
                             weightedStdDev=None,
                             weightedHistogram=None):
+        
+        print "CURRENTLY DOES NOT WRITE REPORT TO LOGBOOK"
+        return
+        
         pb = _m.PageBuilder(title="Matrix Summary Report")
         
-        #TODO: Record report to logbook
+        bodyText = "Summary for matrix: <b>{mtx1!s} - {desc1}</b> ({stamp1!s})\
+        <br>Weighting Matrix: <b>{mtx2!s}".format(
+                                                  mtx1= self.ValueMatrix, 
+                                                  mtx2= self.WeightingMatrix,
+                                                  desc1= self.ValueMatrix.description, 
+                                                  stamp1= self.ValueMatrix.timestamp)
+        if self.WeightingMatrix != None: bodyText += " - %s" %self.WeightingMatrix.description
+        bodyText += "</b><br>"
+        
+        rows = []
+        rows.append("<b>Average:</b> %s" %unweightedAverage)
+        rows.append("<b>Minimum:</b> %s" %minVal)
+        rows.append("<b>Maximum:</b> %s" %maxVal)
+        rows.append("<b>Standard Deviation:</b> %s" %unweightedStdDev)
+        rows.append("<b>Median:</b> %s" %unweightedMedian)
+        
+        if weightedAverage != None:
+            rows.append("<br><br><b>Weighted Average:</b> %s" %weightedAverage)
+            rows.append("<b>Weighted Standard Deviation:</b> %s" %weightedStdDev)
+        
+        bodyText += "<h3>Matrix Statistics</h3>" + "<br>".join(rows)
+        pb.add_text_element(bodyText)
+        
+        #Build the chart data
+        uwData = []
+        wData = []
+        for i, binEdge in enumerate(bins):
+            if i == 0:
+                prevEdge = binEdge
+                continue #Skip the first
+            
+            if (i - 1) >= len(unweightedHistogram):
+                uwVal = 0.0
+            else:
+                uwVal = unweightedHistogram[i - 1]
+            uwData.append((prevEdge, uwVal))
+            
+            if weightedHistogram != None:
+                if (i - 1) >= len(weightedHistogram):
+                    wVal = 0.0
+                else:
+                    wVal = weightedHistogram[i - 1]
+                wData.append((prevEdge, wVal))
+            
+            prevEdge = binEdge
+        
+        cds = [{"title": "Unweighted frequency", 
+                "data": uwData,
+                "color": "red"}]
+        if weightedHistogram != None:
+            cds.append({"title": "Weighted frequency",
+                        "data": wData,
+                        "color": "blue"})
+        
+        try:
+            pb.add_chart_widget(chart_data_series=cds,
+                options= {'table': True,
+                          "plot_parameters": {
+                               "series": {
+                                   "points": {"show": False},
+                                   "lines": {"show": False},
+                                   "bars": {"show": True},
+                                        }
+                                    }
+                          })
+        except Exception, e:
+            print cds
+            raise
+        
+        _m.logbook_write("Matrix Summary Report for %s" %self.ValueMatrix,
+                         value= pb.render())
     
     def _WriteReportToFile(self,
                             unweightedAverage,
