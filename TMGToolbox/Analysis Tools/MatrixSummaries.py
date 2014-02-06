@@ -309,7 +309,7 @@ class MatrixSummary(_m.Tool()):
                 self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
                                            unweightedMedian, unweightedHistogram, bins, 
                                            weightedAverage, weightedStdDev, weightedHistogram)
-                #print "Report written to logbook."
+                print "Report written to logbook."
                 
             elif self.ReportFile:
                 for i in range(3): self.TRACKER.completeTask()
@@ -320,12 +320,12 @@ class MatrixSummary(_m.Tool()):
                 
                 self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
                                            unweightedMedian, unweightedHistogram, bins)
-                #print "Report written to logbook."
+                print "Report written to logbook."
                 
             else:
                 self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
                                            unweightedMedian, unweightedHistogram, bins)
-                #print "Report written to logbook."
+                print "Report written to logbook."
             
             
             
@@ -390,8 +390,8 @@ class MatrixSummary(_m.Tool()):
                             weightedStdDev=None,
                             weightedHistogram=None):
         
-        print "CURRENTLY DOES NOT WRITE REPORT TO LOGBOOK"
-        return
+        #print "CURRENTLY DOES NOT WRITE REPORT TO LOGBOOK"
+        #return
         
         pb = _m.PageBuilder(title="Matrix Summary Report")
         
@@ -430,14 +430,14 @@ class MatrixSummary(_m.Tool()):
                 uwVal = 0.0
             else:
                 uwVal = unweightedHistogram[i - 1]
-            uwData.append((prevEdge, uwVal))
+            uwData.append((int(prevEdge), float(uwVal)))
             
             if weightedHistogram != None:
                 if (i - 1) >= len(weightedHistogram):
                     wVal = 0.0
                 else:
                     wVal = weightedHistogram[i - 1]
-                wData.append((prevEdge, wVal))
+                wData.append((int(prevEdge), float(wVal)))
             
             prevEdge = binEdge
         
@@ -454,8 +454,9 @@ class MatrixSummary(_m.Tool()):
                 options= {'table': True,
                           "plot_parameters": {
                                "series": {
-                                   "points": {"show": False},
-                                   "lines": {"show": False},
+                                   "stack": False,
+                                   #"points": {"show": False},
+                                   #"lines": {"show": False},
                                    "bars": {"show": True},
                                         }
                                     }
