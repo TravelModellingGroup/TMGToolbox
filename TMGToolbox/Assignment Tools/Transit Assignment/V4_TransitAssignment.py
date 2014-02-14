@@ -33,6 +33,7 @@ V4 Transit Assignment
 '''
     0.0.1 Created on 2014-02-04 by pkucirek
     
+    0.0.2 Added a temporary impedance matrix for compatibility with Emme 4.0.8
 '''
 
 import inro.modeller as _m
@@ -90,6 +91,7 @@ class V4_TransitAssignment(_m.Tool()):
         self.Iterations = 20
         
         #---Priavte flags for estimation purposes only
+        self._useEmme41Beta = False
         self._headwayFraction = 0.5
         
         self._useLogitConnectorChoice = True
@@ -98,7 +100,7 @@ class V4_TransitAssignment(_m.Tool()):
         
         self._congestionFunctionType = "BPR" #"CONICAL"
         self._considerTotalImpedance = True
-        self._useMulticore = True
+        self._useMulticore = False
         self._exponent = 4
         
     
@@ -221,7 +223,7 @@ class V4_TransitAssignment(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         #---2 Set up demand matrix
-        self.DemandMatrix = _MODELLER.emmebank.scenario("mf%s" %xtmf_DemandMatrixNumber)
+        self.DemandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
         if self.DemandMatrix == None:
             raise Exception("Full matrix mf%s was not found!" %xtmf_DemandMatrixNumber)
         
@@ -248,15 +250,15 @@ class V4_TransitAssignment(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
-            congestedAssignmentTool = _MODELLER.tool("inro.emme.transit_assignment.congested_transit_assignment")
-            
-            self.TRACKER.runTool(congestedAssignmentTool,
-                                 transit_assignment_spec= self._GetBaseAssignmentSpec(),
-                                 congestion_function= self._GetFuncSpec(),
-                                 stopping_criteria= self._GetStopSpec(),
-                                 scenario= self.Scenario)
-            
-            print "Done"
+            with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
+                congestedAssignmentTool = _MODELLER.tool("inro.emme.transit_assignment.congested_transit_assignment")
+                
+                self.TRACKER.runTool(congestedAssignmentTool,
+                                     transit_assignment_spec= self._GetBaseAssignmentSpec(),
+                                     congestion_function= self._GetFuncSpec(),
+                                     stopping_criteria= self._GetStopSpec(),
+                                     impedances= impedanceMatrix,
+                                     scenario= self.Scenario)
 
     ##########################################################################################################
     
@@ -311,24 +313,39 @@ class V4_TransitAssignment(_m.Tool()):
                     "perception_factor": self.WalkPerception
                 },
                 "aux_transit_cost": None,
-                "flow_distribution_with_aux_transit_choices": {
-                    "choices_at_nodes": "LOGIT_ON_ALL_CONNECTORS",
-                    "logit_parameters": {
-                        "scale": self._connectorLogitScale,
-                        "truncation": self._connectorLogitTruncation
-                    },
-                    "alighting_choices": None,
-                    "fixed_proportions_on_connectors": None
-                },
-                "flow_distribution_between_lines": {
-                    "consider_total_impedance": self._considerTotalImpedance
-                },
                 "connector_to_connector_path_prohibition": None,
                 "od_results": {
                     "total_impedance": None
                 },
                 "type": "EXTENDED_TRANSIT_ASSIGNMENT"
             }
+        
+        if self._useEmme41Beta:
+            baseSpec ["flow_distribution_with_aux_transit_choices"] = {
+                                    "choices_at_nodes": "LOGIT_ON_ALL_CONNECTORS",
+                                    "logit_parameters": {
+                                        "scale": self._connectorLogitScale,
+                                        "truncation": self._connectorLogitTruncation
+                                    },
+                                    "alighting_choices": None,
+                                    "fixed_proportions_on_connectors": None
+                                }
+            baseSpec['flow_distribution_between_lines'] = {
+                    "consider_total_impedance": self._considerTotalImpedance
+                }
+        else:
+            baseSpec['flow_distribution_at_origins'] = {
+                                                        "by_time_to_destination": {
+                                                        "logit": {
+                                                            "scale": self._connectorLogitScale,
+                                                            "truncation": self._connectorLogitTruncation
+                                                        }
+                                                    },
+                                                    "by_fixed_proportions": None}
+            baseSpec['flow_distribution_between_lines'] = {
+                                        "consider_travel_time": self._considerTotalImpedance
+                                    }
+            baseSpec['save_strategies'] = True
         
         if self._useMulticore:
             baseSpec["performance_settings"] = {"number_of_processors": 8}
@@ -347,7 +364,6 @@ class V4_TransitAssignment(_m.Tool()):
                     }
         
         return funcSpec
-        #return str(funcSpec) #The tool is expecting this as a string, not a dict
     
     def _GetStopSpec(self):
         stopSpec = {
@@ -355,7 +371,7 @@ class V4_TransitAssignment(_m.Tool()):
                     "normalized_gap": self.NormGap,
                     "relative_gap": self.RelGap
                     }
-        return stopSpec #The tool is expecting this one as a dict, not a string
+        return stopSpec
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
