@@ -43,6 +43,7 @@ from contextlib import nested
 from os import path as _path
 _util = _m.Modeller().module('TMG2.Common.Utilities')
 _tmgTPB = _m.Modeller().module('TMG2.Common.TmgToolPageBuilder')
+NullPointerException = _util.NullPointerException
 
 ##########################################################################################################
 
@@ -68,7 +69,6 @@ class ExportTransitBoardings(_m.Tool()):
         #ENTER IN THE NUMBER OF TASKS. THIS WILL CRASH OTHERWISE.
         self._tracker = _util.ProgressTracker(4)
         self.ScenarioString = ""
-        self.OutputFile = ""
         self.LineSelectorExpression = "all"
         self._aggregation = {}
         self.scenario = _m.Modeller().scenario
@@ -112,7 +112,7 @@ class ExportTransitBoardings(_m.Tool()):
                            note="<font color='green'><b>Optional: \
                             </b></font>Aggregation file contains two columns with no headers, matching transit\
                             <br>line IDs to their aliases or groups in another data source (e.g., TTS line IDs). The\
-                            <br>first column must be transit line IDs. Any errors are skipped.")
+                            <br>first column must be Emme transit line IDs. Any errors are skipped.")
         
         pb.add_select_file(tool_attribute_name='OutputFile',
                            title="Output file name:",
@@ -126,6 +126,11 @@ class ExportTransitBoardings(_m.Tool()):
         self.tool_run_msg = ""
         
         try:
+            if self.OutputFile == None: raise NullPointerException("Output file not specified")
+            if self.AssignmentPeriod == None: raise NullPointerException("Assignment period not specified")
+            if self.AssignmentPeriod == None: raise NullPointerException("Assignment period not specified")
+            
+            
             self._execute()
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
@@ -141,6 +146,8 @@ class ExportTransitBoardings(_m.Tool()):
         scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
         if scenario == None:
             raise Exception("Scenario %s was not found!" %ScenarioNumber)
+        if not scenario.has_transit_results:
+            raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber) 
         
         self.OutputFile = OutputFile
         self.LineSelectorExpression = LineSelectorExpression

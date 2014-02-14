@@ -275,6 +275,8 @@ def renumberTransitVehicle(oldVehicle, newId):
     try:
         newVehicle = net.create_transit_vehicle(newId, oldVehicle.mode.id)
         created = True
+        for att in newVehicle._attributes.iterkeys():
+            newVehicle[att] = oldVehicle[att]        
         
         dependants = [line for line in net.transit_lines() if line.vehicle.number == oldVehicle.number]
         for line in dependants:

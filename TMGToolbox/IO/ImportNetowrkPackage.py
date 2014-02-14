@@ -49,6 +49,8 @@ Import Network Package
         
     0.4.1 Minor update to check for null export file
     
+    0.5.0 Added XTMF interface to script
+    
 '''
 
 import inro.modeller as _m
@@ -69,7 +71,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ImportNetworkPackage(_m.Tool()):
     
-    version = '0.4.1'
+    version = '0.5.0'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -154,6 +156,18 @@ class ImportNetworkPackage(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario %s created." %self.ScenarioId)
     
+    
+    def __call__(self, NetworkPackageFile, ScenarioId):
+        
+        self.NetworkPackageFile = NetworkPackageFile
+        self.ScenarioDescription = ""
+        self.ScenarioId = ScenarioId
+        
+        try:
+            self._Execute()
+        except Exception, e:
+            msg = str(e) + "\n" + _traceback.format_exc(e)
+            raise Exception(msg)
     
     ##########################################################################################################    
     

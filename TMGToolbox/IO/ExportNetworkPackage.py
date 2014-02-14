@@ -55,6 +55,8 @@ Export Network Package
             
     0.4.1 Minor update to check for null export file
     
+    0.5.0 Added XTMF interface to script
+    
 '''
 
 import inro.modeller as _m
@@ -75,7 +77,7 @@ _inroExportUtil = _MODELLER.module("inro.emme.utility.export_utilities")
 
 class ExportNetworkPackage(_m.Tool()):
     
-    version = '0.4.1'
+    version = '0.5.0'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -87,6 +89,9 @@ class ExportNetworkPackage(_m.Tool()):
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     ExportFile = _m.Attribute(str)
     AttributeIdsToExport = _m.Attribute(_m.ListType)
+    
+    xtmf_AttributeIdString = _m.Attribute(str)
+    xtmf_ScenarioNumber = _m.Attribute(int)
     
     def __init__(self):
         #---Init internal variables
@@ -158,6 +163,24 @@ class ExportNetworkPackage(_m.Tool()):
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario exported to %s" %self.ExportFile)
+    
+    
+    
+    def __call__(self, xtmf_ScenarioNumber, ExportFile, xtmf_AttributeIdString):
+        
+        self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
+        if (self.Scenario == None):
+            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+        
+        self.ExportFile = ExportFile
+        cells = xtmf_AttributeIdString.split(',')
+        self.AttributeIdsToExport = [str(c.strip()) for c in cells if c.strip()] #Clean out null values
+        
+        try:
+            self._Execute()
+        except Exception, e:
+            msg = str(e) + "\n" + _traceback.format_exc(e)
+            raise Exception(msg)
     
     ##########################################################################################################    
     
