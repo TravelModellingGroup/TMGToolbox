@@ -237,11 +237,15 @@ class V4_TransitAssignment(_m.Tool()):
         self.NormGap = NormGap
         self.RelGap = RelGap
         
+        print "Running V4 Transit Assignment"
+        
         try:
             self._Execute()
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
+        
+        print "Done running transit assignment"
     
     ##########################################################################################################    
     

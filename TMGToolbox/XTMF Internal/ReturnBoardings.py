@@ -59,7 +59,7 @@ class ReturnBoardings(_m.Tool()):
     #    get initialized during construction (__init__)
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
-    xtmf_LineAggregationString = _m.Attribute(str)
+    xtmf_LineAggregationFile = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -76,31 +76,36 @@ class ReturnBoardings(_m.Tool()):
     
     ##########################################################################################################
             
-    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationString):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile):
+        
+        _m.logbook_write("Extracting boarding results")
         
         #---1 Set up scenario
         scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         if not scenario.has_transit_results:
-            raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber)      
+            raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber)              
         
-        #Don't need to surround with a try/catch since this is coming directly out
-        # of the XTMF module
-        lineAggregation = loads(xtmf_LineAggregationString)
-              
+        self.xtmf_LineAggregationFile = xtmf_LineAggregationFile
+        
         try:
-            return self._Execute(scenario, lineAggregation)
+            return self._Execute(scenario)
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     
     ##########################################################################################################    
     
-    def _Execute(self, scenario, lineAggregation):
+    def _Execute(self, scenario):
+        lineAggregation = self._LoadLineAggregationFile()
+        print "Loaded line aggregation file."
+        
         network = scenario.get_network()
+        print "Loaded network"
         
         self._CheckAggregationFile(network, lineAggregation)
+        print "Aggregation file checked."
         
         results = {}
         self.TRACKER.startProcess(network.element_totals['transit_segments'])
@@ -116,7 +121,19 @@ class ReturnBoardings(_m.Tool()):
             else:
                 results[lineGroupId] = segment.transit_boardings
         self.TRACKER.completeTask()
+        print "Done extracting results in Python."
         return str(results)            
+    
+    def _LoadLineAggregationFile(self):
+        mapping = {}
+        with open(self.xtmf_LineAggregationFile) as reader:
+            reader.readline()
+            for line in reader:
+                cells = line.strip().split(',')
+                key = cells[0].strip()
+                val = cells[1].strip()
+                mapping[key] = val
+        return mapping
     
     def _CheckAggregationFile(self, network, lineAggregation):
         netSet = set([line.id for line in network.transit_lines()])
@@ -126,17 +143,17 @@ class ReturnBoardings(_m.Tool()):
         linesMappedButNotInNetwork = [id for id in (aggSet - netSet)]
         
         if len(linesMappedButNotInNetwork) > 0:
-            msg = "%s lines have been found in the network without a line grouping: "
+            msg = "%s lines have been found in the network without a line grouping: " %len(linesInNetworkButNotMapped)
             msg += ",".join(linesInNetworkButNotMapped[:10])
             if len(linesInNetworkButNotMapped) > 10:
-                msg += "...(%s more)" %len(linesInNetworkButNotMapped) - 10
+                msg += "...(%s more)" %(len(linesInNetworkButNotMapped) - 10)
             print msg
             
         if len(linesMappedButNotInNetwork) > 0:
-            msg = "%s lines have been found in the aggregation file but do not exist in the network: "
+            msg = "%s lines have been found in the aggregation file but do not exist in the network: " %len(linesMappedButNotInNetwork)
             msg += ",".join(linesMappedButNotInNetwork[:10])
             if len(linesMappedButNotInNetwork) > 10:
-                msg += "...(%s more)" %len(linesMappedButNotInNetwork) - 10
+                msg += "...(%s more)" %(len(linesMappedButNotInNetwork) - 10)
             print msg
     
     ##########################################################################################################
