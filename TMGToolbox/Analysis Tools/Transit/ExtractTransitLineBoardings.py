@@ -126,10 +126,7 @@ class ExportTransitBoardings(_m.Tool()):
         self.tool_run_msg = ""
         
         try:
-            if self.OutputFile == None: raise NullPointerException("Output file not specified")
-            if self.AssignmentPeriod == None: raise NullPointerException("Assignment period not specified")
-            if self.AssignmentPeriod == None: raise NullPointerException("Assignment period not specified")
-            
+            if self.OutputFile == None: raise NullPointerException("Output file not specified")           
             
             self._execute()
         except Exception, e:
