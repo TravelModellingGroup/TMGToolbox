@@ -51,7 +51,7 @@ class V4_TransitAssignment(_m.Tool()):
     
     version = '0.0.1'
     tool_run_msg = ""
-    number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 2 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -69,6 +69,7 @@ class V4_TransitAssignment(_m.Tool()):
     BoardPerception = _m.Attribute(float)
     CongestionPerception = _m.Attribute(float)
     AssignmentPeriod = _m.Attribute(float)
+    GoTrainHeadwayFraction = _m.Attribute(float)
     
     Iterations = _m.Attribute(int)
     NormGap = _m.Attribute(float)
@@ -80,19 +81,19 @@ class V4_TransitAssignment(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
-        self.DemandMatrix = _MODELLER.emmebank.matrix('mf9')
+        self.DemandMatrix = _MODELLER.emmebank.matrix('mf15')
         self.WaitPerception = 1.0
         self.WalkPerception = 1.0
         self.BoardPerception = 1.0
         self.CongestionPerception = 1.0
-        self.AssignmentPeriod = 1.0 / 3.0
+        self.AssignmentPeriod = 3.0 
         self.NormGap = 0.01
         self.RelGap = 0.001
         self.Iterations = 20
+        self.GoTrainHeadwayFraction = 0.5
         
         #---Priavte flags for estimation purposes only
         self._useEmme41Beta = False
-        self._headwayFraction = 0.5
         
         self._useLogitConnectorChoice = True
         self._connectorLogitScale = 0.2
@@ -133,6 +134,14 @@ class V4_TransitAssignment(_m.Tool()):
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
+            with t.table_cell():
+                 pb.add_html("<b>GO Rail Headway Fraction:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'GoTrainHeadwayFraction', size= 10)
+            with t.table_cell():
+                pb.add_html("Applied to GO Rail nodes only (98000 <= i < 99000).")
+            t.new_row()
+            
             with t.table_cell():
                  pb.add_html("<b>Wait Time Perception:</b>")
             with t.table_cell():
@@ -213,7 +222,7 @@ class V4_TransitAssignment(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
-    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, WaitPerception,
+    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
                  WalkPerception, BoardPerception, CongestionPerception, AssignmentPeriod,
                  Iterations, NormGap, RelGap):
         
@@ -228,6 +237,7 @@ class V4_TransitAssignment(_m.Tool()):
             raise Exception("Full matrix mf%s was not found!" %xtmf_DemandMatrixNumber)
         
         #---3 Set up other parameters
+        self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
         self.WaitPerception = WaitPerception
         self.WalkPerception = WalkPerception
         self.BoardPerception = BoardPerception
@@ -254,11 +264,16 @@ class V4_TransitAssignment(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
-            with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
-                congestedAssignmentTool = _MODELLER.tool("inro.emme.transit_assignment.congested_transit_assignment")
+            with nested(_util.tempMatrixMANAGER('Temp impedances'),
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', 
+                                                        default= 0.5, description= "Headway fraction")) \
+                    as (impedanceMatrix, headwayFractionAttribute):
                 
+                self._AssignHeadwayFraction(headwayFractionAttribute.id)
+                
+                congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
                 self.TRACKER.runTool(congestedAssignmentTool,
-                                     transit_assignment_spec= self._GetBaseAssignmentSpec(),
+                                     transit_assignment_spec= self._GetBaseAssignmentSpec(headwayFractionAttribute.id),
                                      congestion_function= self._GetFuncSpec(),
                                      stopping_criteria= self._GetStopSpec(),
                                      impedances= impedanceMatrix,
@@ -285,12 +300,26 @@ class V4_TransitAssignment(_m.Tool()):
             
         return atts 
     
-    def _GetBaseAssignmentSpec(self):
+    def _AssignHeadwayFraction(self, headwayFractionAttributeId):
+        spec = {
+                "result": headwayFractionAttributeId,
+                "expression": str(self.GoTrainHeadwayFraction),
+                "aggregation": None,
+                "selections": {
+                    "node": "i=98000,99000"
+                },
+                "type": "NETWORK_CALCULATION"
+            }
+        
+        tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
+        self.TRACKER.runTool(tool, specification= spec, scenario= self.Scenario)
+    
+    def _GetBaseAssignmentSpec(self, headwayFractionAttributeId):
         baseSpec = {
                 "modes": ["*"],
                 "demand": self.DemandMatrix.id,
                 "waiting_time": {
-                    "headway_fraction": self._headwayFraction,
+                    "headway_fraction": headwayFractionAttributeId,
                     "effective_headways": "hdw",
                     "spread_factor": 1,
                     "perception_factor": self.WaitPerception
@@ -355,7 +384,6 @@ class V4_TransitAssignment(_m.Tool()):
             baseSpec["performance_settings"] = {"number_of_processors": 8}
         
         return baseSpec
-        #return str(baseSpec) #The tool is expecting this as a string, not a dict
     
     def _GetFuncSpec(self):
         funcSpec = {
