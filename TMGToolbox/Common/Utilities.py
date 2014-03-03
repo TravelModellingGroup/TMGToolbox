@@ -125,6 +125,60 @@ def getAvailableScenarioNumber():
     
     raise inro.emme.core.exception.CapacityError("No new scenarios are available: databank is full!")
 
+TEMP_ATT_PREFIXES = {'NODE': 'ti',
+                     'LINK': 'tl',
+                     'TURN': 'tp',
+                     'TRANSIT_LINE': 'tt',
+                     'TRANSIT_SEGMENT': 'ts'}
+
+@contextmanager
+def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None):
+    '''
+    Creates a temporary extra attribute in a given scenario, yield-returning the
+    attribute object. Designed to be used as a context manager, for cleanup
+    after a run.
+    
+    Extra attributes are labeled thusly:
+        - Node: @ti123
+        - Link: @tl123
+        - Turn: @tp123
+        - Transit Line: @tt123
+        - Transit Segment: @ts123
+        (where 123 is replaced by a number)
+        
+    Args: (scenario, domain, default= 0.0, description= None)
+        - scenario= The Emme scenario object in which to create the extra attribute
+        - domain= One of 'NODE', 'LINK', 'TURN', 'TRANSIT_LINE', 'TRANSIT_SEGMENT'
+        - default= The default value of the extra attribute
+        - description= An optional description for the attribute
+    '''
+    
+    domain = str(domain).upper()
+    if not domain in TEMP_ATT_PREFIXES:
+        raise TypeError("Domain '%s' is not a recognized extra attribute domain." %domain)
+    prefix = TEMP_ATT_PREFIXES[domain]
+    existingAttributeSet = set([att.name for att in scenario.extra_attributes() if att.type == domain])
+    
+    index = 1
+    id = "@%s%s" %(prefix, index)
+    while id in existingAttributeSet:
+        index += 1
+        id = "@%s%s" %(prefix, index)
+        if index > 999:
+            raise Exception("Scenario %s already has 999 temporary extra attributes" %scenario)
+    tempAttribute = scenario.create_extra_attribute(domain, id, default)
+    msg = "Created temporary extra attribute %s in scenario %s" %(id, scenario)
+    if description:
+        tempAttribute.description = description
+        msg += ": %s" %description
+    _m.logbook_write(msg)
+    
+    try:
+        yield tempAttribute
+    finally:
+        scenario.delete_extra_attribute(id)
+        _m.logbook_write("Deleted extra attribute %s" %id)
+        
 @contextmanager
 def tempMatrixMANAGER(description="[No description]"):
     #Code here is executed upon entry
