@@ -192,7 +192,6 @@ def tempMatrixMANAGER(description="[No description]"):
         raise Exception("Could not create temporary matrix: %s" %description)
     
     s = "Created temporary matrix {0}: {1}.".format(id, description)
-    print s
     _m.logbook_write(s)
     
     try:
@@ -201,7 +200,6 @@ def tempMatrixMANAGER(description="[No description]"):
         databank.delete_matrix(id)
         
         s = "Deleted matrix %s." %id
-        print s
         _m.logbook_write(s)
 
 def getExtents(network):
