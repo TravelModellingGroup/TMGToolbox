@@ -37,6 +37,32 @@ class Face(_m.Tool()):
 
 #-------------------------------------------------------------------------------------------
 
+def createSegmentAlightingsAttribute(network):
+    '''
+    The Emme Network API does not by default define an attribute
+    for transit alightings on a segment, so this utility function
+    create and calculates that attribute.
+    
+    Since this is NOT an extra attribute, it can be accessed using
+    the '.' operand e.g.:
+    >>> segment.transit_alightings #This is valid
+    '''
+    
+    if 'transit_alightings' in network.attributes('TRANSIT_SEGMENT'):
+        #If the attribute already exists, re-initialize it.
+        network.delete_attribute('TRANSIT_SEGMENT', 'transit_alightings') 
+    network.create_attribute('TRANSIT_SEGMENT', 'transit_alightings', 0.0)
+    
+    for line in network.transit_lines():
+        for i, segment in enumerate(line.segments(include_hidden=True)):
+            if i > 0:
+                a = prevVolume + segment.transit_boardings - segment.transit_volume
+                if a < 0: a = 0.0 #Alightings can be negative due to rounding error
+                segment.transit_alightings = a
+            prevVolume = segment.transit_volume 
+
+#-------------------------------------------------------------------------------------------
+
 def isLinkParallel(link):
     '''
     Tests if a link is parallel with its reverse, based on vertices.
@@ -213,7 +239,7 @@ def addReverseLink(link):
     Args:
         - link= The link to copy
     
-    Returns: The new link 
+    Returns: The reverse link (whether it's new or not).
     '''
     if link.reverse_link != None:
         return link.reverse_link
@@ -242,6 +268,7 @@ def changeTransitLineId(line, newId):
     
     Returns: the modified transit line object
     '''
+    
     network = line.segment(0).link.network
     proxy = TransitLineProxy(line)
     proxy.id = newId
@@ -313,6 +340,7 @@ def mergeLinks(node, deleteStop=False, linkOverride={}, segmentOverride={}):
         
     Returns: None
     '''
+    
     neighbourSet = set([link.j_node for link in node.outgoing_links()])
     if len(neighbourSet) != 2:
         raise Exception("Can only delete nodes with a degree of 2 (found %s)" %len(neighbourSet))
