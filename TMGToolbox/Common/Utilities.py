@@ -42,6 +42,8 @@ class Face(_m.Tool()):
         
         return pb.render()
 
+#-------------------------------------------------------------------------------------------
+
 def formatReverseStack():
     eType, eVal, eTb = _sys.exc_info()
     stackList = _tb.extract_tb(eTb)
@@ -51,10 +53,16 @@ def formatReverseStack():
         msg += "\n  File '%s', line %s, in %s" %(file, line, func)
     return msg
 
+#-------------------------------------------------------------------------------------------
 
-# Truncates a string to a desired length
+#@deprecated: 
 def truncateString(s, num):
+    '''    
+    Truncates string 's' to desired length 'num'.
+    '''
     return s[:num]
+
+#-------------------------------------------------------------------------------------------
 
 _mtxNames = {'FULL' : 'mf',
              'DESTINATION' : 'md',
@@ -62,6 +70,25 @@ _mtxNames = {'FULL' : 'mf',
              'SCALAR' : 'ms'}
 
 def initMatrix2(id=None, default=0, name="", description="", matrix_type='FULL'):
+    '''
+    Utility function for creation and initialization of matrices.
+    
+    Args:
+        - id (=None): String id (e.g. 'mf2') If specified, this function will 
+            initialize the given matrix (if it exists) or create it (if it 
+            does not). If left blank, an available matrix will be found.
+        - default (=0): The numerical value to initialize the matrix to (i.e.,
+            its default value).
+        - name (=""): The 6-character name of the matrix. Will be truncated
+            if longer.
+        - description (=""): The 40-character descriptor for the matrix. Will
+            be truncated if longer.
+        - matrix_type (='FULL'): One of 'SCALAR', 'ORIGIN', 'DESTINATION',
+            or 'FULL'. If an ID is specified, the matrix type will be
+            inferred from the ID's prefix.
+    
+    Returns: The Emme Matrix object created or initialized.
+    '''
     
     databank = _m.Modeller().emmebank
     
@@ -94,6 +121,9 @@ def initMatrix2(id=None, default=0, name="", description="", matrix_type='FULL')
     
     return mtx        
 
+#-------------------------------------------------------------------------------------------
+
+#@deprecated
 # Initialize a matrix safely, by checking if it exists or not
 def initMatrix(id, default, name, descr):
     try:
@@ -118,12 +148,20 @@ def initMatrix(id, default, name, descr):
     
     return None
 
+#-------------------------------------------------------------------------------------------
+
 def getAvailableScenarioNumber():
+    '''
+    Returns: The number of an available scenario. Raises an exception
+    if the databank is full.
+    '''
     for i in range(0, _m.Modeller().emmebank.dimensions['scenarios']):
         if _m.Modeller().emmebank.scenario(i + 1) == None:
             return (i + 1)
     
     raise inro.emme.core.exception.CapacityError("No new scenarios are available: databank is full!")
+
+#-------------------------------------------------------------------------------------------
 
 TEMP_ATT_PREFIXES = {'NODE': 'ti',
                      'LINK': 'tl',
@@ -151,6 +189,8 @@ def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None)
         - domain= One of 'NODE', 'LINK', 'TURN', 'TRANSIT_LINE', 'TRANSIT_SEGMENT'
         - default= The default value of the extra attribute
         - description= An optional description for the attribute
+        
+    Yields: The Extra Attribute object created.
     '''
     
     domain = str(domain).upper()
@@ -178,14 +218,24 @@ def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None)
     finally:
         scenario.delete_extra_attribute(id)
         _m.logbook_write("Deleted extra attribute %s" %id)
-        
+
+#-------------------------------------------------------------------------------------------
+
 @contextmanager
-def tempMatrixMANAGER(description="[No description]"):
-    #Code here is executed upon entry
+def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', default=0.0):
+    '''
+    Creates a temporary matrix in a context manager.
+    
+    Args:
+        - description (="[No description]"): The description of the temporary matrix.
+        - matrix_type (='FULL'): The type of temporary matrix to create. One of 
+            'SCALAR', 'ORIGIN', 'DESTINATION', or 'FULL'.
+        - default (=0.0): The matrix's default value.
+    '''
     
     databank = _m.Modeller().emmebank
-    id = databank.available_matrix_identifier('FULL')
-    mtx = initMatrix(id, 0, id, 
+    id = databank.available_matrix_identifier(matrix_type)
+    mtx = initMatrix(id, default, id, 
                      description)
     
     if mtx == None:
@@ -202,17 +252,25 @@ def tempMatrixMANAGER(description="[No description]"):
         s = "Deleted matrix %s." %id
         _m.logbook_write(s)
 
+#-------------------------------------------------------------------------------------------
+
+#@deprecated: 
 def getExtents(network):
-     minX = float('inf')
-     maxX = - float('inf')
-     minY = float('inf')
-     maxY = - float('inf')
-     for node in network.nodes():
-          minX = min(minX, node.x)
-          maxX = max(maxX, node.x)
-          minY = min(minY, node.y)
-          maxY = max(maxY, node.y)
-     return Extents(minX - 1.0, minY - 1.0, maxX + 1.0, maxY + 1.0)
+    '''
+    Creates an Extents object from the given Network.
+    '''
+    minX = float('inf')
+    maxX = - float('inf')
+    minY = float('inf')
+    maxY = - float('inf')
+    for node in network.nodes():
+        minX = min(minX, node.x)
+        maxX = max(maxX, node.x)
+        minY = min(minY, node.y)
+        maxY = max(maxY, node.y)
+    return Extents(minX - 1.0, minY - 1.0, maxX + 1.0, maxY + 1.0)
+
+#-------------------------------------------------------------------------------------------
 
 class IntRange():
     '''
@@ -257,9 +315,13 @@ class IntRange():
     def overlaps(self, otherRange):
         return otherRange.min in self or otherRange.max in self or self.max in otherRange or self.min in otherRange
     
-
+#-------------------------------------------------------------------------------------------
 
 class FloatRange():
+    '''
+    Represents a range of float values. Supports containment and
+    overlapping boolean operations.
+    '''
     
     def __init__(self, min, max):
         self.min = (float) (min)
@@ -280,7 +342,18 @@ class FloatRange():
     def __str__(self):
         return "%s - %s" %(self.min, self.max)
 
+#-------------------------------------------------------------------------------------------
+
 def buildSearchGridFromNetwork(network, gridSize=100, loadNodes=True, loadCentroids=False):
+    '''
+    Creates a NodeSearchGrid object from the network.
+    
+    Args:
+        - network: An Emme Network object.
+        - gridSize (=100): The number of rows and columns in the grid (e.g., 100x100 by default)
+        - loadNodes (=True): Boolean flag whether to load the network's regular nodes into the grid.
+        - loadCentroids (=False): Boolean flag whether to load the network's centroids into the grid.
+    '''
     extents = getExtents(network)
     grid = NodeSearchGrid(extents, gridSize)
     
@@ -293,7 +366,14 @@ def buildSearchGridFromNetwork(network, gridSize=100, loadNodes=True, loadCentro
             
     return grid
 
+#-------------------------------------------------------------------------------------------
+
 class NodeSearchGrid():
+    
+    '''
+    A simple spatial index for searching for nodes/points.
+    '''
+    
     def __init__(self, extents, gridSize=100):
         self.extents = extents
         #(minX, minY, maxX, maxY)
@@ -364,6 +444,8 @@ class NodeSearchGrid():
         
         return [tuple[1] for tuple in nearestNodes]
 
+#-------------------------------------------------------------------------------------------
+
 class Extents():
     
     def __init__(self, minX, minY, maxX, maxY):
@@ -376,7 +458,19 @@ class Extents():
     def __str__(self):
         return "Extents(X=%s Y=%s)" %(self.xrange, self.yrange)
 
+#-------------------------------------------------------------------------------------------
+
 class ProgressTracker():
+    
+    '''
+    Convenience class for tracking and reporting progress. Also
+    captures the progress from other Emme Tools (such as those
+    provided by INRO), and combines with a total progress.
+    
+    Handles progress at two levels: Tasks and Subtasks. Running
+    an Emme Tool counts as a Task. The total number of tasks 
+    must be known at initialization.
+    '''
     
     def __init__(self, numberOfTasks):
         self._taskIncr = 1000.0 / numberOfTasks #floating point number
@@ -392,6 +486,13 @@ class ProgressTracker():
         self._activeTool = None
     
     def completeTask(self):
+        '''
+        Call to indicate a Task is complete.
+        
+        This function is called automatically
+        at the end of a Subtask and at the end
+        of a Tool run.
+        '''
         if self._processIsRunning:
             self._processIsRunning =False
             self._subTasks = 0
@@ -399,6 +500,15 @@ class ProgressTracker():
         self._progress += self._taskIncr
     
     def runTool(self, tool, *args, **kwargs):
+        '''
+        Launches another Emme Tool, 'capturing' its progress
+        to report a combined overall progress.
+        
+        Args:
+            - tool: The Emme Tool to run
+            - *args, **kwargs: The arguments & keyword arguments
+                to be passed to the Emme Tool.
+        '''
         self._activeTool = tool
         self._toolIsRunning = True
         #actually run the tool. no knowledge of the arguments is required.
@@ -409,11 +519,19 @@ class ProgressTracker():
         return ret
     
     def startProcess(self, numberOfSubtasks):
+        '''
+        Tells the Tracker to start up a new Task
+        with a given number of Subtasks.
+        '''
         self._subTasks = numberOfSubtasks
         self._completedSubtasks = 0
         self._processIsRunning = True            
     
     def completeSubtask(self):
+        '''
+        Call to indicate that a Subtask is complete.
+        '''
+        
         if not self._processIsRunning:
             return
         
@@ -427,6 +545,11 @@ class ProgressTracker():
     
     @_m.method(return_type=_m.TupleType)
     def getProgress(self):
+        '''
+        Call inside a Tool's percent_completed method
+        in order to report that Tool's progress.
+        '''
+        
         if self._toolIsRunning:
             tup = self._activeTool.percent_completed()
             if tup[2] == None: # Tool is returning the 'marquee' display option
