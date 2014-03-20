@@ -250,9 +250,10 @@ class ImportNetworkPackage(_m.Tool()):
                             self.TRACKER.completeSubtask()
                 self.TRACKER.completeTask()
                 
-                zf.extract(self.__components[6], tempFolder)
-                mergeFunctionsTool.FunctionFile = "%s/%s" %(tempFolder, self.__components[6])
-                mergeFunctionsTool.run()
+                if "functions.411" in self.__components:       
+                    zf.extract(self.__components[6], tempFolder)
+                    mergeFunctionsTool.FunctionFile = "%s/%s" %(tempFolder, self.__components[6])
+                    mergeFunctionsTool.run()
                 self.TRACKER.completeTask()
                         
 
