@@ -16,7 +16,6 @@
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
-
 '''
 Contains a bunch of Python utility functions commonly used in TMG tools
 and products. Set up as a non-runnable (e.g. private) Emme module so that
@@ -27,10 +26,11 @@ it can be distributed in the TMG toolbox
 import inro.modeller as _m
 import math
 import inro.emme.core.exception as _excep
-from contextlib import contextmanager
+from contextlib import contextmanager, nested
 import warnings as _warn
 import sys as _sys
 import traceback as _tb
+_MODELLER = _m.Modeller()
 
 class Face(_m.Tool()):
     def page(self):
@@ -55,12 +55,31 @@ def formatReverseStack():
 
 #-------------------------------------------------------------------------------------------
 
-#@deprecated: 
+#@deprecated: Just use Python's builtin functionality instead
 def truncateString(s, num):
     '''    
     Truncates string 's' to desired length 'num'.
     '''
     return s[:num]
+
+#-------------------------------------------------------------------------------------------
+
+def getScenarioModes(scenario, types=['AUTO', 'AUX_AUTO', 'TRANSIT', 'AUX_TRANSIT']):
+    '''
+    Returns a list of mode tuples [(id, type, description)] for a given Scenario object, 
+    bypassing the need to load the Network first.
+    '''
+    '''
+    IMPLEMENTATION NOTE: This currently uses an *undocumented* function for the
+    Scenario object (scenario.modes()). I can confirm that this function exists
+    in Emme 4.0.3 - 4.0.8, and is supported in the 4.1 Beta versions (4.1.0.7 and
+    4.1.0.8). Since this is unsupported, however, there is a possibility that
+    this will need to be changed going forward (possibly using a new function
+    scenario.get_partial_network(...) which is included in 4.1.0.7 but also
+    currently undocumented).
+        - @pkucirek 11/03/2014
+    '''
+    return [(mode.id, mode.type, mode.description) for mode in scenario.modes() if mode.type in types]
 
 #-------------------------------------------------------------------------------------------
 
@@ -197,6 +216,7 @@ def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None)
     if not domain in TEMP_ATT_PREFIXES:
         raise TypeError("Domain '%s' is not a recognized extra attribute domain." %domain)
     prefix = TEMP_ATT_PREFIXES[domain]
+    
     existingAttributeSet = set([att.name for att in scenario.extra_attributes() if att.type == domain])
     
     index = 1
@@ -253,6 +273,8 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
         _m.logbook_write(s)
 
 #-------------------------------------------------------------------------------------------
+
+
 
 #@deprecated: 
 def getExtents(network):
@@ -401,6 +423,33 @@ class NodeSearchGrid():
     def _transformY(self, y):
         return int((y - self.extents.yrange.min) / self._yInterval)
     
+    def getNodesInBox(self, box_tuple_or_geometry):
+        '''
+        Accepts a tuple in (minx, miny, maxx, maxy) format, or a Geometry
+        object.
+        '''
+        if type(box_tuple_or_geometry) == type(()):
+            minx, miny, maxx, maxy = box_tuple_or_geometry
+        elif 'bounds' in dir(box_tuple_or_geometry):
+            minx, miny, maxx, maxy = box_tuple_or_geometry.bounds
+        else:
+            raise TypeError("Box must be a tuple of (minx, miny, maxx, maxy) or a have a 'bounds' property which gives it.")
+        
+        minxi = self._transformX(minx)
+        minyi = self._transformY(miny)
+        maxxi = self._transformX(maxx)
+        maxyi = self._transformY(maxy)
+        
+        xRange = range(minxi, maxxi + 1)
+        yRange = range(minyi, maxyi + 1)
+        
+        retval = []
+        for i in xRange:
+            row = self._contents[i]
+            for j in yRange:
+                retval.extend(row[j])
+        return retval
+        
     def getNearestNode(self, x, y, searchRadius=float('inf')):
         if not (x, y) in self.extents:
             return None
@@ -426,6 +475,9 @@ class NodeSearchGrid():
     def getNearestNodes(self, x, y, searchRadius=float('inf'), maxNodes=100):
         if not (x, y) in self.extents:
             return None
+        
+        xIndex = self._transformX(x)
+        yIndex = self._transformY(y)
         
         xSearcgRange = range(max(0, xIndex - 1), min(self.gridSize, xIndex + 2))
         ySearchRange = range(max(0, yIndex - 1), min(self.gridSize, yIndex + 2))
