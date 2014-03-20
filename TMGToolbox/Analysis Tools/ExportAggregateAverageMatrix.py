@@ -33,6 +33,10 @@ Export Aggregate Average Matrix by Partition
 '''
     0.0.1 Created
     
+    0.1.0 Added XTMF side, which returns the aggregated matrix in third-normalized form as
+        a string. Also added the option to export the results in third-normalize form to
+        the Modeller side.
+    
 '''
 
 import inro.modeller as _m
@@ -47,7 +51,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ExportAggregateAverageMatrix(_m.Tool()):
     
-    version = '0.0.1'
+    version = '0.1.0'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -111,7 +115,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
         self.TRACKER.reset()
         
         try:
-            self._Execute()
+            self._Execute(True)
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
@@ -119,17 +123,24 @@ class ExportAggregateAverageMatrix(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Tool complete.")
     
-    def __call__(self, xtmf_ScenarioNumber):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_PartitionId, MatrixIdToAggregate, WeightingMatrixId):
         
-        raise NotImplementedError("XTMF side not yet implemented!")
+        #raise NotImplementedError("XTMF side not yet implemented!")
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
-            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+            raise Exception("Scenario %s was not found." %xtmf_ScenarioNumber)
+        
+        self.Partition = _MODELLER.emmebank.partition(xtmf_PartitionId)
+        if self.Partition == None:
+            raise Exception("Partition '%s' was not found." %xtmf_PartitionId)
+        
+        self.MatrixIdToAggregate = MatrixIdToAggregate
+        self.WeightingMatrixId = WeightingMatrixId
         
         try:
-            self._Execute()
+            return self._Execute(False)
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
@@ -137,7 +148,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
     ##########################################################################################################    
     
     
-    def _Execute(self):
+    def _Execute(self, writeToFile):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
@@ -154,6 +165,9 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                     partitionAggTool = _MODELLER.tool('inro.emme.standard.matrix_calculation.matrix_partition_aggregation')
                     matrixCalcTool = _MODELLER.tool('inro.emme.standard.matrix_calculation.matrix_calculator')
                     exportMatrixTool = _MODELLER.tool('inro.emme.standard.data.matrix.export_matrices')
+                
+                matrixToAggregate = _MODELLER.emmebank.matrix(self.MatrixIdToAggregate)
+                finalAggregateMatrix.description = matrixToAggregate.description 
                 
                 #Copy the weighting matrix into adjustedDemandMatrix
                 self.TRACKER.runTool(matrixCalcTool, 
@@ -191,19 +205,16 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                                                                 finalAggregateMatrix.id),
                     scenario=self.Scenario)
                 
-                #Export the aggregated matrix
-                aggregation = {'operator': 'sum',
-                               'origins': self.Partition,
-                               'destinations': self.Partition}
-                self.TRACKER.runTool(exportMatrixTool,
-                                matrices=[finalAggregateMatrix],
-                                partition_aggregation=aggregation,
-                                export_file=self.ExportFile,
-                                field_separator=',',
-                                export_format='SCI_DATA_FORMAT',
-                                skip_default_values=False,
-                                full_matrix_line_format='SQUARE',
-                                scenario=self.Scenario)
+                #Return the average matrix
+                retVal = partitionAggTool(finalAggregateMatrix, self.Partition, self.Partition)
+                
+                if writeToFile:
+                    title = ["Value Matrix: %s" %matrixToAggregate.description,
+                             "Weight Matrix: %s" %weightingMatrix.description,
+                             "Partition: %s - %s" %(self.Partition.id, self.Partition.description)]
+                    self._WriteToFile(retVal, "\n".join(title))
+                
+                return retVal
                 
     ##########################################################################################################  
     
@@ -270,7 +281,28 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                     "by_zone": None
                 }
             }
+    
+    def _WriteToFile(self, data, title):
+        with open(self.ExportFile, 'w') as writer:
+            writer.write(title)
+            writer.write("\nO D Val\n")
+            writer.write(self._MatrixDataToString(data))
+    
+    @staticmethod
+    def _MatrixDataToString(data):
+        rows = []
         
+        dim1 = data.indices[0]
+        dim2 = data.indices[1]
+        
+        for i, row in enumerate(data.raw_data):
+            index1 = dim1[i]
+            for j, cell in enumerate(row):
+                index2 = dim2[j]
+                s = "%s %s %s" %(index1, index2, cell)
+                rows.append(s)
+        
+        return "\n".join(rows)
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
