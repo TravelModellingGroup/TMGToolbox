@@ -76,7 +76,7 @@ class CopyZoneSystem2(_m.Tool()):
     
     version = '0.2.0'
     tool_run_msg = ""
-    number_of_tasks = 3 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -163,7 +163,7 @@ class CopyZoneSystem2(_m.Tool()):
         pb.add_text_box(tool_attribute_name='FromZonesToIgnoreSelector',
                         size=100, multi_line=True,
                         title="Zones to Ignore Selector",
-                        note="Emme Network Calculator filter expression to skip over certain \
+                        note="Emme Network Calculator NODE filter expression to skip over certain \
                             zones in the source scenario.")
         
         pb.add_header("TARGET")
@@ -176,7 +176,7 @@ class CopyZoneSystem2(_m.Tool()):
         pb.add_text_box(tool_attribute_name='ToNodesToIgnoreSelector',
                         size=100, multi_line=True,
                         title="Nodes to Ignore Selector",
-                        note="Emme Network Calculator filter expression to prohibit connecting \
+                        note="Emme Network Calculator NODE filter expression to prohibit connecting \
                             to nodes in the target scenario.")
         
         pb.add_header("TOOL OPTIONS")
@@ -305,8 +305,11 @@ class CopyZoneSystem2(_m.Tool()):
                         
                         sourceNetwork = sourceScenario.get_network()
                         self.TRACKER.completeSubtask()
-                finally: 
-                    sourceBank.dispose()
+                finally:
+                    if self.FromEmmebankPath != _MODELLER.emmebank.path:
+                        sourceBank.dispose()
+                
+                
                 
                 #---Load the target network
                 with _util.tempExtraAttributeMANAGER(self.ToScenario, 'NODE') as targetTempAtt:
@@ -357,7 +360,7 @@ class CopyZoneSystem2(_m.Tool()):
             
             #---Publish the network
             if self.PublishNetworkFlag:
-                self.ToScenario.publish_network(targetNetwork)
+                self.ToScenario.publish_network(targetNetwork, True)
             self.TRACKER.completeTask()
             
 
@@ -449,6 +452,7 @@ class CopyZoneSystem2(_m.Tool()):
         grid = _util.buildSearchGridFromNetwork(targetNetwork)
         
         def func(connector, flagAtt, uncopiedConnectors):
+            zone = connector.i_node
             source_jNode = connector.j_node
             target_jNode = grid.getNearestNode(source_jNode.x, source_jNode.y, self.CoordinateTolerance)
             
@@ -460,7 +464,7 @@ class CopyZoneSystem2(_m.Tool()):
                 uncopiedConnectors.append((connector, "Flagged to skip"))
                 return None
             
-            if targetNetwork.link(source_jNode.number, target_jNode.number) != None:
+            if targetNetwork.link(zone.number, target_jNode.number) != None:
                 uncopiedConnectors.append((connector, "Found overlap"))
                 return None
             
@@ -480,7 +484,8 @@ class CopyZoneSystem2(_m.Tool()):
                     targetZone = targetNetwork.create_centroid(zone.number)
                     targetZone.x = zone.x
                     targetZone.y = zone.y
-                raise Exception("Zone %s already exists" %zone.number)
+                else:
+                    raise Exception("Zone %s already exists" %zone.number)
             else:
                 targetZone = targetNetwork.create_centroid(zone.number)
                 targetZone.x = zone.x
@@ -490,8 +495,11 @@ class CopyZoneSystem2(_m.Tool()):
                 target_jNode = getJNodeLambda(connector, flagAtt, uncopiedConnectors)
                 if target_jNode == None: continue #The lambda handles adding to uncopiedConnectors               
                 
-                self._copyConnector(connector, targetNetwork, zone.number, target_jNode.number, atts)
-                count += 1
+                try:
+                    self._copyConnector(connector, targetNetwork, zone.number, target_jNode.number, atts)
+                    count += 1
+                except Exception, e:
+                    uncopiedConnectors.append((connector, str(e)))                
                 
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
@@ -537,7 +545,7 @@ class CopyZoneSystem2(_m.Tool()):
         with Shapely2ESRI(self.ShapefileReport, 'w', Shapely2ESRI.SHP_LINE_TYPE) as writer:
             writer.addField('ZONE', int)
             writer.addField('jNode', int)
-            writer.addField('error')
+            writer.addField('error', str)
             
             for connector, errorMessage in uncopiedConnectors:
                 coordinates = [(connector.i_node.x, connector.i_node.y)]
@@ -545,9 +553,9 @@ class CopyZoneSystem2(_m.Tool()):
                 coordinates.append((connector.j_node.x, connector.j_node.y))
                 
                 ls = _geolib.LineString(coordinates)
-                ls['ZONE'] = connector.i_node.number
-                ls['jNode'] = connector.j_node.number
-                ls['error'] = errorMessage
+                ls['ZONE'] = int(connector.i_node.number)
+                ls['jNode'] = int(connector.j_node.number)
+                ls['error'] = str(errorMessage)
                 
                 writer.writeNext(ls)
                 self.TRACKER.completeSubtask()
