@@ -34,6 +34,10 @@ V4 Transit Assignment
     0.0.1 Created on 2014-02-04 by pkucirek
     
     0.0.2 Added a temporary impedance matrix for compatibility with Emme 4.0.8
+    
+    0.0.3 Added distributed walk time perception attribute; removed singular
+            walk perception parameter. Also adds a new parameter to temporarily
+            increase the capacity of streetcars by a specified factor.
 '''
 
 import inro.modeller as _m
@@ -49,9 +53,9 @@ NullPointerException = _util.NullPointerException
 
 class V4_TransitAssignment(_m.Tool()):
     
-    version = '0.0.1'
+    version = '0.0.3'
     tool_run_msg = ""
-    number_of_tasks = 2 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -64,12 +68,18 @@ class V4_TransitAssignment(_m.Tool()):
     xtmf_DemandMatrixNumber = _m.Attribute(int)
     RunTitle = _m.Attribute(str)
     
+    WalkPerceptionToronto = _m.Attribute(float)
+    WalkPerceptionNonToronto = _m.Attribute(float)
+    WalkPerceptionStationsAndTransfer = _m.Attribute(float)
+    
+    #@deprecated: Trying out differential walk time perceptions
+    #WalkPerception = _m.Attribute(float)
     WaitPerception = _m.Attribute(float)
-    WalkPerception = _m.Attribute(float)
     BoardPerception = _m.Attribute(float)
     CongestionPerception = _m.Attribute(float)
     AssignmentPeriod = _m.Attribute(float)
     GoTrainHeadwayFraction = _m.Attribute(float)
+    StreetcarCapacityFactor = _m.Attribute(float)
     
     Iterations = _m.Attribute(int)
     NormGap = _m.Attribute(float)
@@ -83,7 +93,13 @@ class V4_TransitAssignment(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.DemandMatrix = _MODELLER.emmebank.matrix('mf15')
         self.WaitPerception = 1.0
-        self.WalkPerception = 1.0
+        
+        #self.WalkPerception = 1.0
+        self.WalkPerceptionToronto = 1.0
+        self.WalkPerceptionNonToronto = 1.0
+        self.WalkPerceptionStationsAndTransfer = 1.0
+        
+        self.StreetcarCapacityFactor = 1.0
         self.BoardPerception = 1.0
         self.CongestionPerception = 1.0
         self.AssignmentPeriod = 3.0 
@@ -143,6 +159,14 @@ class V4_TransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
+                 pb.add_html("<b>Streetcar Capacity Factor:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'StreetcarCapacityFactor', size= 10)
+            with t.table_cell():
+                pb.add_html("Applied temporarily to streetcar capacities")
+            t.new_row()
+            
+            with t.table_cell():
                  pb.add_html("<b>Wait Time Perception:</b>")
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'WaitPerception', size= 10)
@@ -151,9 +175,25 @@ class V4_TransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
-                 pb.add_html("<b>Walk Time Perception:</b>")
+                 pb.add_html("<b>Toronto Walk Time Perception:</b>")
             with t.table_cell():
-                pb.add_text_box(tool_attribute_name= 'WalkPerception', size= 10)
+                pb.add_text_box(tool_attribute_name= 'WalkPerceptionToronto', size= 10)
+            with t.table_cell():
+                pb.add_html("Converts walking minutes to impedance")
+            t.new_row()
+            
+            with t.table_cell():
+                 pb.add_html("<b>Non-Toronto Walk Time Perception:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'WalkPerceptionNonToronto', size= 10)
+            with t.table_cell():
+                pb.add_html("Converts walking minutes to impedance")
+            t.new_row()
+            
+            with t.table_cell():
+                 pb.add_html("<b>Transfer Walk Time Perception:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'WalkPerceptionStationsAndTransfer', size= 10)
             with t.table_cell():
                 pb.add_html("Converts walking minutes to impedance")
             t.new_row()
@@ -207,7 +247,9 @@ class V4_TransitAssignment(_m.Tool()):
         try:
             if self.AssignmentPeriod == None: raise NullPointerException("Assignment period not specified")
             if self.WaitPerception == None: raise NullPointerException("Waiting perception not specified")
-            if self.WalkPerception == None: raise NullPointerException("Walking perception not specified")
+            if self.WalkPerceptionToronto == None: raise NullPointerException("Toronto walk perception not specified")
+            if self.WalkPerceptionNonToronto == None: raise NullPointerException("Non-Toronto walk perception not specified")
+            if self.WalkPerceptionStationsAndTransfer == None: raise NullPointerException("Station/Transfer walk perception not specified")
             if self.BoardPerception == None: raise NullPointerException("Boarding perception not specified")
             if self.CongestionPerception == None: raise NullPointerException("Congestion perception not specified")
             if self.Iterations == None: raise NullPointerException("Maximum iterations not specified")
@@ -223,7 +265,8 @@ class V4_TransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
-                 WalkPerception, BoardPerception, CongestionPerception, AssignmentPeriod,
+                 StreetcarCapacityFactor, WalkPerceptionToronto, WalkPerceptionNonToronto, 
+                 WalkPerceptionStationsAndTransfer,  BoardPerception,  CongestionPerception, AssignmentPeriod, 
                  Iterations, NormGap, RelGap):
         
         #---1 Set up scenario
@@ -238,8 +281,13 @@ class V4_TransitAssignment(_m.Tool()):
         
         #---3 Set up other parameters
         self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
+        self.StreetcarCapacityFactor = StreetcarCapacityFactor
+        
         self.WaitPerception = WaitPerception
-        self.WalkPerception = WalkPerception
+        self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
+        self.WalkPerceptionToronto = WalkPerceptionToronto
+        self.WalkPerceptionStationsAndTransfer = WalkPerceptionStationsAndTransfer
+                
         self.BoardPerception = BoardPerception
         self.CongestionPerception = CongestionPerception
         self.AssignmentPeriod = AssignmentPeriod
@@ -266,20 +314,65 @@ class V4_TransitAssignment(_m.Tool()):
             
             with nested(_util.tempMatrixMANAGER('Temp impedances'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', 
-                                                        default= 0.5, description= "Headway fraction")) \
-                    as (impedanceMatrix, headwayFractionAttribute):
+                                                        default= 0.5, description= "Headway fraction"),
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK',
+                                                        default= 1.0, description= "Walk Time perception")) \
+                    as (impedanceMatrix, headwayFractionAttribute, walkPercepAttribute):
+                
+                self.TRACKER.startProcess(2)
                 
                 self._AssignHeadwayFraction(headwayFractionAttribute.id)
+                self.TRACKER.completeSubtask()
                 
-                congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
-                self.TRACKER.runTool(congestedAssignmentTool,
-                                     transit_assignment_spec= self._GetBaseAssignmentSpec(headwayFractionAttribute.id),
-                                     congestion_function= self._GetFuncSpec(),
-                                     stopping_criteria= self._GetStopSpec(),
-                                     impedances= impedanceMatrix,
-                                     scenario= self.Scenario)
+                self._AssignWalkPerception(walkPercepAttribute.id)
+                self.TRACKER.completeSubtask()
+                
+                with self._streetcarCapacityMANAGER():
+                    congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
+                    self.TRACKER.runTool(congestedAssignmentTool,
+                                         transit_assignment_spec= self._GetBaseAssignmentSpec(headwayFractionAttribute.id,
+                                                                                              walkPercepAttribute.id),
+                                         congestion_function= self._GetFuncSpec(),
+                                         stopping_criteria= self._GetStopSpec(),
+                                         impedances= impedanceMatrix,
+                                         scenario= self.Scenario)
 
     ##########################################################################################################
+    
+    @contextmanager
+    def _streetcarCapacityMANAGER(self):
+        
+        streetcarVehicles = [veh for veh in self.Scenario.transit_vehicles() if veh.mode.id == "s"]
+        
+        #Store the original capacities for easy rollback.
+        originalCapacities = {}
+        for veh in streetcarVehicles:
+            originalCapacities[veh.number] = (veh.seated_capacity, veh.total_capacity)
+        
+        changeVehicleTool = _MODELLER.tool('inro.emme.data.network.transit.change_vehicle')
+        self.TRACKER.startProcess(len(streetcarVehicles))
+        with _m.logbook_trace("Modifying streetcar capacities"):
+            for veh in streetcarVehicles:
+                changeVehicleTool(vehicle= veh,
+                                  vehicle_seated_capacity= (veh.seated_capacity * self.StreetcarCapacityFactor),
+                                  vehicle_total_capacity= (veh.total_capacity * self.StreetcarCapacityFactor),
+                                  scenario= self.Scenario)
+                self.TRACKER.completeSubtask()
+        self.TRACKER.completeTask()
+        try:
+            yield
+        finally:
+            #Roll-back vehicle capacities
+            with _m.logbook_trace("Reverting streetcar capacities"):
+                self.TRACKER.startProcess(len(streetcarVehicles))
+                for veh in streetcarVehicles:
+                    caps, capt = originalCapacities[veh.number]
+                    changeVehicleTool(vehicle= veh,
+                                      vehicle_seated_capacity= caps,
+                                      vehicle_total_capacity= capt,
+                                      scenario= self.Scenario)
+                    self.TRACKER.completeSubtask()
+                    self.TRACKER.completeTask()
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
@@ -289,7 +382,10 @@ class V4_TransitAssignment(_m.Tool()):
                 "Version": self.version,
                 "Demand Matrix": "%s - %s" %(self.DemandMatrix, self.DemandMatrix.description),
                 "Wait Perception": self.WaitPerception,
-                "Walk Perception": self.WalkPerception,
+                "Toronto Walk Perception": self.WalkPerceptionToronto,
+                "Non-Toronto Walk Perception": self.WalkPerceptionNonToronto,
+                "Station/Transfer Walk Perception": self.WalkPerceptionStationsAndTransfer,
+                "Streetcar Capacity Factor": self.StreetcarCapacityFactor,
                 "Congestion Perception": self.CongestionPerception,
                 "Assignment Period": self.AssignmentPeriod,
                 "Boarding Perception": self.BoardPerception,
@@ -312,9 +408,30 @@ class V4_TransitAssignment(_m.Tool()):
             }
         
         tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
-        self.TRACKER.runTool(tool, specification= spec, scenario= self.Scenario)
+        tool(specification= spec, scenario= self.Scenario)
     
-    def _GetBaseAssignmentSpec(self, headwayFractionAttributeId):
+    def _AssignWalkPerception(self, walkPercepAttributeId):
+        
+        tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
+        def applySelection(val, selection):
+            spec = {
+                    "result": walkPercepAttributeId,
+                    "expression": str(val),
+                    "aggregation": None,
+                    "selections": {
+                        "link": selection
+                    },
+                    "type": "NETWORK_CALCULATION"
+                }
+            tool(spec, self.Scenario)
+        
+        with _m.logbook_trace("Assigning walk time perception factors"):
+            applySelection(self.WalkPerceptionToronto, "i=0,1000 or j=0,1000 or i=10000,20000 or j=10000,20000 and mode=vw")
+            applySelection(self.WalkPerceptionNonToronto, "i=1000,7000 or j=1000,7000 or i=20000,90000 or j=20000,90000 and mode=vw")
+            applySelection(self.WalkPerceptionStationsAndTransfer, "mode=tuy")
+            applySelection(self.WalkPerceptionStationsAndTransfer, "i=9700,9900 or j=9700,9900 and mode=v")
+    
+    def _GetBaseAssignmentSpec(self, headwayFractionAttributeId, walkPercepAttributeId):
         baseSpec = {
                 "modes": ["*"],
                 "demand": self.DemandMatrix.id,
@@ -343,7 +460,7 @@ class V4_TransitAssignment(_m.Tool()):
                 },
                 "in_vehicle_cost": None,
                 "aux_transit_time": {
-                    "perception_factor": self.WalkPerception
+                                     "perception_factor": walkPercepAttributeId
                 },
                 "aux_transit_cost": None,
                 "connector_to_connector_path_prohibition": None,
