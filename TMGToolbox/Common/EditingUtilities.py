@@ -128,7 +128,7 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor=None, stopOn
     order.sort()
     
     def copyLinkAtts(fromLink, toLink, length, vertexBuffer):
-        for attname in link._attributes.iterkeys(): #A hack to get the attribute names
+        for attname in link.network.attributes('LINK'):
             if attname == 'vertices': continue
             toLink[attname] = fromLink[attname]
         toLink.length = length
@@ -246,7 +246,7 @@ def addReverseLink(link):
     
     network = link.network
     reverse = network.create_link(link.j_node.id, link.i_node.id, link.modes)
-    for att in link._attributes.iterkeys():
+    for att in link.network.attributes('LINK'):
         if att == "vertices":
             continue
         reverse[att] = link[att]
@@ -302,7 +302,7 @@ def renumberTransitVehicle(oldVehicle, newId):
     try:
         newVehicle = net.create_transit_vehicle(newId, oldVehicle.mode.id)
         created = True
-        for att in newVehicle._attributes.iterkeys():
+        for att in newVehicle.network.attributes('TRANSIT_VEHICLE'):
             newVehicle[att] = oldVehicle[att]        
         
         dependants = [line for line in net.transit_lines() if line.vehicle.number == oldVehicle.number]
@@ -495,7 +495,7 @@ class TransitLineProxy():
         self.data3 = line.data3
         
         self.exatts = {}
-        for attId in line._attributes.iterkeys():
+        for attId in line.network.attributes('TRANSIT_LINE'):
             if not attId in self.DEFAULT_ATTS:
                 self.exatts[attId] = line[attId]
         
@@ -553,7 +553,7 @@ class TransitSegmentProxy():
         self.data3 = segment.data3
         
         self.exatts = {}
-        for attId in segment._attributes.iterkeys():
+        for attId in segment.network.attributes('TRANSIT_SEGMENT'):
             if not attId in self.DEFAULT_ATTS:
                 self.exatts[attId] = segment[attId]
     
