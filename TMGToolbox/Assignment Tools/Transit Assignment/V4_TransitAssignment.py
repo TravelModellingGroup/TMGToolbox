@@ -79,7 +79,6 @@ class V4_TransitAssignment(_m.Tool()):
     CongestionPerception = _m.Attribute(float)
     AssignmentPeriod = _m.Attribute(float)
     GoTrainHeadwayFraction = _m.Attribute(float)
-    StreetcarCapacityFactor = _m.Attribute(float)
     
     Iterations = _m.Attribute(int)
     NormGap = _m.Attribute(float)
@@ -99,7 +98,6 @@ class V4_TransitAssignment(_m.Tool()):
         self.WalkPerceptionNonToronto = 1.0
         self.WalkPerceptionStationsAndTransfer = 1.0
         
-        self.StreetcarCapacityFactor = 1.0
         self.BoardPerception = 1.0
         self.CongestionPerception = 1.0
         self.AssignmentPeriod = 3.0 
@@ -156,14 +154,6 @@ class V4_TransitAssignment(_m.Tool()):
                 pb.add_text_box(tool_attribute_name= 'GoTrainHeadwayFraction', size= 10)
             with t.table_cell():
                 pb.add_html("Applied to GO Rail nodes only (98000 <= i < 99000).")
-            t.new_row()
-            
-            with t.table_cell():
-                 pb.add_html("<b>Streetcar Capacity Factor:</b>")
-            with t.table_cell():
-                pb.add_text_box(tool_attribute_name= 'StreetcarCapacityFactor', size= 10)
-            with t.table_cell():
-                pb.add_html("Applied temporarily to streetcar capacities")
             t.new_row()
             
             with t.table_cell():
@@ -265,7 +255,7 @@ class V4_TransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
-                 StreetcarCapacityFactor, WalkPerceptionToronto, WalkPerceptionNonToronto, 
+                 WalkPerceptionToronto, WalkPerceptionNonToronto, 
                  WalkPerceptionStationsAndTransfer,  BoardPerception,  CongestionPerception, AssignmentPeriod, 
                  Iterations, NormGap, RelGap):
         
@@ -281,7 +271,6 @@ class V4_TransitAssignment(_m.Tool()):
         
         #---3 Set up other parameters
         self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
-        self.StreetcarCapacityFactor = StreetcarCapacityFactor
         
         self.WaitPerception = WaitPerception
         self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
@@ -349,16 +338,6 @@ class V4_TransitAssignment(_m.Tool()):
         for veh in streetcarVehicles:
             originalCapacities[veh.number] = (veh.seated_capacity, veh.total_capacity)
         
-        changeVehicleTool = _MODELLER.tool('inro.emme.data.network.transit.change_vehicle')
-        self.TRACKER.startProcess(len(streetcarVehicles))
-        with _m.logbook_trace("Modifying streetcar capacities"):
-            for veh in streetcarVehicles:
-                changeVehicleTool(vehicle= veh,
-                                  vehicle_seated_capacity= (veh.seated_capacity * self.StreetcarCapacityFactor),
-                                  vehicle_total_capacity= (veh.total_capacity * self.StreetcarCapacityFactor),
-                                  scenario= self.Scenario)
-                self.TRACKER.completeSubtask()
-        self.TRACKER.completeTask()
         try:
             yield
         finally:
@@ -385,7 +364,6 @@ class V4_TransitAssignment(_m.Tool()):
                 "Toronto Walk Perception": self.WalkPerceptionToronto,
                 "Non-Toronto Walk Perception": self.WalkPerceptionNonToronto,
                 "Station/Transfer Walk Perception": self.WalkPerceptionStationsAndTransfer,
-                "Streetcar Capacity Factor": self.StreetcarCapacityFactor,
                 "Congestion Perception": self.CongestionPerception,
                 "Assignment Period": self.AssignmentPeriod,
                 "Boarding Perception": self.BoardPerception,
