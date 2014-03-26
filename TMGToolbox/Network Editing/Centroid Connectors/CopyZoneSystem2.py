@@ -542,10 +542,10 @@ class CopyZoneSystem2(_m.Tool()):
     def _WriteShapefile(self, uncopiedConnectors):
         
         self.TRACKER.startProcess(len(uncopiedConnectors))
-        with Shapely2ESRI(self.ShapefileReport, 'w', Shapely2ESRI.SHP_LINE_TYPE) as writer:
-            writer.addField('ZONE', int)
-            writer.addField('jNode', int)
-            writer.addField('error', str)
+        with Shapely2ESRI(self.ShapefileReport, 'w', 'LINESTRING') as writer:
+            writer.addField('ZONE', fieldType= 'INT')
+            writer.addField('jNode', fieldType= 'INT')
+            writer.addField('error', fieldType= 'STR')
             
             for connector, errorMessage in uncopiedConnectors:
                 coordinates = [(connector.i_node.x, connector.i_node.y)]

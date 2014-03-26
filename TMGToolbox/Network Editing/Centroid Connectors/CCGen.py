@@ -385,6 +385,7 @@ class CCGen(_m.Tool()):
                 
                 self.scenario.publish_network(network, resolve_attributes=True) #Resolve the temporary attributes by ignoring them
                 self.report_html = self.FullReportFile
+                _m.Modeller().app.refresh_needed(True)
                 self.tool_run_msg = _m.PageBuilder.format_info("Connector generation complete. {0} zones were connected, with {1} errors.".format(zonesHandled, errors))
 
 
