@@ -153,7 +153,9 @@ class ExtractStationUsage2(_m.Tool()):
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Extract Subway Station Usage v%s" %self.version,
-                     description="[DESCRIPTION]",
+                     description="Extracts boardings and alightings for TTC subway station \
+                         based on auxiliary transit volumes on station-node access and \
+                         egress links.",
                      branding_text="TMG")
         
         if self.tool_run_msg != "": # to display messages in the page
