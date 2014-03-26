@@ -163,9 +163,9 @@ class CopyZoneSystem(_m.Tool()):
                 # Initialize the fields in the DBF
                 writer.addField('Zone')
                 writer.addField('Node')
-                writer.addField('MATCH', pyType=int)
-                writer.addField('Len', pyType=float)
-                writer.addField('Old_Len', pyType=float)
+                writer.addField('MATCH', fieldType='INT')
+                writer.addField('Len', fieldType='float')
+                writer.addField('Old_Len', fieldType='float')
                 
                 handledSum = 0
                 totalSum = 0

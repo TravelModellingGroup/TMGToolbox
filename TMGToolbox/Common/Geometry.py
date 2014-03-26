@@ -29,7 +29,7 @@ _util = _m.Modeller().module('TMG2.Common.Utilities')
 
 class Face(_m.Tool()):
     
-    version = "0.2.0"
+    version = "0.3.0"
     
     def page(self):
         pb = _m.ToolPageBuilder(self, runnable=False, title="Geometry v%s" %self.version,
@@ -180,20 +180,24 @@ def checkSegmentIntersection(coordA1, coordA2, coordB1, coordB2):
 ##################################################################################################################
 #---Field class for storing data about DBF fields
 
-class _stringField():
-    
+class StringField():    
     def __init__(self, name, length=50, decimals=0, default=""):
         self.name = str(name)
         self.length = length
         self.default = default
-    
+        
+        self.type = 'STR'
+        
     def addToDf(self, df):
         df.add_field(self.name, _dbf.FTString, self.length, 0)
     
     def format(self, value):
         return _util.truncateString(str(value), self.length)
+    
+    def __str__(self):
+        return "%s (STR)" %self.name
 
-class _floatField():
+class FloatField():
     def __init__(self, name, length=12, decimals=4, default=0.0):
         if length < 3:
             raise IOError("DBF field definition failed: Field length must be at least 3.")
@@ -206,6 +210,8 @@ class _floatField():
         self.length = length
         self.decimals = decimals
         self.default = default
+        
+        self.type = 'FLOAT'
     
     def addToDf(self, df):
         df.add_field(self.name, _dbf.FTDouble, self.length, self.decimals)
@@ -215,8 +221,11 @@ class _floatField():
         if f < self.min: return self.min
         elif f > self.max: return self.max
         return f
+    
+    def __str__(self):
+        return "%s (FLOAT)" %self.name
 
-class _intField():
+class IntField():
     
     def _getMaxInt(self, length):
         max = 0
@@ -232,6 +241,8 @@ class _intField():
         self.length = length
         self.default = default
         self.name = str(name)
+        
+        self.type = 'INT'
     
     def addToDf(self, df):
         df.add_field(self.name, _dbf.FTInteger, self.length, 0)
@@ -241,17 +252,25 @@ class _intField():
         if i < self.min: return self.min
         elif i > self.max: return self.max
         return i
+    
+    def __str__(self):
+        return "%s (INT)" %self.name
 
-class _boolField():
+class BoolField():
     def __init__(self, name, length=1, decimals=0, default=False):
         self.name = str(name)
         self.default = default
+        
+        self.type = 'BOOL'
     
     def addToDf(self, df):
         df.add_field(self.name, _dbf.FTInteger, 1, 0)
     
     def format(self, value):
         return int(bool(value))
+    
+    def __str__(self):
+        return "%s (BOOL)" %self.name
 
 #---Shapefile class for I/O
 
@@ -286,28 +305,55 @@ class Shapely2ESRI():
     SHP_POLYGON_TYPE = _shp. SHPT_POLYGON
     SHP_NULL_TYPE = _shp.SHPT_NULL
     
-    _pyTypeMap = {int : _intField,
-               float : _floatField,
-               str : _stringField,
-               bool : _boolField}
+    _pyTypeMap = {int : IntField,
+               float : FloatField,
+               str : StringField,
+               bool : BoolField}
     
-    _dbf2fieldMap = {_dbf.FTInteger : _stringField,
-                     _dbf.FTDouble: _floatField,
-                     _dbf.FTString : _intField}
+    _fieldTypeMap = {'INT' : IntField,
+                'FLOAT' : FloatField,
+                'STR' : StringField,
+                'BOOL' : BoolField}
     
-    _geom2shp = {'NULL' : SHP_NULL_TYPE,
-                 'POINT' : SHP_POINT_TYPE,
-                 'LINESTRING' : SHP_LINE_TYPE,
-                 'POLYGON' : SHP_POLYGON_TYPE}
+    _dbf2fieldMap = {_dbf.FTInteger : StringField,
+                     _dbf.FTDouble: FloatField,
+                     _dbf.FTString : IntField}
+    
+    _geom2shp = {'NULL' : _shp.SHPT_NULL,
+                 'POINT' : _shp.SHPT_POINT,
+                 'LINESTRING' : _shp. SHPT_ARC,
+                 'POLYGON' : _shp. SHPT_POLYGON}
     
     _shp2geom = dict((v,k) for k, v in _geom2shp.iteritems())
     
-    def __init__(self, filepath, mode='read', geometryType=0):
+    def __init__(self, filepath, mode='read', geometryType=None):
         '''
-        Acceptable modes are 'read', 'write', 'append'
+        Opens a new shapefile for reading, writing, or appending. If
+        reading, only the filepath need be specified. If writing,
+        the geometry type MUST be specified, otherwise an error
+        will occur.
+        
+        The currently-defined fields can be accessed by the 'fields'
+        property, which is a dictionary of {ID : FiedlObject} (see
+        StringField, FloatField, IntField, and BoolField above).
+        
+        To add fields to a new shapefile, call the method 'add_field.'
+        
+        ARGS:
+        
+            - filepath: The string path to the shapefile
+            - mode (='read'): One of "read", "write", "append". Characters
+                    'r', 'w', and 'a' are also accepted.
+            - geometryType (=0): Optional, except if writing. Can either be
+                    an integer or string. Acceptable integer values are 
+                    given by the class static properties SHP_POINT_TYPE,
+                    SHP_LINE_TYPE, SHP_POLYGON_TYPE, and SHP_NULL_TYPE.
+                    Acceptable string values are 'POINT', 'LINESTRING',
+                    'POLYGON', and 'NULL' respectively.
+        
         '''
         self.filepath = _path.splitext(filepath)[0] #Drop the extension
-        self._fields = {}
+        self.fields = {}
         self._sf = None
         self._df = None 
         self._size = 0
@@ -319,7 +365,7 @@ class Shapely2ESRI():
         elif mode.lower().startswith("w"): #WRITE MODE
             self._canread = False
             self._canwrite = True
-            if geometryType == 0:
+            if geometryType == None:
                 _warn.warn("No geometryType specified. This will cause errors when writing to a shapefile.")
             
         elif mode.lower().startswith("a"): #APPEND MODE
@@ -340,7 +386,7 @@ class Shapely2ESRI():
                   
     def open(self):
         '''
-        TODO: Assign size on open when appending
+        Opens a shapefile. Not required if using inside a 'with' statement
         '''
         if self._canread:
             self._load()
@@ -361,7 +407,7 @@ class Shapely2ESRI():
         self._geometryType = self._sf.read_object(0).type
         
         #--Load in the fields
-        self._fields ['FID'] = _intField('FID') # Add FID field
+        self.fields ['FID'] = IntField('FID') # Add FID field
          
         for i in range(0, self._df.field_count()):
             info = self._df.field_info(i)
@@ -369,15 +415,18 @@ class Shapely2ESRI():
             type = info[0]
             try:
                 field = self._dbf2fieldMap[type](info[1], info[2], info[3])
-                self._fields[field.name] = field
+                self.fields[field.name] = field
             except KeyError, ke:
                 raise IOError("DBF Field type {0} for field '{1}' is \
                 unsupported!".format(info[0], info[1]))
     
     def close(self):
+        '''
+        Closes the file. Not required if using inside a 'with' statement
+        '''
         self._sf.close()
         self._df.close()
-        self._fields.clear()
+        self.fields.clear()
     
     def readAll(self):
         '''
@@ -405,7 +454,6 @@ class Shapely2ESRI():
         
         feature = self._sf.read_object(fid)
         type = feature.type
-        self._geometryType
         
         if type == self.SHP_POINT_TYPE:
             geom = Point(feature.vertices()[0])
@@ -449,7 +497,7 @@ class Shapely2ESRI():
         if not self._canwrite: raise IOError("Writing disabled on this object.")
         if self._sf == None:
             raise IOError("Shapefile hasn't been opened. Call [this].open() first.")
-        if len(self._fields) == 0:
+        if len(self.fields) == 0:
             self.addField('NULL', int, 5)
             _warn.warn("No attribute fields defined. 'NULL' field was added to the attribute table.")
         
@@ -484,7 +532,7 @@ class Shapely2ESRI():
             'attributes' or an attachable geometry. Default values were used.")
             '''
         
-        for fieldName, field in self._fields.items():
+        for fieldName, field in self.fields.items():
             try:
                 val = field.format(geometry[fieldName])
             except KeyError, ke:
@@ -497,21 +545,44 @@ class Shapely2ESRI():
         self._df.write_record(fid, record)
             
     def getFieldNames(self):
-        return [k for k in self._fields.iterkeys()]
+        return [k for k in self.fields.iterkeys()]
     
     def getFieldCount(self):
-        return len(self._fields)
+        return len(self.fields)
     
-    def addField(self, name, pyType=str, length=None, decimals=None, default=None):
+    def addField(self, name, fieldType= 'STR', length=None, decimals=None, default=None, pyType= str):
+        '''
+        Adds a field to the shapefile's DBF. This method does NOT work if the shapefile
+        already contains any records. Therefore, this method can only be used before
+        the first geometry is written to the shapefile.
+        
+        ARGS:
+            - name: The string name of the field. Required.
+            - fieldType (='STR'): The type of the field. Accepted types are 'STR', 'INT',
+                    'FLOAT', and 'BOOL'
+            - length (=None): The length of the field. For string fields, this is the
+                    maximum permitted number of characters. For int fields, this is
+                    the number of digits. For float fields, this is the number of
+                    digits to the left of the decimal.
+                    If left blank, the default value for the field will be used.
+            - decimals (=None): Applies to float fields only, and is the number of
+                    digits to the right of the decimal. If left blank, the field's
+                    default value of 4 gets used.
+            - default (=None): A default value to apply if for some reason a write
+                    occurs and the geometry does not specify this field's value.
+            
+            - pyType (=str): @deprecated: Use fieldType instead. Currently does nothing.
+            
+        '''
         if self._size > 0:
             raise IOError("Cannot add a field to a shapefile which already contains records!")
         
         name = str(name)
         field = None
         try:
-            klass = self._pyTypeMap[pyType]
+            klass = self._fieldTypeMap[fieldType]
         except KeyError, ke:
-            raise KeyError("pyType arg '%s' not recognized as valid field type" %pyType)
+            raise KeyError("'%s' not recognized as valid field type" %fieldType)
         if length == None and decimals == None and default == None: field = klass(name)
         elif length == None and decimals== None: field = klass(name, default=default)
         elif length== None and default == None: field = klass(name, decimals=decimals)
@@ -521,8 +592,10 @@ class Shapely2ESRI():
         elif default == None: field = klass(name, length=length, decimals=decimals)
         else: field = klass(name, length=length, decimals=decimals, default=default)
         
-        self._fields[name] = field
+        self.fields[name] = field
         field.addToDf(self._df)
+        
+        return field
     
     def __enter__(self):
         self.open()

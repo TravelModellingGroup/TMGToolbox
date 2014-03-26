@@ -210,7 +210,7 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
     def _WriteStopsToShapefile(self, stops):
         
         with _geo.Shapely2ESRI(self.ShapefileName, 'w',
-                               _geo.Shapely2ESRI.SHP_POINT_TYPE) as writer:
+                               'POINT') as writer:
             
             maxDescription = 10
             maxName = 10
@@ -226,7 +226,6 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
             print maxDescription
             print maxName
             
-            #def addField(self, name, pyType=str, length=None, decimals=None, default=None):
             writer.addField("StopID")
             writer.addField("Name", length=maxName)
             writer.addField("Description", length=maxDescription)
