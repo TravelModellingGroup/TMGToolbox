@@ -68,12 +68,13 @@ class V4_TransitAssignment(_m.Tool()):
     xtmf_DemandMatrixNumber = _m.Attribute(int)
     RunTitle = _m.Attribute(str)
     
+    WalkAttributeId = _m.Attribute(str)
+    HeadwayFractionAttributeId = _m.Attribute(str)
+    
     WalkPerceptionToronto = _m.Attribute(float)
     WalkPerceptionNonToronto = _m.Attribute(float)
     WalkPerceptionStationsAndTransfer = _m.Attribute(float)
     
-    #@deprecated: Trying out differential walk time perceptions
-    #WalkPerception = _m.Attribute(float)
     WaitPerception = _m.Attribute(float)
     BoardPerception = _m.Attribute(float)
     CongestionPerception = _m.Attribute(float)
@@ -145,6 +146,30 @@ class V4_TransitAssignment(_m.Tool()):
                              filter= ['FULL'], 
                              title= "Demand Matrix",
                              note= "A full matrix of OD demand")
+        
+        keyval1 = {}
+        keyval2 = {}
+        for exatt in _MODELLER.scenario.extra_attributes():
+            if exatt.type == 'NODE':
+                keyval1[exatt.id] = "%s - %s" %(exatt.id, exatt.description)
+            elif exatt.type == 'LINK':
+                keyval2[exatt.id] = "%s - %s" %(exatt.id, exatt.description)
+        
+        pb.add_select(tool_attribute_name='HeadwayFractionAttributeId',
+                      keyvalues= keyval1, title= "Headway Fraction Attribute",
+                      note= "NODE extra attribute to store headway fraction value. \
+                          Select NONE to create a temporary attribute. \
+                          <br><font color='red'><b>Warning:</b></font>\
+                          using a temporary attribute causes an error with \
+                          subsequent strategy-based analyses.")
+        
+        pb.add_select(tool_attribute_name='WalkAttributeId',
+                      keyvalues= keyval2, title= "Walk Perception Attribute",
+                      note= "LINK extra attribute to store walk perception value. \
+                          Select NONE to create a temporary attribute.\
+                          <br><font color='red'><b>Warning:</b></font>\
+                          using a temporary attribute causes an error with \
+                          subsequent strategy-based analyses.")
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
@@ -225,7 +250,34 @@ class V4_TransitAssignment(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'RelGap', size= 12,
                                 title= "Relative Gap")
-                
+        
+        pb.add_html("""
+<script type="text/javascript">
+    $(document).ready( function ()
+    {
+        $("#HeadwayFractionAttributeId").prepend(0,"<option value='-1'>None</option>");
+        $("#WalkAttributeId").prepend(0,"<option value='-1'>None</option>")
+        
+        var tool = new inro.modeller.util.Proxy(%s) ;
+
+        $("#Scenario").bind('change', function()
+        {
+            $(this).commit();
+            $("#HeadwayFractionAttributeId")
+                .empty()
+                .append(tool.get_scenario_node_attributes())
+            inro.modeller.page.preload("#HeadwayFractionAttributeId");
+            $("#HeadwayFractionAttributeId").trigger('change');
+            
+            $("#WalkAttributeId")
+                .empty()
+                .append(tool.get_scenario_link_attributes())
+            inro.modeller.page.preload("#WalkAttributeId");
+            $("#WalkAttributeId").trigger('change');
+        });
+    });
+</script>""" % pb.tool_proxy_tag)
+        
         return pb.render()
     
     ##########################################################################################################
@@ -246,7 +298,29 @@ class V4_TransitAssignment(_m.Tool()):
             if self.NormGap == None: raise NullPointerException("Normalized gap not specified")
             if self.RelGap == None: raise NullPointerException("Relative gap not specified")
             
-            self._Execute()
+            '''
+            Set up the context managers to create the temporary attributes only
+            if the None option is selected.
+            '''
+            @contextmanager
+            def blank(att):
+                try:
+                    yield att
+                finally:
+                    pass
+            if self.HeadwayFractionAttributeId == None:
+                manager1 = _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', default= 0.5)
+            else: manager1 = blank(self.HeadwayFractionAttributeId)
+            if self.WalkAttributeId == None:
+                manager2 = _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', default= 1.0)
+            else: manager2 = blank(self.WalkAttributeId)
+            nest = nested(manager1, manager2)
+            
+            with nest as (headwayAttribute, walkAttribute):                
+                self.HeadwayFractionAttributeId = headwayAttribute
+                self.WalkAttributeId = walkAttribute
+                
+                self._Execute()
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
@@ -255,9 +329,9 @@ class V4_TransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
-                 WalkPerceptionToronto, WalkPerceptionNonToronto, 
-                 WalkPerceptionStationsAndTransfer,  BoardPerception,  CongestionPerception, AssignmentPeriod, 
-                 Iterations, NormGap, RelGap):
+                 WalkPerceptionToronto, WalkPerceptionNonToronto, WalkPerceptionStationsAndTransfer, 
+                 WalkAttributeId, HeadwayFractionAttributeId, BoardPerception, CongestionPerception, 
+                 AssignmentPeriod, Iterations, NormGap, RelGap):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -271,7 +345,9 @@ class V4_TransitAssignment(_m.Tool()):
         
         #---3 Set up other parameters
         self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
+        self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
         
+        self.WalkAttributeId = WalkAttributeId
         self.WaitPerception = WaitPerception
         self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
         self.WalkPerceptionToronto = WalkPerceptionToronto
@@ -301,58 +377,26 @@ class V4_TransitAssignment(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
-            with nested(_util.tempMatrixMANAGER('Temp impedances'),
-                        _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', 
-                                                        default= 0.5, description= "Headway fraction"),
-                        _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK',
-                                                        default= 1.0, description= "Walk Time perception")) \
-                    as (impedanceMatrix, headwayFractionAttribute, walkPercepAttribute):
-                
+            with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
+                                
                 self.TRACKER.startProcess(2)
                 
-                self._AssignHeadwayFraction(headwayFractionAttribute.id)
+                self._AssignHeadwayFraction()
                 self.TRACKER.completeSubtask()
                 
-                self._AssignWalkPerception(walkPercepAttribute.id)
+                self._AssignWalkPerception()
                 self.TRACKER.completeSubtask()
                 
-                with self._streetcarCapacityMANAGER():
-                    congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
-                    self.TRACKER.runTool(congestedAssignmentTool,
-                                         transit_assignment_spec= self._GetBaseAssignmentSpec(headwayFractionAttribute.id,
-                                                                                              walkPercepAttribute.id),
-                                         congestion_function= self._GetFuncSpec(),
-                                         stopping_criteria= self._GetStopSpec(),
-                                         impedances= impedanceMatrix,
-                                         scenario= self.Scenario)
+                congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
+                self.TRACKER.runTool(congestedAssignmentTool,
+                                     transit_assignment_spec= self._GetBaseAssignmentSpec(),
+                                     congestion_function= self._GetFuncSpec(),
+                                     stopping_criteria= self._GetStopSpec(),
+                                     impedances= impedanceMatrix,
+                                     scenario= self.Scenario)
 
     ##########################################################################################################
-    
-    @contextmanager
-    def _streetcarCapacityMANAGER(self):
         
-        streetcarVehicles = [veh for veh in self.Scenario.transit_vehicles() if veh.mode.id == "s"]
-        
-        #Store the original capacities for easy rollback.
-        originalCapacities = {}
-        for veh in streetcarVehicles:
-            originalCapacities[veh.number] = (veh.seated_capacity, veh.total_capacity)
-        
-        try:
-            yield
-        finally:
-            #Roll-back vehicle capacities
-            with _m.logbook_trace("Reverting streetcar capacities"):
-                self.TRACKER.startProcess(len(streetcarVehicles))
-                for veh in streetcarVehicles:
-                    caps, capt = originalCapacities[veh.number]
-                    changeVehicleTool(vehicle= veh,
-                                      vehicle_seated_capacity= caps,
-                                      vehicle_total_capacity= capt,
-                                      scenario= self.Scenario)
-                    self.TRACKER.completeSubtask()
-                    self.TRACKER.completeTask()
-    
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
     def _GetAtts(self):
@@ -374,9 +418,9 @@ class V4_TransitAssignment(_m.Tool()):
             
         return atts 
     
-    def _AssignHeadwayFraction(self, headwayFractionAttributeId):
+    def _AssignHeadwayFraction(self):
         spec = {
-                "result": headwayFractionAttributeId,
+                "result": self.HeadwayFractionAttributeId,
                 "expression": str(self.GoTrainHeadwayFraction),
                 "aggregation": None,
                 "selections": {
@@ -388,12 +432,12 @@ class V4_TransitAssignment(_m.Tool()):
         tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
         tool(specification= spec, scenario= self.Scenario)
     
-    def _AssignWalkPerception(self, walkPercepAttributeId):
+    def _AssignWalkPerception(self):
         
         tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
         def applySelection(val, selection):
             spec = {
-                    "result": walkPercepAttributeId,
+                    "result": self.WalkAttributeId,
                     "expression": str(val),
                     "aggregation": None,
                     "selections": {
@@ -409,12 +453,12 @@ class V4_TransitAssignment(_m.Tool()):
             applySelection(self.WalkPerceptionStationsAndTransfer, "mode=tuy")
             applySelection(self.WalkPerceptionStationsAndTransfer, "i=9700,9900 or j=9700,9900 and mode=v")
     
-    def _GetBaseAssignmentSpec(self, headwayFractionAttributeId, walkPercepAttributeId):
+    def _GetBaseAssignmentSpec(self):
         baseSpec = {
                 "modes": ["*"],
                 "demand": self.DemandMatrix.id,
                 "waiting_time": {
-                    "headway_fraction": headwayFractionAttributeId,
+                    "headway_fraction": self.HeadwayFractionAttributeId,
                     "effective_headways": "hdw",
                     "spread_factor": 1,
                     "perception_factor": self.WaitPerception
@@ -438,7 +482,7 @@ class V4_TransitAssignment(_m.Tool()):
                 },
                 "in_vehicle_cost": None,
                 "aux_transit_time": {
-                                     "perception_factor": walkPercepAttributeId
+                                     "perception_factor": self.WalkAttributeId
                 },
                 "aux_transit_cost": None,
                 "connector_to_connector_path_prohibition": None,
@@ -499,6 +543,22 @@ class V4_TransitAssignment(_m.Tool()):
                     "relative_gap": self.RelGap
                     }
         return stopSpec
+    
+    @_m.method(return_type=unicode)
+    def get_scenario_node_attributes(self):
+        options = ["<option value='-1'>None</option>"]
+        for exatt in self.Scenario.extra_attributes():
+            if exatt.type == 'NODE':
+                options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
+        return "\n".join(options)
+    
+    @_m.method(return_type=unicode)
+    def get_scenario_link_attributes(self):
+        options = ["<option value='-1'>None</option>"]
+        for exatt in self.Scenario.extra_attributes():
+            if exatt.type == 'LINK':
+                options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
+        return "\n".join(options)
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):

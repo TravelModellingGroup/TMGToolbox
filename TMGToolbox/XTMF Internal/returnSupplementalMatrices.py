@@ -159,20 +159,22 @@ class SupplementalTransitMatrices(_m.Tool()):
                     },
                     "type": "EXTENDED_TRANSIT_MATRIX_RESULTS"
                     }
-            matrixResultsTool(spec, scenario)
+            #matrixResultsTool(spec, scenario)
             
             #Get the partition-aggregated results
             #The tool returns the MatrixData object
             walkOnlyResults = partitionAggTool(walkAllWayMatrix, partition, partition, scenario=scenario)
-            avgBoardingResults = partitionAverageTool(scenario.id, partition.id, avgBoardingsMatrix.id, demandMatrix.id)
+            #avgBoardingResults = partitionAverageTool(scenario.id, partition.id, avgBoardingsMatrix.id, demandMatrix.id)
             
             results = {}
+            '''
             for i, row in enumerate(avgBoardingResults.raw_data):
                 origin = avgBoardingResults.indices[0][i]
                 for j, cell in enumerate(row):
                     destination = avgBoardingResults.indices[1][j]
                     key = (origin, destination)
                     results[key] = [cell]
+            '''
             for i, row in enumerate(walkOnlyResults.raw_data):
                 origin = walkOnlyResults.indices[0][i]
                 for j, cell in enumerate(row):
