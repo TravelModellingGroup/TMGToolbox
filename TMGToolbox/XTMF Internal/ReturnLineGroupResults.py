@@ -35,6 +35,8 @@ Return Line Group Boardings
     0.0.1 Created on 2014-02-05 by pkucirek
     
     0.1.0 Upgraded to work with get_attribute_values (partial read)
+    
+    0.2.0 Modified to return a comma-separated string (instead of a dictionary)
 '''
 
 import inro.modeller as _m
@@ -72,7 +74,7 @@ class LineGroup():
 
 class ReturnBoardings(_m.Tool()):
     
-    version = '0.1.0'
+    version = '0.2.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -156,7 +158,12 @@ class ReturnBoardings(_m.Tool()):
             else:
                 results[typeName] += lineCount
             self.TRACKER.completeSubtask()
-        return str(results)            
+        
+        keys = [group.name for group in self.LINE_GROUPS]
+        keys.sort()
+        retval = [str(results[key]) for key in keys]
+        return ",".join(retval)
+                
     
 
     
