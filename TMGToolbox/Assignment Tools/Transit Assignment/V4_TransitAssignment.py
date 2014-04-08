@@ -38,6 +38,11 @@ V4 Transit Assignment
     0.0.3 Added distributed walk time perception attribute; removed singular
             walk perception parameter. Also adds a new parameter to temporarily
             increase the capacity of streetcars by a specified factor.
+    
+    0.0.4 Removed the "Station & Transfer Perception" parameter. Walk perception
+            on station centroid connectors will be set to 0, while transfer link
+            walk perception will take the value of the region it is in (Toronto
+            or Non-Toronto).
 '''
 
 import inro.modeller as _m
@@ -73,7 +78,6 @@ class V4_TransitAssignment(_m.Tool()):
     
     WalkPerceptionToronto = _m.Attribute(float)
     WalkPerceptionNonToronto = _m.Attribute(float)
-    WalkPerceptionStationsAndTransfer = _m.Attribute(float)
     
     WaitPerception = _m.Attribute(float)
     BoardPerception = _m.Attribute(float)
@@ -97,7 +101,6 @@ class V4_TransitAssignment(_m.Tool()):
         #self.WalkPerception = 1.0
         self.WalkPerceptionToronto = 1.0
         self.WalkPerceptionNonToronto = 1.0
-        self.WalkPerceptionStationsAndTransfer = 1.0
         
         self.BoardPerception = 1.0
         self.CongestionPerception = 1.0
@@ -206,14 +209,6 @@ class V4_TransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
-                 pb.add_html("<b>Transfer Walk Time Perception:</b>")
-            with t.table_cell():
-                pb.add_text_box(tool_attribute_name= 'WalkPerceptionStationsAndTransfer', size= 10)
-            with t.table_cell():
-                pb.add_html("Converts walking minutes to impedance")
-            t.new_row()
-            
-            with t.table_cell():
                  pb.add_html("<b>Boarding Perception:</b>")
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'BoardPerception', size= 10)
@@ -291,7 +286,6 @@ class V4_TransitAssignment(_m.Tool()):
             if self.WaitPerception == None: raise NullPointerException("Waiting perception not specified")
             if self.WalkPerceptionToronto == None: raise NullPointerException("Toronto walk perception not specified")
             if self.WalkPerceptionNonToronto == None: raise NullPointerException("Non-Toronto walk perception not specified")
-            if self.WalkPerceptionStationsAndTransfer == None: raise NullPointerException("Station/Transfer walk perception not specified")
             if self.BoardPerception == None: raise NullPointerException("Boarding perception not specified")
             if self.CongestionPerception == None: raise NullPointerException("Congestion perception not specified")
             if self.Iterations == None: raise NullPointerException("Maximum iterations not specified")
@@ -310,17 +304,21 @@ class V4_TransitAssignment(_m.Tool()):
                     pass
             if self.HeadwayFractionAttributeId == None:
                 manager1 = _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', default= 0.5)
-            else: manager1 = blank(self.HeadwayFractionAttributeId)
+            else: manager1 = blank(self.Scenario.extra_attribute(self.HeadwayFractionAttributeId))
             if self.WalkAttributeId == None:
                 manager2 = _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', default= 1.0)
-            else: manager2 = blank(self.WalkAttributeId)
+            else: manager2 = blank(self.Scenario.extra_attribute(self.WalkAttributeId))
             nest = nested(manager1, manager2)
             
-            with nest as (headwayAttribute, walkAttribute):                
-                self.HeadwayFractionAttributeId = headwayAttribute
-                self.WalkAttributeId = walkAttribute
-                
+            with nest as (headwayAttribute, walkAttribute):
+                # Set attributes to default values.
+                headwayAttribute.initialize(0.5) 
+                walkAttribute.initialize(1.0)
+                                
+                self.HeadwayFractionAttributeId = headwayAttribute.id
+                self.WalkAttributeId = walkAttribute.id
                 self._Execute()
+                
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
@@ -329,7 +327,7 @@ class V4_TransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
-                 WalkPerceptionToronto, WalkPerceptionNonToronto, WalkPerceptionStationsAndTransfer, 
+                 WalkPerceptionToronto, WalkPerceptionNonToronto, 
                  WalkAttributeId, HeadwayFractionAttributeId, BoardPerception, CongestionPerception, 
                  AssignmentPeriod, Iterations, NormGap, RelGap):
         
@@ -351,7 +349,6 @@ class V4_TransitAssignment(_m.Tool()):
         self.WaitPerception = WaitPerception
         self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
         self.WalkPerceptionToronto = WalkPerceptionToronto
-        self.WalkPerceptionStationsAndTransfer = WalkPerceptionStationsAndTransfer
                 
         self.BoardPerception = BoardPerception
         self.CongestionPerception = CongestionPerception
@@ -407,7 +404,6 @@ class V4_TransitAssignment(_m.Tool()):
                 "Wait Perception": self.WaitPerception,
                 "Toronto Walk Perception": self.WalkPerceptionToronto,
                 "Non-Toronto Walk Perception": self.WalkPerceptionNonToronto,
-                "Station/Transfer Walk Perception": self.WalkPerceptionStationsAndTransfer,
                 "Congestion Perception": self.CongestionPerception,
                 "Assignment Period": self.AssignmentPeriod,
                 "Boarding Perception": self.BoardPerception,
@@ -448,10 +444,68 @@ class V4_TransitAssignment(_m.Tool()):
             tool(spec, self.Scenario)
         
         with _m.logbook_trace("Assigning walk time perception factors"):
-            applySelection(self.WalkPerceptionToronto, "i=0,1000 or j=0,1000 or i=10000,20000 or j=10000,20000 and mode=vw")
-            applySelection(self.WalkPerceptionNonToronto, "i=1000,7000 or j=1000,7000 or i=20000,90000 or j=20000,90000 and mode=vw")
-            applySelection(self.WalkPerceptionStationsAndTransfer, "mode=tuy")
-            applySelection(self.WalkPerceptionStationsAndTransfer, "i=9700,9900 or j=9700,9900 and mode=v")
+            applySelection(self.WalkPerceptionToronto, "i=0,1000 or j=0,1000 or i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000")
+            applySelection(self.WalkPerceptionNonToronto, "i=1000,7000 or j=1000,7000 or i=20000,90000 or j=20000,90000")
+            applySelection(0, "i=9700,10000 or j=9700,10000")
+    
+    def _GetBaseAssignmentSpecEmme4p1(self):
+        spec = {
+                "modes": ["*"],
+                "demand": "mf15",
+                "waiting_time": {
+                    "headway_fraction": self.HeadwayFractionAttributeId,
+                    "effective_headways": "hdw",
+                    "spread_factor": 1,
+                    "perception_factor": self.WaitPerception
+                },
+                "boarding_time": {
+                    "at_nodes": None,
+                    "on_lines": {
+                        "penalty": "ut3",
+                        "perception_factor": self.BoardPerception
+                    }
+                },
+                "boarding_cost": {
+                    "at_nodes": {
+                        "penalty": 0,
+                        "perception_factor": 1
+                    },
+                    "on_lines": None
+                },
+                "in_vehicle_time": {
+                    "perception_factor": 1
+                },
+                "in_vehicle_cost": None,
+                "aux_transit_time": {
+                    "perception_factor": self.WalkAttributeId
+                },
+                "aux_transit_cost": None,
+                "flow_distribution_at_origins": {
+                    "choices_at_origins": {
+                        "choice_points": "ALL_ORIGINS",
+                        "choice_set": "ALL_CONNECTORS",
+                        "logit_parameters": {
+                            "scale": self._connectorLogitScale,
+                            "truncation": self._connectorLogitTruncation
+                        }
+                    },
+                    "fixed_proportions_on_connectors": None
+                },
+                "flow_distribution_at_regular_nodes_with_aux_transit_choices": {
+                    "choices_at_regular_nodes": "OPTIMAL_STRATEGY"
+                },
+                "flow_distribution_between_lines": {
+                    "consider_total_impedance": True
+                },
+                "connector_to_connector_path_prohibition": None,
+                "od_results": {
+                    "total_impedance": None
+                },
+                "performance_settings": {
+                    "number_of_processors": 8
+                },
+                "type": "EXTENDED_TRANSIT_ASSIGNMENT"
+            }
     
     def _GetBaseAssignmentSpec(self):
         baseSpec = {
