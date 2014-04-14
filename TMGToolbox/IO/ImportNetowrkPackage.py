@@ -51,6 +51,8 @@ Import Network Package
     
     0.5.0 Added XTMF interface to script
     
+    0.6.0 Added loading of NWP metadata (info.txt) which is new (NWP Version 4.0 +)
+    
 '''
 
 import inro.modeller as _m
@@ -71,7 +73,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ImportNetworkPackage(_m.Tool()):
     
-    version = '0.5.0'
+    version = '0.6.0'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -109,6 +111,14 @@ class ImportNetworkPackage(_m.Tool()):
                            file_filter='*.nwp',
                            start_path=_path.dirname(_MODELLER.desktop.project_file_name()))
         
+        pb.add_html("""<div class="t_element" id="NetworkPackageInfoDiv" style="padding: 0px inherit;">
+        </div>""")
+        
+        #pb.add_html("""<div class="t_element" id="NetworkPackageInfoDiv">
+        #<table border="1" width="90%" id="NetworkPackageInfoTable">
+        #</table>
+        #</div>""")
+        
         pb.add_new_scenario_select(tool_attribute_name='ScenarioId',
                                   title="New Scenario Number",
                                   note="'Next' picks the next available scenario.")
@@ -122,13 +132,21 @@ class ImportNetworkPackage(_m.Tool()):
     $(document).ready( function ()
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
-
+        
         $("#NetworkPackageFile").bind('change', function()
         {
             $(this).commit();
+            
+            //Change the scenario description
             $("#ScenarioDescription")
                 .val(tool.get_description_from_file())
             $("#ScenarioDescription").trigger('change');
+            
+            //Change the package info
+            var info = tool.get_file_info();
+            $("#NetworkPackageInfoDiv").removeAttr( 'style' );
+            $("#NetworkPackageInfoDiv").html(info);
+                
         });
     });
 </script>""" % pb.tool_proxy_tag)
@@ -288,15 +306,19 @@ class ImportNetworkPackage(_m.Tool()):
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
     def _CheckNetworkPackage(self, package):
-        contents = package.namelist()
+        '''
+        This method reads the NWP's version number and sets up the list of
+        component files to extract. It also handles backwards compatibility.
+        '''
         
+        contents = package.namelist()
         if 'version.txt' in contents:
             self.__components = ['modes.201', 'vehicles.202', 'base.211', 'transit.221', 'turns.231', 'shapes.251']
             
             vf = package.open('version.txt')
             version = float(vf.readline())
             
-            if version >= 3.0:
+            if version >= 3:
                 self.__components.append('functions.411')
             
             return version
@@ -366,5 +388,40 @@ class ImportNetworkPackage(_m.Tool()):
             else:
                 return self.ScenarioDescription
     
+    @_m.method(return_type=unicode)
+    def get_file_info(self):
+        with self._zipFileMANAGER() as zf:
+            nl = zf.namelist()
+            if 'version.txt' in nl:
+                vf = zf.open('version.txt')
+                version = float(vf.readline())
+            else:
+                return """<table border='1' width='90&#37'><tbody><tr><td valign='top'><b>NWP Version:</b> 1.0</td><tr></tbody></table>"""
+            
+            if not 'info.txt' in nl:
+                return "<table border='1' width='90&#37'><tbody><tr><td valign='top'><b>NWP Version:</b> %s</td><tr></tbody></table>" %version
+            
+            
+            info = zf.open('info.txt')
+            lines = info.readlines()
+            '''
+            Lines = [Project Name,
+                    Project Path,
+                    Scenario Title
+                    Export Date
+                    subsequent comment lines]
+            '''
+            packageVersion = "<b>NWP Version:</b> %s" %version
+            projectName = "<b>Project:</b> %s" %lines[0].strip()
+            scenarioTitle = "<b>Scenario:</b> %s" %lines[2].strip()
+            exportDate = "<b>Export Date:</b> %s" %lines[3].strip()
+            commentLines = ["<b>User Comments:</b>"] + [l.strip() for l in lines[4:]]
+            lcell = "<br>".join([packageVersion, projectName, exportDate, scenarioTitle])
+            rcell = "<br>".join(commentLines)
+            
+            return "<table border='1' width='90&#37'><tbody><tr><td valign='top' width='50&#37'>%s</td><td valign='top'>%s</td></tr></tbody></table>" %(lcell, rcell)
+            
+            
+            
     
     

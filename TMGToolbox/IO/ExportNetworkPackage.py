@@ -57,6 +57,8 @@ Export Network Package
     
     0.5.0 Added XTMF interface to script
     
+    0.6.0 Added metadata file to spec (NWP Version 4.0)
+    
 '''
 
 import inro.modeller as _m
@@ -65,6 +67,7 @@ from contextlib import contextmanager
 from contextlib import nested
 from os import path as _path
 import os as _os
+from datetime import datetime as _dt
 import shutil as _shutil
 import zipfile as _zipfile
 import tempfile as _tf
@@ -89,6 +92,7 @@ class ExportNetworkPackage(_m.Tool()):
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     ExportFile = _m.Attribute(str)
     AttributeIdsToExport = _m.Attribute(_m.ListType)
+    ExportMetadata = _m.Attribute(str)
     
     xtmf_AttributeIdString = _m.Attribute(str)
     xtmf_ScenarioNumber = _m.Attribute(int)
@@ -99,6 +103,7 @@ class ExportNetworkPackage(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
+        self.ExportMetadata = ""
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Network Package v%s" %self.version,
@@ -123,6 +128,10 @@ class ExportNetworkPackage(_m.Tool()):
         pb.add_select(tool_attribute_name="AttributeIdsToExport", keyvalues=keyval,
                     title="Extra Attributes",  
                     note="Optional")
+        
+        pb.add_text_box(tool_attribute_name= 'ExportMetadata',
+                        size= 255, multi_line= True,
+                        title= "Export comments")
         
         pb.add_html("""
 <script type="text/javascript">
@@ -206,8 +215,12 @@ class ExportNetworkPackage(_m.Tool()):
             with nested(self._zipFileMANAGER(), self._TempDirectoryMANAGER()) as (zf, tempFolder):
                 verionFile = tempFolder + "/version.txt"
                 with open(verionFile, 'w') as writer:
-                    writer.write("3.0")
+                    writer.write("4.0")
                 zf.write(verionFile, arcname="version.txt")
+                
+                infoPath = tempFolder + "/info.txt"
+                self._WriteInfoFile(infoPath)
+                zf.write(infoPath, arcname="info.txt")
                 
                 with _m.logbook_trace("Exporting modes"):
                     exportFile = tempFolder + "/modes.201"
@@ -352,6 +365,19 @@ class ExportNetworkPackage(_m.Tool()):
                                      type=att.type,
                                      default=att.default_value,
                                      desc=att.description))
+    
+    def _WriteInfoFile(self, path):
+        with open(path, 'w') as writer:
+            bank = _MODELLER.emmebank
+            time = _dt.now()
+            lines = [str(bank.title),
+                     str(bank.path),
+                     "%s - %s" %(self.Scenario, self.Scenario.title),
+                     "{y}-{m}-{d} {h}:{mm}".format(y= time.year, m= time.month, d= time.day,
+                                                   h= time.hour, mm= time.minute),
+                     self.ExportMetadata]
+            
+            writer.write("\n".join(lines))
     
     def _GetSelectAttributeOptionsJSON(self):
         keyval = {}
