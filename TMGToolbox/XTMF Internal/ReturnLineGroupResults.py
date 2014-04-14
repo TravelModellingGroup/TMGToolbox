@@ -43,7 +43,7 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
-from json import loads
+import shutil as _shutil
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')

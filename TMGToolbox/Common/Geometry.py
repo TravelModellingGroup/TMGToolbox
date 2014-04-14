@@ -279,7 +279,8 @@ class Shapely2ESRI():
     Object for interacting between shapefiles and Shapely Geometry. Reads shapefiles
     as shapely geometry objects, and writes shapely geometry objects to shapefiles.
     
-    ---Usage---
+    USAGE:
+    
     Reading:
     
     with Shapely2ESRI("C:/MyDocuments/zone_centroids.shp", mode = 'read') as reader:
@@ -297,6 +298,30 @@ class Shapely2ESRI():
             point = nodeToShape(node)
             writer.writeNext(point)
             ...
+    
+    USEFUL METHODS:
+        
+        - addField(...): Adds a field to a new shapefile.
+        - getGeometryType(): Returns a string representation of the geometry
+                type.
+        - getFieldNames(): Returns an iterable of field names in the
+                shapefile.
+        - getFieldCount(): Returns the number of fields defined.
+        - __len__(): Returns the number of records defined in the shapefile.
+        - __enter__(), __exit__(): Allows the class to be used as a context
+                manager inside a 'with' statement.
+        
+    USEFUL PROPERTIES:
+        
+        - fields: A dict of {field_name : field_info} which can be used to
+                get information about the fields in this object.
+        - filepath: The path to the actual shapefile.
+        - invalidFeatureIDs: A list of FIDs with invalid geometry. Sometimes
+                the shapefile can define shapes that are geometrically
+                invalid (see http://toblerity.org/shapely/manual.htm for
+                details about what makes a shape invalid). This list
+                contains FIDs of any invalid shapes that have been
+                loaded.
     
     '''
     
@@ -326,7 +351,7 @@ class Shapely2ESRI():
     
     _shp2geom = dict((v,k) for k, v in _geom2shp.iteritems())
     
-    def __init__(self, filepath, mode='read', geometryType=None):
+    def __init__(self, filepath, mode='read', geometryType=0):
         '''
         Opens a new shapefile for reading, writing, or appending. If
         reading, only the filepath need be specified. If writing,
@@ -335,9 +360,9 @@ class Shapely2ESRI():
         
         The currently-defined fields can be accessed by the 'fields'
         property, which is a dictionary of {ID : FiedlObject} (see
-        StringField, FloatField, IntField, and BoolField above).
+        StringField, FloatField, IntField, and BoolField above).        
         
-        To add fields to a new shapefile, call the method 'add_field.'
+        To add fields to a new shapefile, call the method 'addField.'
         
         ARGS:
         
@@ -549,6 +574,9 @@ class Shapely2ESRI():
     
     def getFieldCount(self):
         return len(self.fields)
+    
+    def getGeometryType(self):
+        return self._shp2geom[self._geometryType]
     
     def addField(self, name, fieldType= 'STR', length=None, decimals=None, default=None, pyType= str):
         '''
