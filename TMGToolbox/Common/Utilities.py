@@ -142,7 +142,7 @@ def initMatrix2(id=None, default=0, name="", description="", matrix_type='FULL')
 
 #-------------------------------------------------------------------------------------------
 
-#@deprecated
+#@deprecated: Use initMatrix2 instead
 # Initialize a matrix safely, by checking if it exists or not
 def initMatrix(id, default, name, descr):
     try:
@@ -274,7 +274,78 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
 
 #-------------------------------------------------------------------------------------------
 
+def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
+    '''
+    Performs a fast partial read of transit segment attributes,
+    using scenario.get_attribute_values.
+    
+    Args:
+        - scenario: The Emme Scenario object to load from
+        - list_of_attributes: A list of TRANSIT SEGMENT attribute names to load.
+    
+    Returns: A dictionary, where the keys are transit line IDs.
+        Each key is mapped to a list of attribute dictionaries.
+        
+        Example:
+            {'TS01a': [{'number': 0, 'transit_volume': 200.0}, 
+                        {'number': 1, 'transit_volume': 210.0} ...] ...} 
+    '''
+    '''
+    Implementation note: The scenario method 'get_attribute_vlues' IS documented,
+    however the return value is NOT. I've managed to decipher its structure
+    but since it is not documented by INRO it could be changed.
+        - pkucirek April 2014
+    '''
+    retval = {}
+    root_data = scenario.get_attribute_values('TRANSIT_SEGMENT', list_of_attribtues)
+    indices = root_data[0]
+    values = root_data[1:]
+    
+    for lineId, segmentIndices in indices.iteritems():
+        segments = []
+        
+        for number, dataIndex in enumerate(segmentIndices[1]):
+            segment = {'number': number}
+            for attIndex, attName in enumerate(list_of_attribtues):
+                segment[attName] = values[attIndex][dataIndex]
+            segments.append(segment)
+        retval[lineId] = segments
+    
+    return retval
 
+#-------------------------------------------------------------------------------------------
+
+def fastLoadTransitLineAttributes(scenario, list_of_attributes):
+    '''
+    Performs a fast partial read of transit line attributes,
+    using scenario.get_attribute_values.
+    
+    Args:
+        - scenario: The Emme Scenario object to load from
+        - list_of_attributes: A list of TRANSIT LINE attribute names to load.
+    
+    Returns: A dictionary, where the keys are transit line IDs.
+        Each key is mapped to a dictionary of attributes (one for
+        each attribute in the list_of_attributes arg) plus 'id'.
+        
+        Example:
+            {'TS01a': {'id': 'TS01a', 'headway': 2.34, 'speed': 52.22 } ...}
+    ''' 
+    
+    retval = {}
+    root_data = scenario.get_attribute_values('TRANSIT_LINE', list_of_attributes)
+    indices = root_data[0]
+    values = root_data[1:]
+    
+    for lineId, dataIndex in indices.iteritems():
+        line = {'id': lineId}
+        
+        for attIndex, attName in enumerate(list_of_attributes):
+            line[attName] = values[attIndex][dataIndex]
+        retval[lineId] = line
+    return retval
+
+#-------------------------------------------------------------------------------------------
 
 #@deprecated: 
 def getExtents(network):
