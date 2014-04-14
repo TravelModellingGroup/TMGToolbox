@@ -45,12 +45,13 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
     
     def _addHiddenHTML(self):
         return '''
-        <style>.hdr1{border-bottom: 1px solid gray;}
+            <style>
+                    .hdr1{border-bottom: 1px solid gray;}
                     .sm_indent{padding-left: 25px; background-color: rgb( 241, 243, 233);}
                     .indent{padding-left:50px; background-color: rgb( 241, 243, 233);}
                     .tmg_left{text-align: justify;}
                     .tmg_table{background-color: rgb( 241, 243, 233); margin:0px}
-                    </style>'''
+            </style>'''
     
     def render(self):
         return self._addHiddenHTML() + self.root.render()
