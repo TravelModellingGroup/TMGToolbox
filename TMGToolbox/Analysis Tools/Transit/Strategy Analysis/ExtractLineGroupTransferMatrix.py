@@ -85,8 +85,25 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
     
     def page(self):
-        pb = _tmgTPB.TmgToolPageBuilder(self, title="[TOOL NAME] v%s" %self.version,
-                     description="[DESCRIPTION]",
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="Extract Transfer Matrix v%s" %self.version,
+                     description="Extracts a group-to-group transfer matrix for a number of key \
+                         transit line groups. The 'None' group corresponds to initial boardings, \
+                         final alightings, and walk-all-way trips (none-to-none). To get the \
+                         total boardings for a group, simply sum across the rows for that group.\
+                         <br><br>The groups defined by this tool currently are: <ol>\
+                         <li>Brampton bus lines\
+                         <li>Durham bus lines\
+                         <li>GO Bus lines\
+                         <li>GO Train lines\
+                         <li>Halton bus lines\
+                         <li>Hamilton bus lines\
+                         <li>Mississauga bus lines\
+                         <li>Streetcar lines\
+                         <li>Subway lines\
+                         <li>TTC bus lines\
+                         <li>VIVA bus lines\
+                         <li>YRT bus lines</ol>\
+                         The resulting square matrix is saved to a CSV file.",
                      branding_text="TMG")
         
         if self.tool_run_msg != "": # to display messages in the page
@@ -97,7 +114,7 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
                                allow_none=False)
         
         pb.add_select_file(tool_attribute_name= 'ExportFile',
-                           window_type='save_file',
+                           window_type='save_file', file_filter="*.csv",
                            title= "Exprot File")
         
         pb.add_select_matrix(tool_attribute_name= 'DemandMatrixId',
@@ -276,7 +293,7 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
                     "final_alightings": alightingAttributeId
                 },
                 "aggregated_from_segments": None,
-                "analyzed_demand": None,
+                "analyzed_demand": self.DemandMatrixId,
                 "constraint": None,
                 "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"
             }
@@ -311,16 +328,7 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
             resultMatrix[(0, int(groupId))] = initalBoardings
             resultMatrix[(int(groupId)), 0] = finalAlightings
         
-        self.TRACKER.completeTask()
-        
-        '''
-        with open(self.ExportFile, 'a') as writer:
-            for groupId, data in groupData.iteritems():
-                initalBoardings, finalAlightings = data
-                writer.write("\n0 %s %s" %(groupId, initalBoardings)) 
-                writer.write("\n%s 0 %s" %(groupId, finalAlightings)) 
-        '''
-        
+        self.TRACKER.completeTask()        
         
     def _CalcWalkAllWayMatrix(self, tempMatrixId):
         tool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
@@ -341,7 +349,7 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
                             "upper": 0
                         }
                     },
-                    "analyzed_demand": None,
+                    "analyzed_demand": self.DemandMatrixId,
                     "constraint": None,
                     "results": {
                         "strategy_values": None,
@@ -376,14 +384,10 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
         
         resultMatrix[(0,0)] = walkAllWayResults
         
-        '''
-        with open(self.ExportFile, 'a') as writer:
-            writer.write("\n0 0 %s" %walkAllWayResults)
-        '''
-    
     def _WriteExportFile(self, resultMatrix):
         with open(self.ExportFile, 'w') as writer:
             groups = [(0, 'None')] + [(id, name) for id, selector, name in self.LINE_GROUPS]
+            groups.sort()
             header = ",".join([''] + [name for id, name in groups])
             writer.write(header)
             
