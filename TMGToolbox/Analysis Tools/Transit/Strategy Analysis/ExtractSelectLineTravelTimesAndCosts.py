@@ -294,43 +294,24 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
     #----CONTEXT MANAGERS---------------------------------------------------------------------------------
     '''
     Context managers for temporary database modifications.
-    '''
-    
-    @contextmanager
-    def _selectLineMatrixMANAGER(self):
-        #Code here is executed upon entry
-        
-        _m.logbook_write("Creating temporary select line matrix.")
-        self._selectLineMatrix = _util.initMatrix(self.databank.available_matrix_identifier('FULL'),
-                                                         0, 'select', 'Temp Select line OD matrix')
-        
-        if self._selectLineMatrix == None:
-            raise Exception("Could not create temporary select line matrix!")
-        
-        try:
-            yield
-            # Code here is executed upon clean exit
-        finally:
-            _m.logbook_write("Deleting temporary select line matrix.")
-            self.databank.delete_matrix(self._selectLineMatrix.id)
-    
+    '''    
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
                     
     def _initIVTT(self, mtxId):
-        self.ivttMatrix = _util.initMatrix(mtxId, 0, 'trIVTT', 'Avg total in vehicle times')
+        self.ivttMatrix = _util.initializeMatrix(mtxId, name='trIVTT', description= 'Avg total in vehicle times')
     
     def _initWalk(self, mtxId):
-        self.walkMatrix = _util.initMatrix(mtxId, 0, 'trWalk', 'Avg total walk times')
+        self.walkMatrix = _util.initializeMatrix(mtxId, name= 'trWalk', description= 'Avg total walk times')
     
     def _initWait(self, mtxId):
-        self.waitMatrix = _util.initMatrix(mtxId, 0, 'trWait', 'Avg total wait times')
+        self.waitMatrix = _util.initializeMatrix(mtxId, name= 'trWait', description= 'Avg total wait times')
     
     def _initBoard(self, mtxId):
-        self.boardingMatrix = _util.initMatrix(mtxId, 0, 'trBord', 'Avg total boarding times')
+        self.boardingMatrix = _util.initializeMatrix(mtxId, name= 'trBord', description= 'Avg total boarding times')
     
     def _initCost(self, mtxId):
-        self.costMatrix = _util.initMatrix(mtxId, 0, 'trCost', 'Avg total transit cost (fares)')     
+        self.costMatrix = _util.initializeMatrix(mtxId, name= 'trCost', description= 'Avg total transit cost (fares)')     
             
     def _assignmentCheck(self):
         if self.scenario.transit_assignment_type != 'EXTENDED_TRANSIT_ASSIGNMENT':

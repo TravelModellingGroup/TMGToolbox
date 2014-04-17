@@ -127,7 +127,7 @@ class CreateZoneAdjacencyMatrix(_m.Tool()):
                                      attributes=self._GetAtts()):
             
             
-            adjacencyMatrix = _util.initMatrix2(id=self.ResultMatrixId, name="zadj", description="Zone adjacency matrix")
+            adjacencyMatrix = _util.initializeMatrix(id=self.ResultMatrixId, name="zadj", description="Zone adjacency matrix")
             
             network = self.Scenario.get_network()
             _m.logbook_write("Loaded network data")

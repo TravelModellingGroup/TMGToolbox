@@ -192,7 +192,7 @@ class StringField():
         df.add_field(self.name, _dbf.FTString, self.length, 0)
     
     def format(self, value):
-        return _util.truncateString(str(value), self.length)
+        return str(value)[:self.length]
     
     def __str__(self):
         return "%s (STR)" %self.name

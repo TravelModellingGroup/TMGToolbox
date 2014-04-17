@@ -248,11 +248,11 @@ class Station2StationAssignment(_m.Tool()):
             with self._demandMatrixMANAGER(): # TASK 1
                 
                 with _m.logbook_trace("Initializing output matrices"):
-                    ivttMatrix = _util.initMatrix2(id=self.InVehicleTimeMatrixNumber,
+                    ivttMatrix = _util.initializeMatrix(id=self.InVehicleTimeMatrixNumber,
                                                    matrix_type='FULL',
                                                    description="Station-station IVTT matrix")
                     
-                    waitMatrix = _util.initMatrix2(id=self.WaitTimeMatrixNumber,
+                    waitMatrix = _util.initializeMatrix(id=self.WaitTimeMatrixNumber,
                                                    matrix_type='FULL',
                                                    description="Station-station wait time matrix")
                     
@@ -295,7 +295,7 @@ class Station2StationAssignment(_m.Tool()):
         with _m.logbook_trace("Initializing temporary demand matrix"):
             if self.demandMatrix == None:
                 
-                self.demandMatrix = _util.initMatrix2(id=None,
+                self.demandMatrix = _util.initializeMatrix(id=None,
                                                       matrix_type='SCALAR',
                                                       name='trscal',
                                                       description='Scalar matrix to get transit times')
@@ -304,8 +304,7 @@ class Station2StationAssignment(_m.Tool()):
                 
             else:
                 cachedMatrix = self.demandMatrix
-                id = _m.Modeller().emmebank.available_matrix_identifier('FULL')
-                self.demandMatrix = _util.initMatrix(id, 0, id, "Constrained full matrix for station-station assignment")  
+                self.demandMatrix = _util.initializeMatrix(matrix_type='FULL', description="Constrained full matrix for station-to-station assignment")
                 _m.logbook_write("Created temporary constrained full demand matrix '%s'" %id)
                 
                 try:

@@ -70,10 +70,11 @@ class ExtractCostMatrix(_m.Tool()):
         self.tool_run_msg = ""
         self.isRunningFromXTMF = False
         
-        # Initialize the result matrix, if necessary
-        if self.matrixResult == None:
-            self.matrixResult = _util.initMatrix(self.databank.available_matrix_identifier("FULL"),
-                                                 0, 'trcost', 'Transit avg total cost')
+        # Initialize the result matrix
+        #(id=None, default=0, name="", description="", matrix_type='FULL')
+        self.matrixResult = _util.initializeMatrix(id= self.matrixResult, matrix_type='FULL',
+                                              description="Transit avg total cost",
+                                              name="trcost")
             
         # Run the tool
         try:
@@ -93,8 +94,9 @@ class ExtractCostMatrix(_m.Tool()):
             raise Exception("Could not find scenario %s!" %ScenarioNumber)
         
         # Prepare the result matrix
-        self.matrixResult = _util.initMatrix("mf%s" %MatrixResultNumber,
-                                        0, 'trcost', 'Transit avg total cost')
+        self.matrixResult = _util.initializeMatrix(id= MatrixResultNumber, matrix_type='FULL',
+                                              description="Transit avg total cost",
+                                              name="trcost")
         
         self.isRunningFromXTMF = True
         

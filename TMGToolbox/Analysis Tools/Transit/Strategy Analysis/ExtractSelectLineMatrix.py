@@ -111,7 +111,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
                                                  "Result Matrix": self.MatrixResultId,
                                                  "self": self.__MODELLER_NAMESPACE__}):
             
-            resultMatrix = _util.initMatrix2(self.MatrixResultId, name='slctOD', 
+            resultMatrix = _util.initializeMatrix(self.MatrixResultId, name='slctOD', 
                                              description="Transit select line analysis result")
             
             try:
