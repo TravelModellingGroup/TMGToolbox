@@ -30,6 +30,7 @@ from contextlib import contextmanager, nested
 import warnings as _warn
 import sys as _sys
 import traceback as _tb
+import subprocess as _sp
 _MODELLER = _m.Modeller()
 
 class Face(_m.Tool()):
@@ -344,6 +345,17 @@ def fastLoadTransitLineAttributes(scenario, list_of_attributes):
             line[attName] = values[attIndex][dataIndex]
         retval[lineId] = line
     return retval
+
+#-------------------------------------------------------------------------------------------
+
+def getEmmeVersion():
+    '''
+    Gets the version of Emme that is currently running, as a string. For example,
+    'Emme 4.0.8', or 'Emme 4.1.0 32-bit'.
+    '''
+    emmeProcess = _sp.Popen(['Emme', '-V'], stdout= _sp.PIPE, stderr= _sp.PIPE)
+    output = emmeProcess.communicate()[0]
+    return output.split(',')[0]
 
 #-------------------------------------------------------------------------------------------
 
