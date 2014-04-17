@@ -179,16 +179,16 @@ class ExtractTravelTimeMatrices(_m.Tool()):
             matrixAnalysisTool(self._getAnalysisSpec(), self.scenario)
     
     def _initIVTT(self, mtxId):
-        self.ivttMatrix = _util.initMatrix(mtxId, 0, 'trIVTT', 'Avg total in vehicle times')
+        self.ivttMatrix = _util.initializeMatrix(mtxId, name='trIVTT', description= 'Avg total in vehicle times')
     
     def _initWalk(self, mtxId):
-        self.walkMatrix = _util.initMatrix(mtxId, 0, 'trWalk', 'Avg total walk times')
+        self.walkMatrix = _util.initializeMatrix(mtxId, name='trWalk', description= 'Avg total walk times')
     
     def _initWait(self, mtxId):
-        self.waitMatrix = _util.initMatrix(mtxId, 0, 'trWait', 'Avg total wait times')
+        self.waitMatrix = _util.initializeMatrix(mtxId, name='trWait', description= 'Avg total wait times')
     
     def _initBoard(self, mtxId):
-        self.boardingMatrix = _util.initMatrix(mtxId, 0, 'trBord', 'Avg total boarding times')
+        self.boardingMatrix = _util.initializeMatrix(mtxId, name='trBord', description= 'Avg total boarding times')
     
     def _assignmentCheck(self):
         if self.scenario.transit_assignment_type != 'EXTENDED_TRANSIT_ASSIGNMENT':

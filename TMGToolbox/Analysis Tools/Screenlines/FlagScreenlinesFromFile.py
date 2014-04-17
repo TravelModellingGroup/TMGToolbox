@@ -131,7 +131,7 @@ class FlagScreenlinesFromFile(_m.Tool()):
     
     def _flagScreenline(self, network, screenline):
         attrId = "@s%s" %screenline.id 
-        attrId = _util.truncateString(attrId, 6)
+        attrId = attrId[:6]
         
         attr = self.scenario.extra_attribute(attrId)
         if attr == None:
@@ -147,8 +147,7 @@ class FlagScreenlinesFromFile(_m.Tool()):
             raise Exception("Attribute '%s' already exists and is not being allowed to be \
                     overwritten. Either enable overwriting or delete this attribute." %attrId)
         
-        attr.description = _util.truncateString("SL {0}: {1}".\
-                                                format(screenline.id, screenline.name), 40)
+        attr.description = "SL {0}: {1}".format(screenline.id, screenline.name)[:40]
         
         network = screenline.saveFlaggedLinksToAttribute(network, attr)
         _m.logbook_write("Flagged Screenline {0} ({1}) as attribute '{2}'".\

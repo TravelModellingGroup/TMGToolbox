@@ -189,13 +189,11 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
             self.UseAdditiveDemand = False
         
         #---3 Initialize output matrices, if needed
-        if self.ivttMatrix == None:
-            self.ivttMatrix = _util.initMatrix(self.databank.available_matrix_identifier('FULL'),
-                                           0, 'goIVTT', 'Avg total in vehicle times for GO')
-        
-        if self.costMatrix == None:
-            self.costMatrix = _util.initMatrix(self.databank.available_matrix_identifier('FULL'),
-                                           0, 'gocost', 'Avg total costs for GO')
+        #def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL'):
+        self.ivttMatrix = _util.initializeMatrix(self.ivttMatrix, matrix_type='FULL', name= 'goIVTT', \
+                                                description= 'Avg total in vehicle times for GO')
+        self.costMatrix = _util.initializeMatrix(self.costMatrix, matrix_type='FULL', name='gocost',
+                                            description= 'Avg total costs for GO')
         
         try:
             self._execute()
@@ -224,11 +222,10 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
                                 or a temporary matrix could not be created." %self.DemandMatrixNumber)
         
         #---3 Initialize output matrices
-        self.ivttMatrix = _util.initMatrix("mf%s" %InVehicleTimeMatrixNumber,
-                                           0, 'goIVTT', 'Avg total in vehicle times for GO')
-        
-        self.costMatrix = _util.initMatrix("mf%s" %CostMatrixNumber,
-                                           0, 'gocost', 'Avg total costs for GO')
+        self.ivttMatrix = _util.initializeMatrix(id= InVehicleTimeMatrixNumber, matrix_type='FULL', name= 'goIVTT',
+                                            description= 'Avg total in vehicle times for GO')
+        self.costMatrix = _util.initializeMatrix(id= CostMatrixNumber, matrix_type='FULL', name='gocost',
+                                            description= 'Avg total costs for GO')
         
         #---4 Pass call variables into Tool
         self.UseAdditiveDemand = UseAdditiveDemand
@@ -287,8 +284,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         usingScalar = False
         if self.demandMatrix == None:
             _m.logbook_write("Initializing temporary scalar demand matrix.")
-            self.demandMatrix = _util.initMatrix(_m.Modeller().emmebank.available_matrix_identifier("SCALAR"), \
-                                     0, 'trscal', 'Scalar matrix to get transit times')
+            self.demandMatrix = _util.initializeMatrix(matrix_type='SCALAR', name='trscal', description= 'Scalar matrix to get transit times')
             
             if self.demandMatrix == None:
                 raise Exception("Could not create temporary scalar demand matrix!")
@@ -309,8 +305,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         #Code here is executed upon entry
         
         _m.logbook_write("Initializing temporary constraint matrix.")
-        self.constraintMatrix = _util.initMatrix(self.databank.available_matrix_identifier("FULL"),
-                                            0, 'temp', 'temp')
+        self.constraintMatrix = _util.initializeMatrix(matrix_type='FULL')
         
         try:
             yield

@@ -110,9 +110,9 @@ class ExtractFeasibilityMatrix(_m.Tool()):
             self._modeList.append(m.id)
         
         # Initialize the result matrix, if necessary
-        if self.matrixResult == None:
-            self.matrixResult = _util.initMatrix(self.databank.available_matrix_identifier("FULL"),
-                                                 0, 'trfeas', 'Transit feasibility matrix')
+        #def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL'):
+        self.matrixResult = _util.initializeMatrix(self.matrixResult, matrix_type='FULL', name='trfeas',
+                                              description= 'Transit feasibility matrix')
         
         # Run the tool
         try:
@@ -134,8 +134,8 @@ class ExtractFeasibilityMatrix(_m.Tool()):
         if self.scenario == None:
             raise Exception("Could not find scenario %s!" %ScenarioNumber)
         
-        self.matrixResult = _util.initMatrix("mf%s" %MatrixResultNumber,
-                                        0, 'trfeas', 'Transit feasibility matrix')
+        self.matrixResult = _util.initializeMatrix(MatrixResultNumber, matrix_type='FULL', name='trfeas',
+                                              description='Transit feasibility matrix')
         
         # Convert the mode string to a list of characters
         for i in range(0, len(ModeString)):
@@ -171,33 +171,18 @@ class ExtractFeasibilityMatrix(_m.Tool()):
             self._assignmentCheck()
             
             #---1 Initialize temporary matrices for storing walk, wait, and in-vehicle times
-            _m.logbook_write("Initializing temporary matrices")
-            self.walkMatrix = _util.initMatrix(self.databank.available_matrix_identifier("FULL"),
-                                     0, 'trWalk', 'Temp walk time matrix')
-            self.waitMatrix = _util.initMatrix(self.databank.available_matrix_identifier("FULL"),
-                                    0, 'trwait', 'Temp wait time matrix')
-            self.ivttMatrix = _util.initMatrix(self.databank.available_matrix_identifier("FULL"),
-                                    0, 'trivtt', 'Temp ivtt matrix')
+            with nested(_util.tempMatrixMANAGER(description='Temp walk time matrix'),
+                        _util.tempMatrixMANAGER(description='Temp wait time matrix'),
+                        _util.tempMatrixMANAGER(description='Temp ivtt matrix'))\
+                    as (self.walkMatrix, self.waitMatrix, self.ivttMatrix):
             
-            #---2 Compute the temporary matrices
-            _m.logbook_write("Computing temporary matrices")
-            self.matrixResultTool(self._getStrategyAnalysisSpec())
-            
-            #---3 Compute the final results matrix
-            _m.logbook_write("Computing feasibility matrix")
-            self.matrixCalcTool(self._getMatrixCalcSpec(), self.scenario)
-            
-            #---4 Cleanup temporary matrices
-            _m.logbook_write("Clearing temporary matrices")
-            self._cleanup()
-            '''databank.delete_matrix(self.walkMatrix.id)
-            databank.delete_matrix(self.waitMatrix.id)
-            databank.delete_matrix(self.ivttMatrix.id)'''
-            
-            
-    def _reportProgress(self, current, total):
-        if self.isRunningFromXTMF:
-            self.XTMFBridge.ReportProgress(float(float(current) / float(total)))
+                #---2 Compute the temporary matrices
+                _m.logbook_write("Computing temporary matrices")
+                self.matrixResultTool(self._getStrategyAnalysisSpec())
+                
+                #---3 Compute the final results matrix
+                _m.logbook_write("Computing feasibility matrix")
+                self.matrixCalcTool(self._getMatrixCalcSpec(), self.scenario)            
     
     def _assignmentCheck(self):
         if self.scenario.transit_assignment_type != 'EXTENDED_TRANSIT_ASSIGNMENT':

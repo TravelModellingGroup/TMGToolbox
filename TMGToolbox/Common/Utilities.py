@@ -32,7 +32,7 @@ import sys as _sys
 import traceback as _tb
 import subprocess as _sp
 _MODELLER = _m.Modeller()
-
+_DATABANK = _MODELLER.emmebank
 class Face(_m.Tool()):
     def page(self):
         pb = _m.ToolPageBuilder(self, runnable=False, title="Utilities",
@@ -89,91 +89,74 @@ _mtxNames = {'FULL' : 'mf',
              'ORIGIN' : 'mo',
              'SCALAR' : 'ms'}
 
-def initMatrix2(id=None, default=0, name="", description="", matrix_type='FULL'):
+def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL'):
     '''
-    Utility function for creation and initialization of matrices.
+    Utility function for creation and initialization of matrices. Only works
+    for the current Emmebank.
     
     Args:
-        - id (=None): String id (e.g. 'mf2') If specified, this function will 
-            initialize the given matrix (if it exists) or create it (if it 
-            does not). If left blank, an available matrix will be found.
-        - default (=0): The numerical value to initialize the matrix to (i.e.,
-            its default value).
-        - name (=""): The 6-character name of the matrix. Will be truncated
-            if longer.
-        - description (=""): The 40-character descriptor for the matrix. Will
-            be truncated if longer.
+        - id (=None): Optional. Accepted value is a string integer ID  (must 
+            also specify a matrix_type to be able to use integer ID). If specified, 
+            this function will initialize the matrix with the given ID to a new
+            default value; changing its name and description if they are given. 
+            If unspecified, this function will create an available matrix - however
+            the 'matrix_type' argument MUST also be specified.
+        - default (=0): Optional The numerical value to initialize the matrix to 
+            (i.e., its default value).
+        - name (=""): Optional. If specified, the newly-initialized matrix will
+            have this as its 6-character name.
+        - description (=""): Optional. If specified, the newly-initialized matrix will
+            have this as its 40-character description.
         - matrix_type (='FULL'): One of 'SCALAR', 'ORIGIN', 'DESTINATION',
             or 'FULL'. If an ID is specified, the matrix type will be
-            inferred from the ID's prefix.
+            inferred from the ID's prefix. This argument is NOT optional
+            if passing in an integer ID, or if requesting a new matrix.
     
     Returns: The Emme Matrix object created or initialized.
     '''
     
-    databank = _m.Modeller().emmebank
-    
     if id == None:
         #Get an available matrix
-        id = databank.available_matrix_identifier(matrix_type)
+        id = _DATABANK.available_matrix_identifier(matrix_type)
     elif type(id) == int:
-        #If the matrix id is for some reason given as an integer
+        #If the matrix id is given as an integer
         try:
             id = "%s%s" %(_mtxNames[matrix_type],id)
         except KeyError, ke:
-            raise KeyError("Matrix type '%s' is not a valid matrix type." %matrix_type)
+            raise TypeError("Matrix type '%s' is not a valid matrix type." %matrix_type)
+    elif 'type' in dir(id):
+        #If the matrix id is given as a matrix object
+        t = id.type
+        if not t in _mtxNames:
+            raise TypeError("Assumed id was a matrix, but its type value was not recognized %s" %type(id))
+        id = id.id #Set the 'id' variable to the matrix's 'id' property.
+    elif type(id) != str:
+        raise TypeError("Id is not a supported type: %s" %type(id))
     
-    mtx = databank.matrix(id)
+    mtx = _DATABANK.matrix(id)
     
     if mtx == None:
         #Matrix does not exist, so create it.
-        mtx = databank.create_matrix(id, default_value=default)
-        mtx.name = name[:6] 
-        mtx.description = description[:40] 
+        mtx = _DATABANK.create_matrix(id, default_value=default)
+        if name: mtx.name = name[:6]
+        if description:  mtx.description = description[:40]
         _m.logbook_write("Created new matrix %s: '%s' (%s)." %(id, mtx.name, mtx.description))
     else:
-        #Matrix exists, so rename it, and re-initialize it.
-        if mtx.read_only:
-                raise _excep.ProtectionError("Cannot modify matrix '%s' as it is protected against modifications." %id)
+        if mtx.read_only: raise _excep.ProtectionError("Cannot modify matrix '%s' as it is protected against modifications." %id)
+        
         mtx.initialize(value=default)
-        mtx.name = name[:6]
-        mtx.description = description[:40]
+        if name: mtx.name = name[:6]
+        if description:  mtx.description = description[:40]
         _m.logbook_write("Initialized existing matrix %s: '%s' (%s)." %(id, mtx.name, mtx.description))
-    
-    return mtx        
-
-#-------------------------------------------------------------------------------------------
-
-#@deprecated: Use initMatrix2 instead
-# Initialize a matrix safely, by checking if it exists or not
-def initMatrix(id, default, name, descr):
-    try:
-        mtx = _m.Modeller().emmebank.matrix(id)
         
-        if mtx == None:
-            #Matrix does not exist, so create it.
-            mtx = _m.Modeller().emmebank.create_matrix(id, default_value=default)
-            mtx.name = truncateString(name, 6)
-            mtx.description = truncateString(descr, 40)
-        else:
-            #Matrix exists, so rename it, and re-initialize it.
-            if mtx.read_only:
-                raise _excep.ProtectionError("Cannot modify matrix '%s' as it is protected against modifications." %id)
-            mtx.initialize(value=default)
-            mtx.name = truncateString(name, 6)
-            mtx.description = truncateString(descr, 40)
-        
-        return mtx
-    except Exception, e:
-        raise e
-    
-    return None
+    return mtx
 
 #-------------------------------------------------------------------------------------------
 
 def getAvailableScenarioNumber():
     '''
     Returns: The number of an available scenario. Raises an exception
-    if the databank is full.
+    if the _DATABANK is full.
     '''
     for i in range(0, _m.Modeller().emmebank.dimensions['scenarios']):
         if _m.Modeller().emmebank.scenario(i + 1) == None:
@@ -254,10 +237,7 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
         - default (=0.0): The matrix's default value.
     '''
     
-    databank = _m.Modeller().emmebank
-    id = databank.available_matrix_identifier(matrix_type)
-    mtx = initMatrix(id, default, id, 
-                     description)
+    mtx = initializeMatrix(default=default, description=description, matrix_type=matrix_type)
     
     if mtx == None:
         raise Exception("Could not create temporary matrix: %s" %description)
@@ -268,7 +248,7 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
     try:
         yield mtx
     finally:
-        databank.delete_matrix(id)
+        _DATABANK.delete_matrix(id)
         
         s = "Deleted matrix %s." %id
         _m.logbook_write(s)

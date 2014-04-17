@@ -523,9 +523,9 @@ class TollBasedRoadAssignment(_m.Tool()):
           
     def _initOutputMatrices(self):
         with _m.logbook_trace("Initializing output matrices:"):
-            _util.initMatrix2(self.CostMatrixId, name='acost', description='AUTO COST: %s' %self.RunTitle)
-            _util.initMatrix2(self.TimesMatrixId, name='aivtt', description='AUTO TIME: %s' %self.RunTitle)
-            _util.initMatrix2(self.TollsMatrixId, name='atoll', description='AUTO TOLL: %s' %self.RunTitle)
+            _util.initializeMatrix(self.CostMatrixId, name='acost', description='AUTO COST: %s' %self.RunTitle)
+            _util.initializeMatrix(self.TimesMatrixId, name='aivtt', description='AUTO TIME: %s' %self.RunTitle)
+            _util.initializeMatrix(self.TollsMatrixId, name='atoll', description='AUTO TOLL: %s' %self.RunTitle)
     
     def _getLinkCostCalcSpec(self, costAttributeId):
         return {

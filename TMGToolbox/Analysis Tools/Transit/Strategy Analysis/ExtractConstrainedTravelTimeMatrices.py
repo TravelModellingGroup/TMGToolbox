@@ -232,17 +232,17 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                 
                 #--------------------------------------------------
                 if self.BoardingTimeMatrixId != 'null':
-                    _util.initMatrix2(self.BoardingTimeMatrixId, description="TRANSIT BOARD: %s" %self.RunTitle)
+                    _util.initializeMatrix(self.BoardingTimeMatrixId, description="TRANSIT BOARD: %s" %self.RunTitle)
                 if self.InVehicleTimeMatrixId != 'null':
-                    _util.initMatrix2(self.InVehicleTimeMatrixId, description="TRANSIT IVTT: %s" %self.RunTitle)
+                    _util.initializeMatrix(self.InVehicleTimeMatrixId, description="TRANSIT IVTT: %s" %self.RunTitle)
                 if self.WaitTimeMatrixId != 'null':
-                    _util.initMatrix2(self.WaitTimeMatrixId, description="TRANSIT WAIT: %s" %self.RunTitle)                    
+                    _util.initializeMatrix(self.WaitTimeMatrixId, description="TRANSIT WAIT: %s" %self.RunTitle)                    
                 if self.WalkTimeMatrixId != 'null':
-                    _util.initMatrix2(self.WalkTimeMatrixId, description="TRANSIT WALK: %s" %self.RunTitle)
+                    _util.initializeMatrix(self.WalkTimeMatrixId, description="TRANSIT WALK: %s" %self.RunTitle)
                 
                 calcFares = False
                 if self.CostMatrixId != 'null':
-                    _util.initMatrix2(self.CostMatrixId, description="TRANSIT COST %s" %self.RunTitle)
+                    _util.initializeMatrix(self.CostMatrixId, description="TRANSIT COST %s" %self.RunTitle)
                     if self.FarePerception != 0:
                         calcFares = True    
                 self.TRACKER.completeTask()

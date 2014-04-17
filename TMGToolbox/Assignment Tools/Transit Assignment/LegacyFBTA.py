@@ -272,8 +272,8 @@ class LegacyFBTA(_m.Tool()):
         usingScalar = False
         if self.demandMatrix == None:
             _m.logbook_write("Initializing temporary scalar demand matrix.")
-            self.demandMatrix = _util.initMatrix(_m.Modeller().emmebank.available_matrix_identifier("SCALAR"), \
-                                     0, 'trscal', 'Scalar matrix to get transit times')
+            
+            self.demandMatrix = _util.initializeMatrix(matrix_type='SCALAR', name='trscal', description="Scalar matrix to get transit times")
             
             if self.demandMatrix == None:
                 raise Exception("Could not create temporary scalar demand matrix!")
