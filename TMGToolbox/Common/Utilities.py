@@ -56,15 +56,6 @@ def formatReverseStack():
 
 #-------------------------------------------------------------------------------------------
 
-#@deprecated: Just use Python's builtin functionality instead
-def truncateString(s, num):
-    '''    
-    Truncates string 's' to desired length 'num'.
-    '''
-    return s[:num]
-
-#-------------------------------------------------------------------------------------------
-
 def getScenarioModes(scenario, types=['AUTO', 'AUX_AUTO', 'TRANSIT', 'AUX_TRANSIT']):
     '''
     Returns a list of mode tuples [(id, type, description)] for a given Scenario object, 
@@ -585,6 +576,10 @@ class ProgressTracker():
     Handles progress at two levels: Tasks and Subtasks. Running
     an Emme Tool counts as a Task. The total number of tasks 
     must be known at initialization.
+    
+    Update April 2014: Can be 'reset' with a new number of tasks,
+    for when two task-levels are needed but the number of full
+    tasks are not known at initialization.
     '''
     
     def __init__(self, numberOfTasks):
@@ -592,13 +587,16 @@ class ProgressTracker():
         self.reset()
         self._errorTools = set()
     
-    def reset(self):
+    def reset(self, numberOfTasks=None):
         self._subTasks = 0
         self._completedSubtasks = 0
         self._progress = 0.0 #floating point number
         self._toolIsRunning = False
         self._processIsRunning = False
         self._activeTool = None
+        
+        if numberOfTasks != None: #Can be reset with a new number of tasks
+            self._taskIncr = 1000.0 / numberOfTasks
     
     def completeTask(self):
         '''
