@@ -53,6 +53,9 @@ Import Network Package
     
     0.6.0 Added loading of NWP metadata (info.txt) which is new (NWP Version 4.0 +)
     
+    0.6.1 Tweaked the look of the metadata table. Also updated the file browser to not
+            always start in the project Database folder.
+    
 '''
 
 import inro.modeller as _m
@@ -73,7 +76,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ImportNetworkPackage(_m.Tool()):
     
-    version = '0.6.0'
+    version = '0.6.1'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -108,8 +111,7 @@ class ImportNetworkPackage(_m.Tool()):
         pb.add_select_file(tool_attribute_name='NetworkPackageFile',
                            window_type='file',
                            title="Network Pasckage File",
-                           file_filter='*.nwp',
-                           start_path=_path.dirname(_MODELLER.desktop.project_file_name()))
+                           file_filter='*.nwp')
         
         pb.add_html("""<div class="t_element" id="NetworkPackageInfoDiv" style="padding: 0px inherit;">
         </div>""")
@@ -416,10 +418,10 @@ class ImportNetworkPackage(_m.Tool()):
             scenarioTitle = "<b>Scenario:</b> %s" %lines[2].strip()
             exportDate = "<b>Export Date:</b> %s" %lines[3].strip()
             commentLines = ["<b>User Comments:</b>"] + [l.strip() for l in lines[4:]]
-            lcell = "<br>".join([packageVersion, projectName, exportDate, scenarioTitle])
-            rcell = "<br>".join(commentLines)
+            htmlLines = [packageVersion, projectName, scenarioTitle, exportDate, ''] + commentLines
+            cell = "<br>".join(htmlLines)
             
-            return "<table border='1' width='90&#37'><tbody><tr><td valign='top' width='50&#37'>%s</td><td valign='top'>%s</td></tr></tbody></table>" %(lcell, rcell)
+            return "<table border='1' width='90&#37'><tbody><tr><td valign='top'>%s</td></tr></tbody></table>" %cell
             
             
             
