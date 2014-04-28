@@ -56,6 +56,44 @@ def formatReverseStack():
 
 #-------------------------------------------------------------------------------------------
 
+def iterpairs(iterable):
+    '''
+    Iterates through two subsequent elements in a list.
+    Example: 
+        x = [1,2,3,4,5]
+        for (val1, val2) in iterpairs(x): print "1=%s 2=%s" %(val1, val2)
+        >>> 1=1 2=2
+        >>> 1=2 2=3
+        >>> 1=3 2=4
+        >>> 1=4 2=5
+    '''
+    if len(iterable) < 2: raise IndexError("Iterable must have at least two elements")
+    
+    flag = True
+    for val in iterable:
+        if flag:
+            prev = val
+            flag = False
+        else:
+            yield (prev, val)
+            prev = val
+            
+#-------------------------------------------------------------------------------------------
+
+def equap(number1, number2, precision= 0.00001):
+    '''
+    Tests for shallow floating point approximate equality.
+    
+    Args:
+        - number 1: The first float
+        - number 2: The second float
+        - precision (=0.00001): The maximum allowed error.
+    '''
+    diff = abs(float(number1), float(number2))
+    return diff < precision
+
+#-------------------------------------------------------------------------------------------
+
 def getScenarioModes(scenario, types=['AUTO', 'AUX_AUTO', 'TRANSIT', 'AUX_TRANSIT']):
     '''
     Returns a list of mode tuples [(id, type, description)] for a given Scenario object, 
@@ -233,15 +271,12 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
     if mtx == None:
         raise Exception("Could not create temporary matrix: %s" %description)
     
-    s = "Created temporary matrix {0}: {1}.".format(id, description)
-    _m.logbook_write(s)
-    
     try:
         yield mtx
     finally:
-        _DATABANK.delete_matrix(id)
+        _DATABANK.delete_matrix(mtx.id)
         
-        s = "Deleted matrix %s." %id
+        s = "Deleted matrix %s." %mtx.id
         _m.logbook_write(s)
 
 #-------------------------------------------------------------------------------------------
@@ -327,6 +362,15 @@ def getEmmeVersion():
     emmeProcess = _sp.Popen(['Emme', '-V'], stdout= _sp.PIPE, stderr= _sp.PIPE)
     output = emmeProcess.communicate()[0]
     return output.split(',')[0]
+
+#-------------------------------------------------------------------------------------------
+
+EMME_INFINITY = float('1E+20')
+def isEmmeInfinity(number, precision= 0.001):
+    '''
+    Tests if a matrix value is equal to "Emme infinity" or 1E+20 using approximate equality. 
+    '''
+    return equap(number, EMME_INFINITY, precision)
 
 #-------------------------------------------------------------------------------------------
 
