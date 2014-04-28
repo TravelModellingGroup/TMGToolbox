@@ -18,11 +18,13 @@
 '''
 
 import inro.modeller as _m
+import math as _math
+from warnings import warn as _warn
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _geolib = _MODELLER.module('TMG2.Common.Geometry')
-import math as _math
-from warnings import warn as _warn
+__coord_factor = _MODELLER.emmebank.coord_unit_length
+
 
 class Face(_m.Tool()):
     
@@ -34,6 +36,45 @@ class Face(_m.Tool()):
         pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
         
         return pb.render()
+
+#-------------------------------------------------------------------------------------------
+
+__NAMED_AGGREGATORS = {'sum': lambda x,y: x + y,
+                       'avg': lambda x,y: (x+y) * 0.5,
+                       'first': lambda x,y: x,
+                       'last': lambda x,y: y,
+                       'min': lambda x,y: min(x,y),
+                       'max': lambda x,y: max(x,y),
+                       'and': lambda x,y: x and y,
+                       'or': lambda x,y: x or y}
+
+#-------------------------------------------------------------------------------------------
+
+def calcShapeLength(link, coordFactor= __coord_factor):
+    '''
+    Calculates the shape length of a link (i.e., including
+    shape vertices). Applies the coordinate factor of the
+    current emmebank, unless otherwise specified.
+    
+    Args:
+        - link: An Emme Link object
+        - coordFactor (=__coord_factor): A factor applied
+                to the returned length. By default set to
+                the coordinate factor of the current 
+                emmebank.
+    '''
+    shapeLength = 0
+    i = link.i_node
+    j = link.j_node
+    points = [(i.x, i.y)] + link.vertices + [(j.x, j.y)]
+    
+    for p1, p2 in _util.iterpairs(points):
+        x1, y1 = p1
+        x2, y2 = p2
+        dx = x2-x1
+        dy = y2-y1
+        shapeLength += _math.sqrt(dx*dx + dy*dy)
+    return shapeLength * coordFactor
 
 #-------------------------------------------------------------------------------------------
 
@@ -321,154 +362,190 @@ def renumberTransitVehicle(oldVehicle, newId):
     
 #-------------------------------------------------------------------------------------------
 
-def mergeLinks(node, deleteStop=False, linkOverride={}, segmentOverride={}):
+__LINK_ATTRIBUTE_AGGREGATORS = {'vertices': lambda x, y: x + y,
+                                'length': lambda x, y: x + y,
+                                'num_lanes': lambda x,y: max(x,y),
+                                'type': lambda x,y: min(x,y),
+                                'volume_delay_func': lambda x,y: min(x,y)}
+
+__SEGMENT_ATTRIBUTE_AGGREGATORS = {'dwell_time': lambda x,y: x+y,
+                                   'transit_time_func': lambda x,y: max(x,y),
+                                   'factor_dwell_time_by_length': lambda x,y: x or y,
+                                   'allow_alightings': lambda x,y: x,
+                                   'allow_boardings': lambda x,y: x}
+
+__ATTRIBUTE_CASTS = {'num_lanes': int,
+                     'type': int,
+                     'volume_delay_func': int,
+                     'factor_dwell_time_by_length': bool,
+                     'transit_time_func': int,
+                     'vertices': lambda v: v, #Do not cast the vertices
+                     'allow_alightings': bool,
+                     'allow_boardings': bool} 
+
+def mergeLinks(node, deleteStop= False, vertex= True, linkAggregators=None, segmentAggregators= None):
     '''
-    Deletes a 2-degree node and merges its connected links. The merged link will 
-    always permit the union of modes between its candidate links.
+    Deletes a node and merges its links. This only works for nodes connected to exactly
+    2 other nodes with either two or four links. The node can be a transit stop but cannot
+    be the first or last stop in a transit line's itinerary.
     
     Args:
-        - node: A Node object to delete. This node must connect to exactly two
-            other nodes. 
-        - deleteStop (=False): Allows all incident transit stops to be deleted.
-            Nodes at the end of lines CANNOT ever be deleted.
-        - linkOverride (={}): Dictionary allows the user to specify a dict of
-            [attribute_name: lambda(double => val1, val2)] to override the default
-            operation for merging the two attributes (SUM for link length, AVG for
-            everything else)
-        - segmentOverride (={}): Dictionary is used the same as the linkOverride
-            argument, except applied to all merging segments
-        
-    Returns: None
+        - node: The Emme node object to remove.
+        - deleteStop (=False): Flag to remove incident stops (or not). If False, this
+                function will raise an error if any transit line stops at the given node.
+        - vertex (=True): Flag to insert the deleted node as a vertex in the merged link(s).
+        - linkAggregators (=None): A dictionary. The keys are the names of link standard
+                or extra attributes, the values are two-argument lambdas. This can be
+                used to specify the aggregator function used to combine the values from
+                the two merged links. If not specified, the default aggregators will be
+                used:
+                    SUM for length
+                    MIN for type
+                    MIN for VDF
+                    MAX for lanes
+                    AVG for everything else
+        - segmentAggregators (=None): Similar to linkAggregators, but applied to segment
+                attributes. If not specified, the default aggregators will be used:
+                    SUM for dwell time
+                    MAX for TTF
+                    OR for factor dwell time by length flag
+                    AVG for everything else
+    
+    Returns:
+        A list of created link tuples.
     '''
     
-    neighbourSet = set([link.j_node for link in node.outgoing_links()])
+    incomingLinks = [link for link in node.incoming_links()]
+    outgoingLinks = [link for link in node.outgoing_links()]
+    
+    neighbourSet =set([link.i_node.number for link in incomingLinks] + 
+                      [link.j_node.number for link in outgoingLinks])
+    
+    #Check that this is a valid node to delete.
     if len(neighbourSet) != 2:
-        raise Exception("Can only delete nodes with a degree of 2 (found %s)" %len(neighbourSet))
+        raise Exception("Cannot delete node %s: can only merge nodes with a degree of 2." %node)
     
-    linkPairsToMerge = _getLinkPairs(node)
-    if linkPairsToMerge == None:
-        raise Exception("Impossible to merge configuration of inbound/outbound links")
+    if len(incomingLinks) != len(outgoingLinks):
+        raise Exception("Cannot delete node %s: can only delete nodes with the same number of incoming and outgoing links." %node)
     
+    for link in incomingLinks:
+        for segment in link.segments():
+            if segment.line.segment(-2).number == segment.number:
+                raise Exception("Cannot delete node %s: it is the final stop of transit line %s." %(node, segment.line))
+    for link in outgoingLinks:
+        for segment in link.segments():
+            if segment.number == 0:
+                raise Exception("Cannot delete node %s: it is the first stop of transit line %s." %(node, segment.line))
+            if not deleteStop:
+                if segment.allow_alightings or segment.allow_boardings:
+                    raise Exception("Cannot delete node %s: it is being used as a transit stop for line %s" %(node, segment.line))
+            
     network = node.network
-    newLinks = []
-    newLines = []
-    lineIdMapping = {}
-    TEMP_LINE_ID = 'ZZZZ'
+    avg = lambda x, y: (x + y) * 0.5
+    
+    if linkAggregators == None: linkAggregators = __LINK_ATTRIBUTE_AGGREGATORS
+    else:
+        for attName, func in __LINK_ATTRIBUTE_AGGREGATORS:
+            if not attName in linkAggregators: linkAggregators[attName] = func
+    if segmentAggregators == None: segmentAggregators = __SEGMENT_ATTRIBUTE_AGGREGATORS
+    else:
+        for attName, func in __SEGMENT_ATTRIBUTE_AGGREGATORS:
+            if not attName in segmentAggregators: segmentAggregators[attName] = func
+    
+    #Get the link pair(s) to merge
+    if len(incomingLinks) == 1:
+        pairsToMerge = [(incomingLinks[0], outgoingLinks[0])]
+    elif len(incomingLinks) == 2:
+        pair1 = (incomingLinks[0], incomingLinks[1].reverse_link)
+        pair2 = (incomingLinks[1], incomingLinks[0].reverse_link)
+        pairsToMerge = [pair1, pair2]
+    
+    createdLinks = []
+    createdLines = []
+    
+    def getTempLineId():
+        n = 1
+        tl = network.transit_line(str(n))
+        while tl != None:
+            n += 1
+            tl = network.transit_line(str(n))
+        return str(n)
     
     try:
-        for link1, link2 in linkPairsToMerge:
-            #Merge the links themselves
+        #Merge the links first
+        for link1, link2 in pairsToMerge:
+            
+            #Check if the merged link already exists
             if network.link(link1.i_node.number, link2.j_node.number) != None:
                 raise Exception("Merged link %s-%s already exists!" %(link1.i_node.number, link2.j_node.number))
-            mergedModes = set([m for m in link1.modes] + [m for m in link2.modes])
-            mergedLink = network.create_link(link1.i_node.number, link2.j_node.number, mergedModes)
             
-            for att in mergedLink._atts:
-                if att == 'vertices': continue
-                
-                if att in linkOverride:
-                    mergedLink[att] = linkOverride[att](link1[att], link2[att])
+            newModes = link1.modes | link2.modes #Always permit the union of the set of modes
+            newLink = network.create_link(link1.i_node.number, link2.j_node.number, newModes)
+            
+            #Merge the attributes
+            for att in network.attributes('LINK'):
+                if att in linkAggregators:
+                    func = linkAggregators[att]
                 else:
-                    if att == 'length':
-                        mergedLink.length = link1.length + link2.length
-                    elif att == 'volume_delay_func':
-                        mergedLink.volume_delay_func = max(link1.volume_delay_func, link2.volume_delay_func)
-                    else:
-                        mergedLink[att] = (link1[att] + link2[att]) * 0.5
-                        
-            for vertex in link1.vertices: mergedLink.vertices.append(vertex)
-            for vertex in link2.vertices: mergedLink.vertices.append(vertex)
-            
-            newLinks.append(mergedLink)
-            
-            for segment in link1.segments():
-                proxy = TransitLineProxy(segment.line)
-                proxySegment1 = proxy.segments[segment.number] #This will become the merged segment
-                proxySegment2 = proxy.segments.pop(segment.number + 1) #Remove the following segment from the proxy
+                    func = avg
+                newVal = func(link1[att], link2[att])
                 
-                proxySegment1 = TransitSegmentProxy()
-                proxySegment2 = TransitSegmentProxy()
-                
-                #Merge attributes slaved to a sub function because oh god it's messy
-                _mergeSegments(segmentOverride, proxySegment1, proxySegment2)
-                
-           
-    except Exception, e:
-        for link in newLinks:
-            network.delete_link(link.i_node.number, link.j_node.number)
-        for line in newLines:
-            network.delete_transit_line(line.id)
-        raise
+                if att in __ATTRIBUTE_CASTS:
+                    cast = __ATTRIBUTE_CASTS[att]
+                else:
+                    cast = float
+                newLink[att] = cast(newVal)
 
-def _getLinkPairs(node):
-    oLinks = [link for link in node.outgoing_links()]
-    iLinks = [link for link in node.incoming_links()]
-    
-    if len(oLinks) == 1 and len(iLinks) == 1:
-        return [(iLinks[0], oLinks[0])]
-    elif len(oLinks) == 2 and len(iLinks) == 2:
-        pair1 = (iLinks[0], iLinks[1].reverse_link)
-        pair2 = (iLinks[1], iLinks[0].reverse_link)
-        return [pair1, pair2]
-    else:
-        return None
-
-def _canDeleteStop(node, deleteStop):
-    for link in node.incoming_links():
-        for segment in link.segments():
-            index = segment.number
-            nextSegment = segment.line.segment(index + 1) #Guaranteed to exist, because of the hidden segment
-            if nextSegment.link == None: return False #Cannot delete the last node in an itinerary
+            #If requested, insert the node as a vertex in the merged link
+            if vertex: 
+                newLink.vertices.insert(len(link1.vertices), (node.x, node.y))
             
-            if nextSegment.allow_boardings or nextSegment.allow_alightings:
-                return deleteStop
-    for link in node.outgoing_links():
-        for segment in link.segments():
-            if segment.number == 0: return False #Cannot delete the first node in an itinerary
-            
-            if segment.allow_boardings or segment.allow_alightings:
-                return deleteStop
-    return True
-
-def _mergeSegments(segmentOverride, proxySegment1, proxySegment2):
-    if 'transit_time_func' in segmentOverride:
-        proxySegment1.ttf = segmentOverride['transit_time_func'](proxySegment1.ttf, proxySegment2.ttf)
-    else:
-        proxySegment1.ttf = max(proxySegment1.ttf, proxySegment2.ttf)
+            createdLinks.append((link1.i_node.number, link2.j_node.number))
         
-    if 'dwell_time' in segmentOverride:
-        proxySegment1.dwellTime = segmentOverride['dwell_time'](proxySegment1.dwellTime, proxySegment2.dwellTime)
-    else:
-        proxySegment1.dwellTime += proxySegment2.dwellTime
+        #Then, merge the transit segments
+        for link1, link2 in pairsToMerge:
+            for baseSegment1 in link1.segments():
+                proxy = TransitLineProxy(baseSegment1.line)
+                
+                nSeg1 = baseSegment1.number
+                nSeg2 = nSeg1 + 1
+                proxySeg1 = proxy.segments[nSeg1]
+                proxySeg2 = proxy.segments[nSeg2]
+                
+                for att in network.attributes('TRANSIT_SEGMENT'):
+                    if att in segmentAggregators:
+                        func = segmentAggregators[att]
+                    else:
+                        func = avg
+                    newVal = func(proxySeg1[att], proxySeg2[att])
+                    
+                    if att in __ATTRIBUTE_CASTS:
+                        cast = __ATTRIBUTE_CASTS[att]
+                    else:
+                        cast = float
+                    proxySeg1[att] = cast(newVal)
+                proxy.segments.pop(nSeg2) #Remove the second segment
+                
+                proxy.id = getTempLineId()
+                copy = proxy.copyToNetwork(network)
+                createdLines.append((copy, baseSegment1.line.id))
+                
+        #Delete the node and the connected links and lines
+        network.delete_node(node.number, cascade= True)
+        
+        #Rename the proxies
+        for newLine, oldId in createdLines:
+            changeTransitLineId(newLine, oldId)
+        
+    except Exception, e:
+        #If any error occurs, undo the created links and lines
+        for iNodeId, jNodeId in createdLinks:
+            network.delete_link(iNodeId, jNodeId)
+        for newLine, oldId in createdLines:
+            network.delete_transit_line(newLine.id)
+        raise
     
-    if 'factor_dwell_time_by_length' in segmentOverride:
-        proxySegment1.factorFlag = segmentOverride['factor_dwell_time_by_length'](proxySegment1.factorFlag, proxySegment2.factorFlag)
-    else:
-        proxySegment1.factorFlag = proxySegment1.factorFlag and proxySegment2.factorFlag
-    
-    if 'data1' in segmentOverride:
-        proxySegment1.data1 = segmentOverride['data1'](proxySegment1.data1, proxySegment2.data1)
-    else:
-        proxySegment1.data1 = (proxySegment1.data1 + proxySegment2.data1) * 0.5
-    
-    if 'data2' in segmentOverride:
-        proxySegment1.data2 = segmentOverride['data2'](proxySegment1.data2, proxySegment2.data2)
-    else:
-        proxySegment1.data2 = (proxySegment1.data2 + proxySegment2.data2) * 0.5
-    
-    if 'data3' in segmentOverride:
-        proxySegment1.data3 = segmentOverride['data3'](proxySegment1.data3, proxySegment2.data3)
-    else:
-        proxySegment1.data3 = (proxySegment1.data3 + proxySegment2.data3) * 0.5
-    
-    for att in proxySegment1.exatts.iterkeys():
-        if att in segmentOverride:
-            proxySegment1.exatts[att] = segmentOverride[att](proxySegment1.exatts[att], proxySegment2.exatts[att])
-        else:
-            try:
-                proxySegment1.exatts[att] = (proxySegment1.exatts[att] + proxySegment2.exatts[att]) * 0.5
-            except Exception, e:
-                pass
+    return [createdLinks]
 
 #-------------------------------------------------------------------------------------------
 
@@ -482,6 +559,8 @@ class TransitLineProxy():
     '''
     
     DEFAULT_ATTS = set(['description', 'layover_time', 'speed', 'headway', 'data1', 'data2', 'data3'])
+    
+    __MAP = {'layover_time': 'layover'}
     
     def __init__(self, line):
         self.id = line.id
@@ -500,6 +579,23 @@ class TransitLineProxy():
                 self.exatts[attId] = line[attId]
         
         self.segments = [TransitSegmentProxy(segment) for segment in line.segments(True)]
+    
+    def __getitem__(self, key):
+        if type(key) != str: raise TypeError("Attribute must be a string")
+        
+        if key in self.__MAP: key = self.__MAP[key]
+        if key in self.exatts:
+            return self.exatts[key]
+        return self.__dict__[key]
+    
+    def __setitem__(self, key, value):
+        if type(key) != str: raise TypeError("Attribute must be a string")
+        
+        if key in self.__MAP: key = self.__MAP[key]
+        if key in self.exatts:
+            self.exatts = value
+        else:
+            self.__dict__[key] = value        
     
     def copyToNetwork(self, network):
         itinerary = [segment.iNode.number for segment in self.segments]
@@ -534,6 +630,12 @@ class TransitSegmentProxy():
                         'transit_volume', 'transit_boardings', 'factor_dwell_time_by_length',
                         'transit_time_func', 'data1', 'data2', 'data3'])
     
+    __MAP = {'allow_boardings': 'allowBoardings',
+             'allow_alightings':'allowAlightings',
+             'dwell_time':'dwellTime',
+             'transit_time_func':'ttf',
+             'factor_dwell_time_by_length':'factorFlag'}
+    
     def __init__(self, segment, iNode=None):
         '''
         By default, a new segment takes the iNode of the segment to copy,
@@ -553,9 +655,26 @@ class TransitSegmentProxy():
         self.data3 = segment.data3
         
         self.exatts = {}
-        for attId in segment.network.attributes('TRANSIT_SEGMENT'):
+        for attId in segment.line.mode.network.attributes('TRANSIT_SEGMENT'):
             if not attId in self.DEFAULT_ATTS:
                 self.exatts[attId] = segment[attId]
+    
+    def __getitem__(self, key):
+        if type(key) != str: raise TypeError("Attribute must be a string")
+        
+        if key in self.__MAP: key = self.__MAP[key]
+        if key in self.exatts:
+            return self.exatts[key]
+        return self.__dict__[key]
+    
+    def __setitem__(self, key, value):
+        if type(key) != str: raise TypeError("Attribute must be a string")
+        
+        if key in self.__MAP: key = self.__MAP[key]
+        if key in self.exatts:
+            self.exatts = value
+        else:
+            self.__dict__[key] = value 
     
     def copyToSegment(self, segment):
         segment.allow_boardings = self.allowBoardings
