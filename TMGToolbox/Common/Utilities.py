@@ -354,14 +354,32 @@ def fastLoadTransitLineAttributes(scenario, list_of_attributes):
 
 #-------------------------------------------------------------------------------------------
 
-def getEmmeVersion():
+def getEmmeVersion(asTuple= False):
     '''
     Gets the version of Emme that is currently running, as a string. For example,
     'Emme 4.0.8', or 'Emme 4.1.0 32-bit'.
+    
+    Args:
+        - asTuple (=False): Boolean flag to return the version number as a string, or
+                as a tuple of ints (e.g., [4,1,0] for Emme 4.1.0)
+    
+    Returns: The version number as a string, or a tuple of version numbers (see 
+            asTuple argument)
+    '''
+    '''
+    Implementation note: For the string-to-int-tuple conversion, I've assumed the
+    string version is of the form ['Emme', '4.x.x', ...] (i.e., the version string
+    is the second item in the space-separated list). -pkucirek April 2014
     '''
     emmeProcess = _sp.Popen(['Emme', '-V'], stdout= _sp.PIPE, stderr= _sp.PIPE)
     output = emmeProcess.communicate()[0]
-    return output.split(',')[0]
+    retval = output.split(',')[0]
+    if not asTuple: return retval
+    
+    components = retval.split(' ')
+    version = components[1].split('.')
+    versionTuple = [int(n) for n in version]
+    return versionTuple
 
 #-------------------------------------------------------------------------------------------
 
