@@ -56,11 +56,21 @@ IMPORT NETWORK UPDATE
         ~<_edb_ 2 211 Update_Yong_St_lanes/00000_nodes
             becomes
         ~<_edb_ 2 211 $DIR$/00000_nodes
+    It also recommended to replace the "reports=[macro name]-%s%.rep" line with:
+        reports=$REP$-%s%.rep
+        ~t9=$REP$-%s%.rep
+    This ensures that the reports files are written to the Database folder, not
+    the temporary directory (which gets deleted).
+    
         
 '''
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2014-04-21 by pkucirek
+    
+    0.1.1 Added better support for reports
+    
+    0.2.0 Added support for Python scripts
     
 '''
 
@@ -72,15 +82,26 @@ import shutil as _shutil
 from os import path
 import tempfile as _tf
 import zipfile as _zipfile
+import sys
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 ##########################################################################################################
 
+class redirectPrint():
+    
+    def __init__(self, base):
+        self._echo = base
+    
+    def write(self, statement):
+        if not statement.isspace():
+            self._echo.write("%s\n" %statement)
+            _m.logbook_write(statement)
+
 class ImportNetworkUpdate(_m.Tool()):
     
-    version = '0.1.0'
+    version = '0.2.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -99,7 +120,14 @@ class ImportNetworkUpdate(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Network Update v%s" %self.version,
                      description="Opens a Network Update (*.nup) file, which contains \
-                         scripts and macros used to update one or more scenarios.",
+                         scripts and macros used to update one or more scenarios. \
+                         <br><br>Macros used to perform a network update are based on \
+                         Emme's Network Editor, which can sometimes cause an error \
+                         when network elements are missing. It is recommended to check \
+                         the Database directory for the created reports file(s). \
+                         <br><br><font color='red'><b>Wanring:</b></font> This tool \
+                         makes irreversible changes to your scenarios. Make sure to \
+                         test the update on copies first.",
                      branding_text="TMG")
         
         if self.tool_run_msg != "": # to display messages in the page
@@ -168,7 +196,7 @@ class ImportNetworkUpdate(_m.Tool()):
                     scripts = [line.strip() for line in reader]
                 finally:
                     reader.close()
-                
+                                
                 self.TRACKER.reset(len(scripts))
                 nl = set(zf.namelist())
                 
@@ -179,6 +207,11 @@ class ImportNetworkUpdate(_m.Tool()):
                         
                         with _m.logbook_trace("Running MACRO %s" %script):
                             self._RunMacro(zf, script)
+                    elif script.endswith(".py"):
+                        if not script in nl:
+                            raise IOError("NUP file formatting error: Script %s does not exist" %script)
+                        with _m.logbook_trace("Running PY_SCRIPT %s" %script):
+                            self._RunPythonScript(zf, script)
                     else:
                         _m.logbook_write("Script type of '%'s not supported" %script)
                     self.TRACKER.completeTask()
@@ -212,6 +245,16 @@ class ImportNetworkUpdate(_m.Tool()):
         finally:
             _shutil.rmtree(tempDirectory, True)  
             _m.logbook_write("Deleted temp directory at %s" %tempDirectory)  
+    
+    @contextmanager
+    def _printRedirectMANAGER(self):
+        base = sys.stdout
+        sys.stdout = redirectPrint(base)
+        
+        try:
+            yield
+        finally:
+            sys.stdout = base
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
@@ -248,10 +291,9 @@ class ImportNetworkUpdate(_m.Tool()):
             try:
                 with open(path.join(tempFolder, macroName), 'w') as writer:
                     for line in reader:
+                        line = line.replace("$REP$", macroName)
                         if line.startswith("~<"):
                             line = line.replace('$DIR$', "%s/%s" %(relativeName, prefix))
-                        elif line.startswith("reports="):
-                            continue #Skips writing to reports
                         elif line.startswith("comment="):
                             continue #Skips commenting to logbook
                         writer.write(line)
@@ -265,6 +307,18 @@ class ImportNetworkUpdate(_m.Tool()):
                      scenario= sc)
                 self.TRACKER.completeSubtask()
         #File cleanup is handled by the context managers
+    
+    def _RunPythonScript(self, zipFile, scriptName):
+        self.TRACKER.startProcess(len(self.Scenarios))
+        
+        with self._tempDirectoryMANAGER() as tempFolder:
+            zipFile.extract(scriptName, tempFolder)
+            scriptFile = path.join(tempFolder, scriptName)
+            
+            for sc in self.Scenarios:
+                nup_scenario = sc
+                with self._printRedirectMANAGER():
+                    execfile(scriptFile, locals())
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
@@ -304,6 +358,7 @@ class ImportNetworkUpdate(_m.Tool()):
                         htmlList += "</ol>"
                         htmlLines[len(htmlLines) - 1] += htmlList
                         listBuffer = []
+                        htmlLines.append(line)
                 else:
                     if line.startswith("*"):
                         listBuffer.append(line[1:])
