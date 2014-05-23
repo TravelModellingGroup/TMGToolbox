@@ -77,7 +77,33 @@ def iterpairs(iterable):
         else:
             yield (prev, val)
             prev = val
-            
+
+#-------------------------------------------------------------------------------------------
+
+def itersync(list1, list2):
+    '''
+    Iterates through tuples of corresponding values for
+    lists of the same length.
+    
+    Example:
+        list1 = [1,2,3,4,5]
+        list2 = [6,7,8,9,10]
+        
+        for a, b in itersync(list1, list2):
+            print a,b
+        >>>1 6
+        >>>2 7
+        >>>3 8
+        >>>4 9
+        >>>5 10
+    '''
+    
+    if len(list1) != len(list2):
+        raise IndexError("Lists must be of the same length")
+    
+    for i in xrange(len(list1)):
+        yield list1[i], list2[i]
+
 #-------------------------------------------------------------------------------------------
 
 def equap(number1, number2, precision= 0.00001):
@@ -354,32 +380,44 @@ def fastLoadTransitLineAttributes(scenario, list_of_attributes):
 
 #-------------------------------------------------------------------------------------------
 
-def getEmmeVersion(asTuple= False):
+def getEmmeVersion(returnType= str):
     '''
     Gets the version of Emme that is currently running, as a string. For example,
     'Emme 4.0.8', or 'Emme 4.1.0 32-bit'.
     
-    Args:
+    Args & returns:
+        - returnType (=str): The desired Python type to return. Accepted types are:
+            str: Returns in the form "Emme 4.1.0 32-bit". This is the most verbose.
+            tuple: Returns in the form (4, 1, 0) tuple of integers.
+            float: Returns in the form 4.1
+            int: Return in the form 4
+            
         - asTuple (=False): Boolean flag to return the version number as a string, or
                 as a tuple of ints (e.g., [4,1,0] for Emme 4.1.0)
-    
-    Returns: The version number as a string, or a tuple of version numbers (see 
-            asTuple argument)
     '''
     '''
     Implementation note: For the string-to-int-tuple conversion, I've assumed the
     string version is of the form ['Emme', '4.x.x', ...] (i.e., the version string
     is the second item in the space-separated list). -pkucirek April 2014
     '''
+    
+    #The following is code directly from INRO
     emmeProcess = _sp.Popen(['Emme', '-V'], stdout= _sp.PIPE, stderr= _sp.PIPE)
     output = emmeProcess.communicate()[0]
     retval = output.split(',')[0]
-    if not asTuple: return retval
+    if returnType == str: return retval
     
+    #The following is my own code
     components = retval.split(' ')
     version = components[1].split('.')
     versionTuple = [int(n) for n in version]
-    return versionTuple
+    if returnType == tuple: return versionTuple
+    
+    if returnType == float: return versionTuple[0] + versionTuple[1] * 0.1
+    
+    if returnType == int: return versionTuple[0]
+    
+    raise TypeError("Type %s not accepted for getting Emme version" %returnType)
 
 #-------------------------------------------------------------------------------------------
 
@@ -698,6 +736,9 @@ class ProgressTracker():
         Tells the Tracker to start up a new Task
         with a given number of Subtasks.
         '''
+        if numberOfSubtasks <= 0:
+            raise Exception("A new process requires at least one task!")
+        
         self._subTasks = numberOfSubtasks
         self._completedSubtasks = 0
         self._processIsRunning = True            
