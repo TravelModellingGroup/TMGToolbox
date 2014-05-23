@@ -216,6 +216,7 @@ class CopyZoneSystem2(_m.Tool()):
                         label="Flag to publish the network.",
                         note="Unflag to discard changes.")
         
+        #---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
