@@ -49,10 +49,12 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from multiprocessing import cpu_count
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 NullPointerException = _util.NullPointerException
+EMME_VERSION = _util.getEmmeVersion(float) 
 
 ##########################################################################################################
 
@@ -89,6 +91,9 @@ class V4_TransitAssignment(_m.Tool()):
     NormGap = _m.Attribute(float)
     RelGap = _m.Attribute(float)
     
+    if EMME_VERSION >= 4.1:
+        NumberOfProcessors = _m.Attribute(int)
+    
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
@@ -110,18 +115,17 @@ class V4_TransitAssignment(_m.Tool()):
         self.Iterations = 20
         self.GoTrainHeadwayFraction = 0.5
         
-        #---Priavte flags for estimation purposes only
-        self._useEmme41Beta = False
+        if EMME_VERSION >= 4.1:
+            self.NumberOfProcessors = cpu_count()
         
+        #---Priavte flags for estimation purposes only
         self._useLogitConnectorChoice = True
         self._connectorLogitScale = 0.2
         self._connectorLogitTruncation = 0.05
-        
+        self._useMultiCore = False
         self._congestionFunctionType = "BPR" #"CONICAL"
         self._considerTotalImpedance = True
-        self._useMulticore = False
-        self._exponent = 4
-        
+        self._exponent = 4        
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="V4 Transit Assignment v%s" %self.version,
@@ -131,7 +135,7 @@ class V4_TransitAssignment(_m.Tool()):
                         <ul><li> Boarding penalties are assumed stored in <b>UT3</b></li>\
                         <li> The congestion term is stored in <b>US3</b></li>\
                         <li> In-vehicle time perception is 1.0</li>\
-                        <li> Unless specified, all available transit modes will be used.</li>\
+                        <li> All available transit modes will be used.</li>\
                         </ul>\
                         <font color='red'>This tool is only compatible with Emme 4 and later versions</font>",
                      branding_text="TMG")
@@ -246,6 +250,19 @@ class V4_TransitAssignment(_m.Tool()):
                 pb.add_text_box(tool_attribute_name= 'RelGap', size= 12,
                                 title= "Relative Gap")
         
+        if EMME_VERSION >= 4.1:
+            keyval3 = {}
+            for i in range(cpu_count()):
+                if i == 0:
+                    keyval3[1] = "1 processor"
+                else:
+                    keyval3[i + 1] = "%s processors" %(i + 1)
+            
+            pb.add_select(tool_attribute_name='NumberOfProcessors',
+                          keyvalues= keyval3,
+                          title= "Number of Processors")
+        
+        
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
@@ -317,6 +334,7 @@ class V4_TransitAssignment(_m.Tool()):
                                 
                 self.HeadwayFractionAttributeId = headwayAttribute.id
                 self.WalkAttributeId = walkAttribute.id
+                
                 self._Execute()
                 
         except Exception, e:
@@ -385,8 +403,11 @@ class V4_TransitAssignment(_m.Tool()):
                 self.TRACKER.completeSubtask()
                 
                 congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
+                
+                spec = self._GetBaseAssignmentSpec()
+                
                 self.TRACKER.runTool(congestedAssignmentTool,
-                                     transit_assignment_spec= self._GetBaseAssignmentSpec(),
+                                     transit_assignment_spec= spec,
                                      congestion_function= self._GetFuncSpec(),
                                      stopping_criteria= self._GetStopSpec(),
                                      impedances= impedanceMatrix,
@@ -415,6 +436,9 @@ class V4_TransitAssignment(_m.Tool()):
         return atts 
     
     def _AssignHeadwayFraction(self):
+        exatt = self.Scenario.extra_attribute(self.HeadwayFractionAttributeId)
+        exatt.initialize(0.5)
+        
         spec = {
                 "result": self.HeadwayFractionAttributeId,
                 "expression": str(self.GoTrainHeadwayFraction),
@@ -429,6 +453,8 @@ class V4_TransitAssignment(_m.Tool()):
         tool(specification= spec, scenario= self.Scenario)
     
     def _AssignWalkPerception(self):
+        exatt = self.Scenario.extra_attribute(self.WalkAttributeId)
+        exatt.initialize(1.0)
         
         tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
         def applySelection(val, selection):
@@ -447,65 +473,6 @@ class V4_TransitAssignment(_m.Tool()):
             applySelection(self.WalkPerceptionToronto, "i=0,1000 or j=0,1000 or i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000")
             applySelection(self.WalkPerceptionNonToronto, "i=1000,7000 or j=1000,7000 or i=20000,90000 or j=20000,90000")
             applySelection(0, "i=9700,10000 or j=9700,10000")
-    
-    def _GetBaseAssignmentSpecEmme4p1(self):
-        spec = {
-                "modes": ["*"],
-                "demand": "mf15",
-                "waiting_time": {
-                    "headway_fraction": self.HeadwayFractionAttributeId,
-                    "effective_headways": "hdw",
-                    "spread_factor": 1,
-                    "perception_factor": self.WaitPerception
-                },
-                "boarding_time": {
-                    "at_nodes": None,
-                    "on_lines": {
-                        "penalty": "ut3",
-                        "perception_factor": self.BoardPerception
-                    }
-                },
-                "boarding_cost": {
-                    "at_nodes": {
-                        "penalty": 0,
-                        "perception_factor": 1
-                    },
-                    "on_lines": None
-                },
-                "in_vehicle_time": {
-                    "perception_factor": 1
-                },
-                "in_vehicle_cost": None,
-                "aux_transit_time": {
-                    "perception_factor": self.WalkAttributeId
-                },
-                "aux_transit_cost": None,
-                "flow_distribution_at_origins": {
-                    "choices_at_origins": {
-                        "choice_points": "ALL_ORIGINS",
-                        "choice_set": "ALL_CONNECTORS",
-                        "logit_parameters": {
-                            "scale": self._connectorLogitScale,
-                            "truncation": self._connectorLogitTruncation
-                        }
-                    },
-                    "fixed_proportions_on_connectors": None
-                },
-                "flow_distribution_at_regular_nodes_with_aux_transit_choices": {
-                    "choices_at_regular_nodes": "OPTIMAL_STRATEGY"
-                },
-                "flow_distribution_between_lines": {
-                    "consider_total_impedance": True
-                },
-                "connector_to_connector_path_prohibition": None,
-                "od_results": {
-                    "total_impedance": None
-                },
-                "performance_settings": {
-                    "number_of_processors": 8
-                },
-                "type": "EXTENDED_TRANSIT_ASSIGNMENT"
-            }
     
     def _GetBaseAssignmentSpec(self):
         baseSpec = {
@@ -543,38 +510,26 @@ class V4_TransitAssignment(_m.Tool()):
                 "od_results": {
                     "total_impedance": None
                 },
-                "type": "EXTENDED_TRANSIT_ASSIGNMENT"
-            }
-        
-        if self._useEmme41Beta:
-            baseSpec ["flow_distribution_with_aux_transit_choices"] = {
-                                    "choices_at_nodes": "LOGIT_ON_ALL_CONNECTORS",
-                                    "logit_parameters": {
-                                        "scale": self._connectorLogitScale,
-                                        "truncation": self._connectorLogitTruncation
-                                    },
-                                    "alighting_choices": None,
-                                    "fixed_proportions_on_connectors": None
-                                }
-            baseSpec['flow_distribution_between_lines'] = {
-                    "consider_total_impedance": self._considerTotalImpedance
-                }
-        else:
-            baseSpec['flow_distribution_at_origins'] = {
-                                                        "by_time_to_destination": {
+                "flow_distribution_at_origins": {
+                                                "by_time_to_destination": {
                                                         "logit": {
                                                             "scale": self._connectorLogitScale,
                                                             "truncation": self._connectorLogitTruncation
                                                         }
                                                     },
-                                                    "by_fixed_proportions": None}
-            baseSpec['flow_distribution_between_lines'] = {
+                                                    "by_fixed_proportions": None},
+                "flow_distribution_between_lines": {
                                         "consider_travel_time": self._considerTotalImpedance
-                                    }
-            baseSpec['save_strategies'] = True
+                                        },
+                "save_strategies": True,
+                "type": "EXTENDED_TRANSIT_ASSIGNMENT"
+            }
         
-        if self._useMulticore:
-            baseSpec["performance_settings"] = {"number_of_processors": 8}
+        if EMME_VERSION >= 4.1:
+                    
+            baseSpec["performance_settings"] = {
+                    "number_of_processors": self.NumberOfProcessors
+                }
         
         return baseSpec
     
