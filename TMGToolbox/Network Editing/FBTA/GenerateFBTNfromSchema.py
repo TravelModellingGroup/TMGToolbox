@@ -1287,9 +1287,6 @@ class FBTNFromSchema(_m.Tool()):
             pb.wrap_html(body=str(h))
             
             _m.logbook_write("LINKS AND SEGMENTS WITH NEGATIVE FARES", value=pb.render())
-         
-        
-        #TODO Write negative cost report if required
 
     #---              
     #---MODELLER INTERFACE FUNCTIONS----------------------------------------------------------------------      
