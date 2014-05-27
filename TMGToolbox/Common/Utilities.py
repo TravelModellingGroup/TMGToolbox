@@ -120,6 +120,28 @@ def equap(number1, number2, precision= 0.00001):
 
 #-------------------------------------------------------------------------------------------
 
+def databankHasDifferentZones(emmebank):
+    '''
+    Checks that all scenarios have the same zone system.
+    
+    Args:
+        - emmebank: The Emmebank object to test
+    
+    Returns:
+        - True if all of the scenarios have the same zone system,
+                False otherwise.
+    '''
+    
+    scenarioZones = [set(sc.zone_numbers) for sc in emmebank.scenarios()]
+    scenarioRequired = False
+    for nZones1, nZones2 in iterpairs(scenarioZones):
+        if nZones1 != nZones2:
+            scenarioRequired = True
+            break
+    return scenarioRequired
+
+#-------------------------------------------------------------------------------------------
+
 def getScenarioModes(scenario, types=['AUTO', 'AUX_AUTO', 'TRANSIT', 'AUX_TRANSIT']):
     '''
     Returns a list of mode tuples [(id, type, description)] for a given Scenario object, 
