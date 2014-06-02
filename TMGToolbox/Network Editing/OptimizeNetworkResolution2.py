@@ -33,6 +33,8 @@
 '''
     0.0.1 Created on 2014-05-06 by pkucirek
     
+    1.0.0 Published with proper documentation on 2014-05-29
+    
 '''
 
 import inro.modeller as _m
@@ -72,7 +74,7 @@ class RemoveExtraNodes(_m.Tool()):
         
         return (a1 * l1 + a2 * l2) / (l1 + l2)
     
-    version = '0.0.1'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -130,7 +132,27 @@ class RemoveExtraNodes(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Remove Extra Nodes v%s" %self.version,
                      description="Removes unnecessary (i.e., cosmetic) nodes from the network. \
-                                Additional documentation to come.",
+                                Only candidate nodes (nodes with a degree of 2) will be removed \
+                                from the network, however the tool can be configured to \
+                                expand and/or contract the set of candidate nodes. Three filter \
+                                attributes are used: <ul>\
+                                <li>Node filter attribute: Contracts the set of candidate nodes, \
+                                to only those candidate nodes whose attribute value is nonzero.\
+                                <li>Stop filter attribute: Expands the set of candidate nodes to \
+                                include candidate nodes with transit stops whose attribute value \
+                                is nonzero. Otherwise nodes with transit stops will be excluded \
+                                from the set of candidate nodes.\
+                                <li>Connector filter attribute: Expands the set of candidate \
+                                nodes to include candidate nodes attached to centroid connectors \
+                                whose attribute value are all nonzero. Otherwise, all centroid \
+                                connectors are preserved. </ul>\
+                                <br>Additionally, this tool allows the user to specify \
+                                functions used to aggregate LINK and TRANSIT SEGMENT attributes. \
+                                Attributes can be named using either their Emme Desktop names \
+                                (e.g. 'lanes') or their Network API names  (e.g. 'num_lanes'). \
+                                See below for a description of accepted function names. Note \
+                                that the function <b>force</b> can be used to keep nodes when \
+                                attribute values differ (e.g. to preserve lane change locations).",
                      branding_text="TMG")
         
         if self.tool_run_msg != "": # to display messages in the page
