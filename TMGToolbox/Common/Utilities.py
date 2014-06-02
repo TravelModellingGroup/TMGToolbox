@@ -172,7 +172,7 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
     for the current Emmebank.
     
     Args:
-        - id (=None): Optional. Accepted value is a string integer ID  (must 
+        - id (=None): Optional. Accepted value is a string or integer ID  (must 
             also specify a matrix_type to be able to use integer ID). If specified, 
             this function will initialize the matrix with the given ID to a new
             default value; changing its name and description if they are given. 

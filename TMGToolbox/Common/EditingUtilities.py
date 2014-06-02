@@ -24,7 +24,7 @@ import traceback as _traceback
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _geolib = _MODELLER.module('TMG2.Common.Geometry')
-__coord_factor = _MODELLER.emmebank.coord_unit_length
+COORD_FACTOR = _MODELLER.emmebank.coord_unit_length
 
 
 class Face(_m.Tool()):
@@ -55,7 +55,7 @@ class InvalidNetworkOperationError(Exception):
 
 #===========================================================================================
 
-def calcShapeLength(link, coordFactor= __coord_factor):
+def calcShapeLength(link, coordFactor= COORD_FACTOR):
     '''
     Calculates the shape length of a link (i.e., including
     shape vertices). Applies the coordinate factor of the
@@ -63,7 +63,7 @@ def calcShapeLength(link, coordFactor= __coord_factor):
     
     Args:
         - link: An Emme Link object
-        - coordFactor (=__coord_factor): A factor applied
+        - coordFactor (=COORD_FACTOR): A factor applied
                 to the returned length. By default set to
                 the coordinate factor of the current 
                 emmebank.
@@ -131,7 +131,7 @@ def isLinkParallel(link):
 
 TEMP_LINE_ID = '999999'
 
-def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor=None, stopOnNewNodes=False):
+def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTOR, stopOnNewNodes=False):
     '''
     Splits a link at a given node (or nodes). Uses geometry to determine which vertices
     get assigned to which subsequently-created new link (and in what order).
@@ -139,9 +139,12 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor=None, stopOn
     Args:
         - newNodes: A new node (or iterable of nodes) to be inserted into the link
         - twoWay (=True): bool flag whether to also split the reverse link
-        - onLink (=True): bool flag whether the new nodes should be adjusted to occur on the link.
-        - coordFactor (=None): conversion between coordinate unit and link length
-        - stopOnNewNodes (=False): flag to indicate if the new nodes should be used as transit stops.
+        - onLink (=True): bool flag whether the new nodes should be adjusted to occur on 
+                the link (if they do not project onto the link).
+        - coordFactor: Conversion between coordinate unit and link length. By
+                default, the coordinate factor of the Emme Project is used.
+        - stopOnNewNodes (=False): flag to indicate if the new nodes should be used as 
+                transit stops.
     
     Returns: A list of all subsequently created links.
     '''
@@ -370,6 +373,7 @@ def renumberTransitVehicle(oldVehicle, newId):
 
 #===========================================================================================
 
+#---
 #---LINK MERGING
 
 __AVG = lambda attName, item1, item2: (item1[attName] + item2[attName]) * 0.5
@@ -631,6 +635,9 @@ def _mergeLineSegments(network, line, segmentNumbersToRemove, segmentAggregators
     
 #===========================================================================================
 
+#---
+#---PROXY CLASSES
+
 class TransitLineProxy():
     '''
     Data container for copying transit line data. For easy line itinerary modification,
@@ -773,6 +780,9 @@ class TransitSegmentProxy():
         
 
 ############################################################################################
+
+#---
+#---SHORTEST PATH CALCULATOR
 
 class _DestinationLink():
     def __init__(self, jNode):
