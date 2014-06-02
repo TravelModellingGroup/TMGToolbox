@@ -41,9 +41,14 @@ from contextlib import contextmanager
 from contextlib import nested
 import tempfile as _tf
 import shutil as _shutil
+from json import loads as _parsedict
+from os.path import exists as fileexists
+from os.path import dirname
+from html import HTML
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+EMME_VERSION = _util.getEmmeVersion(float)
 
 ##########################################################################################################
 
@@ -62,6 +67,9 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     ExportFile = _m.Attribute(str)
     DemandMatrixId = _m.Attribute(str)
+    
+    if EMME_VERSION >= 4.1:
+        ClassName = _m.Attribute(str)
     
     LINE_GROUPS = [(1, "line=B_____", "Brampton"),
                    (2, "line=D_____", "Durham"),
@@ -122,6 +130,34 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
                              title= "Demand to Analyze",
                              note= "If set to None, the tool will use the demand matrix from the assignment, \
                                  however this will affect run time for this tool.")
+        
+        if EMME_VERSION >= 4.1:
+            
+            keyvals = self.preload_iterations(False)
+            
+            pb.add_select(tool_attribute_name= 'ClassName',
+                          keyvalues= keyvals,
+                          title= "Class or Iteration Name")
+            
+            #---JAVASCRIPT
+            pb.add_html("""
+<script type="text/javascript">
+    $(document).ready( function ()
+    {
+        var tool = new inro.modeller.util.Proxy(%s) ;
+
+        $("#Scenario").bind('change', function()
+        {
+            $(this).commit();
+            
+            $("#ClassName")
+                .empty()
+                .append(tool.preload_iterations(true))
+            inro.modeller.page.preload("#ClassName");
+            $("#ClassName").trigger('change')
+        });
+    });
+</script>""" % pb.tool_proxy_tag)
         
         return pb.render()
     
@@ -262,8 +298,12 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
                                 }
         else:
             spec['constraint'] = None
-        
-        self.TRACKER.runTool(tool, spec, tempFile, scenario=self.Scenario)
+            
+        if EMME_VERSION >= 4.1:
+            print self.ClassName
+            self.TRACKER.runTool(tool, spec, tempFile, scenario=self.Scenario, class_name=self.ClassName)
+        else:
+            self.TRACKER.runTool(tool, spec, tempFile, scenario=self.Scenario)
     
     def _ParseTraversalResults(self, tempFile):
         _m.logbook_write("Parsing traversal matrix")
@@ -402,6 +442,37 @@ class ExtractLineGroupTransferMatrix(_m.Tool()):
                     data.append(str(val))
                 line = "\n" + ",".join(data)
                 writer.write(line)
+    
+    @_m.method(return_type=unicode)
+    def preload_iterations(self, asHtml= True):
+        configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %self.Scenario
+        
+        h = HTML()
+        
+        if not fileexists(configPath):
+            text = "STRATEGY FILE NOT FOUND FOR SCENARIO %s." %self.Scenario
+            opt = h.option(text, value='-1')
+            return str(opt)
+        
+        with open(configPath) as reader:
+            config = _parsedict(reader.readline())
+        
+        options = []
+        for info in config['strat_files']:
+            className = info['name']
+            alpha = info['data']['alpha']
+            
+            text = "%s (weight %s)" %(className, alpha)
+            
+            if asHtml:
+                opt = str(h.option(text, value= className))
+            else:
+                opt = (className, text)
+            options.append(opt)
+            
+        if asHtml: return "\n".join(options)
+        else: return options
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
