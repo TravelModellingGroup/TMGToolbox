@@ -259,6 +259,8 @@ class FBTNFromSchema(_m.Tool()):
         
         if not self.XMLSchemaFile: raise NullPointerException("Fare Schema file not specified")
         if not self.VirtualNodeDomain: raise NullPointerException("Virtual Node Domain not specified")
+        if not self.LinkFareAttributeId: raise NullPointerException("Link fare attribute not specified")
+        if not self.SegmentFareAttributeId: raise NullPointerException("Segment fare attribute not specified")
         
         try:
             self._Execute()
