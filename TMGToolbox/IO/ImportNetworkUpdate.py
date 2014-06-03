@@ -62,6 +62,17 @@ IMPORT NETWORK UPDATE
     This ensures that the reports files are written to the Database folder, not
     the temporary directory (which gets deleted).
     
+    Python scripts can also be included in run_order.txt. These scripts are 
+    executed IN GOOD FAITH so please try to ensure that they are safe to run
+    and are as general as possible. The scenario being updated is saved into the
+    locals dictionary as 'nup_scenario' to be accessed by the script if needed.
+    For example:
+        if 'nup_scenario' in  dir():
+            sc = nup_scenario
+        else:
+            sc = mm.scenario   
+    will get the scenario currently being updated by the network updater (or
+    the currently-open Primary Scenario if being run as a stand-alone script).
         
 '''
 #---VERSION HISTORY
