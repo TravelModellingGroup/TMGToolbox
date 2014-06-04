@@ -35,6 +35,10 @@ Fare-Based Transit Network (FBTN) From Schema
     
     1.0.0 Debugged and deployed by 2014-05-23
     
+    1.1.0 Added feature to save base I-node IDs for transit segments
+        as they are being moved over to the hyper network. This enables
+        transit speed updating.
+    
 '''
 from copy import copy
 from contextlib import contextmanager
@@ -110,7 +114,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.1.0'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -130,6 +134,7 @@ class FBTNFromSchema(_m.Tool()):
     TransferModeId = _m.Attribute(str) 
     SegmentFareAttributeId = _m.Attribute(str)
     LinkFareAttributeId = _m.Attribute(str)
+    SegmentINodeAttributeId = _m.Attribute(str)
     
     __ZONE_TYPES = ['node_selection', 'from_shapefile']
     __RULE_TYPES = ['initial_boarding', 
@@ -197,6 +202,7 @@ class FBTNFromSchema(_m.Tool()):
         
         keyval2 = []
         keyval3 = []
+        keyval4 = [(-1, "None - Do not save segment base info")]
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type == 'LINK':
                 val = "%s - %s" %(exatt.name, exatt.description)
@@ -204,6 +210,7 @@ class FBTNFromSchema(_m.Tool()):
             elif exatt.type == 'TRANSIT_SEGMENT':
                 val = "%s - %s" %(exatt.name, exatt.description)
                 keyval3.append((exatt.name, val))
+                keyval4.append((exatt.name, val))
         
         pb.add_select(tool_attribute_name= 'LinkFareAttributeId',
                       keyvalues= keyval2,
@@ -216,6 +223,15 @@ class FBTNFromSchema(_m.Tool()):
                       title="Segment Fare Attribute",
                       note= "Select a TRANSIT SEGMENT extra attribute in which \
                       to save transit fares.")
+        
+        pb.add_select(tool_attribute_name= 'SegmentINodeAttributeId',
+                      keyvalues= keyval4,
+                      title= "Segment I-node Attribute",
+                      note= "Select a TRANSIT SEGMENT extra attribute in which \
+                      to save the base node ID. This data is used to implement \
+                      transit speed updating. Select 'None' to disable this \
+                      feature.")
+        
         
         #---JAVASCRIPT
         pb.add_html("""
@@ -240,11 +256,19 @@ class FBTNFromSchema(_m.Tool()):
             inro.modeller.page.preload("#LinkFareAttributeId");
             $("#LinkFareAttributeId").trigger('change')
             
+            var segmentAtts = tool.preload_scenario_segment_attributes();
+            
             $("#SegmentFareAttributeId")
                 .empty()
-                .append(tool.preload_scenario_segment_attributes())
+                .append(segmentAtts)
             inro.modeller.page.preload("#SegmentFareAttributeId");
             $("#SegmentFareAttributeId").trigger('change')
+            
+            $("#SegmentINodeAttributeId")
+                .empty()
+                .append(segmentAtts)
+            inro.modeller.page.preload("#SegmentINodeAttributeId");
+            $("#SegmentINodeAttributeId").trigger('change')
         });
     });
 </script>""" % pb.tool_proxy_tag)
@@ -360,7 +384,7 @@ class FBTNFromSchema(_m.Tool()):
             #Transform the network
             with _m.logbook_trace("Transforming hyper network"):
                 transferGrid, zoneCrossingGrid = self._TransformNetwork(network, nGroups, nZones)
-                print "Hyper network generated."
+                print "Hyper network generated."            
             
             #Apply fare rules to network.
             with _m.logbook_trace("Applying fare rules"):
@@ -857,8 +881,15 @@ class FBTNFromSchema(_m.Tool()):
         totalLinks3 = network.element_totals['links']
         _m.logbook_write("Created %s road-to-transit connector links" %(totalLinks3 - totalLinks2))
         
+        if self.SegmentINodeAttributeId != None:
+            def saveFunction(segment, iNodeId):
+                segment[self.SegmentINodeAttributeId] = iNodeId
+        else:
+            def saveFunction(segment, iNodeId):
+                pass
+        
         for lineId in lineIds:
-            self._ProcessTransitLine(lineId, network, zoneCrossingGrid)
+            self._ProcessTransitLine(lineId, network, zoneCrossingGrid, saveFunction)
             self.TRACKER.completeSubtask()
         
         print "Processed transit lines"
@@ -1053,7 +1084,7 @@ class FBTNFromSchema(_m.Tool()):
                     if groupNumber1 != groupNumber2:
                         transferGrid[groupNumber1, groupNumber2].add(newLink)
     
-    def _ProcessTransitLine(self, lineId, network, zoneTransferGrid):
+    def _ProcessTransitLine(self, lineId, network, zoneTransferGrid, saveFunction):
         line = network.transit_line(lineId)
         group = line.group
         lineMode = set([line.mode])
@@ -1079,6 +1110,8 @@ class FBTNFromSchema(_m.Tool()):
         for segment in line.segments(True):
             newSegment = newLine.segment(segment.number)
             for att in network.attributes('TRANSIT_SEGMENT'): newSegment[att] = segment[att]
+            
+            saveFunction(newSegment, segment.i_node.number)
             
             link = segment.link
             if link != None:
