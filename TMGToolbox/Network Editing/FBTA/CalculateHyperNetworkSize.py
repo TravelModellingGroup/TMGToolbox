@@ -37,6 +37,9 @@ ESTIMATE NETWORK SIZE
         calculating the number of links eludes me. Therefore, it "estimates" the number of links
         required, slightly conservatively. My ballpark figure is over by < 1%
     
+    1.0.1 Fixed a bug in PrepareNetwork which only considers segments that permit alightings as 
+        'stops.' We want to catch both boardings AND alightings 
+    
 '''
 
 import inro.modeller as _m
@@ -61,7 +64,7 @@ class XmlValidationError(Exception):
 
 class EstimateHyperNetworkSize(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.0.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -400,7 +403,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
             
             for segment in line.segments(True):
                 iNode = segment.i_node
-                if segment.allow_alightings or segment.allow_alightings:
+                if segment.allow_boardings or segment.allow_alightings:
                     iNode.stopping_groups.add(group)
                     if group in iNode.passing_groups: iNode.passing_groups.remove(group)
                 else:

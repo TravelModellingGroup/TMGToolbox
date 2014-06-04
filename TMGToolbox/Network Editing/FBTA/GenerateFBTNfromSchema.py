@@ -39,6 +39,9 @@ Fare-Based Transit Network (FBTN) From Schema
         as they are being moved over to the hyper network. This enables
         transit speed updating.
     
+    1.1.1 Fixed a bug in PrepareNetwork which only considers segments that permit alightings as 
+        'stops.' We want to catch both boardings AND alightings
+    
 '''
 from copy import copy
 from contextlib import contextmanager
@@ -787,7 +790,7 @@ class FBTNFromSchema(_m.Tool()):
             
             for segment in line.segments(True):
                 iNode = segment.i_node
-                if segment.allow_alightings or segment.allow_alightings:
+                if segment.allow_boardings or segment.allow_alightings:
                     iNode.stopping_groups.add(group)
                     if group in iNode.passing_groups: iNode.passing_groups.remove(group)
                 else:
