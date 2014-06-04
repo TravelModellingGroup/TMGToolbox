@@ -43,6 +43,8 @@ V4 Transit Assignment
             on station centroid connectors will be set to 0, while transfer link
             walk perception will take the value of the region it is in (Toronto
             or Non-Toronto).
+    
+    2.0.0 Branched to create a FBTA procedure
 '''
 
 import inro.modeller as _m
@@ -58,9 +60,9 @@ EMME_VERSION = _util.getEmmeVersion(float)
 
 ##########################################################################################################
 
-class V4_TransitAssignment(_m.Tool()):
+class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '0.0.3'
+    version = '2.0.0'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -77,16 +79,17 @@ class V4_TransitAssignment(_m.Tool()):
     
     WalkAttributeId = _m.Attribute(str)
     HeadwayFractionAttributeId = _m.Attribute(str)
+    LinkFareAttributeId = _m.Attribute(str)
+    SegmentFareAttributeId = _m.Attribute(str)
     
     WalkPerceptionToronto = _m.Attribute(float)
     WalkPerceptionNonToronto = _m.Attribute(float)
-    
     WaitPerception = _m.Attribute(float)
     BoardPerception = _m.Attribute(float)
     CongestionPerception = _m.Attribute(float)
+    FarePerception = _m.Attribute(float)
     AssignmentPeriod = _m.Attribute(float)
     GoTrainHeadwayFraction = _m.Attribute(float)
-    FarePerception = _m.Attribute(float)
     
     Iterations = _m.Attribute(int)
     NormGap = _m.Attribute(float)
@@ -102,6 +105,9 @@ class V4_TransitAssignment(_m.Tool()):
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.DemandMatrix = _MODELLER.emmebank.matrix('mf15')
+        
+        self.LinkFareAttributeId = "@lfare"
+        self.SegmentFareAttributeId = "@sfare"
         self.HeadwayFractionAttributeId = "@frac"
         self.WalkAttributeId = "@walkp"
         
@@ -111,12 +117,13 @@ class V4_TransitAssignment(_m.Tool()):
         self.BoardPerception = 1.0
         
         self.CongestionPerception = 1.0
-
-        self.AssignmentPeriod = 2.04
+        self.FarePerception = 1.0
+        
+        self.AssignmentPeriod = 3.0 
         self.NormGap = 0.01
         self.RelGap = 0.001
         self.Iterations = 20
-        self.GoTrainHeadwayFraction = 0.2
+        self.GoTrainHeadwayFraction = 0.5
         
         if EMME_VERSION >= 4.1:
             self.NumberOfProcessors = cpu_count()
@@ -131,7 +138,7 @@ class V4_TransitAssignment(_m.Tool()):
         self._exponent = 4        
     
     def page(self):
-        pb = _tmgTPB.TmgToolPageBuilder(self, title="V4 Transit Assignment v%s" %self.version,
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="V4 Fare-Based Transit Assignment v%s" %self.version,
                      description="Executes a congested transit assignment procedure \
                         for GTAModel V4.0. \
                         <br><br>Hard-coded assumptions: \
@@ -157,13 +164,19 @@ class V4_TransitAssignment(_m.Tool()):
                              title= "Demand Matrix",
                              note= "A full matrix of OD demand")
         
-        keyval1 = {}
-        keyval2 = {}
+        keyval1 = [(-1, 'None')]
+        keyval2 = [(-1, 'None')]
+        keyval3 = []
+        keyval4 = []
         for exatt in _MODELLER.scenario.extra_attributes():
+            tup = (exatt.id, "%s - %s" %(exatt.id, exatt.description))
             if exatt.type == 'NODE':
-                keyval1[exatt.id] = "%s - %s" %(exatt.id, exatt.description)
+                keyval1.append(tup)
             elif exatt.type == 'LINK':
-                keyval2[exatt.id] = "%s - %s" %(exatt.id, exatt.description)
+                keyval2.append(tup)
+                keyval3.append(tup)
+            elif exatt.type == 'TRANSIT_SEGMENT':
+                keyval4.append(tup)
         
         pb.add_select(tool_attribute_name='HeadwayFractionAttributeId',
                       keyvalues= keyval1, title= "Headway Fraction Attribute",
@@ -180,6 +193,16 @@ class V4_TransitAssignment(_m.Tool()):
                           <br><font color='red'><b>Warning:</b></font>\
                           using a temporary attribute causes an error with \
                           subsequent strategy-based analyses.")
+        
+        pb.add_select(tool_attribute_name= 'LinkFareAttributeId',
+                      keyvalues = keyval3, 
+                      title= "Link Fare Attribute",
+                      note= "LINK extra attribute containing actual fare costs.")
+        
+        pb.add_select(tool_attribute_name= 'SegmentFareAttributeId',
+                      keyvalues= keyval4,
+                      title= "Segment Fare Attribute",
+                      note= "SEGMENT extra attribute containing actual fare costs.")
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
@@ -232,6 +255,14 @@ class V4_TransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
+                 pb.add_html("<b>Fare Perception:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'FarePerception', size= 10)
+            with t.table_cell():
+                pb.add_html("Converts fare costs to impedance. In $/hr.")
+            t.new_row()
+            
+            with t.table_cell():
                  pb.add_html("<b>Peak/Representative Hour Factor:</b>")
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'AssignmentPeriod', size= 10)
@@ -265,14 +296,11 @@ class V4_TransitAssignment(_m.Tool()):
                           keyvalues= keyval3,
                           title= "Number of Processors")
         
-        
+        #---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
-    {
-        $("#HeadwayFractionAttributeId").prepend(0,"<option value='-1'>None</option>");
-        $("#WalkAttributeId").prepend(0,"<option value='-1'>None</option>")
-        
+    {        
         var tool = new inro.modeller.util.Proxy(%s) ;
 
         $("#Scenario").bind('change', function()
@@ -289,6 +317,18 @@ class V4_TransitAssignment(_m.Tool()):
                 .append(tool.get_scenario_link_attributes())
             inro.modeller.page.preload("#WalkAttributeId");
             $("#WalkAttributeId").trigger('change');
+            
+            $("#LinkFareAttributeId")
+                .empty()
+                .append(tool.get_scenario_link_attributes(false))
+            inro.modeller.page.preload("#LinkFareAttributeId");
+            $("#LinkFareAttributeId").trigger('change');
+            
+            $("#SegmentFareAttributeId")
+                .empty()
+                .append(tool.get_scenario_segment_attribtues())
+            inro.modeller.page.preload("#SegmentFareAttributeId");
+            $("#SegmentFareAttributeId").trigger('change');
         });
     });
 </script>""" % pb.tool_proxy_tag)
@@ -311,6 +351,9 @@ class V4_TransitAssignment(_m.Tool()):
             if self.Iterations == None: raise NullPointerException("Maximum iterations not specified")
             if self.NormGap == None: raise NullPointerException("Normalized gap not specified")
             if self.RelGap == None: raise NullPointerException("Relative gap not specified")
+            if self.LinkFareAttributeId == None: raise NullPointerException("Link fare attribute not specified")
+            if self.SegmentFareAttributeId == None: raise NullPointerException("Segment fare attribute not specified")
+            
             
             '''
             Set up the context managers to create the temporary attributes only
@@ -349,7 +392,9 @@ class V4_TransitAssignment(_m.Tool()):
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
                  WalkPerceptionToronto, WalkPerceptionNonToronto, 
-                 WalkAttributeId, HeadwayFractionAttributeId, BoardPerception, CongestionPerception, 
+                 WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
+                 SegmentFareAttributeId,
+                 BoardPerception, CongestionPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap):
         
         #---1 Set up scenario
@@ -362,17 +407,33 @@ class V4_TransitAssignment(_m.Tool()):
         if self.DemandMatrix == None:
             raise Exception("Full matrix mf%s was not found!" %xtmf_DemandMatrixNumber)
         
+        if self.Scenario.extra_attribute(self.WalkAttributeId) == None:
+            raise Exception("Walk perception attribute %s does not exist" %self.WalkAttributeId)
+        
+        if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) == None:
+            raise Exception("Headway fraction attribute %s does not exist" %self.HeadwayFractionAttributeId)
+        
+        if self.Scenario.extra_attribute(self.LinkFareAttributeId) == None:
+            raise Exception("Link fare attribute %s does not exist" %self.LinkFareAttributeId)
+        
+        if self.Scenario.extra_attribute(self.SegmentFareAttributeId) == None:
+            raise Exception("Segment fare attribute %s does not exist" %self.SegmentFareAttributeId)
+        
         #---3 Set up other parameters
         self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
         self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
-        
         self.WalkAttributeId = WalkAttributeId
+        self.LinkFareAttributeId = LinkFareAttributeId
+        self.SegmentFareAttributeId = SegmentFareAttributeId
+        
         self.WaitPerception = WaitPerception
         self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
         self.WalkPerceptionToronto = WalkPerceptionToronto
-                
         self.BoardPerception = BoardPerception
+        
         self.CongestionPerception = CongestionPerception
+        self.FarePerception = FarePerception
+        
         self.AssignmentPeriod = AssignmentPeriod
         self.Iterations = Iterations
         self.NormGap = NormGap
@@ -476,8 +537,15 @@ class V4_TransitAssignment(_m.Tool()):
             applySelection(self.WalkPerceptionToronto, "i=0,1000 or j=0,1000 or i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000")
             applySelection(self.WalkPerceptionNonToronto, "i=1000,7000 or j=1000,7000 or i=20000,90000 or j=20000,90000")
             applySelection(0, "i=9700,10000 or j=9700,10000")
+            
     
     def _GetBaseAssignmentSpec(self):
+        
+        if self.FarePerception == 0:
+            farePerception = 0.0
+        else:
+            farePerception = 60.0 / self.FarePerception
+        
         baseSpec = {
                 "modes": ["*"],
                 "demand": self.DemandMatrix.id,
@@ -504,11 +572,17 @@ class V4_TransitAssignment(_m.Tool()):
                 "in_vehicle_time": {
                     "perception_factor": 1
                 },
-                "in_vehicle_cost": None,
+                "in_vehicle_cost": {
+                                    "penalty": self.SegmentFareAttributeId,
+                                    "perception_factor": farePerception
+                },
                 "aux_transit_time": {
                                      "perception_factor": self.WalkAttributeId
                 },
-                "aux_transit_cost": None,
+                "aux_transit_cost": {
+                                    "penalty": self.LinkFareAttributeId,
+                                    "perception_factor": farePerception
+                },
                 "connector_to_connector_path_prohibition": None,
                 "od_results": {
                     "total_impedance": None
@@ -565,10 +639,20 @@ class V4_TransitAssignment(_m.Tool()):
         return "\n".join(options)
     
     @_m.method(return_type=unicode)
-    def get_scenario_link_attributes(self):
-        options = ["<option value='-1'>None</option>"]
+    def get_scenario_link_attributes(self, include_none= True):
+        options = []
+        if include_none:
+            options.append("<option value='-1'>None</option>")
         for exatt in self.Scenario.extra_attributes():
             if exatt.type == 'LINK':
+                options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
+        return "\n".join(options)
+    
+    @_m.method(return_type=unicode)
+    def get_scenario_segment_attribtues(self):
+        options = []
+        for exatt in self.Scenario.extra_attributes():
+            if exatt.type == 'TRANSIT_SEGMENT':
                 options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
         return "\n".join(options)
     

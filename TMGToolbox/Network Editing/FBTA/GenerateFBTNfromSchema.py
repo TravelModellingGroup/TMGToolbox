@@ -155,6 +155,9 @@ class FBTNFromSchema(_m.Tool()):
         self.VirtualNodeDomain = 100000
         self.NewScenarioTitle = ""
         
+        self.LinkFareAttributeId = "@lfare"
+        self.SegmentFareAttributeId = "@sfare"
+        
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="FBTN From Schema v%s" %self.version,
