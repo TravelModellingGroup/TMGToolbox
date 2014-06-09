@@ -42,6 +42,9 @@ Fare-Based Transit Network (FBTN) From Schema
     1.1.1 Fixed a bug in PrepareNetwork which only considers segments that permit alightings as 
         'stops.' We want to catch both boardings AND alightings
     
+    1.1.2 Slightly tweaked the page() function's Javascript to allow the NONE option when segment
+        attributes are pre-loaded from scenario.
+    
 '''
 from copy import copy
 from contextlib import contextmanager
@@ -117,7 +120,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.1.0'
+    version = '1.1.2'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -262,17 +265,16 @@ class FBTNFromSchema(_m.Tool()):
             inro.modeller.page.preload("#LinkFareAttributeId");
             $("#LinkFareAttributeId").trigger('change')
             
-            var segmentAtts = tool.preload_scenario_segment_attributes();
-            
             $("#SegmentFareAttributeId")
                 .empty()
-                .append(segmentAtts)
+                .append(tool.preload_scenario_segment_attributes())
             inro.modeller.page.preload("#SegmentFareAttributeId");
             $("#SegmentFareAttributeId").trigger('change')
             
             $("#SegmentINodeAttributeId")
                 .empty()
-                .append(segmentAtts)
+                .append("<option value='-1'>None - Do not save segment base info</option>")
+                .append(tool.preload_scenario_segment_attributes())
             inro.modeller.page.preload("#SegmentINodeAttributeId");
             $("#SegmentINodeAttributeId").trigger('change')
         });
