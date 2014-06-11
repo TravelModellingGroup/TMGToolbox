@@ -102,6 +102,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
         pb.add_select_file(tool_attribute_name='LineAggrgeationFile',
                            title="Line aggregation file:",
                            window_type='file',
+                           file_filter= "*.csv",
                            note="<font color='green'><b>Optional: \
                             </b></font>Aggregation file contains two columns with no headers, matching transit\
                             <br>line IDs to their aliases or groups in another data source (e.g., TTS line IDs). The\
