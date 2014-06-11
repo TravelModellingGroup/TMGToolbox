@@ -250,7 +250,7 @@ TEMP_ATT_PREFIXES = {'NODE': 'ti',
                      'TRANSIT_SEGMENT': 'ts'}
 
 @contextmanager
-def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None):
+def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None, returnId= False):
     '''
     Creates a temporary extra attribute in a given scenario, yield-returning the
     attribute object. Designed to be used as a context manager, for cleanup
@@ -269,8 +269,9 @@ def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None)
         - domain= One of 'NODE', 'LINK', 'TURN', 'TRANSIT_LINE', 'TRANSIT_SEGMENT'
         - default= The default value of the extra attribute
         - description= An optional description for the attribute
+        - returnId (=False): Flag to return either the Extra Attribute object, or its ID
         
-    Yields: The Extra Attribute object created.
+    Yields: The Extra Attribute object created (or its ID as indicated by the returnId arg).
     '''
     
     domain = str(domain).upper()
@@ -294,8 +295,13 @@ def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None)
         msg += ": %s" %description
     _m.logbook_write(msg)
     
+    if returnId:
+        retval = tempAttribute.id
+    else:
+        retval = tempAttribute
+    
     try:
-        yield tempAttribute
+        yield retval
     finally:
         scenario.delete_extra_attribute(id)
         _m.logbook_write("Deleted extra attribute %s" %id)
@@ -329,8 +335,11 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
 
 #-------------------------------------------------------------------------------------------
 
+#@deprecated: In Emme 4.1.2 the indices have been changed
 def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
     '''
+    BROEKN SINCE EMME 4.1.2. Use fastLoadSummedSegmentAttributes instead
+    
     Performs a fast partial read of transit segment attributes,
     using scenario.get_attribute_values.
     
@@ -350,7 +359,14 @@ def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
     however the return value is NOT. I've managed to decipher its structure
     but since it is not documented by INRO it could be changed.
         - pkucirek April 2014
+        
+    IMPORTANT: This function is currently broken for version 4.1.2! An error
+    will be raised if tried. - pkucirek June 2014
     '''
+    major, minor, release = getEmmeVersion(tuple)
+    if major >= 4 and minor >= 1 and release >= 2:
+        raise Exception("fastLoadTransitSegmentAttributes is deprecated in Emme 4.1.2 or newer versions!")
+    
     retval = {}
     root_data = scenario.get_attribute_values('TRANSIT_SEGMENT', list_of_attribtues)
     indices = root_data[0]
@@ -367,6 +383,46 @@ def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
         retval[lineId] = segments
     
     return retval
+
+#-------------------------------------------------------------------------------------------
+
+def fastLoadSummedSegmentAttributes(scenario, list_of_attributes):
+    '''
+    Performs a fast partial read of transit segment attributes, aggregated to each line,
+    using scenario.get_attribute_values.
+    
+    Args:
+        - scenario: The Emme Scenario object to load from
+        - list_of_attributes: A list of TRANSIT SEGMENT attribute names to load.
+        
+    Returns: A dictionary whose keys are transit line IDs and whose values
+        are dictionaries of attributes.
+    '''
+    retval = {}
+    root_data = scenario.get_attribute_values('TRANSIT_SEGMENT', list_of_attributes)
+    indices = root_data[0]
+    values = root_data[1:]
+    
+    major, minor, release = getEmmeVersion(tuple)
+    if major >= 4 and minor >= 1 and release >= 2:
+        get_iter = lambda segmentIndices: segmentIndices.iteritems()
+    else:
+        get_iter = lambda segmentIndices: itersync(*segmentIndices)
+    
+    for lineId, segmentIndices in indices.iteritems():
+        line = {'id': lineId}
+        
+        for iNode, dataRow in get_iter(segmentIndices):
+            for attName, dataColumn in itersync(list_of_attributes, values):
+                value = dataColumn[dataRow]
+                if attName in line: line[attName] += value
+                else: line[attName] = value
+        
+        retval[lineId] = line
+    
+    return retval
+        
+        
 
 #-------------------------------------------------------------------------------------------
 
