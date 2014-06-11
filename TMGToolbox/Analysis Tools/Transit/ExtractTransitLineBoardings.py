@@ -195,16 +195,12 @@ class ExportTransitBoardings(_m.Tool()):
                     file.write("\nLineId,Branches,TotalBoardings,PeakVolume,PeakVCR,WAvgVCR")
                     
                     self._tracker.startProcess(len(lineGroups))
-                    for lineGroup in lineGroups.itervalues(): # TASK 4
-                        results = lineGroup.getResults()
-                        '''
-                        {'boardings' : boardings,
-                        'peakVolume' : peakVolume,
-                        'peakVCR' : peakVCR,
-                        'wsumVCR' : weightedVCRSum / totalVol}
-                        '''
+                    keys = lineGroups.keys()
+                    keys.sort()
+                    for id in keys:
+                        results = lineGroups[id].getResults()
                         file.write("\n%s,%s,%s,%s,%s,%s"
-                                   %(lineGroup.id, results['branches'],
+                                   %(id, results['branches'],
                                      results['boardings'], results['peakVolume'],
                                      results['peakVCR'], results['wsumVCR']))
                         
