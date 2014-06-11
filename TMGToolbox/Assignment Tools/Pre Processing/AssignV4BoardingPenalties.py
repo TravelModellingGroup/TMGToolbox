@@ -34,6 +34,9 @@ Assign V4 Boarding Penalties
 '''
     0.0.1 Created on 2014-02-14 by pkucirek
     
+    1.0.0 Cleaned and published. Now accepts a list of scenarios, for easy use (Modeller only).
+            Also changed the order of paramters to better match the order of groups used in
+            GTAModel V4.
 '''
 
 import inro.modeller as _m
@@ -49,7 +52,7 @@ NullPointerException = _util.NullPointerException
 
 class AssignV4BoardingPenalties(_m.Tool()):
     
-    version = '0.0.1'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 15 # For progress reporting, enter the integer number of tasks here
     
@@ -59,7 +62,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
     #    get intitialized during construction (__init__)
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
-    Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
+    Scenarios = _m.Attribute(_m.ListType) # common variable or parameter
     
     SubwayBoardingPenalty = _m.Attribute(float)
     GoTrainBoardingPenalty = _m.Attribute(float)
@@ -81,7 +84,6 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
         
         #---Set the defaults of parameters used by Modeller
-        self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.SubwayBoardingPenalty = 1.0
         self.GoTrainBoardingPenalty = 1.0
         self.GoBusBoardingPenalty = 1.0
@@ -106,54 +108,53 @@ class AssignV4BoardingPenalties(_m.Tool()):
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
             
-        pb.add_select_scenario(tool_attribute_name='Scenario',
-                               title='Scenario:',
-                               allow_none=False)
+        pb.add_select_scenario(tool_attribute_name='Scenarios',
+                               title='Scenarios:')
         
-        pb.add_text_box(tool_attribute_name='GoTrainBoardingPenalty',
-                        size=10, title="GO Train Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='GoBusBoardingPenalty',
-                        size=10, title="GO Bus Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='SubwayBoardingPenalty',
-                        size=10, title="Subway Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='StreetcarXROWBoardingPenalty',
-                        size=10, title="Streetcar (Excl. ROW) Boarding Penalty",
-                        note="Currently hard-coded to T509, T510, and T512")
-        
-        pb.add_text_box(tool_attribute_name='TTCBusBoardingPenalty',
-                        size=10, title="TTC Bus Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='StreetcarBoardingPenalty',
-                        size=10, title="Streetcar Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='VIVABoardingPenalty',
-                        size=10, title="YRT VIVA Boarding Penalty",
-                        note="Currently hard-coded to lines beginning with 'YV'")
-        
-        pb.add_text_box(tool_attribute_name='YRTBoardingPenalty',
-                        size=10, title="YRT (non-VIVA) Boarding Penalty")
+        pb.add_text_box(tool_attribute_name='BramptonBoardingPenalty',
+                        size=10, title="Brampton Transit (non-ZUM) Boarding Penalty")
         
         pb.add_text_box(tool_attribute_name='ZUMBoardingPenalty',
                         size=10, title="Brampton ZUM Boarding Penalty",
                         note="Currently hard-coded to B501 and B502")
         
-        pb.add_text_box(tool_attribute_name='BramptonBoardingPenalty',
-                        size=10, title="Brampton Transit (non-ZUM) Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='MiWayBoardingPenalty',
-                        size=10, title="MiWay (Mississauga) Boarding Penalty")
-        
         pb.add_text_box(tool_attribute_name='DurhamBoardingPenalty',
                         size=10, title="Durham Boarding Penalty")
+        
+        pb.add_text_box(tool_attribute_name='GoBusBoardingPenalty',
+                        size=10, title="GO Bus Boarding Penalty")
+        
+        pb.add_text_box(tool_attribute_name='GoTrainBoardingPenalty',
+                        size=10, title="GO Train Boarding Penalty")
         
         pb.add_text_box(tool_attribute_name='HaltonBoardingPenalty',
                         size=10, title="Halton Boarding Penalty")
         
         pb.add_text_box(tool_attribute_name='HSRBoardingPenalty',
                         size=10, title="HSR (Hamilton) Boarding Penalty")
+        
+        pb.add_text_box(tool_attribute_name='MiWayBoardingPenalty',
+                        size=10, title="MiWay (Mississauga) Boarding Penalty")
+        
+        pb.add_text_box(tool_attribute_name='StreetcarBoardingPenalty',
+                        size=10, title="Streetcar Boarding Penalty")
+        
+        pb.add_text_box(tool_attribute_name='StreetcarXROWBoardingPenalty',
+                        size=10, title="Streetcar (Excl. ROW) Boarding Penalty",
+                        note="Currently hard-coded to T509, T510, and T512")
+        
+        pb.add_text_box(tool_attribute_name='SubwayBoardingPenalty',
+                        size=10, title="Subway Boarding Penalty")
+        
+        pb.add_text_box(tool_attribute_name='TTCBusBoardingPenalty',
+                        size=10, title="TTC Bus Boarding Penalty")
+                
+        pb.add_text_box(tool_attribute_name='VIVABoardingPenalty',
+                        size=10, title="YRT VIVA Boarding Penalty",
+                        note="Currently hard-coded to lines beginning with 'YV'")
+        
+        pb.add_text_box(tool_attribute_name='YRTBoardingPenalty',
+                        size=10, title="YRT (non-VIVA) Boarding Penalty")
         
         return pb.render()
     
@@ -164,6 +165,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.TRACKER.reset()
         
         try:
+            if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")
             if self.SubwayBoardingPenalty == None: raise NullPointerException("Subway boarding penalty not specified")
             if self.GoTrainBoardingPenalty == None: raise NullPointerException("GO Train boarding penalty not specified")
             if self.GoBusBoardingPenalty == None: raise NullPointerException("GO Bus boarding penalty not specified")
@@ -204,9 +206,10 @@ class AssignV4BoardingPenalties(_m.Tool()):
                  HSRBoardingPenalty):
         
         #---1 Set up scenario
-        self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
-            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+        scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
+        if (scenario == None):
+            raise Exception("Scenarios %s was not found!" %xtmf_ScenarioNumber)
+        self.Scenarios = [scenario]
         
         self.SubwayBoardingPenalty = SubwayBoardingPenalty
         self.GoTrainBoardingPenalty = GoTrainBoardingPenalty
@@ -238,101 +241,92 @@ class AssignV4BoardingPenalties(_m.Tool()):
             
             tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
             
-            with _m.logbook_trace("Resetting UT3 to 0"):
-                tool(specification=self._GetClearAllSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
+            self.TRACKER.reset(len(self.Scenarios))
             
-            with _m.logbook_trace("Applying GO Train BP"):
-                tool(specification=self._GetGoTrainSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying GO Bus BP"):
-                tool(specification=self._GetGoBusSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying Subway BP"):
-                tool(specification=self._GetSubwaySpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying Streetcar BP"):
-                tool(specification=self._GetAllStreetcarSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying Streetcar XROW BP"):
-                tool(specification=self._GetStreetcarXROWSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying TTC Bus BP"):
-                tool(specification=self._GetTTCBusSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-                
-            with _m.logbook_trace("Applying YRT BP"):
-                tool(specification=self._GetAllYRTSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying VIVA BP"):
-                tool(specification=self._GetVIVASpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying Brampton Transit BP"):
-                tool(specification=self._GetAllBramptonSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying ZUM BP"):
-                tool(specification=self._GetZUMSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-                
-            with _m.logbook_trace("Applying MiWay BP"):
-                tool(specification=self._GetMiWaySpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-                
-            with _m.logbook_trace("Applying Durham BP"):
-                tool(specification=self._GetDurhamSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-            
-            with _m.logbook_trace("Applying Halton BP"):
-                tool(specification=self._GetHaltonSpec(), scenario=self.Scenario)
-                self.TRACKER.completeTask()
-                
-            with _m.logbook_trace("Applying Hamilton BP"):
-                tool(specification=self._GetHamiltonSpec(), scenario=self.Scenario)
+            for scenario in self.Scenarios:
+                with _m.logbook_trace("Processing scenario %s" %scenario):
+                    self._ProcessScenario(scenario)
                 self.TRACKER.completeTask()
                 
             _MODELLER.desktop.refresh_needed(True)
             
     ##########################################################################################################
-
-    #----CONTEXT MANAGERS---------------------------------------------------------------------------------
-    '''
-    Context managers for temporary database modifications.
-    '''
-    
-    @contextmanager
-    def _MANAGERtemplate(self):
-        # Code here is executed upon entry {
-        
-        # }
-        try:
-            yield # Yield return a temporary object
-            
-            # Code here is executed upon clean exit {
-            
-            # }
-        finally:
-            # Code here is executed in all cases. {
-            pass
-            # }
     
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
     def _GetAtts(self):
         atts = {
-                "Scenario" : str(self.Scenario.id),
+                "Scenarios" : str(self.Scenarios),
                 "Version": self.version, 
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts 
+    
+    def _ProcessScenario(self, scenario):
+        tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
+        
+        self.TRACKER.startProcess(15)
+        
+        with _m.logbook_trace("Resetting UT3 to 0"):
+            tool(specification=self._GetClearAllSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying GO Train BP"):
+            tool(specification=self._GetGoTrainSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying GO Bus BP"):
+            tool(specification=self._GetGoBusSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying Subway BP"):
+            tool(specification=self._GetSubwaySpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying Streetcar BP"):
+            tool(specification=self._GetAllStreetcarSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying Streetcar XROW BP"):
+            tool(specification=self._GetStreetcarXROWSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying TTC Bus BP"):
+            tool(specification=self._GetTTCBusSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+            
+        with _m.logbook_trace("Applying YRT BP"):
+            tool(specification=self._GetAllYRTSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying VIVA BP"):
+            tool(specification=self._GetVIVASpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying Brampton Transit BP"):
+            tool(specification=self._GetAllBramptonSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying ZUM BP"):
+            tool(specification=self._GetZUMSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+            
+        with _m.logbook_trace("Applying MiWay BP"):
+            tool(specification=self._GetMiWaySpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+            
+        with _m.logbook_trace("Applying Durham BP"):
+            tool(specification=self._GetDurhamSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+        
+        with _m.logbook_trace("Applying Halton BP"):
+            tool(specification=self._GetHaltonSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
+            
+        with _m.logbook_trace("Applying Hamilton BP"):
+            tool(specification=self._GetHamiltonSpec(), scenario=scenario)
+            self.TRACKER.completeSubtask()
     
     def _GetClearAllSpec(self):
         return {
