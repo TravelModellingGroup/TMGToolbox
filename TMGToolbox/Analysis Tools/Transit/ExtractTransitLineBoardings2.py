@@ -51,7 +51,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ExtractTransitLineBoardings(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.0.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -124,8 +124,14 @@ class ExtractTransitLineBoardings(_m.Tool()):
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
         
-        $("#WriteIndividualRoutesFlag").prop('disabled', true);
-        $("#ReportErrorsToLogbookFlag").prop('disabled', true);
+        if (tool.check_agg_file())
+        {
+            $("#WriteIndividualRoutesFlag").prop('disabled', false);
+            $("#ReportErrorsToLogbookFlag").prop('disabled', false);
+        } else {
+            $("#WriteIndividualRoutesFlag").prop('disabled', true);
+            $("#ReportErrorsToLogbookFlag").prop('disabled', true);
+        }
 
         $("#LineAggrgeationFile").bind('change', function()
         {
@@ -161,8 +167,8 @@ class ExtractTransitLineBoardings(_m.Tool()):
         return self.tool_run_msg
     
     @_m.method(return_type= bool)
-    def check_scenario(self):
-        return self.Scenario.has_transit_results
+    def check_agg_file(self):
+        return bool(self.LineAggrgeationFile)
     
     #---
     #---XTMF INTERFACE METHODS
