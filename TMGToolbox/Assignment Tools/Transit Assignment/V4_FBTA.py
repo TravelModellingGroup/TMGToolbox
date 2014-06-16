@@ -168,7 +168,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         keyval2 = [(-1, 'None')]
         keyval3 = []
         keyval4 = []
-        for exatt in _MODELLER.scenario.extra_attributes():
+        for exatt in self.Scenario.extra_attributes():
             tup = (exatt.id, "%s - %s" %(exatt.id, exatt.description))
             if exatt.type == 'NODE':
                 keyval1.append(tup)
