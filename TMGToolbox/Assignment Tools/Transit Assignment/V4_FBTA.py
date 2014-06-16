@@ -45,6 +45,10 @@ V4 Transit Assignment
             or Non-Toronto).
     
     2.0.0 Branched to create a FBTA procedure
+    
+    2.1.0 Added new parameters:
+        - Toronto Connector Walk Perception
+        - Non-Toronto Connector Walk Perception
 '''
 
 import inro.modeller as _m
@@ -62,7 +66,7 @@ EMME_VERSION = _util.getEmmeVersion(float)
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.0.0'
+    version = '2.1.0'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -84,6 +88,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     WalkPerceptionToronto = _m.Attribute(float)
     WalkPerceptionNonToronto = _m.Attribute(float)
+    WalkPerceptionTorontoConnectors = _m.Attribute(float)
+    WalkPerceptionNonTorontoConnectors = _m.Attribute(float)
+    
     WaitPerception = _m.Attribute(float)
     BoardPerception = _m.Attribute(float)
     CongestionPerception = _m.Attribute(float)
@@ -114,6 +121,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WaitPerception = 1.0
         self.WalkPerceptionToronto = 1.0
         self.WalkPerceptionNonToronto = 1.0
+        self.WalkPerceptionTorontoConnectors = 1.0
+        self.WalkPerceptionNonTorontoConnectors = 1.0
         self.BoardPerception = 1.0
         
         self.CongestionPerception = 1.0
@@ -223,11 +232,27 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
+                 pb.add_html("<b>Toronto Access Perception:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'WalkPerceptionTorontoConnectors', size= 10)
+            with t.table_cell():
+                pb.add_html("Walk perception on Toronto centroid connectors")
+            t.new_row()
+            
+            with t.table_cell():
                  pb.add_html("<b>Toronto Walk Time Perception:</b>")
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'WalkPerceptionToronto', size= 10)
             with t.table_cell():
-                pb.add_html("Converts walking minutes to impedance")
+                pb.add_html("Walk perception on Toronto links")
+            t.new_row()
+            
+            with t.table_cell():
+                 pb.add_html("<b>Non-Toronto Access Perception:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'WalkPerceptionNonTorontoConnectors', size= 10)
+            with t.table_cell():
+                pb.add_html("Walk perception on non-Toronto centroid connectors")
             t.new_row()
             
             with t.table_cell():
@@ -235,7 +260,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'WalkPerceptionNonToronto', size= 10)
             with t.table_cell():
-                pb.add_html("Converts walking minutes to impedance")
+                pb.add_html("Walk perception on non-Toronto links")
             t.new_row()
             
             with t.table_cell():
@@ -392,6 +417,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
                  WalkPerceptionToronto, WalkPerceptionNonToronto, 
+                 WalkPerceptionTorontoConnectors, WalkPerceptionNonTorontoConnectors,
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
                  SegmentFareAttributeId,
                  BoardPerception, CongestionPerception, FarePerception,
@@ -429,6 +455,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WaitPerception = WaitPerception
         self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
         self.WalkPerceptionToronto = WalkPerceptionToronto
+        self.WalkPerceptionTorontoConnectors = WalkPerceptionTorontoConnectors
+        self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
         self.BoardPerception = BoardPerception
         
         self.CongestionPerception = CongestionPerception
@@ -534,8 +562,10 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             tool(spec, self.Scenario)
         
         with _m.logbook_trace("Assigning walk time perception factors"):
-            applySelection(self.WalkPerceptionToronto, "i=0,1000 or j=0,1000 or i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000")
-            applySelection(self.WalkPerceptionNonToronto, "i=1000,7000 or j=1000,7000 or i=20000,90000 or j=20000,90000")
+            applySelection(self.WalkPerceptionTorontoConnectors, "i=0,1000 or j=0,1000")
+            applySelection(self.WalkPerceptionNonTorontoConnectors, "i=1000,7000 or j=1000,7000")
+            applySelection(self.WalkPerceptionToronto, "i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000")
+            applySelection(self.WalkPerceptionNonToronto, "i=20000,90000 or j=20000,90000")
             applySelection(0, "i=9700,10000 or j=9700,10000")
             
     
