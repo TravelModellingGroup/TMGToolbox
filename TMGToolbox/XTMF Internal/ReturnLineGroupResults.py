@@ -194,23 +194,12 @@ class ReturnBoardings(_m.Tool()):
             group.select(scenario)
     
     def _GetLineResults(self, scenario):
-        #Performs a partial read of the network. The data structure is undocumented
-        # so this method is subject to change in future versions of Emme.
         
-        q = scenario.get_attribute_values('TRANSIT_SEGMENT', ['transit_boardings'])
-        indices = q[0]
-        values = q[1]
-        
+        results = _util.fastLoadSummedSegmentAttributes(scenario, ['transit_boardings'])
         retVal = {}
-        for id, segmentIndices in indices.iteritems():
-            id = str(id) #Normally stored in unicode.
-            
-            valueIndices = segmentIndices[1]
-            
-            sum = 0.0
-            for index in valueIndices:
-                sum += values[index]
-            retVal[id] = sum
+        for lineId, attributes in results.iteritems():
+            id = str(lineId)
+            retVal[id] = attributes['transit_boardings']
         
         return retVal
     
