@@ -49,6 +49,8 @@ V4 Transit Assignment
     2.1.0 Added new parameters:
         - Toronto Connector Walk Perception
         - Non-Toronto Connector Walk Perception
+    
+    2.2.0 New features: save standard output matrices
 '''
 
 import inro.modeller as _m
@@ -66,9 +68,9 @@ EMME_VERSION = _util.getEmmeVersion(float)
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.1.0'
+    version = '2.2.0'
     tool_run_msg = ""
-    number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -85,6 +87,16 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     HeadwayFractionAttributeId = _m.Attribute(str)
     LinkFareAttributeId = _m.Attribute(str)
     SegmentFareAttributeId = _m.Attribute(str)
+    
+    InVehicleTimeMatrixId = _m.Attribute(str)
+    WaitTimeMatrixId = _m.Attribute(str)
+    WalkTimeMatrixId = _m.Attribute(str)
+    FareMatrixId = _m.Attribute(str)
+    
+    xtmf_InVehicleTimeMatrixNumber = _m.Attribute(int)
+    xtmf_WaitTimeMatrixNumber = _m.Attribute(int)
+    xtmf_WalkTimeMatrixNumber = _m.Attribute(int)
+    xtmf_FareMatrixNumber = _m.Attribute(int)
     
     WalkPerceptionToronto = _m.Attribute(float)
     WalkPerceptionNonToronto = _m.Attribute(float)
@@ -212,6 +224,32 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                       keyvalues= keyval4,
                       title= "Segment Fare Attribute",
                       note= "SEGMENT extra attribute containing actual fare costs.")
+        
+        pb.add_header("OUTPUT MATRICES")
+        
+        pb.add_select_output_matrix(tool_attribute_name= 'InVehicleTimeMatrixId',
+                                    include_existing= True,
+                                    title= "In Vehicle Times Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to save in-vehicle times")
+        
+        pb.add_select_output_matrix(tool_attribute_name= 'WaitTimeMatrixId',
+                                    include_existing= True,
+                                    title= "Wait Times Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to save wait times")
+        
+        pb.add_select_output_matrix(tool_attribute_name= 'WalkTimeMatrixId',
+                                    include_existing= True,
+                                    title= "Walk Times Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to save walk times")
+        
+        pb.add_select_output_matrix(tool_attribute_name= 'FareMatrixId',
+                                    include_existing= True,
+                                    title= "Fares Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to save fares.")
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
@@ -421,7 +459,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
                  SegmentFareAttributeId,
                  BoardPerception, CongestionPerception, FarePerception,
-                 AssignmentPeriod, Iterations, NormGap, RelGap):
+                 AssignmentPeriod, Iterations, NormGap, RelGap,
+                 xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
+                 xtmf_FareMatrixNumber):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -445,7 +485,17 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         if self.Scenario.extra_attribute(self.SegmentFareAttributeId) == None:
             raise Exception("Segment fare attribute %s does not exist" %self.SegmentFareAttributeId)
         
-        #---3 Set up other parameters
+        #---3 Set up output matrices
+        if xtmf_InVehicleTimeMatrixNumber:
+            self.InVehicleTimeMatrixId = "mf%s" %xtmf_InVehicleTimeMatrixNumber
+        if xtmf_WaitTimeMatrixNumber:
+            self.WaitTimeMatrixId = "mf%s" %xtmf_WaitTimeMatrixNumber
+        if xtmf_WalkTimeMatrixNumber:
+            self.WalkTimeMatrixId = "mf%s" %xtmf_WalkTimeMatrixNumber
+        if xtmf_FareMatrixNumber:
+            self.FareMatrixId = "mf%s" %xtmf_FareMatrixNumber
+        
+        #---4 Set up other parameters
         self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
         self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
         self.WalkAttributeId = WalkAttributeId
@@ -504,6 +554,14 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                      stopping_criteria= self._GetStopSpec(),
                                      impedances= impedanceMatrix,
                                      scenario= self.Scenario)
+                
+                if self.InVehicleTimeMatrixId or self.WalkTimeMatrixId or self.WaitTimeMatrixId:
+                    self._ExtractTimesMatrices()
+                else: self.TRACKER.completeTask()
+                
+                if self.FareMatrixId:
+                    self._ExtractCostMatrix()
+                else: self.TRACKER.completeTask()
 
     ##########################################################################################################
         
@@ -659,6 +717,54 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                     "relative_gap": self.RelGap
                     }
         return stopSpec
+    
+    def _ExtractTimesMatrices(self):
+        spec = {
+                "by_mode_subset": {
+                    "modes": ["*"],
+                    "actual_in_vehicle_times": self.InVehicleTimeMatrixId,
+                    "actual_aux_transit_times": self.WalkTimeMatrixId
+                },
+                "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
+                "actual_total_waiting_times": self.WaitTimeMatrixId
+            }
+        tool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix_results')
+        
+        self.TRACKER.runTool(tool, spec, scenario= self.Scenario)
+    
+    def _ExtractCostMatrix(self):
+        spec = {
+                "trip_components": {
+                    "boarding": None,
+                    "in_vehicle": self.SegmentFareAttributeId,
+                    "aux_transit": self.LinkFareAttributeId,
+                    "alighting": None
+                },
+                "sub_path_combination_operator": "+",
+                "sub_strategy_combination_operator": "average",
+                "selected_demand_and_transit_volumes": {
+                    "sub_strategies_to_retain": "ALL",
+                    "selection_threshold": {
+                        "lower": -999999,
+                        "upper": 999999
+                    }
+                },
+                "analyzed_demand": self.DemandMatrix.id,
+                "constraint": None,
+                "results": {
+                    "strategy_values": self.FareMatrixId,
+                    "selected_demand": None,
+                    "transit_volumes": None,
+                    "aux_transit_volumes": None,
+                    "total_boardings": None,
+                    "total_alightings": None
+                },
+                "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
+            }
+        
+        tool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
+        
+        self.TRACKER.runTool(tool, spec, scneario= self.Scenario)
     
     @_m.method(return_type=unicode)
     def get_scenario_node_attributes(self):
