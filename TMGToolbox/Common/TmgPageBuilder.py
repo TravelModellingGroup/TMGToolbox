@@ -20,6 +20,7 @@
 import inro.modeller as _m
 from contextlib import contextmanager
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
+_EMMEBANK = _MODELLER.emmebank
 
 class Face(_m.Tool()):
     def page(self):
@@ -34,6 +35,13 @@ class Face(_m.Tool()):
         
         return pb.render()
 
+_getMatrixText = lambda matrix: "%s - %s - %s" %(matrix.id, matrix.name, matrix.description)
+_getExtraAttributeText = lambda exatt: "%s - %s - %s"(exatt.id, exatt.type, exatt.description)
+_matrixOrder = {'FULL': 0, 'ORIGIN': 1, 'DESTINATION': 2, 'SCALAR': 3}
+_matrixTypeSorter = lambda matrix_type: _matrixOrder[matrix_type]
+_matrixTypeDimension = lambda matrix_type: _EMMEBANK.dimensions["%s_matrices" %matrix_type.lower()] 
+_matrixPrefixes = {'FULL': 'mf', 'ORIGIN': 'mo', 'DESTINATION': 'md', 'SCALAR': 'ms'}
+
 class TmgToolPageBuilder(_m.ToolPageBuilder):
     
     def __init__(self, tool, runnable=True, title="", description="", branding_text="", help_path=None,
@@ -42,6 +50,8 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
         self.root.__init__(tool, runnable=runnable, title=title, description=description, branding_text=branding_text,
                            help_path=help_path, footer_help_links=footer_help_links)
         self.description = "<div class=tmg_left>%s</div>" %self.description
+    
+    #-------------------------------------------------------------------------------------------
     
     def _addHiddenHTML(self):
         return '''
@@ -53,8 +63,12 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
                     .tmg_table{background-color: rgb( 241, 243, 233); margin:0px}
             </style>'''
     
+    #-------------------------------------------------------------------------------------------
+    
     def render(self):
         return self._addHiddenHTML() + self.root.render()
+    
+    #-------------------------------------------------------------------------------------------
     
     def add_header(self,text, note=None):      
         s = '<div class="hdr1 t_element"><br><b>%s</b></div>' %text
@@ -62,40 +76,26 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
             s += '<div class="t_element">%s</div>' %note
         self.root.add_html(s)
         
-            
+    #-------------------------------------------------------------------------------------------    
     
     def add_plain_text(self, text):
         self.root.add_html('<div class="t_element">%s</div>' %text)
-        
+    
+    #-------------------------------------------------------------------------------------------
+    
     def add_sub_section(self, header, text):
         self.root.add_html('<div class="t_element"><b>%s</b></div>' %header)
         self.root.add_html('<div class="indent">%s</div>' %text)
-    
-    '''
-    def add_select_scenario(self, tool_attribute_name, 
-                            filter= lambda scenario: True,
-                            filter_note="None",
-                            title='', note='', allow_none=False):
-        kv = []
-        if allow_none:
-            kv.append((None, "None"))
-        for scenario in _MODELLER.emmebank.scenarios():
-            if filter(scenario):
-                kv.append((scenario, "%s - %s" %(scenario.number, scenario.title)))
-        
-        if len(kv) > 0:
-            self.root.add_select(tool_attribute_name=tool_attribute_name,
-                             title=title, note=note, keyvalues=kv)
-        else:
-            self.add_plain_text("<font color=red><b>Cannot run this tool, as there are no \
-                        valid scenarios meeting criteria:</b> <em>'%s'</em></font>" %filter_note)
-            self.runnable=False
-    '''
+     
+    #-------------------------------------------------------------------------------------------
         
     def add_new_scenario_select(self, tool_attribute_name="",
                                 title="", note="",
-                                next_scenario_option=True):
+                                next_scenario_option= True,
+                                allow_none= False):
         availableScenarioIds = []
+        if allow_none:
+            availableScenarioIds.append((-1, 'None'))
         scenarios = set([s.number for s in _MODELLER.emmebank.scenarios()])
         nextScenario = None
         for i in range(1, _MODELLER.emmebank.dimensions['scenarios'] + 1):
@@ -111,6 +111,81 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
                       title=title,
                       note=note)
     
+    #-------------------------------------------------------------------------------------------
+    
+    def add_select_output_matrix(self, tool_attribute_name,
+                                 matrix_types= ['FULL'],
+                                 title= "", note= "",
+                                 include_none= True,
+                                 include_next= True,
+                                 include_existing= False,
+                                 include_new= False):
+        '''
+        Add a widget to the page to select an output matrix. The widget
+        returns a string matrix ID (or None).
+        
+        Args:
+            - matrix_types (=['FULL']): An list of a subset of the four
+                    matrix types (FULL, ORIGIN, DESTINATION, or SCALAR).
+            - title (=""): Optional title above widget.
+            - note (=""): Optional note below widget.
+            - include_none (=True): Include the 'None' option in the 
+                    widget. If selected, the widget will return the None
+                    object.
+            - include_next (=True): Include an option to select the next
+                    available matrix for the given type(s).
+            - include_existing (=False): Include existing matrices of the
+                    given type(s) which are not protected from modification.
+            - include_new (=False): Include options for matrices which do
+                    not yet exist. Turning on this flag can make the list
+                    of options very long - at minimum one entry for each
+                    available matrix ID up to the maximum number of 
+                    matrices given by the databank.
+        
+        '''
+        
+        if not matrix_types:
+            raise TypeError("No matrix types were selected")
+        
+        matrix_types = list(matrix_types) #Make a copy, just in case the user wishes to preserve their original list
+        matrix_types.sort(key= _matrixTypeSorter) #Sort in order of FULL, ORIGIN, DESTINATION, SCALAR
+        
+        options = []
+        if include_none: options.append((-1, "None - Do not save"))
+        
+        if include_next:
+            for matrixType in matrix_types:
+                nextId = _EMMEBANK.available_matrix_identifier(matrixType)
+                options.append((nextId,
+                                "Next available %s matrix" %matrixType))
+        
+        if include_existing or include_new:
+            for matrixType in matrix_types:
+                dimension = _matrixTypeDimension(matrixType)
+                prefix = _matrixPrefixes[matrixType]
+                for i in range(1, dimension + 1):
+                    id = prefix + str(i)
+                    
+                    matrix = _EMMEBANK.matrix(id)
+                    if matrix == None and include_new:
+                        options.append((id,
+                                       "%s - New matrix %s" %(id, id)))
+                        
+                    elif matrix != None and include_existing:
+                        if matrix.read_only: continue #Skip protected matrices
+                        options.append((id,
+                                       _getMatrixText(matrix)))
+        if len(options) == 0:
+            raise TypeError("No options were permitted")
+        
+        self.root.add_select(tool_attribute_name,
+                             keyvalues= options,
+                             title= title,
+                             note= note)
+    
+    #-------------------------------------------------------------------------------------------
+    
+    #@deprecated: Use add_select_output_matrix instead
     def add_select_new_matrix(self, tool_attribute_name,
                               matrix_type='FULL',
                               title="", note="",
@@ -149,6 +224,8 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
                              keyvalues=availableMatrixIds,
                              title=title, note=note)
     
+    #-------------------------------------------------------------------------------------------
+    
     def add_method_description(self, name, description="", args={}, return_string="void"):
         iter = args.iterkeys()
         h  = iter.next()
@@ -163,11 +240,60 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
         l += "</ul>"
         self.root.add_html('<div class="indent">{0}<br>{1}</div>'.format(description, l))           
     
+    #-------------------------------------------------------------------------------------------
+    
     def add_file_example(self, file_type="Sample file", header_text="", body_text=""):
         pass
     
-    def add_table(self, visible_border=True, title=""):
+    #-------------------------------------------------------------------------------------------
+    
+    def add_table(self, visible_border=False, title=""):
+        '''
+        Returns a special Table object which can be used inside a 'with'
+        statement to wrap other Page widgets. This facilitates the creation
+        of layout tables inside of the Page.
+        
+        Args:
+            - visible_border (=False): Flag to make the table's borders visible.
+            - title (=""): Title text to appear above the table.
+            
+        Returns: A Table object, with the following methods:
+        
+            - add_table_header(list_of_column_names): Adds a header row to the
+                    table. The argument list_of_column_names is an iterable of
+                    column headers. This header is automatically encapsulated
+                    in its own row (there is no need to call new_row() after
+                    this method).
+            - new_row(): Starts a new row in the table, ending the current row.
+            - table_cell(): Context manager to wrap the contents within a cell
+                    within a row.
+                    
+        Example:
+            with pb.add_table() as t:
+                t.add_table_header(['Parameter', 'Value', 'Description'])
+                
+                with t.table_cell():
+                    pb.add_html("Walk Perception")
+                with t.table_cell():
+                    pb.add_text_box(tool_attribute_name= 'WalkPerception', size= 6)
+                with t.table_cell():
+                    pb.add_html("The perception factor of walking time.")
+                
+                t.new_row()
+                
+                with t.table_cell():
+                    pb.add_html("Wait Perception")
+                with t.table_cell():
+                    pb.add_text_box(tool_attribute_name= 'WaitPerception', size= 6)
+                with t.table_cell():
+                    pb.add_html("The perception factor of waiting time.")
+                
+                ...
+        
+        '''
         return _table(self.root, visible_border, title)
+    
+    #-------------------------------------------------------------------------------------------
 
 # Context manager for creating tables inside the PageBuilder
 class _table():
