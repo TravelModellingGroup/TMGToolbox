@@ -153,9 +153,11 @@ class OperatorTransferMatrix(_m.Tool()):
     DemandMatrixId = _m.Attribute(str)
     ClassName = _m.Attribute(str)
     
+    ExportTransferMatrixFlag = _m.Attribute(bool)
     LineGroupOptionOrAttributeId = _m.Attribute(str)
     TransferMatrixFile = _m.Attribute(str)
     
+    ExportWalkAllWayMatrixFlag = _m.Attribute(bool)
     AggregationPartition = _m.Attribute(_m.InstanceType)
     WalkAllWayExportFile = _m.Attribute(str)
     
@@ -165,6 +167,8 @@ class OperatorTransferMatrix(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
+        self.ExportTransferMatrixFlag = True
+        self.ExportWalkAllWayMatrixFlag = False
     
     ##########################################################################################################
     #---
@@ -228,6 +232,9 @@ class OperatorTransferMatrix(_m.Tool()):
         
         pb.add_header("TRANSFER MATRIX")
         
+        pb.add_checkbox(tool_attribute_name= 'ExportTransferMatrixFlag',
+                        label= "Export Transfer Matrix?")
+        
         keyval2 = [(1, "<em>Pre-built:</em> NCS11 operator codes"),
                    (2, "<em>Pre-built:</em> Alphabetical by operator"),
                    (3, "<em>Pre-built:</em> Alphabetical by operator and mode"),
@@ -255,6 +262,9 @@ class OperatorTransferMatrix(_m.Tool()):
         
         pb.add_header("WALK-ALL-WAY MATRIX")
         
+        pb.add_checkbox(tool_attribute_name= 'ExportWalkAllWayMatrixFlag',
+                        label= "Export walk-all-way matrix?")
+        
         pb.add_select_partition(tool_attribute_name= 'AggregationPartition',
                                 allow_none= True,
                                 title= "Aggregation Partition",
@@ -279,6 +289,18 @@ class OperatorTransferMatrix(_m.Tool()):
             $("#ClassName").prop('disabled', false);
         } else {
             $("#ClassName").prop('disabled', true);
+        }
+        
+        if (! tool.preload_transfer_matrix_flag())
+        {
+            $("#LineGroupOptionOrAttributeId").prop('disabled', true);
+            $("#TransferMatrixFile").prop('disabled', true);
+        }
+        
+        if (! tool.preload_waw_matrix_flag())
+        {
+            $("#AggregationPartition").prop('disabled', true);
+            $("#WalkAllWayExportFile").prop('disabled', true);
         }
         
         $("#Scenario").bind('change', function()
@@ -310,6 +332,24 @@ class OperatorTransferMatrix(_m.Tool()):
                 $("#ClassName").prop('disabled', true);
             }
         });
+        
+        $("#ExportTransferMatrixFlag").bind('change', function()
+        {
+            $(this).commit();
+            
+            var flag = ! tool.preload_transfer_matrix_flag();
+            $("#LineGroupOptionOrAttributeId").prop('disabled', flag);
+            $("#TransferMatrixFile").prop('disabled', flag);
+        });
+        
+        $("#ExportWalkAllWayMatrixFlag").bind('change', function()
+        {
+            $(this).commit();
+            
+            var flag = ! tool.preload_waw_matrix_flag();
+            $("#AggregationPartition").prop('disabled', flag);
+            $("#WalkAllWayExportFile").prop('disabled', flag);
+        });
     });
 </script>""" % pb.tool_proxy_tag)
         
@@ -320,8 +360,17 @@ class OperatorTransferMatrix(_m.Tool()):
         self.TRACKER.reset()
         
         try:
-            self._Execute()
-            _MODELLER.desktop.refresh_needed(False)
+            if self.ExportTransferMatrixFlag or self.ExportWalkAllWayMatrixFlag:
+                
+                if self.ExportTransferMatrixFlag and not self.TransferMatrixFile:
+                    raise IOError("No transfer matrix file specified.")
+                
+                if self.ExportWalkAllWayMatrixFlag:
+                    if not self.AggregationPartition: raise TypeError("No aggregation partition specified")
+                    if not self.WalkAllWayExportFile: raise TypeError("No walk-all-way matrix file specified")
+                    
+                self._Execute()
+                _MODELLER.desktop.refresh_needed(False)
         except Exception, e:
             _MODELLER.desktop.refresh_needed(False)
             self.tool_run_msg = _m.PageBuilder.format_exception(
@@ -369,6 +418,13 @@ class OperatorTransferMatrix(_m.Tool()):
         options = ["<option value=%s>%s</option>" %tup for tup in options]
         return "\n".join(options)
     
+    @_m.method(return_type= bool)
+    def preload_transfer_matrix_flag(self):
+        return self.ExportTransferMatrixFlag
+    
+    @_m.method(return_type= bool)
+    def preload_waw_matrix_flag(self):
+        return self.ExportWalkAllWayMatrixFlag
     ##########################################################################################################    
     
     #---
@@ -400,29 +456,32 @@ class OperatorTransferMatrix(_m.Tool()):
                                        tempFolder):
                 
                 #---1. Flag pre-built groupings, if needed
-                if lineGroupOption:
+                if lineGroupOption and self.ExportTransferMatrixFlag:
                     with _m.logbook_trace("Applying pre-built groupings"):
                         self._ApplyPreBuiltCodes(lineGroupOption, lineGroupAtributeID)
                 self.TRACKER.completeTask()
                 
                 #---2. Get the traversal matrix
-                transferMatrix = self._GetTraversalMatrix(lineGroupAtributeID, tempFolder)
-                
-                
-                #---3. Attach initial boarding and final alighting data to matrix
-                self._GetBoardingsAndAlightings(transferMatrix, lineGroupAtributeID, 
-                                                boardAttribute.id, alightAttribute.id)
-                print "Loaded initial boardings and final alightings"
+                if self.ExportTransferMatrixFlag:
+                    transferMatrix = self._GetTraversalMatrix(lineGroupAtributeID, tempFolder)
+                    
+                    
+                    #---3. Attach initial boarding and final alighting data to matrix
+                    self._GetBoardingsAndAlightings(transferMatrix, lineGroupAtributeID, 
+                                                    boardAttribute.id, alightAttribute.id)
+                    print "Loaded initial boardings and final alightings"
+                else: transferMatrix = None 
                 
                 #---4. Get the walk-all-way matrix
                 self._GetWalkAllWayMatrix(walkAllWayMatrix, transferMatrix)
                 print "Loaded walk all-way matrix"
                 
                 #---5. Export the transfer matrix
-                self._WriteExportFile(transferMatrix)
+                if self.ExportTransferMatrixFlag:
+                    self._WriteExportFile(transferMatrix)
                 
                 #---6. Export the aggregated walk-all-way matrix (if desired)
-                if self.AggregationPartition != None:
+                if self.ExportWalkAllWayMatrixFlag:
                     self._ExportWalkAllWayMatrix(walkAllWayMatrix)
                 
 
@@ -670,7 +729,8 @@ class OperatorTransferMatrix(_m.Tool()):
         
         wawSum = self._SumWalkAllWayMatrix(wawMatrix.id)
         
-        transferMatrix[(0,0)] = wawSum 
+        if self.ExportTransferMatrixFlag:
+            transferMatrix[(0,0)] = wawSum 
     
     def _RunStrategyAnalysis(self, wawMatrixId):
         spec = {
