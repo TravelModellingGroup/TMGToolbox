@@ -35,6 +35,10 @@ Extract Operator Transfer Matrix
     
     1.0.0 Published and documented on 2014-06-11
     
+    1.1.0 Added in feature to just extract the walk-all-way matrix
+    
+    1.1.1 Fixed some documentation.
+    
 '''
 
 import inro.modeller as _m
@@ -144,7 +148,7 @@ LINE_GROUPS_GTAMV4_PREM = [(1, "line=B_____", "Brampton"),
 
 class OperatorTransferMatrix(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.1.1'
     tool_run_msg = ""
     number_of_tasks = 8 # For progress reporting, enter the integer number of tasks here
     
@@ -179,12 +183,13 @@ class OperatorTransferMatrix(_m.Tool()):
                      description="Extracts and exports a matrix of passenger volumes transferring \
                          from and to each operator, including initial boardings, final alightings \
                          and total walk-all-way volumes. Summing over each column is equivalent \
-                         to aggregating the boardings for each operator.\
+                         to aggregating the boardings for each operator; but only if the each line\
+                         has a non-zero group number (i.e. full coverage).\
                          <br><br>Each operator (or <em>line group</em>) is identified numerically \
                          (e.g. <b>1</b> for the first group, <b>2</b> for the second, etc.) based on \
                          several pre-set schemes. The 0<sup>th</sup> 'group' is special: the 0<sup>th</sup> \
                          row corresponds to initial boardings, and the 0<sup>th</sup> column to \
-                         final alightings. The cell at 0, 0 contains the total walk-all-way volumes \
+                         final alightings. The cell at 0,0 contains the total walk-all-way volumes \
                          for the scenario.\
                          <br><br><b>Walk-all-way matrix:</b> This tool also calculates, for each OD \
                          the fraction of trips walking all-way. If desired, this tool can aggregate \
