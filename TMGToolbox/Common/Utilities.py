@@ -422,8 +422,6 @@ def fastLoadSummedSegmentAttributes(scenario, list_of_attributes):
     
     return retval
         
-        
-
 #-------------------------------------------------------------------------------------------
 
 def fastLoadTransitLineAttributes(scenario, list_of_attributes):
@@ -454,6 +452,39 @@ def fastLoadTransitLineAttributes(scenario, list_of_attributes):
         for attIndex, attName in enumerate(list_of_attributes):
             line[attName] = values[attIndex][dataIndex]
         retval[lineId] = line
+    return retval
+
+#-------------------------------------------------------------------------------------------
+
+def fastLoadLinkAttributes(scenario, list_of_attributes):
+    '''
+    Performs a fast partial read of link attributes, using
+    scenario.get_attribute_values.
+    
+    Args:
+        - scenario: The scenario to load from
+        - list_of_attributes: A list of attributes to load.
+    
+    Returns:
+        A dictionary, where the keys are (i_node, j_node) tuples
+        (link IDs), and whose values are dictionaries of
+        attribute : values.
+        
+        Example: {(10001, 10002): {'i_node': 10001, 'j_node': 10002, 'length': 1.002} ...}
+    '''
+    
+    package = scenario.get_attribute_values('LINK', list_of_attributes)
+    indices = package[0]
+    attribute_tables = package[1:]
+    
+    retval = {}
+    for i_node, outgoing_links in indices.iteritems():
+        for j_node, index in outgoing_links.iteritems():
+            link = i_node, j_node
+            attributes = {'i_node': i_node, 'j_node': j_node}
+            for att_name, table in itersync(list_of_attributes, attribute_tables):
+                attributes[att_name] = table[index]
+            retval[link] = attributes
     return retval
 
 #-------------------------------------------------------------------------------------------
