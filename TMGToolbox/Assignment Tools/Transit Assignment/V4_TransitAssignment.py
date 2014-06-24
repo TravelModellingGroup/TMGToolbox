@@ -43,6 +43,7 @@ V4 Transit Assignment
             on station centroid connectors will be set to 0, while transfer link
             walk perception will take the value of the region it is in (Toronto
             or Non-Toronto).
+    
 '''
 
 import inro.modeller as _m
@@ -60,7 +61,7 @@ EMME_VERSION = _util.getEmmeVersion(float)
 
 class V4_TransitAssignment(_m.Tool()):
     
-    version = '0.0.3'
+    version = '0.0.4'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -232,7 +233,7 @@ class V4_TransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
-                 pb.add_html("<b>Peak/Representative Hour Factor:</b>")
+                 pb.add_html("<b>Assignment Period:</b>")
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'AssignmentPeriod', size= 10)
             with t.table_cell():

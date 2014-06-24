@@ -149,7 +149,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         if EMME_VERSION >= 4.1:
             self.NumberOfProcessors = cpu_count()
         
-        #---Priavte flags for estimation purposes only
+        #---Private flags for calibration purposes only
         self._useLogitConnectorChoice = True
         self._connectorLogitScale = 0.2
         self._connectorLogitTruncation = 0.05
@@ -326,7 +326,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
-                 pb.add_html("<b>Peak/Representative Hour Factor:</b>")
+                 pb.add_html("<b>Assignment Period:</b>")
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'AssignmentPeriod', size= 10)
             with t.table_cell():
