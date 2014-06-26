@@ -51,6 +51,8 @@ Toll-Based Road Assignment
     
     2.0.1 Fixed bug which occurs when a new matrix is selected for output.
     
+    2.0.2 Implemented XTMF-side
+    
 '''
 
 import inro.modeller as _m
@@ -66,7 +68,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '2.0.1'
+    version = '2.0.2'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -309,7 +311,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, TimesMatrixId, CostMatrixId, TollsMatrixId,
                  PeakHourFactor, LinkCost, TollCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
-                 RunTitle, SelectTollLinkExpression):
+                 RunTitle, LinkTollAttributeId):
         
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -335,7 +337,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         self.isRunningFromXTMF = True
         self.RunTitle = RunTitle[:25]
-        self.SelectTollLinkExpression = SelectTollLinkExpression
+        self.LinkTollAttributeId = LinkTollAttributeId
         
         #---3. Run
         try:

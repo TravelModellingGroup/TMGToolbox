@@ -56,6 +56,8 @@ Toll-Based Road Assignment
     
     3.0.1 Fixed minor bug: transit vehicle auto equivalencies were not being applied
     
+    3.0.2 Re-coded XTMF-side of tool.
+    
 '''
 
 import inro.modeller as _m
@@ -71,7 +73,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '3.0.1'
+    version = '3.0.2'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -291,7 +293,6 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.tool_run_msg = ""
         
         '''Run is called from Modeller.'''
-        self.isRunningFromXTMF = False
         
         if self.DemandMatrix == None: raise NullPointerException("Demand matrix not specified")
         if self.LinkTollAttributeId == None: raise NullPointerException("Link toll attribute not specified")
@@ -314,7 +315,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, TimesMatrixId, CostMatrixId, TollsMatrixId,
                  PeakHourFactor, LinkCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
-                 RunTitle, SelectTollLinkExpression):
+                 RunTitle, LinkTollAttributeId):
         
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -337,9 +338,8 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.brGap = brGap
         self.normGap = normGap
         
-        self.isRunningFromXTMF = True
         self.RunTitle = RunTitle[:25]
-        self.SelectTollLinkExpression = SelectTollLinkExpression
+        self.LinkTollAttributeId = LinkTollAttributeId
         
         #---3. Run
         try:
