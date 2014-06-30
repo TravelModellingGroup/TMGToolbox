@@ -491,6 +491,8 @@ class Shapely2ESRI():
             for i in range(1, len(v)):
                 holes.append(v[i])
             geom = Polygon(shell, holes)
+        else:
+            raise NotImplementedError("Shape type '%s' is not currently supported." %type)
         
         if not geom.is_valid:
             self.invalidFeatureIDs.add(fid)
