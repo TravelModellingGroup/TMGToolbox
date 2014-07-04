@@ -44,6 +44,8 @@ Fare-Based Transit Network (FBTN) From Schema
     
     1.1.2 Slightly tweaked the page() function's Javascript to allow the NONE option when segment
         attributes are pre-loaded from scenario.
+        
+    1.1.3 Slightly tweaked to over-write the FBTN scenario if it already exists.
     
 '''
 from copy import copy
@@ -120,7 +122,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.1.2'
+    version = '1.1.3'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -312,9 +314,6 @@ class FBTNFromSchema(_m.Tool()):
         if (self.BaseScenario == None):
             raise Exception("Base scenario %s was not found!" %xtmf_BaseScenarioNumber)
         
-        if _MODELLER.emmebank.scenario(NewScenarioNumber) != None:
-            raise Exception("New scenario %s already exists!" %NewScenarioNumber)
-        
         if self.BaseScenario.extra_attribute(SegmentFareAttributeId) == None:
             att = self.BaseScenario.create_extra_attribute('TRANSIT_SEGMENT',
                                                            SegmentFareAttributeId)
@@ -405,7 +404,9 @@ class FBTNFromSchema(_m.Tool()):
                 print "Applied fare rules to network."
             
             #Publish the network
-            newSc = _MODELLER.emmebank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
+            newSc = _MODELLER.emmebank.scenario(self.NewScenarioNumber)
+            if newSc == None:
+                newSc = _MODELLER.emmebank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
             newSc.title = self.NewScenarioTitle
             newSc.publish_network(network, resolve_attributes= True)
             
