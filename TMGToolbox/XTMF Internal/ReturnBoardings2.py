@@ -61,6 +61,7 @@ class ReturnBoardings(_m.Tool()):
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     xtmf_LineAggregationFile = _m.Attribute(str)
+    xtmf_CheckAggregationFlag = _m.Attribute(bool)
     
     def __init__(self):
         #---Init internal variables
@@ -77,7 +78,7 @@ class ReturnBoardings(_m.Tool()):
     
     ##########################################################################################################
             
-    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile, xtmf_CheckAggregationFlag):
         
         _m.logbook_write("Extracting boarding results")
         
@@ -89,6 +90,7 @@ class ReturnBoardings(_m.Tool()):
             raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber)              
         
         self.xtmf_LineAggregationFile = xtmf_LineAggregationFile
+        self.xtmf_CheckAggregationFlag = xtmf_CheckAggregationFlag
         
         try:
             return self._Execute(scenario)
@@ -99,12 +101,13 @@ class ReturnBoardings(_m.Tool()):
     ##########################################################################################################    
     
     def _Execute(self, scenario):
-        print "Extracting results from Emme"
+        
         lineAggregation = self._LoadLineAggregationFile()
         
         lineBoardings = self._GetLineResults(scenario)
         netSet = set([key for key in lineBoardings.iterkeys()])
-        self._CheckAggregationFile(netSet, lineAggregation)
+        if self.xtmf_CheckAggregationFlag:
+            self._CheckAggregationFile(netSet, lineAggregation)
         self.TRACKER.completeTask()
         
         results = {}
@@ -120,6 +123,8 @@ class ReturnBoardings(_m.Tool()):
             else:
                 results[lineGroupId] = lineCount
             self.TRACKER.completeSubtask()
+            
+        print "Extracted results from Emme"
         return str(results)            
     
     def _LoadLineAggregationFile(self):
