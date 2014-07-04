@@ -16,6 +16,11 @@
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
+
+from numpy import array
+from numpy import min as nmin
+from numpy import max as nmax
+
 import inro.modeller as _m
 from copy import copy
 _MODELLER = _m.Modeller()
@@ -108,6 +113,30 @@ class Rectangle():
         else:
             raise TypeError("Object must be another rectangle or (x,y) point.")
 
+def get_network_extents(net):
+    '''
+    For a given Emme Network, find the envelope (extents) of all of its elements.
+    Includes link vertices as well as nodes.
+    
+    Args:
+        -net: An Emme Network Object
+    
+    Returns:
+        minx, miny, maxx, maxy tuple
+    '''
+    xs, ys = [], []
+    for node in net.nodes():
+        xs.append(node.x)
+        ys.append(node.y)
+    for link in net.links():
+        for x, y in link.vertices:
+            xs.append(x)
+            ys.append(y)
+    xa = array(xs)
+    ya = array(ys)
+    
+    return nmin(xa) - 1.0, nmin(ya) - 1.0, nmax(xa) + 1.0, nmax(ya) + 1.0
+
 #------------------------------------------------------------------------------        
 
 class grid():
@@ -121,7 +150,11 @@ class grid():
             self._contents.append(cells)
         self._maxCol = xSize
         self._maxRow = ySize
-        
+    
+    def __contains__(self, key):
+        col, row = key
+        return row >= 1 and row <= self._maxRow and col >= 1 and col <= self._maxCol
+    
     def __getitem__(self, key):
         col, row = key
 
@@ -144,16 +177,38 @@ class GridIndex():
     every single feature for intersection (which is a slow 
     operation).
     
-    Usage:
-        
+    USAGE
+    
+    Insertion: Inserts an object into the grid index for later
+    queries. Objects can only be inserted into locations which
+    overlap the grid itself. Three low-level insertions are
+    defined:
+        insertxy: Inserts an object at a single point
+        insertpline: Inserts an object over a polyline
+        insertbox: Inserts an object within a box.
+    Several convenience methods are also provided.
+    
+    Querying: Queries the grid index for objects. [More to come]
+    
+    Nearest: Only one nearest operation is supported. [More to come]
     '''
     
     __READ_ONLY_FLAG = False
     
-    def __init__(self, xSize, ySize, extents):
-        props = set(dir(extents))
+    def __init__(self, extents, xSize= 100, ySize= 100):
+        '''
+        Args:
+            - extents: A tuple of minx, miny, maxx, maxy, OR
+                a Rectangle object. Represents the spatial extents
+                of the grid. Objects outside of the extents
+                CANNOT be inserted into the grid (an error will
+                be raised). Querying points outside of the grid,
+                on the other hand, IS permitted.
+            - xSize (=100): The number of columns in the grid.
+            - ySize (=100): The number of rows in the grid.
+        '''
         
-        if '__iter__' in props:
+        if hasattr(extents, '__iter__'):
             minx, miny, maxx, maxy = extents
             self.extents = Rectangle(minx, miny, maxx, maxy)
         else:
@@ -193,16 +248,23 @@ class GridIndex():
         
         return coordinates
     
+    @staticmethod
+    def __line2coords(line):
+        coords = []
+        for node in line.itinerary():
+            coords.append((node.x, node.y))
+        return coords
+    
     #------------------------------------------------------------------------------
     #---INDEXING
     
     def _check_x(self, x):
         if not x in self.extents.rangeX: 
-            raise IndexError("X-coordinate '%s' is outside the bounds of the grid." %x)
+            raise IndexError("X-coordinate '%s' is outside the bounds of the grid %s" %(x, self.extents.rangeX))
     
     def _check_y(self, y):
         if not y in self.extents.rangeY:
-            raise IndexError("Y-coordinate '%s' is outside the bounds of the grid." %y)
+            raise IndexError("Y-coordinate '%s' is outside the bounds of the grid %s" %(y, self.extents.rangeY))
     
     def _transform_x(self, x):
         return int((x - self.minX) / self._deltaX) + 1
@@ -380,7 +442,7 @@ class GridIndex():
         for col, row in self._index_box(minx, miny, maxx, maxy):
             self._grid[col, row].add(obj)    
     
-    def insetPoint(self, pointOrNode):
+    def insertPoint(self, pointOrNode):
         '''
         Inserts a Shapely Point or Emme Node object.
         '''
@@ -401,6 +463,20 @@ class GridIndex():
         
         self.insertpline(link, self.__link2coords(link))
     
+    def insertTransitLine(self, line):
+        '''
+        Inserts an Emme Transit Line object
+        '''
+        
+        self.insertpline(line, self.__line2coords(line))
+    
+    def insertTransitSegment(self, segment):
+        '''
+        Inserts an Emme Transit Segment object
+        '''
+        
+        self.insertpline(segment, self.__link2coords(segment.link))
+    
     def insertPolygon(self, polygon):
         '''
         Inserts a Shapely Polygon object (or any object with a 'bounds'
@@ -414,7 +490,7 @@ class GridIndex():
     
     def queryxy(self, x, y):
         '''
-        Queries a single point.
+        Queries a single point. The point does not have to overlap the grid.
         
         Args:
             - x: The x-coordinate
@@ -427,15 +503,15 @@ class GridIndex():
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
         
-        self._check_x(x)
-        self._check_y(y)
-        
-        col, row = self._index_point(x, y)
-        return set(self._grid[col, row]) #Return a copy of the set
+        address = self._index_point(x, y)
+        if address in self._grid:
+            return set(self._grid[address]) #Return a copy of the set
+        return set()
     
     def querypline(self, coordinates):
         '''
-        Queries a polyline / linestring
+        Queries a polyline / linestring. The line's points do not need to overlap
+        the grid.
         
         Args:
             - coordinates: A list of (x,y) tuples.
@@ -449,22 +525,18 @@ class GridIndex():
         
         retval = set()
         
-        x0, y0 = coordinates[0]
-        self._check_x(x0)
-        self._check_y(y0)
-        
-        for x1, y1 in coordinates[1:]:
-            self._check_x(x1)
-            self._check_y(y1)
-            
-            for col, row in self._index_line_segment(x0, y0, x1, y1):
-                retval |= self._grid[col, row]
+        for p0, p1 in _util.iterpairs(coordinates):
+            x0, y0 = p0
+            x1, y1 = p1
+            for address in self._index_line_segment(x0, y0, x1, y1):
+                if address in self._grid:
+                    retval |= self._grid[address]
         
         return retval
     
     def querybox(self, minx, miny, maxx, maxy):
         '''
-        Queries a rectangular box.
+        Queries a rectangular box. The box does not need to overlap the grid.
         
         Args:
             minx: The minimum x coordinate
@@ -479,6 +551,12 @@ class GridIndex():
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
         
+        retval = set()
+        for address in self._index_box(minx, miny, maxx, maxy):
+            if address in self._grid:
+                retval |= self._grid[address]
+        
+        '''
         col0 = max(1, self._transform_x(minx))
         col1 = min(self.maxCol, self._transform_x(maxx))
         row0 = max(1, self._transform_y(miny))
@@ -488,11 +566,13 @@ class GridIndex():
         for col in xrange(col0, col1):
             for row in xrange(row0, row1):
                 retval |= self._grid[col, row]
+        '''
+        
         return retval
     
     def queryPoint(self, pointOrNode):
         '''
-        Queries a single point.
+        Queries a single point. The point does not need to overlap the grid.
         
         Args:
             - pointOrNode: A Shapely Point or Emme Node object,
@@ -512,7 +592,7 @@ class GridIndex():
     
     def queryLineString(self, linestring):
         '''
-        Queries a polyline / linestring
+        Queries a polyline / linestring. The line does not need to overlap the grid.
         
         Args:
             - linestring: A Shapely LineString object
@@ -530,7 +610,7 @@ class GridIndex():
     
     def queryLink(self, link):
         '''
-        Queries a polyline / linestring
+        Queries an Emme Link object. The link does not need to overlap the grid.
         
         Args:
             - link: An Emme Link object
@@ -545,6 +625,38 @@ class GridIndex():
         coordinates = self.__link2coords(link)
         
         return self.querypline(coordinates)
+    
+    def queryTransitLine(self, line):
+        '''
+        Queries an Emme Transit Line object. The line does not need to overlap the 
+        grid.
+        
+        Args:
+            - line: An Emme Transit Line object
+        
+        All 'query' functions check the grid for the contents of all of the cells
+        intersected by the given geometry. THERE IS NO GURANATEE that the returned
+        contents intersect the given geometry, merely that they intersect the CELLS
+        that intersect the given geometry. Tests for containment, intersection,
+        overlap, etc. (i.e. DE-9IM relations) must be done separately.
+        '''
+        return self.querypline(self.__line2coords(line))
+    
+    def queryTransitSegment(self, segment):
+        '''
+        Queries an Emme Transit Segment object. The segment does not need to overlap the 
+        grid.
+        
+        Args:
+            - segment: An Emme Transit Segment object
+        
+        All 'query' functions check the grid for the contents of all of the cells
+        intersected by the given geometry. THERE IS NO GURANATEE that the returned
+        contents intersect the given geometry, merely that they intersect the CELLS
+        that intersect the given geometry. Tests for containment, intersection,
+        overlap, etc. (i.e. DE-9IM relations) must be done separately.
+        '''
+        return self.querypline(self.__link2coords(segment.link))
     
     def queryPolygon(self, polygon):
         '''
@@ -566,7 +678,7 @@ class GridIndex():
     
     def queryRectangle(self, rectangle):
         '''
-        Queries a rectangular box.
+        Queries a rectangular box. The rectangle does not need to overlap the grid.
         
         Args:
             rectangle: A Rectangle object (in this module).
@@ -587,7 +699,7 @@ class GridIndex():
     
     def queryCircle(self, x, y, radius):
         '''
-        Queries a circle.
+        Queries a circle. The circle does not need to overlap the grid.
         
         Args:
             - x: The x-coordinate of the circle's center
@@ -610,6 +722,20 @@ class GridIndex():
     #---NEAREST
     
     def nearestToPoint(self, x, y):
+        '''
+        A special query to find the nearest element to a given point.
+        The grid is queried in rings around the point, stopping once
+        the return set is non-empty, or the grid is fully searched.
+        
+        Args:
+            -x, y: the coordinates of interest. This point MUST overlap
+                the grid.
+        
+        Returns:
+            A set of objects which may be the nearest to the point of
+            interest. Another operation is required to determine
+            which objects are actually nearest.
+        '''
         self._check_x(x)
         self._check_y(y)
         
