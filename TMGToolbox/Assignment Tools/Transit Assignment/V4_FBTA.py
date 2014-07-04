@@ -764,7 +764,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         tool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
         
-        self.TRACKER.runTool(tool, spec, scneario= self.Scenario)
+        self.TRACKER.runTool(tool, spec, scenario= self.Scenario)
     
     @_m.method(return_type=unicode)
     def get_scenario_node_attributes(self):
