@@ -28,11 +28,9 @@ _util = _m.Modeller().module('TMG2.Common.Utilities')
 ##################################################################################################################
 
 class Face(_m.Tool()):
-    
-    version = "0.3.0"
-    
+
     def page(self):
-        pb = _m.ToolPageBuilder(self, runnable=False, title="Geometry v%s" %self.version,
+        pb = _m.ToolPageBuilder(self, runnable=False, title="Geometry",
                                 description="Collection of private tools for performing geometric \
                                         operations from shapefiles.",
                                 branding_text="TMG")
@@ -340,9 +338,9 @@ class Shapely2ESRI():
                 'STR' : StringField,
                 'BOOL' : BoolField}
     
-    _dbf2fieldMap = {_dbf.FTInteger : StringField,
+    _dbf2fieldMap = {_dbf.FTInteger : IntField,
                      _dbf.FTDouble: FloatField,
-                     _dbf.FTString : IntField}
+                     _dbf.FTString : StringField}
     
     _geom2shp = {'NULL' : _shp.SHPT_NULL,
                  'POINT' : _shp.SHPT_POINT,
