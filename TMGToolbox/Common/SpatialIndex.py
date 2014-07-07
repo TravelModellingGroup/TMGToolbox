@@ -16,6 +16,16 @@
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
+#---TODO LIST
+'''
+TODO LIST:
+
+- Ensure that all query functions work even if the query geometry does not intersect the grid.
+    In general, the _index functions should not care about the extents, and only the query(...)
+    functions make the 'within grid' restriction. This standard is not consistently applied for
+    all query/index pairings.
+
+'''
 
 from numpy import array
 from numpy import min as nmin
@@ -112,6 +122,9 @@ class Rectangle():
             return x in self.rangeX and y in self.rangeY
         else:
             raise TypeError("Object must be another rectangle or (x,y) point.")
+    
+    def __str__(self):
+        return "%s %s" %(self.rangeX, self.rangeY)
 
 def get_network_extents(net):
     '''
@@ -195,7 +208,7 @@ class GridIndex():
     
     __READ_ONLY_FLAG = False
     
-    def __init__(self, extents, xSize= 100, ySize= 100):
+    def __init__(self, extents, xSize= 100, ySize= 100, marginSize=0.0):
         '''
         Args:
             - extents: A tuple of minx, miny, maxx, maxy, OR
@@ -206,11 +219,16 @@ class GridIndex():
                 on the other hand, IS permitted.
             - xSize (=100): The number of columns in the grid.
             - ySize (=100): The number of rows in the grid.
+            - marginSize (=0.0): A margin applied to the extents.
+                For example, a margin of 1.0 sets the minimum x
+                coordinate to minx - 1.0 and the maximum x
+                coordinate to maxx + 1.0
         '''
         
         if hasattr(extents, '__iter__'):
             minx, miny, maxx, maxy = extents
-            self.extents = Rectangle(minx, miny, maxx, maxy)
+            self.extents = Rectangle(minx - marginSize, miny - marginSize, \
+                                     maxx + marginSize, maxy + marginSize)
         else:
             self.extents = extents
         
@@ -311,7 +329,7 @@ class GridIndex():
             xIntercept = y0 - slope * x0
             prevRow = row0
             for col in nrange(col0, col1):
-                columnBoundary = self._deltaX * col
+                columnBoundary = self._deltaX * col + self.minX
                 yIntercept = slope * columnBoundary + xIntercept
                 rowIntercept = self._transform_y(yIntercept)
                 
@@ -366,7 +384,7 @@ class GridIndex():
         rad2 = radius ** 2
         
         for col in xrange(col0, col1):
-            columnBoundary = self._deltaX * col
+            columnBoundary = self._deltaX * col + self.minX
             # y = center_y +/- sqrt(radius^2 - (x - center_x)^2 )
             root = (rad2 - (columnBoundary - center_x)**2) ** 0.5
             
@@ -714,8 +732,10 @@ class GridIndex():
         '''
         
         retval = set()
-        for col, row in self._index_cirlce(x, y, radius):
-            retval |= self._grid[col, row]
+        
+        for address in self._index_cirlce(x, y, radius):
+            if address in self._grid:
+                retval |= self._grid[address]
         return retval
     
     #------------------------------------------------------------------------------
