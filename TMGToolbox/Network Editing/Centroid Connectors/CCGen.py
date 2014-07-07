@@ -59,6 +59,12 @@ Kucirek-Vaughan Automated Centroid Connector Generator (CCGen)
     
     0.3.3 Added progress reporting to the tool, as well as variable defaults.
     
+    1.0.0 Upgraded UI + usability for release version. Major improvements:
+        - Using Utilities.tempExtraAttributeMANAGER to get the temporary flag attibute
+        - Using SpatialIndex.GridIndex for indexing boundary geometries
+        - Using SpatialIndex.GridIndex for indexing network nodes
+    
+    
 '''
 
 import inro.modeller as _m
@@ -70,9 +76,11 @@ from itertools import combinations
 import math
 import inspect
 import numpy
-_g = _m.Modeller().module('TMG2.Common.Geometry')
-_util = _m.Modeller().module('TMG2.Common.Utilities')
-_tmgTPB = _m.Modeller().module('TMG2.Common.TmgToolPageBuilder')
+_MODELLER = _m.Modeller()
+_g = _MODELLER.module('TMG2.Common.Geometry')
+_util = _MODELLER.module('TMG2.Common.Utilities')
+_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
 
 def _straightLineDist(x1, y1, x2, y2):
     return math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2))
@@ -82,15 +90,16 @@ def _manhattanDist(x1, y1, x2, y2):
 
 ##########################################################################################################
 
-class CCGen(_m.Tool()):
+class CCGEN(_m.Tool()):
     
-    version = '0.3.3'
+    version = '1.0.0'
     tool_run_msg = ""
     report_html = ""
     
     #---Variable definitions
     ZonesFile = _m.Attribute(str)
     ZoneShapeFile = _m.Attribute(str)
+    ShapefileZoneAttributeId = _m.Attribute(str)
     
     BoundaryFile = _m.Attribute(str)
     InfeasibleLinkSelector = _m.Attribute(str)
@@ -110,12 +119,13 @@ class CCGen(_m.Tool()):
     DoSummaryReport = _m.Attribute(bool)
     FullReportFile = _m.Attribute(str)
     
-    #---Special instance types
-    scenario = _m.Attribute(_m.InstanceType) #
-    ConnectorModes = _m.Attribute(_m.ListType)
+    Scenario = _m.Attribute(_m.InstanceType) #
+    ConnectorModeIds = _m.Attribute(_m.ListType)
     MassAttribute = _m.Attribute(_m.InstanceType)
     
     def __init__(self):
+        
+        self.Scenario = _MODELLER.scenario
         self._tracker = _util.ProgressTracker(5)
         
         self.BetaMassSum = 0.0
@@ -132,7 +142,7 @@ class CCGen(_m.Tool()):
         
     
     def page(self):
-        pb = _tmgTPB.TmgToolPageBuilder(self, title="--CCGEN v%s--" %self.version,
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="CCGEN v%s" %self.version,
                                 description="Advanced tool for adding centroid connectors to unconnected \
                                 zones (or loading zones from a file). Uses a utility function to choose \
                                 the best combination of candidate nodes for connections. Contact TMG \
@@ -142,13 +152,8 @@ class CCGen(_m.Tool()):
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
         
-        if self.report_html != "":
-            pb.add_link(self.report_html, "Open report file")
-            
-        pb.add_header("NETWORK")
-        
-        pb.add_select_scenario(tool_attribute_name="scenario",
-                               title="Select scenario",
+        pb.add_select_scenario(tool_attribute_name="Scenario",
+                               title="Select Scenario",
                                allow_none=False)
         
         pb.add_select_file(tool_attribute_name="ZonesFile",
@@ -156,19 +161,29 @@ class CCGen(_m.Tool()):
                             file_filter="*.txt; *.csv; *.211",
                             title="File with zones to be added",
                             note="Accepts CSV, tab-delimited text, and Emme network batchout (*.211) formats.\
-                                <br><br>If left blank, the tool will look for unconnected zones.")
+                                <br>If left blank, the tool will look for unconnected zones.")
         
         pb.add_select_file(tool_attribute_name="ZoneShapeFile",
                             window_type="file",
                             file_filter="*.shp",
                             title="Zone Shapefile",
-                            note="Optional shapefile defining zone shapes. If selected, the \
+                            note="<font color='green'><b>Optional:</b></font> \
+                                Shapefile defining zone shapes. If selected, the \
                                 algorithm will apply the search <br>radius as a buffer around each \
                                 zone polygon and use only those nodes which fall inside.")
         
-        pb.add_select_mode(tool_attribute_name="ConnectorModes",
+        pb.add_select(tool_attribute_name= 'ShapefileZoneAttributeId',
+                      keyvalues= [],
+                      title= "Zone ID Attribute",
+                      note= "Shapefile field containing zone ID attribute (corresponds to network zone ID).")
+        
+        keyval = []
+        for mode in self.Scenario.modes():
+            text = " ".join([mode.id, mode.description, mode.type])
+            keyval.append((mode.id, text))
+        pb.add_select(tool_attribute_name="ConnectorModeIds",
                            title="Modes on new connectors",
-                           allow_none=False)
+                           keyvalues= keyval)
         
         pb.add_header("EXCLUSIONS")
         
@@ -176,7 +191,8 @@ class CCGen(_m.Tool()):
                             window_type="file",
                             file_filter="*.shp",
                             title="Boundary shapefile",
-                            note="Optional. Centroids are not permitted to cross any features in this shapefile.")
+                            note="<font color='green'><b>Optional.</b></font> Centroids are \
+                            not permitted to cross any features in this shapefile.")
         
         pb.add_text_box(tool_attribute_name='InfeasibleLinkSelector',
                         size=300,
@@ -193,20 +209,18 @@ class CCGen(_m.Tool()):
         
         pb.add_text_box(tool_attribute_name='MaxConnectors',
                         size=2,
-                        title='Maximum number of connectors',
-                        note='Default is 4')
+                        title='Maximum number of connectors')
         
         pb.add_text_box(tool_attribute_name='MaxCandidates',
                         size=2,
                         title='Maximum number of candidate nodes',
-                        note="Fewer candidates improves computation time.\
-                            <br>Default value is 10.")
+                        note="Fewer candidates improves computation time.")
         
         pb.add_text_box(tool_attribute_name='SearchRadius',
                         size=10,
                         title='Search radius',
-                        note="In km\
-                            <br>Default is 2.0 km")
+                        note="In coordinate units.\
+                        <br>If a zone shapefile is used, this will be the buffer distance around zone polygons.")
         
         pb.add_header("UTILITY FUNCTION")
         
@@ -251,8 +265,8 @@ class CCGen(_m.Tool()):
         pb.add_select(tool_attribute_name="ErrorHandlingOption",
                       title="Error handling option",
                       note="Only applies to non-fatal errors.",
-                      keyvalues={1: "Crash and revert",
-                                 2: "Skip and report"})
+                      keyvalues=[(1, "Crash and revert"),
+                                 (2, "Skip and report")])
         
         pb.add_checkbox(tool_attribute_name="DoSummaryReport",
                                 title="Summary report?",
@@ -264,7 +278,65 @@ class CCGen(_m.Tool()):
                             title="Full Report File",
                             note="Optional text file to save detailed utility statistics for each zone.")
         
+        #---JAVASCRIPT
+        pb.add_html("""
+<script type="text/javascript">
+    $(document).ready( function ()
+    {
+        var tool = new inro.modeller.util.Proxy(%s) ;
+        
+        $("#ShapefileZoneAttributeId").prop('disabled', true);
+        
+        $("#Scenario").bind('change', function()
+        {
+            $(this).commit();
+            $("#ConnectorModeIds")
+                .empty()
+                .append(tool.preload_scenario_modes())
+            //inro.modeller.page.preload("#ConnectorModeIds");
+            $("#ConnectorModeIds").trigger('change');
+        });
+        
+        $("#ZoneShapeFile").bind('change', function()
+        {
+            $(this).commit();
+            $("#ShapefileZoneAttributeId")
+                .empty()
+                .append(tool.preload_shapefile_fields())
+            inro.modeller.page.preload("#ShapefileZoneAttributeId");
+            $("#ShapefileZoneAttributeId").trigger('change');
+            $("#ShapefileZoneAttributeId").prop('disabled', false);
+        });
+    });
+</script>""" % pb.tool_proxy_tag)
+        
         return pb.render()
+    
+    @_m.method(return_type= unicode)
+    def preload_scenario_modes(self):
+        print "bob"
+        options = []
+        for mode in self.Scenario.modes():
+            text = "%s %s %s" %(mode.id, mode.description, mode.type)
+            options.append("<option value='%s'>%s</option>" %(mode.id, text))
+        return "\n".join(options)
+    
+    @_m.method(return_type= unicode)
+    def preload_shapefile_fields(self):
+        with _g.Shapely2ESRI(self.ZoneShapeFile) as reader:
+            options = []
+            for fieldName in reader.getFieldNames():
+                options.append("<option value='%s'>%s</option>" %(fieldName, fieldName))
+            
+            return "\n".join(options)
+    
+    @_m.method(return_type=_m.TupleType)
+    def percent_completed(self):
+        return self._tracker.getProgress()
+    
+    @_m.method(return_type=unicode)
+    def tool_run_msg_status(self):
+        return self.tool_run_msg
     
     ##########################################################################################################
         
@@ -291,11 +363,11 @@ class CCGen(_m.Tool()):
         self._tracker.reset()
         
         with _m.logbook_trace(name="{0} v{1}".format(self.__class__.__name__,self.version), attributes=self._getAtts()):          
-            with self._tempInfeasLinkAttributeMANAGER() as flagAttr:
+            with _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK') as flagAttr:
                 with _m.logbook_trace("Flagging infeasible links"):
                     self._applyInfeasibleLinkFilter(flagAttr.id)
                 
-                network = self.scenario.get_network() # Get the network once.
+                network = self.Scenario.get_network() # Get the network once.
                 
                 #---1. Load the zones file
                 zonesToProcess = None
@@ -322,15 +394,14 @@ class CCGen(_m.Tool()):
                 if self.ZoneShapeFile != None and self.ZoneShapeFile != "":
                     self._loadZoneShape(self.ZoneShapeFile, network)
                 self._tracker.completeSubtask()
-                # TASK 3
                 
                 #---3. Get feasible nodes
                 feasibleNodes = None
                 with _m.logbook_trace("Getting set of feasible nodes"):
-                    feasibleNodes = {2 : self._getFeasibleNodesGreedy,
+                    feasibleNodes, nFeasibleNodes = {2 : self._getFeasibleNodesGreedy,
                                      1 : self._getFeasibleNodesReluctant}[self.NodeExcluderOption](network, flagAttr.id)
-                    _m.logbook_write("%s nodes were selected as feasible in the network." %len(feasibleNodes))
-                    self._generateNodePointCache(feasibleNodes)
+                    _m.logbook_write("%s nodes were selected as feasible in the network." %nFeasibleNodes)
+                    print "Filtered and indexed feasible nodes"
                 self._tracker.completeTask() # TASK 4
                 
                 #---4. Process new zones
@@ -351,6 +422,7 @@ class CCGen(_m.Tool()):
                 zonesHandled = 0
                 errors = 0
                 self._tracker.startProcess(len(zonesToProcess)) # TASK 5
+                print "Processing zones"
                 for zone in zonesToProcess: #{1
                     try:
                         #{
@@ -374,6 +446,7 @@ class CCGen(_m.Tool()):
                         else:
                             raise
                     self._tracker.completeSubtask()
+                print "Done connecting zones."
                 #}1
                 
                 #---6. Report results
@@ -383,41 +456,19 @@ class CCGen(_m.Tool()):
                 if self.DoFullReport:
                     fullReport.export()
                 
-                self.scenario.publish_network(network, resolve_attributes=True) #Resolve the temporary attributes by ignoring them
+                self.Scenario.publish_network(network, resolve_attributes=True) #Resolve the temporary attributes by ignoring them
                 self.report_html = self.FullReportFile
-                _m.Modeller().app.refresh_needed(True)
+                _m.Modeller().desktop.refresh_needed(True)
                 self.tool_run_msg = _m.PageBuilder.format_info("Connector generation complete. {0} zones were connected, with {1} errors.".format(zonesHandled, errors))
 
 
     ##########################################################################################################
-
-    #----CONTEXT MANAGERS---------------------------------------------------------------------------------
-    '''
-    Context managers for temporary database modifications.
-    '''
-    
-    @contextmanager
-    def _tempInfeasLinkAttributeMANAGER(self):
-        # Code here is executed upon entry {
-        att = self.scenario.create_extra_attribute('LINK', '@lf01')
-        _m.logbook_write("Created temporary link attribute '%s'" %att.id)
-        # }
-        try:
-            yield att
-            
-            # Code here is executed upon clean exit {
-            # }
-        finally:
-            # Code here is executed in all cases. {
-            self.scenario.delete_extra_attribute(att.id)
-            _m.logbook_write("Deleted temporary link attribute '%s'" %att.id)
-            # }
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
     def _getAtts(self):
         atts = {
-                "Scenario" : str(self.scenario.id),
+                "Scenario" : str(self.Scenario.id),
                 "Version": self.version,
                 "Infeasible Link Selector" : self.InfeasibleLinkSelector,
                 "Max Connectors" : self.MaxConnectors,
@@ -430,7 +481,7 @@ class CCGen(_m.Tool()):
                 "Boundary File" : self.BoundaryFile,
                 "Beta Gravity" : self.BetaGravity,
                 "Zones File" : self.ZonesFile,
-                "Mass Attribute" : self.MassAttribute.id,
+                "Mass Attribute" : str(self.MassAttribute),
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts
@@ -439,17 +490,33 @@ class CCGen(_m.Tool()):
     
     def _loadBoundaryFile(self, filename):
         with _g.Shapely2ESRI(filename) as reader:
-            self._Boundaries = reader.readAll()
+            minx = float('inf')
+            miny = float('inf')
+            maxx = float('-inf')
+            maxy = float('-inf')
+            
+            boundaries = []
+            for boundary in reader.readThrough():
+                bminx, bminy, bmaxx, bmaxy = boundary.bounds
+                if bminx < minx: minx = bminx
+                if bminy < miny: miny = bminy
+                if bmaxx > maxx: maxx = bmaxx
+                if bmaxy > maxy: maxy = bmaxy
+                boundaries.append(boundary)
+            
+            extents = minx - 1.0, miny - 1.0, maxx + 1.0, maxy + 1.0
+            spatialIndex = _spindex.GridIndex(extents, 200, 200)
+            for ls in boundaries:
+                spatialIndex.insertLineString(ls)
+            
+            self._Boundaries = spatialIndex
+            
+        print "Loaded and indexed boundaries."
         _m.logbook_write("Boundary file loaded: '%s'" %filename)
     
     def _loadZoneShape(self, filename, network):
         with _g.Shapely2ESRI(filename) as reader:
-            fieldNames = [s.upper() for s in reader.getFieldNames()]
-            idLabel = 'ID'
-            if not 'ID' in fieldNames:
-                idLabel = 'ZONE'
-                if not 'ZONE' in fieldNames:
-                    raise IOError("Shapefile must define zone id with a field labelled either 'ID' or 'ZONE'")
+            idLabel = self.ShapefileZoneAttributeId
             
             for poly in reader.readThrough():
                 zone = network.node(poly[idLabel])
@@ -458,8 +525,10 @@ class CCGen(_m.Tool()):
                         _m.logbook_write("Corresponding network node for zone shape '%s' is not a zone!" %poly[idLabel])
                     else:
                         zone._geometry = poly
+                '''
                 else:
                     _m.logbook_write("Could not find corresponding network node for zone shape '%s'!" %poly[idLabel])
+                '''
                 
         _m.logbook_write("Zone shapefile loaded: '%s'" %filename)
     
@@ -479,7 +548,7 @@ class CCGen(_m.Tool()):
         try:
             return opener[ext](filename, network)
         except KeyError, ke:
-            raise IOError("File format '*%s' is unsupported!" %ext)
+            raise IOError("File format '*.%s' is unsupported!" %ext)
     
     def _openTabDelimitedFile(self, filename, network):
         return self._openDelimitedFile(filename, network,  "\t")
@@ -673,14 +742,14 @@ class CCGen(_m.Tool()):
             - Generalize default attributes for link connectors (for other jurisdictions)
             - Get the link type dynamically based on the nodes it connects to.
             '''
-            outConnector = network.create_link(zone.id, node.id, self.ConnectorModes)
+            outConnector = network.create_link(zone.id, node.id, self.ConnectorModeIds)
             outConnector.length = self._measureDistance(zone, node)
             outConnector.num_lanes = 2.0
             outConnector.volume_delay_func = 90
             outConnector.data2 = 40.0
             outConnector.data3 = 9999
             
-            inConnector = network.create_link(node.id, zone.id, self.ConnectorModes)
+            inConnector = network.create_link(node.id, zone.id, self.ConnectorModeIds)
             inConnector.length = outConnector.length
             inConnector.num_lanes = 2.0
             inConnector.volume_delay_func = 90
@@ -731,13 +800,19 @@ class CCGen(_m.Tool()):
         except Exception, e:
             tool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
         
-        self._tracker.runTool(tool, spec, scenario=self.scenario)
-        #tool(spec, scenario=self.scenario)
+        self._tracker.runTool(tool, spec, scenario=self.Scenario)
+        #tool(spec, Scenario=self.Scenario)
     
     def _getFeasibleNodesGreedy(self, network, attributeId):
         '''
         Excludes nodes which are connected to at least one flagged link.
         '''
+        
+        minx = float('inf')
+        miny = float('inf')
+        maxx = float('-inf')
+        maxy = float('-inf')
+        
         feasibleNodes = []
         for node in network.regular_nodes():
             flagged = 0
@@ -745,15 +820,35 @@ class CCGen(_m.Tool()):
                 flagged += link[attributeId]
             for link in node.outgoing_links():
                 flagged += link[attributeId]
+                
             if flagged == 0:
                 feasibleNodes.append(node)
+                x, y = node.x, node.y
+                if x < minx: minx = x
+                if x > maxx: maxx = x
+                if y < miny: miny = y
+                if y > maxy: maxy = y
         
-        return feasibleNodes
+        extents = minx - 1.0, miny - 1.0, maxx + 1.0, maxy + 1.0
+        index = _spindex.GridIndex(extents)
+        
+        for node in feasibleNodes:
+            p = _g.Point(node.x, node.y)
+            node._geometry = p
+            
+            index.insertPoint(node)
+        
+        return index, len(feasibleNodes)
         
     def _getFeasibleNodesReluctant(self, network, attributeId):
         '''
         Excludes nodes which are only connected to flagged links
         '''
+        minx = float('inf')
+        miny = float('inf')
+        maxx = float('-inf')
+        maxy = float('-inf')
+        
         feasibleNodes = []
         for node in network.regular_nodes():
             flagged = 0
@@ -766,14 +861,25 @@ class CCGen(_m.Tool()):
                 total += 1
             if flagged < total:
                 feasibleNodes.append(node)
+                
+                x, y = node.x, node.y
+                if x < minx: minx = x
+                if x > maxx: maxx = x
+                if y < miny: miny = y
+                if y > maxy: maxy = y
         
-        return feasibleNodes
-
-    #----Candidate Node Functions--------------------------------------------------------------------
-    
-    def _generateNodePointCache(self, feasibleNodes):
+        extents = minx - 1.0, miny - 1.0, maxx + 1.0, maxy + 1.0
+        index = _spindex.GridIndex(extents)
+        
         for node in feasibleNodes:
-            node._geometry = _g.Point(node.x, node.y)
+            p = _g.Point(node.x, node.y)
+            node._geometry = p
+            
+            index.insertPoint(node)
+        
+        return index, len(feasibleNodes)
+    
+    #----Candidate Node Functions--------------------------------------------------------------------
     
     def _getCandidateNodes(self, zone, feasibleNodes):
         if zone._geometry != None:
@@ -786,28 +892,17 @@ class CCGen(_m.Tool()):
         Gets a list of all network nodes within the specified distance from the edge of
         the zone's boundary.
         '''
-        buffer = zone._geometry.buffer(self.SearchRadius*1000.0, resolution=2)
-        xBounds = _util.FloatRange(buffer.bounds[0], buffer.bounds[1])
-        yBounds = _util.FloatRange(buffer.bounds[2], buffer.bounds[3])
+        buffer = zone._geometry.buffer(self.SearchRadius, resolution=2)
         
         candidateNodes = {}
         
-        for node in feasibleNodes:
-            if node.x in xBounds and node.y in yBounds:
-                if buffer.contains(node._geometry):
-                    candidateNodes[node] = self._measureDistance(node, zone)
-            '''
-            try:
-                if buffer.contains(node._geometry):
-                    candidateNodes[node] = self._measureDistance(node, zone)
-            except Exception, e:
-                raise Exception("{0} (zone {1}, node {2})".format(str(e), zone.id, node.id))
-            '''
+        for node in feasibleNodes.queryPolygon(buffer):
+            if not buffer.contains(node._geometry):
+                continue #Skip over nodes indexed nearby but not contained within the polygon
+            candidateNodes[node] = self._measureDistance(node, zone)
         
         zone._candidateNodes = candidateNodes #Attach candidate nodes to the zone
         
-        # return candidateNodes
-    
     def _searchByPoint(self, zone, feasibleNodes):
         '''
         Gets a list of all network nodes within the specified radius of the zone centroid,
@@ -818,16 +913,20 @@ class CCGen(_m.Tool()):
         closestNode = None
         candidateNodes = {}
         
-        for node in feasibleNodes:
+        for node in feasibleNodes.queryCircle(zone.x, zone.y, self.SearchRadius):
             dist = self._measureDistance(node, zone)
-            if dist < minDistance:
-                minDistance = dist
-                closestNode = node
-            if dist <= self.SearchRadius:
+            if dist < self.SearchRadius:
                 candidateNodes[node] = dist
+        try:
+            for node in feasibleNodes.nearestToPoint(zone.x, zone.y):
+                dist = self._measureDistance(node, zone)
+                if dist < minDistance: minDistance = dist
+                closestNode = node
+        except IndexError: #Expected if the zone is outside the bounds of the feasible node set
+            pass 
         
-        if len(candidateNodes) < 1:
-            candidateNodes = {closestNode : minDistance}
+        if len(candidateNodes) == 0 and closestNode != None:
+            candidateNodes[closestNode] = minDistance
         
         zone._candidateNodes = candidateNodes 
     
@@ -844,8 +943,8 @@ class CCGen(_m.Tool()):
         
     def _checkForCrossing(self, node, zone):
         geom = _g.LineString([(zone.x, zone.y),(node.x, node.y)])
-        for bound in self._Boundaries:
-            if geom.crosses(bound): return False
+        for boundary in self._Boundaries.queryLineString(geom):
+            if geom.intersects(boundary): return False
         return True
     
     def _truncateCandidateSet(self, zone):
@@ -996,14 +1095,6 @@ class CCGen(_m.Tool()):
             return node[self.MassAttribute.name]
         else:
             return 1
-    
-    @_m.method(return_type=_m.TupleType)
-    def percent_completed(self):
-        return self._tracker.getProgress()
-    
-    @_m.method(return_type=unicode)
-    def tool_run_msg_status(self):
-        return self.tool_run_msg
     
 #---------------------------------------------------------------------------------------------
 
