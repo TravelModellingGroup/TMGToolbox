@@ -64,6 +64,7 @@ class ReturnBoardingsAndWAW(_m.Tool()):
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     xtmf_LineAggregationFile = _m.Attribute(str)
+    xtmf_ExportWAW = _m.Attribute(bool)
     
     def __init__(self):
         #---Init internal variables
@@ -80,7 +81,7 @@ class ReturnBoardingsAndWAW(_m.Tool()):
     
     ##########################################################################################################
             
-    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile, xtmf_ExportWAW):
         
         _m.logbook_write("Extracting boarding results")
         
@@ -92,6 +93,7 @@ class ReturnBoardingsAndWAW(_m.Tool()):
             raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber)              
         
         self.xtmf_LineAggregationFile = xtmf_LineAggregationFile
+        self.xtmf_ExportWAW = xtmf_ExportWAW
         
         try:
             return self._Execute(scenario)
@@ -125,7 +127,9 @@ class ReturnBoardingsAndWAW(_m.Tool()):
             
         print "Loaded transit line boardings"
         
-        results['Walk-all-way'] = self._GetWalkAllWayMatrix(scenario)
+        if self.xtmf_ExportWAW:
+            results['Walk-all-way'] = self._GetWalkAllWayMatrix(scenario)
+            print "Loaded transit walk-all-way numbers"
         
         return str(results)            
     

@@ -61,7 +61,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
     #    need to be placed here. Internal parameters (such as lists and dicts)
     #    get intitialized during construction (__init__)
     
-    xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
+    xtmf_ScenarioNumbers = _m.Attribute(str) # parameter used by XTMF only
     Scenarios = _m.Attribute(_m.ListType) # common variable or parameter
     
     SubwayBoardingPenalty = _m.Attribute(float)
@@ -189,7 +189,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
-    def __call__(self, xtmf_ScenarioNumber,
+    def __call__(self, xtmf_ScenarioNumbers,
                  SubwayBoardingPenalty,
                  GoTrainBoardingPenalty,
                  GoBusBoardingPenalty,
@@ -205,11 +205,13 @@ class AssignV4BoardingPenalties(_m.Tool()):
                  HaltonBoardingPenalty,
                  HSRBoardingPenalty):
         
-        #---1 Set up scenario
-        scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (scenario == None):
-            raise Exception("Scenarios %s was not found!" %xtmf_ScenarioNumber)
-        self.Scenarios = [scenario]
+        #---1 Set up scenarios
+        self.Scenarios = []
+        for number in xtmf_ScenarioNumbers.split(','):
+            sc = _MODELLER.emmebank.scenario(number)
+            if (scenario == None):
+                raise Exception("Scenarios %s was not found!" %sc)
+            self.Scenarios.append(sc)
         
         self.SubwayBoardingPenalty = SubwayBoardingPenalty
         self.GoTrainBoardingPenalty = GoTrainBoardingPenalty
