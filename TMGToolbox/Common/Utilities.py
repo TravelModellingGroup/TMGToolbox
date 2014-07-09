@@ -504,12 +504,37 @@ def getEmmeVersion(returnType= str):
         - asTuple (=False): Boolean flag to return the version number as a string, or
                 as a tuple of ints (e.g., [4,1,0] for Emme 4.1.0)
     '''
+
+    app = _MODELLER.desktop
+    if hasattr(app, 'version'):
+        return _getVersionNew(app, returnType)
+    else:
+        return _getVersionOld(returnType)
+
+def _getVersionNew(app, returnType):
+    '''
+    Available in versions 4.1.3 and newer
+    '''
+    
+    if returnType == str:
+        return str(app.version)
+    
+    version_tuple = app.version_info
+    
+    if returnType == tuple: return version_tuple
+    
+    if returnType == float: return version_tuple[0] + version_tuple[1] * 0.1
+    
+    if returnType == int: return version_tuple[0]
+    
+    raise TypeError("Type %s not accepted for getting Emme version" %returnType)
+
+def _getVersionOld(returnType):
     '''
     Implementation note: For the string-to-int-tuple conversion, I've assumed the
     string version is of the form ['Emme', '4.x.x', ...] (i.e., the version string
     is the second item in the space-separated list). -pkucirek April 2014
     '''
-    
     #The following is code directly from INRO
     emmeProcess = _sp.Popen(['Emme', '-V'], stdout= _sp.PIPE, stderr= _sp.PIPE)
     output = emmeProcess.communicate()[0]
@@ -527,7 +552,6 @@ def getEmmeVersion(returnType= str):
     if returnType == int: return versionTuple[0]
     
     raise TypeError("Type %s not accepted for getting Emme version" %returnType)
-
 #-------------------------------------------------------------------------------------------
 
 EMME_INFINITY = float('1E+20')
