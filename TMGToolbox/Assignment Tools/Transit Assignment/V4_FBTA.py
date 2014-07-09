@@ -51,6 +51,10 @@ V4 Transit Assignment
         - Non-Toronto Connector Walk Perception
     
     2.2.0 New features: save standard output matrices
+    
+    2.2.1 Exposed some private parameters (e.g. logit scale param for distribution
+            among origin connectors). Added the private option to use logit
+            distribution among auxiliary transit links at stops.
 '''
 
 import inro.modeller as _m
@@ -62,13 +66,13 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 NullPointerException = _util.NullPointerException
-EMME_VERSION = _util.getEmmeVersion(float) 
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.2.0'
+    version = '2.2.1'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -109,6 +113,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     FarePerception = _m.Attribute(float)
     AssignmentPeriod = _m.Attribute(float)
     GoTrainHeadwayFraction = _m.Attribute(float)
+    
+    xtmf_OriginDistributionLogitScale = _m.Attribute(float)
+    xtmf_WalkDistributionLogitScale = _m.Attribute(float)
     
     Iterations = _m.Attribute(int)
     NormGap = _m.Attribute(float)
@@ -151,8 +158,14 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         #---Private flags for calibration purposes only
         self._useLogitConnectorChoice = True
-        self._connectorLogitScale = 0.2
+        #self._connectorLogitScale = 0.2 #Use self.xtmf_OriginDistributionLogitScale
+        self.xtmf_OriginDistributionLogitScale = 0.2
         self._connectorLogitTruncation = 0.05
+        
+        self._useLogitAuxTrChoice = False
+        self.xtmf_WalkDistributionLogitScale = 0.2
+        self._auxTrLogitTruncation = 0.05
+        
         self._useMultiCore = False
         self._congestionFunctionType = "BPR" #"CONICAL"
         self._considerTotalImpedance = True
@@ -461,7 +474,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  BoardPerception, CongestionPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
-                 xtmf_FareMatrixNumber):
+                 xtmf_FareMatrixNumber, xtmf_OriginDistributionLogitScale):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -511,6 +524,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.CongestionPerception = CongestionPerception
         self.FarePerception = FarePerception
+        
+        self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
         
         self.AssignmentPeriod = AssignmentPeriod
         self.Iterations = Iterations
@@ -675,14 +690,6 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 "od_results": {
                     "total_impedance": None
                 },
-                "flow_distribution_at_origins": {
-                                                "by_time_to_destination": {
-                                                        "logit": {
-                                                            "scale": self._connectorLogitScale,
-                                                            "truncation": self._connectorLogitTruncation
-                                                        }
-                                                    },
-                                                    "by_fixed_proportions": None},
                 "flow_distribution_between_lines": {
                                         "consider_travel_time": self._considerTotalImpedance
                                         },
@@ -690,11 +697,35 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 "type": "EXTENDED_TRANSIT_ASSIGNMENT"
             }
         
-        if EMME_VERSION >= 4.1:
+        if self._useLogitConnectorChoice:
+            baseSpec["flow_distribution_at_origins"] = {
+                                                "by_time_to_destination": {
+                                                        "logit": {
+                                                            "scale": self.xtmf_OriginDistributionLogitScale,
+                                                            "truncation": self._connectorLogitTruncation
+                                                        }
+                                                    },
+                                                    "by_fixed_proportions": None}
+        
+        emmeVersionFloat = EMME_VERSION[0] + 0.1 * EMME_VERSION[1]
+        if emmeVersionFloat >= 4.1:
                     
             baseSpec["performance_settings"] = {
                     "number_of_processors": self.NumberOfProcessors
                 }
+            
+            if self._useLogitAuxTrChoice:
+                raise NotImplementedError()
+                baseSpec["flow_distribution_at_regular_nodes_with_aux_transit_choices"] = {
+                    "choices_at_regular_nodes": {
+                        "choice_points": "ui1",
+                        "aux_transit_choice_set": "BEST_LINK",
+                        "logit_parameters": {
+                            "scale": self.xtmf_WalkDistributionLogitScale,
+                            "truncation": 0.05
+                            }
+                        }
+                    }
         
         return baseSpec
     
@@ -765,6 +796,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         tool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
         
         self.TRACKER.runTool(tool, spec, scenario= self.Scenario)
+    
+    #---MODELLER INTERFACE FUNCTIONS
     
     @_m.method(return_type=unicode)
     def get_scenario_node_attributes(self):
