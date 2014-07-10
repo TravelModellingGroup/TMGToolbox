@@ -35,6 +35,8 @@ Export Countpost Results
     
     0.0.2 Modified to properly append the file extension.
     
+    1.0.0 Upgraded for release: Now works with util.fastLoadLinkAttributes.
+    
 '''
 
 import inro.modeller as _m
@@ -51,7 +53,7 @@ NullPointerException = _util.NullPointerException
 
 class ExportCountpostResults(_m.Tool()):
     
-    version = '0.0.2'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -90,10 +92,11 @@ class ExportCountpostResults(_m.Tool()):
                                title='Scenario:',
                                allow_none=False)
         
-        keyval = {}
+        keyval = []
         for att in _MODELLER.scenario.extra_attributes():
             if att.type == 'LINK':
-                keyval[att.id] = "%s - %s" %(att.id, att.description)
+                text = "%s - %s" %(att.id, att.description)
+                keyval.append((att.id, text))
         
         pb.add_select(tool_attribute_name='CountpostAttributeId',
                       keyvalues=keyval,
@@ -122,7 +125,7 @@ class ExportCountpostResults(_m.Tool()):
             
             $("#CountpostAttributeId")
                 .empty()
-                .append(tool._GetSelectAttributeOptionsHTML())
+                .append(tool.preload_scenario_attributes())
             inro.modeller.page.preload("#CountpostAttributeId");
             $("#CountpostAttributeId").trigger('change');
             
@@ -137,6 +140,24 @@ class ExportCountpostResults(_m.Tool()):
         
         
         return pb.render()
+    
+    @_m.method(return_type=_m.TupleType)
+    def percent_completed(self):
+        return self.TRACKER.getProgress()
+                
+    @_m.method(return_type=unicode)
+    def tool_run_msg_status(self):
+        return self.tool_run_msg
+    
+    @_m.method(return_type=unicode)
+    def preload_scenario_attributes(self):
+        list = []
+        
+        for att in self.Scenario.extra_attributes():
+            label = "{id} - {name}".format(id=att.name, name=att.description)
+            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
+            list.append(html)
+        return "\n".join(list)
     
     ##########################################################################################################
         
@@ -200,32 +221,41 @@ class ExportCountpostResults(_m.Tool()):
                                      attributes=self._GetAtts()):
             self.TRACKER.reset()
             
-            self.ExportFile = splitext(self.ExportFile)[0] + ".csv"
+            linkResults = _util.fastLoadLinkAttributes(self.Scenario, [self.CountpostAttributeId,
+                                                                       self.AlternateCountpostAttributeId,
+                                                                       'auto_volume',
+                                                                       'additional_volume',
+                                                                       'auto_time'])
             
-            network = self.Scenario.get_network()
-            self.tool_run_msg = "Network loaded. Processing traffic results"
-            
+            #Remove entries not flagged with a countpost
+            self._CleanResults(linkResults)
+                        
             with open(self.ExportFile, 'w') as writer:
                 writer.write("Countpost,Link,VOLAU,VOLAD,TIMAU")
                 
                 posts = 0
-                self.TRACKER.startProcess(network.element_totals['links'])
-                for link in network.links():
-                    post1 = link[self.CountpostAttributeId]
-                    post2 = link[self.AlternateCountpostAttributeId]
+                self.TRACKER.startProcess(len(linkResults))
+                for (iNode, jNode), attributes in linkResults.iteritems():
+                    linkId = "%s-%s" %(iNode, jNode)
+
+                    post1 = attributes[self.CountpostAttributeId]
+                    post2 = attributes[self.AlternateCountpostAttributeId]
+                    volau = attributes['auto_volume']
+                    volad = attributes['additional_volume']
+                    timau = attributes['auto_time']
                     
-                    if post1 > 0:
-                        data = [post1, link.id, link.auto_volume, link.additional_volume, link.auto_time]
-                        data = [str(d) for d in data]
-                        writer.write("\n" + ",".join(data))
-                        posts += 1
-                    if post2 > 0:
-                        data = [post2, link.id, link.auto_volume, link.additional_volume, link.auto_time]
-                        data = [str(d) for d in data]
-                        writer.write("\n" + ",".join(data))
-                        posts += 1
+                    data = [linkId, volau, volad, timau]
                     
+                    if post1:
+                        line = [str(c) for c in [post1] + data]
+                        writer.write("\n" + ','.join(line))
+                        posts += 1
+                    if post2:
+                        line = [str(c) for c in [post2] + data]
+                        writer.write("\n" + ','.join(line))
+                        posts += 1
                     self.TRACKER.completeSubtask()
+                _m.logbook_write("Wrote %s countposts to file." %posts) 
             
 
     ##########################################################################################################
@@ -241,23 +271,13 @@ class ExportCountpostResults(_m.Tool()):
                 "Version": self.version, 
                 "self": self.__MODELLER_NAMESPACE__}
             
-        return atts 
-
-    @_m.method(return_type=unicode)
-    def _GetSelectAttributeOptionsHTML(self):
-        list = []
-        
-        for att in self.Scenario.extra_attributes():
-            label = "{id} - {name}".format(id=att.name, name=att.description)
-            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
-            list.append(html)
-        return "\n".join(list)
+        return atts
     
-    @_m.method(return_type=_m.TupleType)
-    def percent_completed(self):
-        return self.TRACKER.getProgress()
-                
-    @_m.method(return_type=unicode)
-    def tool_run_msg_status(self):
-        return self.tool_run_msg
-        
+    def _CleanResults(self, linkResults):
+        idsToRemove = []
+        for linkId, attributes in linkResults.iteritems():
+            if not attributes[self.CountpostAttributeId] and not attributes[self.AlternateCountpostAttributeId]:
+                idsToRemove.append(linkId)
+        for key in idsToRemove:
+            linkResults.pop(key) 
+    
