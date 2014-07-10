@@ -67,16 +67,16 @@ def iterpairs(iterable):
         >>> 1=3 2=4
         >>> 1=4 2=5
     '''
-    if len(iterable) < 2: raise IndexError("Iterable must have at least two elements")
     
-    flag = True
-    for val in iterable:
-        if flag:
-            prev = val
-            flag = False
-        else:
-            yield (prev, val)
-            prev = val
+    iterator = iterable.__iter__()
+    
+    try: prev = iterator.next()
+    except StopIteration: return
+    
+    for val in iterator:
+        yield prev, val
+        prev = val
+
 
 #-------------------------------------------------------------------------------------------
 
@@ -133,12 +133,12 @@ def databankHasDifferentZones(emmebank):
     '''
     
     scenarioZones = [set(sc.zone_numbers) for sc in emmebank.scenarios()]
-    scenarioRequired = False
+    differentZones = False
     for nZones1, nZones2 in iterpairs(scenarioZones):
         if nZones1 != nZones2:
-            scenarioRequired = True
+            differentZones = True
             break
-    return scenarioRequired
+    return differentZones
 
 #-------------------------------------------------------------------------------------------
 
