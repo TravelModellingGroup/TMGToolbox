@@ -209,8 +209,8 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.Scenarios = []
         for number in xtmf_ScenarioNumbers.split(','):
             sc = _MODELLER.emmebank.scenario(number)
-            if (scenario == None):
-                raise Exception("Scenarios %s was not found!" %sc)
+            if (sc == None):
+                raise Exception("Scenarios %s was not found!" %number)
             self.Scenarios.append(sc)
         
         self.SubwayBoardingPenalty = SubwayBoardingPenalty
