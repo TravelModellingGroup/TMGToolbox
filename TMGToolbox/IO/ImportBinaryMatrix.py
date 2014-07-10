@@ -88,7 +88,7 @@ class ImportBinaryMatrix(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name= 'ImportFile',
                            window_type= 'file',
-                           file_filter= '*.emxd; *.mtx',
+                           file_filter= '*.emxd *.mtx',
                            title= "Import File")
         
         pb.add_select_matrix(tool_attribute_name= 'MatrixId',
@@ -201,7 +201,7 @@ class ImportBinaryMatrix(_m.Tool()):
                     
                     raise Exception("Matrix zones not compatible with scenario %s. Check logbook for details." %self.Scenario)
                 
-                matrix.set_data(data, scenario= self.Scenario)
+                matrix.set_data(data, scenario_id= self.Scenario.id)
             else:
                 sc = _bank.scenarios()[0]
                 zones = set(sc.zone_numbers)
