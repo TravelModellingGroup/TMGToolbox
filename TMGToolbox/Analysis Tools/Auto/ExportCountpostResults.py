@@ -37,6 +37,9 @@ Export Countpost Results
     
     1.0.0 Upgraded for release: Now works with util.fastLoadLinkAttributes.
     
+    1.1.0 Added new feature to optionally select an alternate countpost attribute.
+            Also, now countpost results will be reported in increasing order.
+    
 '''
 
 import inro.modeller as _m
@@ -53,7 +56,7 @@ NullPointerException = _util.NullPointerException
 
 class ExportCountpostResults(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.1.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -92,21 +95,24 @@ class ExportCountpostResults(_m.Tool()):
                                title='Scenario:',
                                allow_none=False)
         
-        keyval = []
+        keyval1 = []
+        keyval2 = [(-1, 'None - No attribute')]
         for att in _MODELLER.scenario.extra_attributes():
             if att.type == 'LINK':
                 text = "%s - %s" %(att.id, att.description)
-                keyval.append((att.id, text))
+                keyval1.append((att.id, text))
+                keyval2.append((att.id, text))
         
         pb.add_select(tool_attribute_name='CountpostAttributeId',
-                      keyvalues=keyval,
+                      keyvalues=keyval1,
                       title="Countpost Attribute",
                       note="LINK attribute containing countpost id numbers")
         
         pb.add_select(tool_attribute_name='AlternateCountpostAttributeId',
-                      keyvalues=keyval,
+                      keyvalues=keyval2,
                       title="Alternate Countpost Attribute",
-                      note="Alternate countpost attribute for multiple post per link")
+                      note="<font color='green'><b>Optional:</b></font> Alternate countpost attribute \
+                      for multiple post per link")
         
         pb.add_select_file(tool_attribute_name='ExportFile',
                            window_type='save_file',
@@ -169,7 +175,6 @@ class ExportCountpostResults(_m.Tool()):
                 raise Exception("Scenario %s has no traffic assignment results" %self.Scenario.number)
             
             if self.CountpostAttributeId == None: raise NullPointerException("Countpost Attribute not specified")
-            if self.AlternateCountpostAttributeId == None: raise NullPointerException("Alternate Countpost Attribute not specified")
             if self.ExportFile == None: raise NullPointerException("Export File not specified")
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
@@ -222,40 +227,23 @@ class ExportCountpostResults(_m.Tool()):
             self.TRACKER.reset()
             
             linkResults = _util.fastLoadLinkAttributes(self.Scenario, [self.CountpostAttributeId,
-                                                                       self.AlternateCountpostAttributeId,
                                                                        'auto_volume',
                                                                        'additional_volume',
                                                                        'auto_time'])
             
+            alternateLinkResults = {}
+            if self.AlternateCountpostAttributeId:
+                alternateLinkResults = _util.fastLoadLinkAttributes(self.Scenario, 
+                                                                    [self.AlternateCountpostAttributeId])
+            
             #Remove entries not flagged with a countpost
-            self._CleanResults(linkResults)
-                        
-            with open(self.ExportFile, 'w') as writer:
-                writer.write("Countpost,Link,VOLAU,VOLAD,TIMAU")
-                
-                posts = 0
-                self.TRACKER.startProcess(len(linkResults))
-                for (iNode, jNode), attributes in linkResults.iteritems():
-                    linkId = "%s-%s" %(iNode, jNode)
-
-                    post1 = attributes[self.CountpostAttributeId]
-                    post2 = attributes[self.AlternateCountpostAttributeId]
-                    volau = attributes['auto_volume']
-                    volad = attributes['additional_volume']
-                    timau = attributes['auto_time']
-                    
-                    data = [linkId, volau, volad, timau]
-                    
-                    if post1:
-                        line = [str(c) for c in [post1] + data]
-                        writer.write("\n" + ','.join(line))
-                        posts += 1
-                    if post2:
-                        line = [str(c) for c in [post2] + data]
-                        writer.write("\n" + ','.join(line))
-                        posts += 1
-                    self.TRACKER.completeSubtask()
-                _m.logbook_write("Wrote %s countposts to file." %posts) 
+            self._CleanResults(linkResults, alternateLinkResults)
+            
+            #Get the countpost data, sorted
+            lines = self._ProcessResults(linkResults, alternateLinkResults)
+            
+            #Write countpost data to file
+            self._WriteReport(lines)
             
 
     ##########################################################################################################
@@ -273,11 +261,52 @@ class ExportCountpostResults(_m.Tool()):
             
         return atts
     
-    def _CleanResults(self, linkResults):
+    def _CleanResults(self, linkResults, alternateLinkResults):
         idsToRemove = []
         for linkId, attributes in linkResults.iteritems():
-            if not attributes[self.CountpostAttributeId] and not attributes[self.AlternateCountpostAttributeId]:
+            post1 = attributes[self.CountpostAttributeId]
+            post2 = 0
+            if linkId in alternateLinkResults:
+                post2 = alternateLinkResults[linkId][self.AlternateCountpostAttributeId] 
+            
+            if not post1 and not post2:
                 idsToRemove.append(linkId)
         for key in idsToRemove:
             linkResults.pop(key) 
     
+    def _ProcessResults(self, linkResults, alternateLinkResults):
+        lines = []
+        
+        posts = 0
+        self.TRACKER.startProcess(len(linkResults))
+        for linkIdTuple, attributes in linkResults.iteritems():
+            linkId = "%s-%s" %linkIdTuple
+
+            post1 = attributes[self.CountpostAttributeId]
+            post2 = 0
+            if linkIdTuple in alternateLinkResults:
+                post2 = alternateLinkResults[linkIdTuple][self.AlternateCountpostAttributeId]
+            volau = attributes['auto_volume']
+            volad = attributes['additional_volume']
+            timau = attributes['auto_time']
+            
+            data = [linkId, volau, volad, timau]
+            
+            if post1:
+                lines.append((post1, linkId, volau, volad, timau))
+                posts += 1
+            if post2:
+                lines.append((post2, linkId, volau, volad, timau))
+                posts += 1
+            self.TRACKER.completeSubtask()
+        _m.logbook_write("Found %s countposts in network" %posts)
+        lines.sort()
+        return lines
+    
+    def _WriteReport(self, lines):
+        with open(self.ExportFile, 'w') as writer:
+            writer.write("Countpost,Link,Auto Volume,Additional Volume,Auto Time")
+            for line in lines:
+                line = [str(c) for c in line]
+                writer.write("\n" + ','.join(line))
+        _m.logbook_write("Wrote report to %s" %self.ExportFile)
