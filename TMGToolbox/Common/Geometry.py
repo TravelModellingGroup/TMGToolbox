@@ -108,7 +108,8 @@ def nodeToShape(node):
     p = Point(node.x, node.y)
     p['number'] = node.number
     p['id'] = node.id
-    for att in node._attributes.iterkeys():
+    
+    for att in node.network.attributes('NODE'):
         p[att] = node[att]
     return p
 
@@ -119,7 +120,7 @@ def linkToShape(link):
     coords.append((link.j_node.x, link.j_node.y))
     ls = LineString(coords)
     
-    for att in link._attributes.iterkeys():
+    for att in link.network.attributes('LINK'):
         if att == 'vertices': continue
         ls[att] = link[att]
     
@@ -129,7 +130,19 @@ def turnToShape(turn):
     raise NotImplementedError("Turns are not yet implemented.")
 
 def transitLineToShape(line):
-    raise NotImplementedError("Transit lines are not yet implemented.")
+    inode = line.segment(0)
+    coordinates = [(inode.x, inode.y)]
+    
+    for segment in line.segments(False):
+        coordinates.extend(segment.link.vertices)
+        jnode = segment.j_node
+        coordinates.append((jnode.x, jnode.y))
+    
+    ls = LineString(coordinates)
+    
+    for att in line.network.attributes('TRANSIT_LINE'):
+        ls[att] = line[att]
+    
 
 #---Static methods for casting shapely geometries to attachable geometries
 def castAsAttachable(geom):
@@ -145,7 +158,9 @@ def castAsAttachable(geom):
         interiors = []
         for interior in geom.interiors:
             interiors.append(interior.coords)
-        return Polygon(exterior, interiors)    
+        return Polygon(exterior, interiors)
+    else:
+        raise TypeError("Geometry type '%s' not recognized" %type)
 
 #---Other static methods
 def crossProduct(coordA1, coordA2, coordB1, coordB2):
