@@ -55,6 +55,8 @@ V4 Transit Assignment
     2.2.1 Exposed some private parameters (e.g. logit scale param for distribution
             among origin connectors). Added the private option to use logit
             distribution among auxiliary transit links at stops.
+    
+    2.2.2 Tool now initializes the output matrices before running the analyses.
 '''
 
 import inro.modeller as _m
@@ -72,7 +74,7 @@ EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.2.1'
+    version = '2.2.2'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -570,6 +572,20 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                      impedances= impedanceMatrix,
                                      scenario= self.Scenario)
                 
+                if self.InVehicleTimeMatrixId:
+                    _util.initializeMatrix(id= self.InVehicleTimeMatrixId,
+                                           description= "Transit in-vehicle travel times")
+                if self.WalkTimeMatrixId:
+                    _util.initializeMatrix(id= self.WalkTimeMatrixId,
+                                           description= "Transit total walk times")
+                if self.WaitTimeMatrixId:
+                    _util.initializeMatrix(id= self.WaitTimeMatrixId,
+                                           description= "Transit total wait times")
+                if self.FareMatrixId:
+                    _util.initializeMatrix(id= self.FareMatrixId,
+                                           description= "Transit total fare costs")
+                
+                
                 if self.InVehicleTimeMatrixId or self.WalkTimeMatrixId or self.WaitTimeMatrixId:
                     self._ExtractTimesMatrices()
                 else: self.TRACKER.completeTask()
@@ -588,8 +604,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 "Version": self.version,
                 "Demand Matrix": "%s - %s" %(self.DemandMatrix, self.DemandMatrix.description),
                 "Wait Perception": self.WaitPerception,
+                "Fare Perception": self.FarePerception,
                 "Toronto Walk Perception": self.WalkPerceptionToronto,
                 "Non-Toronto Walk Perception": self.WalkPerceptionNonToronto,
+                "Toronto Access Perception": self.WalkPerceptionTorontoConnectors,
+                "Non-Toronto Access Perception": self.WalkPerceptionNonTorontoConnectors,
                 "Congestion Perception": self.CongestionPerception,
                 "Assignment Period": self.AssignmentPeriod,
                 "Boarding Perception": self.BoardPerception,
