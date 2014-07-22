@@ -139,21 +139,21 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.HeadwayFractionAttributeId = "@frac"
         self.WalkAttributeId = "@walkp"
         
-        self.WaitPerception = 1.0
-        self.WalkPerceptionToronto = 1.0
-        self.WalkPerceptionNonToronto = 1.0
-        self.WalkPerceptionTorontoConnectors = 1.0
-        self.WalkPerceptionNonTorontoConnectors = 1.0
-        self.BoardPerception = 1.0
+        self.WaitPerception = 2.29
+        self.WalkPerceptionToronto = 2.20
+        self.WalkPerceptionNonToronto = 3.07
+        self.WalkPerceptionTorontoConnectors = 1.97
+        self.WalkPerceptionNonTorontoConnectors = 2.78
+        self.BoardPerception = 1.5
         
-        self.CongestionPerception = 1.0
-        self.FarePerception = 1.0
+        self.CongestionPerception = 0.44
+        self.FarePerception = 9.78
         
-        self.AssignmentPeriod = 3.0 
+        self.AssignmentPeriod = 2.04 
         self.NormGap = 0.01
         self.RelGap = 0.001
-        self.Iterations = 20
-        self.GoTrainHeadwayFraction = 0.5
+        self.Iterations = 5
+        self.GoTrainHeadwayFraction = 0.18
         
         if EMME_VERSION >= 4.1:
             self.NumberOfProcessors = cpu_count()
