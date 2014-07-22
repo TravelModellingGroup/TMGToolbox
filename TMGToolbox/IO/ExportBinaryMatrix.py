@@ -19,14 +19,14 @@
 '''
 #---METADATA---------------------
 '''
-[TITLE]
+ExportBinaryMatrix
 
     Authors: pkucirek
 
     Latest revision by: pkucirek
     
     
-    [Description]
+    Exports matrix data in the new binary format.
         
 '''
 #---VERSION HISTORY
@@ -34,6 +34,8 @@
     0.0.1 Created on 2014-06-06 by pkucirek
     
     1.0.0 Published on 2014-06-09
+    
+    1.0.1 Tool now checks that the matrix exists.
     
 '''
 
@@ -50,7 +52,7 @@ _bank = _MODELLER.emmebank
 
 class ExportBinaryMatrix(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.0.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -159,6 +161,8 @@ class ExportBinaryMatrix(_m.Tool()):
                           "4 for full matrices.")
         
         self.MatrixId = self.MATRIX_TYPES[xtmf_MatrixType] + str(xtmf_MatrixNumber)
+        if _bank.matrix(self.MatrixId) == None:
+            raise IOError("Matrix %s does not exist." %self.MatrixId)
         
         if _util.databankHasDifferentZones(_bank):
             self.Scenario = _bank.scenario(xtmf_ScenarioNumber)
@@ -166,7 +170,7 @@ class ExportBinaryMatrix(_m.Tool()):
                 raise Exception("A valid scenario must be specified as there are " +
                                     "multiple zone systems in this Emme project. "+
                                     "'%s' is not a valid scenario." %xtmf_ScenarioNumber)
-        
+
         try:
             self._Execute()
         except Exception, e:
