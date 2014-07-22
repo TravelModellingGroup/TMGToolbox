@@ -47,6 +47,12 @@ Fare-Based Transit Network (FBTN) From Schema
         
     1.1.3 Slightly tweaked to over-write the FBTN scenario if it already exists.
     
+    1.1.4 Fixed a bug in the scenario overwrite: If the target (new) scenario already exists,
+        it gets deleted, then the base scenario is copied in its place first. This ensures that
+        the new scenario is a verbatim copy of the base scenario prior to publishing the network.
+        Before, it was possible to end up with different extra attributes between the two 
+        scenarios.
+    
 '''
 from copy import copy
 from contextlib import contextmanager
@@ -122,7 +128,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.1.3'
+    version = '1.1.4'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -404,9 +410,10 @@ class FBTNFromSchema(_m.Tool()):
                 print "Applied fare rules to network."
             
             #Publish the network
-            newSc = _MODELLER.emmebank.scenario(self.NewScenarioNumber)
-            if newSc == None:
-                newSc = _MODELLER.emmebank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
+            bank = _MODELLER.emmebank
+            if bank.scenario(self.NewScenarioNumber) != None:
+                bank.delete_scenario(self.NewScenarioNumber)
+            newSc = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
             newSc.title = self.NewScenarioTitle
             newSc.publish_network(network, resolve_attributes= True)
             
