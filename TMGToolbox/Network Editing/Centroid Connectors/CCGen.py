@@ -63,7 +63,10 @@ Kucirek-Vaughan Automated Centroid Connector Generator (CCGen)
         - Using Utilities.tempExtraAttributeMANAGER to get the temporary flag attibute
         - Using SpatialIndex.GridIndex for indexing boundary geometries
         - Using SpatialIndex.GridIndex for indexing network nodes
-    
+        
+    1.0.1 Fixed a minor bug in the UI where the zone field selector combobox wasn't
+        loading properly after a run. Also fixed a bug where the tool would crash if
+        no zones were selected to be connected.  
     
 '''
 
@@ -92,7 +95,7 @@ def _manhattanDist(x1, y1, x2, y2):
 
 class CCGEN(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.0.1'
     tool_run_msg = ""
     report_html = ""
     
@@ -285,7 +288,17 @@ class CCGEN(_m.Tool()):
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
         
-        $("#ShapefileZoneAttributeId").prop('disabled', true);
+        if (tool.has_shapefile_loaded())
+        {
+            $("#ShapefileZoneAttributeId")
+                .empty()
+                .append(tool.preload_shapefile_fields())
+            inro.modeller.page.preload("#ShapefileZoneAttributeId");
+            $("#ShapefileZoneAttributeId").trigger('change');
+            $("#ShapefileZoneAttributeId").prop('disabled', false);
+        } else {
+            $("#ShapefileZoneAttributeId").prop('disabled', true);
+        }
         
         $("#Scenario").bind('change', function()
         {
@@ -320,6 +333,10 @@ class CCGEN(_m.Tool()):
             text = "%s %s %s" %(mode.id, mode.description, mode.type)
             options.append("<option value='%s'>%s</option>" %(mode.id, text))
         return "\n".join(options)
+    
+    @_m.method(return_type= bool)
+    def has_shapefile_loaded(self):
+        return self.ZoneShapeFile != None
     
     @_m.method(return_type= unicode)
     def preload_shapefile_fields(self):
@@ -378,7 +395,11 @@ class CCGEN(_m.Tool()):
                     zonesToProcess = self._loadZonesToBeAdded(self.ZonesFile, network)
                     _m.logbook_write("Loaded new zones from file '%s'" %self.ZonesFile)
                 self._tracker.completeTask() # TASK 2
-                    
+                
+                if len(zonesToProcess) == 0:
+                    self.tool_run_msg = _m.PageBuilder.format_info("No zones were selected for processing.")
+                    return
+                
                 #---2. Create temporary zone attributes in the network
                 network.create_attribute('NODE', '_geometry', None) # For zones, stores the boundaries. For nodes, stores the point geometry.
                 network.create_attribute('NODE', '_candidateNodes', None) # Stores a mapping of candidateNode -> distance from centroid 
