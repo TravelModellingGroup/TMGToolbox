@@ -35,6 +35,8 @@ Export Transit Line Boardings
     
     1.0.0 Documented and published on 2014-06-11
     
+    1.0.1 Added XTMF interface
+    
 '''
 
 import inro.modeller as _m
@@ -173,14 +175,18 @@ class ExtractTransitLineBoardings(_m.Tool()):
     #---
     #---XTMF INTERFACE METHODS
     
-    def __call__(self, xtmf_ScenarioNumber):
-        
-        raise NotImplementedError()
+    def __call__(self, xtmf_ScenarioNumber, ReportFile, LineAggrgeationFile):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+        
+        self.ReportFile = ReportFile
+        if LineAggrgeationFile:
+            self.LineAggrgeationFile = LineAggrgeationFile
+            self.ReportErrorsToLogbookFlag = False
+            self.WriteIndividualRoutesFlag = False
         
         try:
             self._Execute()
