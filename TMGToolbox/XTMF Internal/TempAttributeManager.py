@@ -76,9 +76,12 @@ class TempAttributeManager(_m.Tool()):
         if (scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
-        if xtmf_DeleteFlag:
+        exatt = scenario.extra_attribute(xtmf_AttributeId)
+        if xtmf_DeleteFlag and exatt != None:
             scenario.delete_extra_attribute(xtmf_AttributeId)
         else:
+            if exatt != None:
+                scenario.delete_extra_attribute(xtmf_AttributeId)
             scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
     
     
