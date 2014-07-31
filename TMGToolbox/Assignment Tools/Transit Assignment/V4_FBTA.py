@@ -551,6 +551,19 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
+            if self.InVehicleTimeMatrixId:
+                _util.initializeMatrix(id= self.InVehicleTimeMatrixId,
+                                       description= "Transit in-vehicle travel times")
+            if self.WalkTimeMatrixId:
+                _util.initializeMatrix(id= self.WalkTimeMatrixId,
+                                       description= "Transit total walk times")
+            if self.WaitTimeMatrixId:
+                _util.initializeMatrix(id= self.WaitTimeMatrixId,
+                                       description= "Transit total wait times")
+            if self.FareMatrixId:
+                _util.initializeMatrix(id= self.FareMatrixId,
+                                       description= "Transit total fare costs")
+            
             with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
                                 
                 self.TRACKER.startProcess(2)
@@ -570,21 +583,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                      congestion_function= self._GetFuncSpec(),
                                      stopping_criteria= self._GetStopSpec(),
                                      impedances= impedanceMatrix,
-                                     scenario= self.Scenario)
-                
-                if self.InVehicleTimeMatrixId:
-                    _util.initializeMatrix(id= self.InVehicleTimeMatrixId,
-                                           description= "Transit in-vehicle travel times")
-                if self.WalkTimeMatrixId:
-                    _util.initializeMatrix(id= self.WalkTimeMatrixId,
-                                           description= "Transit total walk times")
-                if self.WaitTimeMatrixId:
-                    _util.initializeMatrix(id= self.WaitTimeMatrixId,
-                                           description= "Transit total wait times")
-                if self.FareMatrixId:
-                    _util.initializeMatrix(id= self.FareMatrixId,
-                                           description= "Transit total fare costs")
-                
+                                     scenario= self.Scenario)                
                 
                 if self.InVehicleTimeMatrixId or self.WalkTimeMatrixId or self.WaitTimeMatrixId:
                     self._ExtractTimesMatrices()
