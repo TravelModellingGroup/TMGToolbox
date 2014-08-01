@@ -53,6 +53,8 @@ Toll-Based Road Assignment
     
     2.0.2 Implemented XTMF-side
     
+    2.1.0 Added feature to recognize '0' matrix as a scalar of 0 (XTMF side only)
+    
 '''
 
 import inro.modeller as _m
@@ -66,9 +68,16 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 ##########################################################################################################
 
+@contextmanager
+def blankManager(obj):
+    try:
+        yield obj
+    finally:
+        pass
+
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '2.0.2'
+    version = '2.1.0'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -318,9 +327,13 @@ class TollBasedRoadAssignment(_m.Tool()):
         if (self.Scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
-        self.DemandMatrix =_m.Modeller().emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
-        if (self.DemandMatrix == None):
-            raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
+        if xtmf_DemandMatrixNumber == 0:
+            manager = _util.tempMatrixMANAGER(matrix_type= 'SCALAR')
+        else:
+            demandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
+            if demandMatrix == None:
+                raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
+            manager = blankManager(demandMatrix)
         
         #---2. Pass in remaining args
         self.TimesMatrixId = TimesMatrixId
@@ -341,7 +354,10 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         #---3. Run
         try:
-            self._execute()
+            with manager as self.DemandMatrix:
+                
+                print "Running Auto Assignment"
+                self._execute()
         except Exception, e:
             raise Exception(_util.formatReverseStack())
     
@@ -703,32 +719,3 @@ class TollBasedRoadAssignment(_m.Tool()):
             html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
             list.append(html)
         return "\n".join(list)
-    
-    def mm(self):
-        q = {
-             "traversal_analysis": null,
-             "classes": [
-                         {
-                          "generalized_cost": 
-                            {
-                             "link_costs": "@z407",
-                             "perception_factor": 2.0
-                             },
-                          "results": 
-                                {"link_volumes": null,
-                                 "od_travel_times": 
-                                    {
-                                     "shortest_paths": "mf1"
-                                    },
-                                  "turn_volumes": null
-                                  },
-                          "mode": "c",
-                          "analysis": {
-                                       "analyzed_demand": "mf1",
-                                       "results": {
-                                                   "selected_turn_volumes": null,
-                                                   "selected_link_volumes": null,
-                                                   "od_values": "mf3"
-                                                   }
-                                       }, "demand": "mf1"}], "background_traffic": null, "path_analysis": {"operator": "+", "selection_threshold": {"upper": 999999, "lower": -999999}, "turn_component": null, "path_to_od_composition": {"multiply_path_proportions_by": {"path_value": true, "analyzed_demand": false}, "considered_paths": "ALL"}, "link_component": "@z407"}, "performance_settings": {"number_of_processors": 8}, "cutoff_analysis": null, "type": "STANDARD_TRAFFIC_ASSIGNMENT", "stopping_criteria": {"normalized_gap": 0.0, "best_relative_gap": 0.0, "relative_gap": 0.0, "max_iterations": 100}}
-    
