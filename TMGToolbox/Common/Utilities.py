@@ -58,7 +58,7 @@ def formatReverseStack():
 
 def iterpairs(iterable):
     '''
-    Iterates through two subsequent elements in a list.
+    Iterates through two subsequent elements in any iterable.
     Example: 
         x = [1,2,3,4,5]
         for (val1, val2) in iterpairs(x): print "1=%s 2=%s" %(val1, val2)
