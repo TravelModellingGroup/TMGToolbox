@@ -52,6 +52,9 @@ Fare-Based Transit Network (FBTN) From Schema
         the new scenario is a verbatim copy of the base scenario prior to publishing the network.
         Before, it was possible to end up with different extra attributes between the two 
         scenarios.
+        
+    1.1.5 Modified to use the new spatial index. Also changed the copy scenario call to NOT
+        copy over strategy or path files as this considerably increases runtime.
     
 '''
 from copy import copy
@@ -71,8 +74,9 @@ _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 _geolib = _MODELLER.module('TMG2.Common.Geometry')
 _editing = _MODELLER.module('TMG2.Common.Editing')
+_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
 Shapely2ESRI = _geolib.Shapely2ESRI
-NodeSearchGrid = _util.NodeSearchGrid
+GridIndex = _spindex.GridIndex
 TransitLineProxy = _editing.TransitLineProxy
 NullPointerException = _util.NullPointerException
 
@@ -128,7 +132,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.1.4'
+    version = '1.1.5'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -413,7 +417,8 @@ class FBTNFromSchema(_m.Tool()):
             bank = _MODELLER.emmebank
             if bank.scenario(self.NewScenarioNumber) != None:
                 bank.delete_scenario(self.NewScenarioNumber)
-            newSc = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
+            newSc = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber, \
+                                       copy_path_files=False, copy_strat_files=False)
             newSc.title = self.NewScenarioTitle
             newSc.publish_network(network, resolve_attributes= True)
             
@@ -708,10 +713,9 @@ class FBTNFromSchema(_m.Tool()):
         #This part is magic, and COMPLETELY UNDOCUMENTED code
         indices, xtable, ytable = self.BaseScenario.get_attribute_values('NODE', ['x', 'y'])
         
-        minx, maxx, miny, maxy = min(xtable), max(xtable), min(ytable), max(ytable) 
-        extents = _util.Extents(minx, miny, maxx, maxy)
+        extents = min(xtable), min(ytable), max(xtable), max(ytable)
         
-        spatialIndex = NodeSearchGrid(extents)
+        spatialIndex = GridIndex(extents, marginSize= 1.0)
         proxies = {}
         
         for nodeNumber, index in indices.iteritems():
@@ -721,7 +725,7 @@ class FBTNFromSchema(_m.Tool()):
             #Using a proxy class defined in THIS file, because we don't yet
             #have the full network loaded.
             nodeProxy = NodeSpatialProxy(nodeNumber, x, y)
-            spatialIndex.addNode(nodeProxy)
+            spatialIndex.insertPoint(nodeProxy)
             proxies[nodeNumber] = nodeProxy
         
         return spatialIndex, proxies
@@ -760,7 +764,7 @@ class FBTNFromSchema(_m.Tool()):
             reader = shapefiles[sid]
             polygon = reader.readFrom(fid)
             
-            nodesToCheck = spatialIndex.getNodesInBox(polygon)
+            nodesToCheck = spatialIndex.queryPolygon(polygon)
             for proxy in nodesToCheck:
                 point = proxy.geometry
                 

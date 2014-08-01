@@ -44,8 +44,8 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 _geo = _MODELLER.module('TMG2.Common.Geometry')
+_spindex = _MODELLER.module('TMG2.Common.SpatialIndex') 
 Shapely2ESRI = _geo.Shapely2ESRI
-PolygonMeshSearchGrid = _geo.PolygonMeshSearchGrid
 
 ##########################################################################################################
 
@@ -197,8 +197,21 @@ class GeoRenumberNodes(_m.Tool()):
     
     def _ClassifyNodes(self, network, boundaries):
         network.create_attribute('NODE', 'numberCategory', None)
-        searchGrid = PolygonMeshSearchGrid(boundaries, 10)
-                
+        
+        minx, miny = float('inf'), float('inf')
+        maxx, maxy = float('-inf'), float('-inf')
+        for bound in boundaries:
+            x0, y0, x1, y1 = bound.bounds
+            if x0 < minx: minx = x0
+            if y0 < miny: miny = y0
+            if x1 > maxx: maxx = x1
+            if y1 > maxy: maxy = y1
+        
+        searchGrid = _spindex.GridIndex([minx, miny, maxx, maxy], marginSiz= 1.0)
+        for bound in boundaries:
+            searchGrid.insertPolygon(bounds)
+        print "Constructed spatial index."
+        
         self.TRACKER.startProcess(network.element_totals['regular_nodes'])
         errorCount = 0
         for node in network.regular_nodes():
@@ -213,13 +226,19 @@ class GeoRenumberNodes(_m.Tool()):
                 continue
                         
             try:
-                containers = searchGrid.findContainingGeometries(node)
-                if len(containers) > 1:
-                    raise Exception("Shapefile contains overlapping features")
-                elif len(containers) == 0:
+                polygons = searchGrid.queryPoint(node)
+                p = _geo.nodeToShape(node)
+                if len(polygons) == 0:
                     raise IOError("Shapefile does not cover node")
                 
-                shape = containers[0]
+                shape = None
+                for polygon in containers:
+                    if polygon.contains(p):
+                        shape = polygon
+                        break
+                if shape == None:
+                    raise IOError("Shapefile does not cover node")
+                
                 node.numberCategory = shape['County']
                 self.TRACKER.completeSubtask()
             except Exception, e:

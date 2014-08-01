@@ -40,6 +40,8 @@ GET STATION ACCESS FILE
 '''
     0.0.1 Created
     
+    
+    1.0.0 Published to use the new spatial index module.
 '''
 
 import inro.modeller as _m
@@ -47,15 +49,17 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 from os import path as _path
+from math import sqrt
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
 
 ##########################################################################################################
 
 class GetStationAccessFile(_m.Tool()):
     
-    version = '0.0.1'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -181,40 +185,49 @@ class GetStationAccessFile(_m.Tool()):
                 network = self.Scenario.get_network()
                 self.TRACKER.completeTask()
                 
+                network.create_attribute('NODE', 'subStation', 0)
+                network.create_attribute('NODE', 'goStation', 0)
+                
                 with _m.logbook_trace("Getting station coordinates"):
                     self._FlagTransitStops(network)
                     subwayStations, goStations = self._GetNodeSet(network)
                     
                 with nested(_m.logbook_trace("Performing search"),
                             open(self.ExportFile, 'w')) as (log, writer):
-                    #Prepare the file
-                    writer.write("Zone,NearSubway,NearGO")
                     
                     #Prepare the search grid
-                    extents = _util.getExtents(network)
-                    goSearchGrid = _util.NodeSearchGrid(extents)
-                    subwaySearchGrid = _util.NodeSearchGrid(extents)
-                    for station in subwayStations:
-                        subwaySearchGrid.addNode(station)
-                    for station in goStations:
-                        goSearchGrid.addNode(station)
+                    extents = _spindex.get_network_extents(network)
+                    spatialIndex = _spindex.GridIndex(extents, marginSize= 1.0)
+                    for zone in network.centroids():
+                        spatialIndex.insertPoint(zone)
                     
-                    self.TRACKER.startProcess(network.element_totals['centroids'])
-                    for centroid in network.centroids():
-                        subStation = subwaySearchGrid.getNearestNode(centroid.x, centroid.y, self.SearchRadius)
-                        goStation = goSearchGrid.getNearestNode(centroid.x, centroid.y, self.SearchRadius)
-                        
-                        if subStation == None and goStation == None:
-                            self.TRACKER.completeSubtask()
-                            continue
-                        
-                        #Integerize the stations by casting to bool (=False if none), 
-                        #then to int (=0 if False, 1 if True)
-                        writer.write("\r\n%s,%s,%s" %(centroid.number, 
-                                                      int(bool(subStation)), 
-                                                      int(bool(goStation))))
-                        
+                    self.TRACKER.startProcess(len(subwayStations) + len(goStations))
+                    for station in subwayStations:
+                        nearbyNodes = spatialIndex.queryCircle(station.x, station.y, self.SearchRadius)
+                        for node in nearbyNodes:
+                            dist = sqrt((node.x - station.x)**2 + (node.y - station.y)**2)
+                            if dist > self.SearchRadius: continue
+                            
+                            node.subStation = 1
                         self.TRACKER.completeSubtask()
+                    
+                    for station in goStations:
+                        nearbyNodes = spatialIndex.queryCircle(station.x, station.y, self.SearchRadius)
+                        for node in nearbyNodes:
+                            dist = sqrt((node.x - station.x)**2 + (node.y - station.y)**2)
+                            if dist > self.SearchRadius: continue
+                            
+                            node.goStation = 1
+                        self.TRACKER.completeSubtask()
+                    
+                    #Prepare the file
+                    writer.write("Zone,NearSubway,NearGO")
+                    for centroid in network.centroids():
+                        writer.write("\n%s,%s,%s" %(centroid.number, 
+                                                      centroid.subStation, 
+                                                      centroid.goStation))
+                        
+                        
                     self.TRACKER.completeTask()
 
     ##########################################################################################################
