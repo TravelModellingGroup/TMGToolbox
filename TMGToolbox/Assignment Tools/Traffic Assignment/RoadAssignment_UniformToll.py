@@ -48,6 +48,10 @@ Toll-Based Road Assignment
     1.1.1 Bug fixes. Should actually run now.
     
     1.1.2 Fixed bug which occurs when a new matrix is selected for output.
+    
+    1.2.0 Upgraded to use SOLA traffic assignment (Emme 4.1 and newer). Other new features:
+        - Print status to console (also to XTMF) whilst running. Includes the stopping criterion
+        - All-or-nothing scenario manager doesn't copy over the transit strategy files.
 '''
 
 import inro.modeller as _m
@@ -59,12 +63,13 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 NullPointerException = _util.NullPointerException
+EMME_VERSION = _util.getEmmeVersion(float)
 
 ##########################################################################################################
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '1.1.1'
+    version = '1.2.0'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -93,7 +98,9 @@ class TollBasedRoadAssignment(_m.Tool()):
     rGap = _m.Attribute(float)
     brGap = _m.Attribute(float)
     normGap = _m.Attribute(float)
+    
     PerformanceFlag = _m.Attribute(bool)
+    SOLAFlag = _m.Attribute(bool)
     
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -116,6 +123,10 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.PerformanceFlag = False
         self.RunTitle = ""
         
+        if EMME_VERSION >= 4.1:
+            self.SOLAFlag = True
+        else:
+            self.SOLAFlag = False
 
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Toll Based Road Assignment v%s" %self.version,
@@ -261,6 +272,10 @@ class TollBasedRoadAssignment(_m.Tool()):
                         note="This mode will use more cores for assignment,<br>\
                             at the cost of slowing down other processes.")
         
+        if EMME_VERSION >= 4.1:
+            pb.add_checkbox(tool_attribute_name= 'SOLAFlag',
+                            label= "Use SOLA traffic assignment?")
+        
         return pb.render()
     
     ##########################################################################################################
@@ -294,7 +309,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, TimesMatrixId, CostMatrixId, TollsMatrixId,
                  PeakHourFactor, LinkCost, TollCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
-                 RunTitle, SelectTollLinkExpression):
+                 RunTitle, SelectTollLinkExpression, SOLAFlag):
         
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -322,6 +337,11 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.RunTitle = RunTitle[:25]
         self.SelectTollLinkExpression = SelectTollLinkExpression
         
+        if EMME_VERSION >= 4.1:
+            self.SOLAFlag = SOLAFlag
+        else:
+            self.SOLAFlag = False
+        
         #---3. Run
         try:
             self._execute()
@@ -336,18 +356,20 @@ class TollBasedRoadAssignment(_m.Tool()):
         with _m.logbook_trace(name="%s (%s v%s)" %(self.RunTitle, self.__class__.__name__, self.version),
                                      attributes=self._getAtts()):
             
-            _m.logbook_write(name="Initializing")
-            
+            print "Starting Road Assignment"
             self._tracker.reset()
             
-            try:
-                matrixCalcTool = _m.Modeller().tool("inro.emme.standard.matrix_calculation.matrix_calculator")
-                trafficAssignmentTool = _m.Modeller().tool("inro.emme.standard.traffic_assignment.standard_traffic_assignment")
-                networkCalculationTool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
-            except Exception, e:
-                matrixCalcTool = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
-                trafficAssignmentTool = _m.Modeller().tool("inro.emme.traffic_assignment.standard_traffic_assignment")
-                networkCalculationTool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
+            if EMME_VERSION < 4:
+                matrixCalcTool = _MODELLER.tool("inro.emme.standard.matrix_calculation.matrix_calculator")
+                trafficAssignmentTool = _MODELLER.tool("inro.emme.standard.traffic_assignment.standard_traffic_assignment")
+                networkCalculationTool = _MODELLER.tool("inro.emme.standard.network_calculation.network_calculator")
+            else:
+                matrixCalcTool = _MODELLER.tool("inro.emme.matrix_calculation.matrix_calculator")
+                networkCalculationTool = _MODELLER.tool("inro.emme.network_calculation.network_calculator")
+                if self.SOLAFlag:
+                    trafficAssignmentTool = _MODELLER.tool('inro.emme.traffic_assignment.sola_traffic_assignment')
+                else:
+                    trafficAssignmentTool = _MODELLER.tool("inro.emme.traffic_assignment.standard_traffic_assignment")
             
             self._tracker.startProcess(4)
             
@@ -380,15 +402,45 @@ class TollBasedRoadAssignment(_m.Tool()):
                     self._tracker.completeTask()
                     
                     with _m.logbook_trace("Running primary road assignment."):
-                        spec = self._getPrimaryRoadAssignmentSpec(peakHourMatrix.id, costAttribute.id, 
-                                                                  tollAttribute.id, appliedTollFactor)
-                        self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
+                        print "Running primary road assignment"
+                        
+                        if self.SOLAFlag:
+                            spec = self._getPrimarySOLASpec(peakHourMatrix.id, tollAttribute.id, appliedTollFactor)
+                        else:
+                            spec = self._getPrimaryRoadAssignmentSpec(peakHourMatrix.id, tollAttribute.id, 
+                                                                  appliedTollFactor)
+                        
+                        report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
+                        
+                        stoppingCriterion = report['stopping_criterion']
+                        iterations = report['iterations']
+                        if len(iterations) > 0: finalIteration = iterations[-1]
+                        else:
+                            finalIteration = {'number': 0}
+                            stoppingCriterion = 'MAX_ITERATIONS'
+                        number = finalIteration['number']
+                        
+                        if stoppingCriterion == 'MAX_ITERATIONS':
+                            val = finalIteration['number']
+                        elif stoppingCriterion == 'RELATIVE_GAP':
+                            val = finalIteration['gaps']['relative']
+                        elif stoppingCriterion == 'NORMALIZED_GAP':
+                            val = finalIteration['gaps']['normalized']
+                        elif stoppingCriterion == 'BEST_RELATIVE_GAP':
+                            val = finalIteration['gaps']['best_relative']
+                        else:
+                            val = 'undefined'
+                        
+                        print "Primary assignment complete at %s iterations" %number
+                        print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
                     
                     self._tracker.startProcess(3)
                     with self._AoNScenarioMANAGER() as allOrNothingScenario:
                         self._tracker.completeSubtask
                         
                         with _m.logbook_trace("All or nothing assignment to recover costs:"):
+                            print "Running all-or-nothing assignment to recover costs."
+                            
                             with _m.logbook_trace("Copying auto times into UL2"):
                                 networkCalculationTool(self._getSaveAutoTimesSpec(), scenario=allOrNothingScenario)
                                 self._tracker.completeSubtask
@@ -401,10 +453,14 @@ class TollBasedRoadAssignment(_m.Tool()):
                             self._tracker.completeTask()
                             
                             with _m.logbook_trace("Running all or nothing assignment"):
+                                if self.SOLAFlag:
+                                    spec = self._getAllOrNothingSOLASpec(peakHourMatrix.id, costAttribute.id)
+                                else:
+                                    spec = self._getAoNAssignmentSpec(peakHourMatrix.id, costAttribute.id)
+                                
                                 self._tracker.runTool(trafficAssignmentTool,
-                                                      self._getAoNAssignmentSpec(peakHourMatrix.id, costAttribute.id),
-                                                      scenario=allOrNothingScenario)
-                                 
+                                                      spec, scenario= allOrNothingScenario)
+        print "Road Assignment complete."
 
     ##########################################################################################################
 
@@ -422,7 +478,10 @@ class TollBasedRoadAssignment(_m.Tool()):
         if tempScenarioNumber == None:
             raise Exception("No additional scenarios are available!")
         
-        scenario = _MODELLER.emmebank.copy_scenario(self.Scenario.id, tempScenarioNumber)
+        scenario = _MODELLER.emmebank.copy_scenario(self.Scenario.id, tempScenarioNumber, 
+                                                    copy_path_files= False, 
+                                                    copy_strat_files= False, 
+                                                    copy_db_files= False)
         scenario.title = "All-or-nothing assignment"
         
         _m.logbook_write("Created temporary Scenario %s for all-or-nothing assignment." %tempScenarioNumber)
@@ -569,8 +628,79 @@ class TollBasedRoadAssignment(_m.Tool()):
         if self.TollWeight != 0:
             appliedTollFactor = 60.0 / self.TollWeight #Toll weight is in $/hr, needs to be converted to min/$
         return appliedTollFactor
-            
-    def _getPrimaryRoadAssignmentSpec(self, peakHourMatrixId,costAttributeId, tollAttributeId, appliedTollFactor):
+    
+    def _getPrimarySOLASpec(self, peakHourMatrixId, tollAttributeId, appliedTollFactor):
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 1, 1)
+        
+        modeId = _util.getScenarioModes(self.Scenario, ['AUTO'])[0][0]
+        #Returns a list of tuples. Emme guarantees that there is always
+        #one auto mode.
+        
+        return {
+                "type": "SOLA_TRAFFIC_ASSIGNMENT",
+                "classes": [
+                    {
+                        "mode": modeId,
+                        "demand": peakHourMatrixId,
+                        "generalized_cost": {
+                            "link_costs": tollAttributeId,
+                            "perception_factor": appliedTollFactor
+                        },
+                        "results": {
+                            "link_volumes": None,
+                            "turn_volumes": None,
+                            "od_travel_times": {
+                                "shortest_paths": self.TimesMatrixId
+                            }
+                        },
+                        "path_analysis": {
+                            "link_component": tollAttributeId,
+                            "turn_component": None,
+                            "operator": "+",
+                            "selection_threshold": {
+                                "lower": None,
+                                "upper": None
+                            },
+                            "path_to_od_composition": {
+                                "considered_paths": "ALL",
+                                "multiply_path_proportions_by": {
+                                    "analyzed_demand": False,
+                                    "path_value": True
+                                }
+                            }
+                        },
+                        "cutoff_analysis": None,
+                        "traversal_analysis": None,
+                        "analysis": {
+                            "analyzed_demand": None,
+                            "results": {
+                                "od_values": self.TollsMatrixId,
+                                "selected_link_volumes": None,
+                                "selected_turn_volumes": None
+                            }
+                        }
+                    }
+                ],
+                "path_analysis": None,
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "performance_settings": {
+                    "number_of_processors": numberOfPocessors
+                },
+                "background_traffic": None,
+                "stopping_criteria": {
+                    "max_iterations": self.Iterations,
+                    "relative_gap": self.rGap,
+                    "best_relative_gap": self.brGap,
+                    "normalized_gap": self.normGap
+                }
+            }
+      
+    
+    def _getPrimaryRoadAssignmentSpec(self, peakHourMatrixId, tollAttributeId, appliedTollFactor):
         
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
@@ -662,7 +792,75 @@ class TollBasedRoadAssignment(_m.Tool()):
                                },
                 "type": "NETWORK_CALCULATION"
                 }
+    
+    def _getAllOrNothingSOLASpec(self, peakHourMatrixId, costAttributeId):
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 1, 1)
+            
+        modeId = _util.getScenarioModes(self.Scenario, ['AUTO'])[0][0]
+        #Returns a list of tuples. Emme guarantees that there is always
+        #one auto mode.
         
+        return {
+                "type": "SOLA_TRAFFIC_ASSIGNMENT",
+                "classes": [
+                    {
+                        "mode": modeId,
+                        "demand": peakHourMatrixId,
+                        "generalized_cost": None,
+                        "results": {
+                            "link_volumes": None,
+                            "turn_volumes": None,
+                            "od_travel_times": {
+                                "shortest_paths": None
+                            }
+                        },
+                        "path_analysis": {
+                            "link_component": costAttributeId,
+                            "turn_component": None,
+                            "operator": "+",
+                            "selection_threshold": {
+                                "lower": None,
+                                "upper": None
+                            },
+                            "path_to_od_composition": {
+                                "considered_paths": "ALL",
+                                "multiply_path_proportions_by": {
+                                    "analyzed_demand": False,
+                                    "path_value": True
+                                }
+                            }
+                        },
+                        "cutoff_analysis": None,
+                        "traversal_analysis": None,
+                        "analysis": {
+                            "analyzed_demand": None,
+                            "results": {
+                                "od_values": self.CostMatrixId,
+                                "selected_link_volumes": None,
+                                "selected_turn_volumes": None
+                            }
+                        }
+                    }
+                ],
+                "path_analysis": None,
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "performance_settings": {
+                    "number_of_processors": numberOfPocessors
+                },
+                "background_traffic": None,
+                "stopping_criteria": {
+                    "max_iterations": 0,
+                    "relative_gap": 0,
+                    "best_relative_gap": 0,
+                    "normalized_gap": 0
+                }
+            }
+    
+    
     def _getAoNAssignmentSpec(self, peakHourMatrixId, costAttributeId):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
