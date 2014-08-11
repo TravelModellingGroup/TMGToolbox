@@ -55,6 +55,10 @@ Copy Zone System V2
 '''
     0.2.0 Created on 2014-03-11 by pkucirek
     
+    1.0.0 Changed to "published" version number as this version is clean and well-tested.
+    
+    1.0.1 Re-factored to use the more general-purpose Spatial Index module
+    
 '''
 
 import inro.modeller as _m
@@ -67,6 +71,7 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 _geolib = _MODELLER.module('TMG2.Common.Geometry')
+_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
 NullPointerException = _util.NullPointerException
 Shapely2ESRI = _geolib.Shapely2ESRI
 
@@ -74,7 +79,7 @@ Shapely2ESRI = _geolib.Shapely2ESRI
 
 class CopyZoneSystem2(_m.Tool()):
     
-    version = '0.2.0'
+    version = '1.0.1'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -105,7 +110,7 @@ class CopyZoneSystem2(_m.Tool()):
         self.ToScenario = _MODELLER.scenario #Default is primary scenario
         self.FromEmmebankPath = _MODELLER.emmebank.path
         self.ClearTargetZonesFlag = False
-        self.CoordinateTolerance = 2.0
+        self.CoordinateTolerance = 200.0
         self.MatchOption = 1
         self.LinkLengthTolerance = 50.0
         self.FromZonesToIgnoreSelector = "i=9700,9900"
@@ -196,7 +201,7 @@ class CopyZoneSystem2(_m.Tool()):
         pb.add_text_box(tool_attribute_name='CoordinateTolerance',
                         size=10, title="Coordinate Tolerance",
                         note="When using node coordinates for matching, skip connectors whose \
-                                j-node is further from any other node by this value.")
+                                j-node is further from any other node by this value, in coordinate units.")
         
         pb.add_select_file(tool_attribute_name='ShapefileReport',
                            window_type='save_file', file_filter='*.shp',
@@ -238,11 +243,11 @@ class CopyZoneSystem2(_m.Tool()):
             $(this).commit();
             if ($(this).val() == 1)
             {
-                $("#LinkLengthTolerance").prop("disabled", true);
-                $("#CoordinateTolerance").prop("disabled", false);
+                $("#LinkLengthTolerance").parent().parent().hide();
+                $("#CoordinateTolerance").parent().parent().show();
             } else {
-                $("#LinkLengthTolerance").prop("disabled", false);
-                $("#CoordinateTolerance").prop("disabled", true);
+                $("#LinkLengthTolerance").parent().parent().show();
+                $("#CoordinateTolerance").parent().parent().hide();
             }
         });
         
@@ -362,6 +367,7 @@ class CopyZoneSystem2(_m.Tool()):
             #---Publish the network
             if self.PublishNetworkFlag:
                 self.ToScenario.publish_network(targetNetwork, True)
+                _MODELLER.desktop.refresh_needed(True)
             self.TRACKER.completeTask()
             
 
@@ -450,12 +456,26 @@ class CopyZoneSystem2(_m.Tool()):
         return func
     
     def _GetMatchByGeometryLambda(self, targetNetwork):
-        grid = _util.buildSearchGridFromNetwork(targetNetwork)
+        extents = _spindex.get_network_extents(targetNetwork)
+        grid = _spindex.GridIndex(extents, marginSize= 1.0)
+        
+        for node in targetNetwork.regular_nodes():
+            grid.insertPoint(node)
         
         def func(connector, flagAtt, uncopiedConnectors):
             zone = connector.i_node
             source_jNode = connector.j_node
-            target_jNode = grid.getNearestNode(source_jNode.x, source_jNode.y, self.CoordinateTolerance)
+            
+            targetCandidates = grid.queryCircle(source_jNode.x, source_jNode.y, self.CoordinateTolerance)
+            target_jNode = None
+            minDistance = float('inf')
+            for node in targetCandidates:
+                dx = node.x - source_jNode.x
+                dy = node.y - source_jNode.y
+                d = sqrt(dx * dx + dy * dy)
+                if d < minDistance:
+                    target_jNode = node
+                    minDistance = d
             
             if target_jNode == None:
                 uncopiedConnectors.append((connector, "No match (Coordinate)"))

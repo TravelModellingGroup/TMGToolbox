@@ -232,9 +232,24 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
         primaryNetwork.create_attribute('NODE', "twin_node", default_value=None)
         secondaryNetwork.create_attribute('NODE', "twin_node", default_value=None)
         
-        grid = _util.buildSearchGridFromNetwork(secondaryNetwork)
+        extents = _spindex.get_network_extents(secondaryNetwork)
+        grid = _spindex.GridIndex(extents, marginSize= 1.0)
+        for node in secondaryNetwork.regular_nodes():
+            grid.insertPoint(node)
+        
         for primaryNode in primaryNetwork.regular_nodes():
             twin = grid.getNearestNode(primaryNode.x, primaryNode.y, self.SearchBuffer)
+            
+            candidates = grid.queryCircle(primaryNode.x, primaryNode.y, self.SearchBuffer)
+            twin = None
+            minDistance = float('inf')
+            for node in candidates:
+                dx = node.x - primaryNode.x
+                dy = node.y - primaryNode.y
+                d = sqrt(dx * dx + dy * dy)
+                if d < minDistance:
+                    twin = node
+                    minDistance = d
             
             if twin == None:
                 self.TRACKER.completeSubtask()
