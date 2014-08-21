@@ -59,6 +59,10 @@ V4 Transit Assignment
     2.2.2 Tool now initializes the output matrices before running the analyses.
     
     2.3.0 Added new feature to add the congestion term to the IVTT output matrix.
+    
+    2.3.1 Added new feature to try to heal the travel time functions, which can be
+            left in an inappropriate state if Python is exited before finishing the
+            assignment.
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -84,7 +88,7 @@ EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.3.0'
+    version = '2.3.1'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -582,6 +586,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
+            with _m.logbook_trace("Checking travel time functions"):
+                changes = self._HealTravelTimeFunctions()
+                if changes == 0: _m.logbook_write("No problems were found")
+            
+            
             if self.InVehicleTimeMatrixId:
                 _util.initializeMatrix(id= self.InVehicleTimeMatrixId,
                                        description= "Transit in-vehicle travel times")
@@ -652,6 +661,40 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts 
+    
+    def _HealTravelTimeFunctions(self):
+        changes = 0
+        for function in _MODELLER.emmebank.functions():
+            if function.type != 'TRANSIT_TIME': continue
+            
+            cleanedExpression = function.expression.replace(" ", '') #Remove all spaces from the expression
+            if "us3" in cleanedExpression:
+                if cleanedExpression.endswith("*(1+us3)"):
+                    #Detected pattern of transit time function which includes a congestion term
+                    #i.e., Python was exited before the context manager was able to restore the
+                    #function's original form. Therefore we try to heal it here.
+                    
+                    #Example: ft1 = "((length*60/us1))*(1+us3)", where the original function
+                    #is "(length*60/us1)"
+                    index = cleanedExpression.find("*(1+us3)")
+                    newExpression = cleanedExpression[:index][1:-1]
+                    
+                    function.expression = newExpression
+                    
+                    print "Detected function %s with existing congestion term." %function
+                    print "Original expression= '%s'" %cleanedExpression
+                    print "Healed expression= '%s'" %newExpression
+                    print ""
+                    _m.logbook_write("Detected function %s with existing congestion term." %function)
+                    _m.logbook_write("Original expression= '%s'" %cleanedExpression)
+                    _m.logbook_write("Healed expression= '%s'" %newExpression)
+                    
+                    changes += 1
+                else:
+                    raise Exception("Function %s already uses US3, which is reserved for transit" %function + \
+                                    " segment congestion values. Please modify the expression " +\
+                                    "to use different attributes.")
+        return changes
     
     def _AssignHeadwayFraction(self):
         exatt = self.Scenario.extra_attribute(self.HeadwayFractionAttributeId)
