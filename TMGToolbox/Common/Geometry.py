@@ -20,10 +20,13 @@
 from shapely import geometry as _geo
 import shapelib as _shp
 import dbflib as _dbf
+from shutil import copyfile
 from os import path as _path
 import warnings as _warn
 import inro.modeller as _m
-_util = _m.Modeller().module('TMG2.Common.Utilities')
+
+_MODELLER = _m.Modeller()
+_util = _MODELLER.module('TMG2.Common.Utilities')
 
 ##################################################################################################################
 
@@ -130,7 +133,7 @@ def turnToShape(turn):
     raise NotImplementedError("Turns are not yet implemented.")
 
 def transitLineToShape(line):
-    inode = line.segment(0)
+    inode = line.segment(0).i_node
     coordinates = [(inode.x, inode.y)]
     
     for segment in line.segments(False):
@@ -143,6 +146,7 @@ def transitLineToShape(line):
     for att in line.network.attributes('TRANSIT_LINE'):
         ls[att] = line[att]
     
+    return ls
 
 #---Static methods for casting shapely geometries to attachable geometries
 def castAsAttachable(geom):
@@ -364,7 +368,7 @@ class Shapely2ESRI():
     
     _shp2geom = dict((v,k) for k, v in _geom2shp.iteritems())
     
-    def __init__(self, filepath, mode='read', geometryType=0):
+    def __init__(self, filepath, mode='read', geometryType=0, projectionFile= None):
         '''
         Opens a new shapefile for reading, writing, or appending. If
         reading, only the filepath need be specified. If writing,
@@ -388,6 +392,10 @@ class Shapely2ESRI():
                     SHP_LINE_TYPE, SHP_POLYGON_TYPE, and SHP_NULL_TYPE.
                     Acceptable string values are 'POINT', 'LINESTRING',
                     'POLYGON', and 'NULL' respectively.
+            - projectionFile (=None): Optional path of a projection file to
+                    attach to this shapefile (writing ONLY). If omitted, the 
+                    projection file of the Emme project is used instead. The
+                    projection can also be set later using setProjection(...)
         
         '''
         self.filepath = _path.splitext(filepath)[0] #Drop the extension
@@ -401,6 +409,7 @@ class Shapely2ESRI():
             self._canwrite = False
             self.invalidFeatureIDs = set()
         elif mode.lower().startswith("w"): #WRITE MODE
+            self.setProjection(projectionFile)
             self._canread = False
             self._canwrite = True
             if geometryType == None:
@@ -638,7 +647,40 @@ class Shapely2ESRI():
         self.fields[name] = field
         field.addToDf(self._df)
         
-        return field
+        return field    
+    
+    def setProjection(self, projectionFile= None):
+        '''
+        Sets the projection file (*.prj) for the shapefile. By default, the projection
+        used is the same as that of the Emme project (only available for Emme versions
+        4.1 and newer).
+        
+        Args:
+            - projectionFile (=None): Optional path of a projection file to attach to this
+                    shapefile. If omitted, the projection file of the Emme project is used
+                    instead.
+            
+        '''
+        major, minor, release, beta = _util.getEmmeVersion(tuple)
+        
+        if projectionFile != None:
+            #I have no way of checking that the existing file actually IS a projection
+            #file. This will need to be used in good faith.
+            if not _path.isfile(projectionFile):
+                raise IOError("File %s does not exist" %projectionFile)
+        #For a non-specified projection path, copy the file from the Emme Project
+        #This can only be done for versions 4.1 and newer.
+        elif major >= 4 and minor >= 1:
+            if release < 2: #4.1.1 has a slightly difference name
+                projectionFile = _MODELLER.desktop.project.arcgis_spatial_reference_file
+            else:
+                projectionFile = _MODELLER.desktop.project.spatial_reference_file   
+        else:
+            _warn.warn("Emme project spatial reference only available in versions 4.1 and newer.")
+            return #Do nothing
+        
+        destinationPath = self.filepath + ".prj"
+        copyfile(projectionFile, destinationPath)
     
     def __enter__(self):
         self.open()
