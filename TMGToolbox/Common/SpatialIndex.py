@@ -245,6 +245,7 @@ class GridIndex():
         self.maxRow = self._transform_y(self.maxY) - 1
         
         self._grid = grid(xSize, ySize)
+        self._addressbook = {}
         
         self.__READ_ONLY_FLAG = True
     
@@ -418,6 +419,8 @@ class GridIndex():
         
         col, row = self._index_point(x, y)
         self._grid[col, row].add(obj)
+        self._addressbook[obj] = [(col, row)]
+        
     
     def insertpline(self, obj, coordinates):
         '''
@@ -437,8 +440,10 @@ class GridIndex():
             self._check_y(y0)
             self._check_y(y1)
             
-            for col, row in self._index_line_segment(x0, y0, x1, y1):
+            addresses = self.self._index_line_segment(x0, y0, x1, y1)
+            for col, row in addresses:
                 self._grid[col, row].add(obj)
+            self._addressbook[obj] = addresses
     
     def insertbox(self, obj, minx, miny, maxx, maxy):
         '''
@@ -457,8 +462,10 @@ class GridIndex():
         self._check_y(miny)
         self._check_y(maxy)
         
-        for col, row in self._index_box(minx, miny, maxx, maxy):
-            self._grid[col, row].add(obj)    
+        addresses = self._index_box(minx, miny, maxx, maxy)
+        for col, row in addresses:
+            self._grid[col, row].add(obj)
+        self._addressbook[obj] = addresses
     
     def insertPoint(self, pointOrNode):
         '''
@@ -502,6 +509,22 @@ class GridIndex():
         '''
         
         self.insertbox(polygon, *polygon.bounds)
+    
+    #------------------------------------------------------------------------------
+    #---REMOVAL
+    
+    def remove(self, obj):
+        '''
+        Removes an object from the spatial index. The object must have been
+        already inserted to the index, otherwise a KeyError will be raised.
+        '''
+        if not obj in self._addressbook:
+            raise KeyError(str(obj))
+        
+        for col, row in self._addressbook[obj]:
+            self._grid[col, row].remove(obj)
+            
+        self._addressbook.pop(obj)
     
     #------------------------------------------------------------------------------
     #---QUERY
