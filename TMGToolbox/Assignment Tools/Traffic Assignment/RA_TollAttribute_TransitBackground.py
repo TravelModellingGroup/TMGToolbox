@@ -379,9 +379,9 @@ class TollBasedRoadAssignment(_m.Tool()):
         #---3. Run
         try:
             with manager as self.DemandMatrix:
-                print "Running Auto Assignment"
-                
+                print "Starting auto assignment."
                 self._execute()
+                print "Road assignment complete."  
         except Exception, e:
             raise Exception(_util.formatReverseStack())
     
@@ -393,7 +393,6 @@ class TollBasedRoadAssignment(_m.Tool()):
         with _m.logbook_trace(name="%s (%s v%s)" %(self.RunTitle, self.__class__.__name__, self.version),
                                      attributes=self._getAtts()):
             
-            print "Starting Road Assignment"
             self._tracker.reset()
             
             if EMME_VERSION < 4:
@@ -435,7 +434,6 @@ class TollBasedRoadAssignment(_m.Tool()):
                 self._tracker.completeTask()
                 
                 with _m.logbook_trace("Running primary road assignment."):
-                    print "Running primary road assignment"
                     
                     if self.SOLAFlag:
                         spec = self._getPrimarySOLASpec(peakHourMatrix.id, appliedTollFactor)
@@ -464,7 +462,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                     else:
                         val = 'undefined'
                     
-                    print "Primary assignment complete at %s iterations" %number
+                    print "Primary assignment complete at %s iterations." %number
                     print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
 
                 self._tracker.startProcess(3)
@@ -472,7 +470,6 @@ class TollBasedRoadAssignment(_m.Tool()):
                     self._tracker.completeSubtask
                     
                     with _m.logbook_trace("All or nothing assignment to recover costs:"):
-                        print "Running all-or-nothing assignment to recover costs."
                         
                         with _m.logbook_trace("Copying auto times into UL2"):
                             networkCalculationTool(self._getSaveAutoTimesSpec(), scenario=allOrNothingScenario)
@@ -492,8 +489,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                 spec = self._getAoNAssignmentSpec(peakHourMatrix.id, costAttribute.id)
                                 
                             self._tracker.runTool(trafficAssignmentTool,
-                                                  spec, scenario=allOrNothingScenario)                 
-        print "Road Assignment complete."                
+                                                  spec, scenario=allOrNothingScenario)                               
 
     ##########################################################################################################
 
