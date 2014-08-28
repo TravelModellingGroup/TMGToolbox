@@ -247,7 +247,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
     
     #-------------------------------------------------------------------------------------------
     
-    def add_table(self, visible_border=False, title=""):
+    def add_table(self, visible_border=False, title="", width= None):
         '''
         Returns a special Table object which can be used inside a 'with'
         statement to wrap other Page widgets. This facilitates the creation
@@ -291,18 +291,19 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
                 ...
         
         '''
-        return _table(self.root, visible_border, title)
+        return _table(self.root, visible_border, title, width)
     
     #-------------------------------------------------------------------------------------------
 
 # Context manager for creating tables inside the PageBuilder
 class _table():
         
-    def __init__(self, root, visible_border, title):
+    def __init__(self, root, visible_border, title, width):
         self.root = root
         self.visible_border = visible_border
         self.title = title
         self.row_is_open = False
+        self.width = width
             
     def __enter__(self):
         borderWidth = ""
@@ -311,11 +312,12 @@ class _table():
             borderWidth = "1"
             frame = "solid"
         
-        #s = "<div class='t_element'><b>{0}</b><table style='border-style:{2};' border={1} \
-        #    cellpadding='2' width='98%'>".format(self.title, borderWidth,  frame)
-        
-        s = "<div class='sm_indent'><table class='tmg_table' style='border-style:{1};' border={0} \
-            cellpadding='0'>".format(borderWidth,  frame) #
+        if self.width == None:
+            s = "<div class='sm_indent'><table class='tmg_table' style='border-style:{1};' border={0} \
+            cellpadding='0'>".format(borderWidth,  frame)
+        else:
+            s = "<div class='sm_indent'><table class='tmg_table' style='border-style:{1};' border={0} \
+            cellpadding='0' width='{2}%'>".format(borderWidth,  frame, self.width)
             
         self.root.add_html(s)
         return self
@@ -341,7 +343,12 @@ class _table():
         self.row_is_open = True
             
     @contextmanager
-    def table_cell(self):
-        self.root.add_html("<td valign='baseline'>")
+    def table_cell(self, **attributes):
+        h = "<td"
+        for keyval in attributes.iteritems():
+            h += " %s='%s'" %keyval
+        h += ">"
+        
+        self.root.add_html(h)
         yield
         self.root.add_html("</td>")
