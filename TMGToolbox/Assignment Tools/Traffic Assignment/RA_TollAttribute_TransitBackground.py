@@ -63,6 +63,8 @@ Toll-Based Road Assignment
     3.2.0 Upgraded to use SOLA traffic assignment (Emme 4.1 and newer). Other new features:
         - Print status to console (also to XTMF) whilst running. Includes the stopping criterion
         - All-or-nothing scenario manager doesn't copy over the transit strategy files.
+        
+    3.2.1 Removed a scaling factor being incorrectly applied to the Best Relative Gap
     
 '''
 
@@ -87,7 +89,7 @@ def blankManager(obj):
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '3.2.0'
+    version = '3.2.1'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -783,7 +785,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                 "traversal_analysis": None,
                 "stopping_criteria": {
                                       "max_iterations": self.Iterations,
-                                      "best_relative_gap": self.brGap * 0.01,
+                                      "best_relative_gap": self.brGap,
                                       "relative_gap": self.rGap,
                                       "normalized_gap": self.normGap
                                       }
