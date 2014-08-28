@@ -76,7 +76,7 @@ class ModifyWalkModes(_m.Tool()):
                                             NCS11.\
                                             <br><br><b>This tool makes irreversible changes to your sceanrio! Be sure to back it \
                                             up before running.</b>",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

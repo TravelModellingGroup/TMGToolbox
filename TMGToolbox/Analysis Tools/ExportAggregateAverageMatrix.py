@@ -82,7 +82,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                          Zone groups with a zero summed weight will be averaged equally \
                          over all zones equally.\
                          <br><br><b>Temporary storage requirements:</b> 3 matrices",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

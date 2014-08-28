@@ -38,7 +38,7 @@ class CheckLinkLanes(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Check Link lanes",
                      description="Checks that special link type (centroid connectors, transit-only links) \
                                  meet NCS11 requirements.<br><br> Reports any errors in the logbook.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
                 pb.tool_run_status(self.tool_run_msg_status)

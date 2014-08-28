@@ -80,7 +80,7 @@ class Calc407ETRTolls(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Calculate 407 ETR Tolls v%s" %self.version,
                      description="Calculates a link extra attribute for the 407ETR toll highway\
                      which uses a two-zone system.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

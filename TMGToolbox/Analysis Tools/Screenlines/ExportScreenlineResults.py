@@ -59,7 +59,7 @@ class ExportScreenlineResults(_m.Tool()):
                                 crossing each element of the screenline and in each direction on that link into a \
                                 CSV file. The shapefile's attribute table must contain fields labeled 'Id', 'Descr' \
                                 'PosDirName' and 'NegDirName'. Results are written to a text file.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
         pb.add_select_scenario(tool_attribute_name="Scenario", title='Select a Scenario')

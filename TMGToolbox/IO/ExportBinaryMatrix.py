@@ -86,7 +86,7 @@ class ExportBinaryMatrix(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Binary Matrix v%s" %self.version,
                      description="Exports a matrix in the special binary format, which is \
                          considerably smaller and quicker to load.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

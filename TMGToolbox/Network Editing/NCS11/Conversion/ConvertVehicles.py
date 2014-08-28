@@ -62,7 +62,7 @@ class ConvertVehicles(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Convert Vehicles v%s" %self.version,
                                 description="Converts vehicle definitions and properties \
                                     according to NCS11 definitions.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

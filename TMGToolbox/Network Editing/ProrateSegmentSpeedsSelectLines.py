@@ -72,7 +72,7 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
                          prorates the line speed over each segment to get the segment \
                          speed (stored in US1). Each segment's speed is based on the \
                          link's freeflow speed (UL2).",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

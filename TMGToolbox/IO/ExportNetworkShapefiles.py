@@ -75,7 +75,7 @@ class ExportNetworkShapefiles(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="[TOOL NAME] v%s" %self.version,
                      description="[DESCRIPTION]",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

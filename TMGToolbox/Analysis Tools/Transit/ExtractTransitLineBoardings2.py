@@ -85,7 +85,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
                      description="Extracts total boardings for each transit line and exports \
                          them in a CSV file. Optionally, lines can be aggregated using an \
                          external file (two-column CSV).",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

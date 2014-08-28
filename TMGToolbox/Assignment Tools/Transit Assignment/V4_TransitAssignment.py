@@ -142,7 +142,7 @@ class V4_TransitAssignment(_m.Tool()):
                         <li> All available transit modes will be used.</li>\
                         </ul>\
                         <font color='red'>This tool is only compatible with Emme 4 and later versions</font>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -90,7 +90,7 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                      matrices from a strategy-based assignment, for transit lines flagged by attribute\
                      <b>@lflag</b>. <br><br>To calculate costs, the network must have transfer fares\
                      stored in <b>@tfare</b> and in-line fares stored in <b>us3</b>.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

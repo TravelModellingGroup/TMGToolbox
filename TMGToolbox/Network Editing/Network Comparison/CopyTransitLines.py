@@ -136,7 +136,7 @@ class CopyTransitLines(_m.Tool()):
                          and error message to the Logbook. In most cases, when the matched \
                          itinerary contains at least two nodes, the tool will also write a polyline \
                          to the output shapefile (along with the error details).",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

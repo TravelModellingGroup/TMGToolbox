@@ -78,7 +78,7 @@ class CreateZoneAdjacencyMatrix(_m.Tool()):
                          drawing a buffer around each zone boundary and testing for intersection; \
                          so zones touching at a corner will be considered adjacent. A zone is \
                          always adjacent to itself.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

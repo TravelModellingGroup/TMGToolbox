@@ -85,7 +85,7 @@ class CopyZoneSystem(_m.Tool()):
                         records the original length and the new length, to allow for the identification \
                         of nodes which have been moved (or created in a different location). \
                         <br><br>This shapefile is created regardless of whether the results are permanent.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -30,7 +30,7 @@ COORD_FACTOR = _MODELLER.emmebank.coord_unit_length
 class Face(_m.Tool()):
     
     def page(self):
-        pb = _m.ToolPageBuilder(self, title="Network Utilities", branding_text="TMG",
+        pb = _m.ToolPageBuilder(self, title="Network Utilities", branding_text="- TMG Toolbox",
                                 description="Collection of small functions (including \
                                 a shortest-path calculator) for network editing")
         

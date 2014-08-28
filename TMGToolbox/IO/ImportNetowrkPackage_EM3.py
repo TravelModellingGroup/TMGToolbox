@@ -94,7 +94,7 @@ class ImportNetworkPackage(_m.Tool()):
                              <br><br><font color='red'>\
                              This version is downgraded to work with the Modeller Beta Release \
                              in Emme 3.4.2</font>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

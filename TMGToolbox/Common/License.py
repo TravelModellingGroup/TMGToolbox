@@ -35,7 +35,7 @@ class License(_m.Tool()):
                                 <br><br>To request source code, please visit
                                 &lt;<a href="http://tmg.utoronto.ca">http://tmg.utoronto.ca</a>&gt;.''',
                                 runnable=False,
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         pb.wrap_html(body="""<h3 style="text-align: center;">GNU GENERAL PUBLIC LICENSE</h3>
 <p style="text-align: center;">Version 3, 29 June 2007</p>

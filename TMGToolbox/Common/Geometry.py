@@ -36,7 +36,7 @@ class Face(_m.Tool()):
         pb = _m.ToolPageBuilder(self, runnable=False, title="Geometry",
                                 description="Collection of private tools for performing geometric \
                                         operations from shapefiles.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
         

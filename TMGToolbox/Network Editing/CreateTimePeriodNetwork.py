@@ -108,7 +108,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                          24-hour base network and corresponding transit service table. \
                          Line speeds and headways are calculated from the service table.\
                          Transit lines with no service in the time period are removed.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -150,7 +150,7 @@ class CCGEN(_m.Tool()):
                                 zones (or loading zones from a file). Uses a utility function to choose \
                                 the best combination of candidate nodes for connections. Contact TMG \
                                 for additional documentation.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

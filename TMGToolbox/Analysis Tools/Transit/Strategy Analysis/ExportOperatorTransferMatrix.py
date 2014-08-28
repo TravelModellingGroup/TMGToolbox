@@ -197,7 +197,7 @@ class OperatorTransferMatrix(_m.Tool()):
                          <br><br><b>Temporary storage requirements:</b> 1 full matrix, 2 transit \
                          segment attributes, and 1 transit line attribute (if using a pre-built \
                          grouping scheme). ",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

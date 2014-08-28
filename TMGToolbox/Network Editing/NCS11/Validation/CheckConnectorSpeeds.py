@@ -38,7 +38,7 @@ class CheckConnectorSpeeds(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Check connector speeds",
                      description="Checks that all connectors are set to 40 km/hr as per NCS11.<br><br>\
                                  Reports any errors in the logbook.",
-                     branding_text="TMG.")
+                     branding_text="- TMG Toolbox"")
         
         if self.tool_run_msg != "": # to display messages in the page
                 pb.tool_run_status(self.tool_run_msg_status)

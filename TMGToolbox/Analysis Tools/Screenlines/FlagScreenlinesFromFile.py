@@ -47,7 +47,7 @@ class FlagScreenlinesFromFile(_m.Tool()):
                          <br><br>As this tool creates multiple attributes (one for each \
                          screenline defined), it is import to ensure that <b>the databank contains \
                          enough space</b> for the number of screenlines to be loaded.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

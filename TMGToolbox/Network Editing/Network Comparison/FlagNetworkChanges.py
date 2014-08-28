@@ -84,7 +84,7 @@ class FlagNetworkChanges(_m.Tool()):
                          <li> (Links only) Link was split in the other scenario</li>\
                          <li> (Links only) Belongs to a split link in the other scenario</li>\
                          </ol> Both scenarios will be contain the flagged attributes.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

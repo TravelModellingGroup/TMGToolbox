@@ -98,7 +98,7 @@ class GetStationAccessFile(_m.Tool()):
                          station (0 or 1), and the third column indicates whether a zone is within the \
                          radius of a GO Train station (0 or 1). Zones not in the radius of either are not \
                          listed.</p>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

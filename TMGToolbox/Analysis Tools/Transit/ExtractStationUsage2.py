@@ -156,7 +156,7 @@ class ExtractStationUsage2(_m.Tool()):
                      description="Extracts boardings and alightings for TTC subway station \
                          based on auxiliary transit volumes on station-node access and \
                          egress links.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

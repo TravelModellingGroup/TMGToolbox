@@ -62,7 +62,7 @@ class ConvertVDFs(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Convert VDFs v%s" %self.version,
                                 description="Converts link classification types (stored as VDF ids) from \
                                 DMG2001 to NCS11.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

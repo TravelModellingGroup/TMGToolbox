@@ -37,7 +37,7 @@ class Face(_m.Tool()):
     def page(self):
         pb = _m.ToolPageBuilder(self, runnable=False, title="Utilities",
                                 description="Collection of private utilities",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
         

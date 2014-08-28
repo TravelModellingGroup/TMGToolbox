@@ -55,7 +55,7 @@ class ExecutePythonScript(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Execute Python Script",
                                 description="A powerful utility Tool which facilitates executing a single Python script.\
                                 <br><br>All '<b>print</b>' statements get re-directed to the logbook.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

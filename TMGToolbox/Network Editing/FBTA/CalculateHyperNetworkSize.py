@@ -102,7 +102,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
                          <br><br>The number of nodes reported is calculated accurately, however \
                          the number of links is estimated. Trial runs indicate that the \
                          number of links is over-estimated by less than 1%.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

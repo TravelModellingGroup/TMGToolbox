@@ -153,7 +153,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                          extra attribute already containing the link toll cost.\
                          <br><br><b>Temporary Storage Requirements:</b> 1 extra \
                          link attributes, 1 full matrix, 1 scenario.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
