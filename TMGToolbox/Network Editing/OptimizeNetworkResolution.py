@@ -135,7 +135,7 @@ class OptimizeNetworkResolution(_m.Tool()):
                          the subset of nodes to remove.\
                          <br><br><font color='red'>Warning: Currently does NOT merge any \
                          scenario extra attributes.</font></p>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

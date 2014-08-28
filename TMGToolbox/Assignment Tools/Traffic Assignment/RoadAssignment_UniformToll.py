@@ -138,7 +138,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                          uniform toll cost to links meeting a selector expression.\
                          <br><br><b>Temporary Storage Requirements:</b> 2 extra \
                          link attributes, 1 full matrix, 1 scenario.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

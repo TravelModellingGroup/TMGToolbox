@@ -71,7 +71,7 @@ class CheckScenarioFunctions(_m.Tool()):
                      description="Loads a scenario and checks that all referenced functions \
                          (link VDF, transit segment TTF, and turn TPF) are defined in the \
                          emmebank. It will raise an error listing all missing functions.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

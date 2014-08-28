@@ -138,7 +138,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
                             attribute from a specified field. Non-numeric fields must be able to be \
                             parsed into numeric values. For example '1' is acceptable since it \
                             parse to 1, but 'blue' cannot be converted to a numeric value.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -185,7 +185,7 @@ class FBTNFromSchema(_m.Tool()):
                      attribute, one node extra attribute.\
                      <br><br><em>Tip: To view tool progress messages in real-time, press CTRL+K to \
                      open the Python Console.</em>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

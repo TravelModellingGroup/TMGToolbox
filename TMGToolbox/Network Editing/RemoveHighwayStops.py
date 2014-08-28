@@ -70,7 +70,7 @@ class RemoveHighwayStops(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Remove Highway Stops v%s" %self.version,
                      description="Disables transit stops on highways for all transit line segments.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

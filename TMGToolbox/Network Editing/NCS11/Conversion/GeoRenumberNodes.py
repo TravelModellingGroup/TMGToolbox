@@ -91,7 +91,7 @@ class GeoRenumberNodes(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Geometric Renumber Nodes v%s" %self.version,
                      description="Re-numbers nodes based on a geographic mesh imported from a shapefile. \
                          A compatible shapefile should be obtained from TMG in order for this to work.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

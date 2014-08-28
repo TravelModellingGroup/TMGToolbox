@@ -103,7 +103,7 @@ class ImportNetworkPackage(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Import Network Package v%s" %self.version,
                      description="Imports a new scenario from a compressed network package \
                              (*.nwp) file.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

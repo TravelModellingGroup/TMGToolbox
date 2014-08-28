@@ -89,7 +89,7 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                      description="Extracts average in-vehicle, walking, waiting, boarding time, \
                      and cost matrices from a fare-based assignment. Matrices will be multiplied by a \
                      feasibility matrices (where 0 = infeasible and 1 = feasible).",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

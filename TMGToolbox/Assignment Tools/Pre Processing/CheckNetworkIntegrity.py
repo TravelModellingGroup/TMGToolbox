@@ -91,7 +91,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                          <li> UL3 (capacity) = 0 for auto links</li>\
                          <li> Speed = 0 for transit lines</li>\
                          <li> US1 (segment speed) = 0 for transit segments with TTF = 1</li></ul>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

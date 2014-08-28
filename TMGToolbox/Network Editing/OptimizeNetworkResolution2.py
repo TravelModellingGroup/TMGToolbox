@@ -153,7 +153,7 @@ class RemoveExtraNodes(_m.Tool()):
                                 See below for a description of accepted function names. Note \
                                 that the function <b>force</b> can be used to keep nodes when \
                                 attribute values differ (e.g. to preserve lane change locations).",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

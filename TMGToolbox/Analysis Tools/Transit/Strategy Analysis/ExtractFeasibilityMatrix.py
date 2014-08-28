@@ -62,7 +62,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Extract Feasibility Matrix",
                      description="Extracts a feasibility matrix (where 1 is feasible and 0 is infeasible), based \
                                     on cut-off values for walking, waiting, and total times.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -94,7 +94,7 @@ class Station2StationAssignment(_m.Tool()):
                              demand (constrained by the station selector). Unlike most other transit \
                              assignment tools, this tool saves the constrained IVTT and wait times \
                              matrices as outputs.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

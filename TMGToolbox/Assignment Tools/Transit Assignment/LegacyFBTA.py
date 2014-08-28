@@ -114,7 +114,7 @@ class LegacyFBTA(_m.Tool()):
                                  <br><br>This Tool executes an Extended Transit Assignment, which allows\
                                  for subsequent analyses; such as those that can be found in \
                                  <em>TMG2.Assignment.TransitAnalysis</em>.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -100,7 +100,7 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
                          write the file</li>\
                          <li><b>nodes.txt</b> contains the node correspondence</li>\
                          <li><b>links.txt</b> contains the link correspondence</li></ul></p>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

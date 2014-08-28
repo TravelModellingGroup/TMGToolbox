@@ -40,7 +40,7 @@ class Face(_m.Tool()):
     def page(self):
         pb = _m.ToolPageBuilder(self, runnable=False, title="Spatial Index",
                                 description="For internal use only.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
         

@@ -33,7 +33,7 @@ class CheckLinkTypes(_m.Tool()):
     def page(self):
         pb = _m.ToolPageBuilder(self, title="Check Link Types",
                      description="Produces a worksheet to view all link types in a scenario. It is recommended that you open the default worksheet prior to running this tool.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

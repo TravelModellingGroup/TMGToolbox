@@ -110,7 +110,7 @@ class ExportNetworkPackage(_m.Tool()):
                      description="Exports all scenario data files (modes, vehicles, nodes, \
                                  links, transit lines, link shape, turns) to a compressed \
                                  network package file (*.nwp).",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

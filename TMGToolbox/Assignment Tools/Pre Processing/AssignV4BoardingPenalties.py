@@ -103,7 +103,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Assign V4 Boarding Penalties v%s" %self.version,
                      description="Assigns line-specific boarding penalties (stored in UT3) \
                          based on hard-coded line groupings.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

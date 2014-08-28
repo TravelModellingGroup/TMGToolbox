@@ -43,7 +43,7 @@ class Face(_m.Tool()):
                                     in which direction (positive is right-to-left, negative is left-to-\
                                     right). It can also automatically lookup results from \
                                     an assigned scenario.",
-                                branding_text="TMG")
+                                branding_text="- TMG Toolbox")
         
         pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
         

@@ -70,7 +70,7 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Export GTFS Stops As Shapefile v%s" %self.version,
                      description="Converts the <b>stops.txt</b> file to a shapefile, flagging which \
                              modes it serves as well.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

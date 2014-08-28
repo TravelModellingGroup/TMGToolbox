@@ -57,7 +57,7 @@ class FlagPremiumBusLines(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Flag Premium Bus Lines",
                      description="Flags certain premium lines by assigning '1' to line extra attribute '@lflag'. Initializes \
                          @lflag to 0 first.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

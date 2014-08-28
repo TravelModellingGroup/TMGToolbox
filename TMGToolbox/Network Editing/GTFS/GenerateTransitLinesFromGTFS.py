@@ -136,7 +136,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                         reported in the logbook). \
                         Lines which result in a repeated node (looped lines) will also be flagged for review.\
                         <br><br><b>Tip: </b>Press CTRL+K to bring up the Python Console to view tool progress.</p>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

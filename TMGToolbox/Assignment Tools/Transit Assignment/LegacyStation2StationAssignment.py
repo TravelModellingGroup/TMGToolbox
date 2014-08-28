@@ -114,7 +114,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
                          times and costs (fares) for feasible trips from station centroids only. Station \
                          centroids are hard-coded to NCS11 definitions.\
                          <br><br>Costs are computed assuming in-line fares are stored in <br>us3</b>.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

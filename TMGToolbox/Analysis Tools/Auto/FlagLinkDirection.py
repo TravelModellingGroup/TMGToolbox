@@ -73,7 +73,7 @@ class FlagLinkDirection(_m.Tool()):
                      description="Hard-coded to GTHA geographic type groupings, this tool \
                          assigns direction integers to each link (stored in an extra \
                          attribute). 1 = North, 2 = East, 3 = South, 4 = West",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

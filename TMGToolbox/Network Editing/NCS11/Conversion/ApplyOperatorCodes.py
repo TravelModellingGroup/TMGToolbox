@@ -130,7 +130,7 @@ class ApplyOperatorCodes(_m.Tool()):
                          for several pre-set line groups. The code can be saved to the \
                          standard UT1 attribute, or any transit line extra attribute. \
                          The grouping scheme is written to the logbook.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

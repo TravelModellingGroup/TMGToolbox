@@ -95,7 +95,7 @@ class CheckNetworkConnectivity(_m.Tool()):
                          <br><br><b>Temporary storage requirements:</b> One scenario (if needed), \
                          one matrix for transit times, and one matrix for <em>each auto mode \
                          selected</em>.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

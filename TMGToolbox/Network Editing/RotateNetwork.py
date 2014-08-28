@@ -83,7 +83,7 @@ class RotateNetwork(_m.Tool()):
                          in your reference network.\
                          <br><br>Warning: this tool makes irreversible changes to your scenario! \
                          make sure you copy before running.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

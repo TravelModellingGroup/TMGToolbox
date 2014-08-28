@@ -86,7 +86,7 @@ class ExportCountpostResults(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Countpost Results v%s" %self.version,
                      description="Exports traffic assignment results on links flagged with \
                          a countpost number.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

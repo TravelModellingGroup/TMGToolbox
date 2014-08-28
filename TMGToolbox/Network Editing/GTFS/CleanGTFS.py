@@ -50,7 +50,7 @@ class CleanGTFS(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Clean GTFS Folder v%s" %self.version,
                      description="Cleans a set of GTFS files by service ID. Filters all \
                          GTFS files except for routes, calendar, and shapes.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

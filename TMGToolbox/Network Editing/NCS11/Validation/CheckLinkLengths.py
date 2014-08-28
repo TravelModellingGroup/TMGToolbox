@@ -39,7 +39,7 @@ class CheckLinkLengths(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Check Link Lengths",
                      description="Checks that link lengths are Euclidean as per NCS11. Does not edit \
                                  the network, but reports in the logbook which links are suspect.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
                 pb.tool_run_status(self.tool_run_msg_status)

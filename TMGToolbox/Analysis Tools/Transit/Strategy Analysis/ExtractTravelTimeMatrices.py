@@ -58,7 +58,7 @@ class ExtractTravelTimeMatrices(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Extract Travel Time Matrices",
                      description="Extracts average in-vehicle, walking, waiting, and boarding time\
                      matrices from a strategy-based assignment.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

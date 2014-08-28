@@ -33,7 +33,7 @@ class MoveNetowrks(_m.Tool()):
                              compatible with UTM-17N.<br>\
                              <br><b>This tool is irreversible. Make sure to copy your \
                              scenarios prior to running!</b>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -34,7 +34,7 @@ class RenumberNonZoneNodes(_m.Tool()):
         pb = _m.ToolPageBuilder(self, title="Renumber Nodes",
                      description="Re numbers non-zone nodes from NCS01 to NCS11.<br><br><b>This tool is irreversible. \
                                  Make sure to copy your scenarios prior to running!</b>",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

@@ -63,7 +63,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Extract Select Line Matrix",
                      description="Extracts a select-line matrix for transit lines flagged\
                          by <b>@lflag</b>.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

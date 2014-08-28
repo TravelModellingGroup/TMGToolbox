@@ -37,7 +37,7 @@ class ImportBoardingPenalties(_m.Tool()):
     def page(self):      
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Import Boarding Penalties from File",
                      description="Imports boarding penalties into UT3 (line attribute 3) from a file",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         #pb.add_file_example(header_text="boarding_penalty;filter_expression;description",
                             #body_text="0.0; ut1=26 and mode=m; TTC subway")
