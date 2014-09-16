@@ -120,6 +120,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     CalculateCongestedIvttFlag = _m.Attribute(bool)
     
+    WalkSpeed = _m.Attribute(float)
     WalkPerceptionToronto = _m.Attribute(float)
     WalkPerceptionNonToronto = _m.Attribute(float)
     WalkPerceptionTorontoConnectors = _m.Attribute(float)
@@ -157,6 +158,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.CalculateCongestedIvttFlag = True
         
+        self.WalkSpeed = 4
         self.WaitPerception = 2.29
         self.WalkPerceptionToronto = 2.20
         self.WalkPerceptionNonToronto = 3.07
@@ -303,6 +305,14 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 pb.add_text_box(tool_attribute_name= 'WaitPerception', size= 10)
             with t.table_cell():
                 pb.add_html("Converts waiting minutes to impedance")
+            t.new_row()
+            
+            with t.table_cell():
+                 pb.add_html("<b>Walking Speed:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'WalkSpeed', size= 4)
+            with t.table_cell():
+                pb.add_html("Walking speed, in km/hr. Applied to all walk modes.")
             t.new_row()
             
             with t.table_cell():
@@ -504,7 +514,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
-                 WalkPerceptionToronto, WalkPerceptionNonToronto, 
+                 WalkSpeed, WalkPerceptionToronto, WalkPerceptionNonToronto, 
                  WalkPerceptionTorontoConnectors, WalkPerceptionNonTorontoConnectors,
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
                  SegmentFareAttributeId,
@@ -590,6 +600,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 changes = self._HealTravelTimeFunctions()
                 if changes == 0: _m.logbook_write("No problems were found")
             
+            self._ChangeWalkSpeed()
             
             if self.InVehicleTimeMatrixId:
                 _util.initializeMatrix(id= self.InVehicleTimeMatrixId,
@@ -695,6 +706,32 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                     " segment congestion values. Please modify the expression " +\
                                     "to use different attributes.")
         return changes
+    
+    def _ChangeWalkSpeed(self):
+        with _m.logbook_trace("Setting walk speeds to %s" %self.WalkSpeed):
+            if EMME_VERSION >= 4.1:
+                self._ChangeWalkSpeed4p1()
+            else:
+                self._ChangeWalkSpeed4p0()
+    
+    def _ChangeWalkSpeed4p0(self):
+        changeModeTool = _MODELLER.tool('inro.emme.data.network.mode.change_mode')
+        for mode in self.Scenario.modes():
+            if mode.type != 'AUX_TRANSIT': continue
+            changeModeTool(mode,
+                           mode_speed= self.WalkSpeed,
+                           scenario= self.Scenario)
+    
+    def _ChangeWalkSpeed4p1(self):
+        partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
+        
+        for mode in partialNetwork.modes():
+            if mode.type != 'AUX_TRANSIT': continue
+            mode.speed = self.WalkSpeed
+            _m.logbook_write("Changed mode %s" %mode.id)
+        
+        baton = partialNetwork.get_attribute_values('MODE', ['speed'])
+        self.Scenario.set_attribute_values('MODE', ['speed'], baton)
     
     def _AssignHeadwayFraction(self):
         exatt = self.Scenario.extra_attribute(self.HeadwayFractionAttributeId)
@@ -940,9 +977,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                             "type": "MATRIX_CALCULATION"
                         }
             matrixCalcTool(matrixCalcSpec, scenario= self.Scenario)
-        
     
     #---MODELLER INTERFACE FUNCTIONS
+    
+    def short_description(self):
+        return "Fare-based transit assignment tool for GTAModel V4"
     
     @_m.method(return_type=unicode)
     def get_scenario_node_attributes(self):
