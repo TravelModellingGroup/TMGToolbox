@@ -63,6 +63,9 @@ V4 Transit Assignment
     2.3.1 Added new feature to try to heal the travel time functions, which can be
             left in an inappropriate state if Python is exited before finishing the
             assignment.
+            
+    2.3.2 Added in re-calibrated default parameter values
+    
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -88,7 +91,7 @@ EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.3.1'
+    version = '2.3.2'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -160,10 +163,10 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.WalkSpeed = 4
         self.WaitPerception = 2.29
-        self.WalkPerceptionToronto = 2.20
-        self.WalkPerceptionNonToronto = 3.07
-        self.WalkPerceptionTorontoConnectors = 1.97
-        self.WalkPerceptionNonTorontoConnectors = 2.78
+        self.WalkPerceptionToronto = 1.76
+        self.WalkPerceptionNonToronto = 2.45
+        self.WalkPerceptionTorontoConnectors = 1.57
+        self.WalkPerceptionNonTorontoConnectors = 2.23
         self.BoardPerception = 1.5
         
         self.CongestionPerception = 0.44
