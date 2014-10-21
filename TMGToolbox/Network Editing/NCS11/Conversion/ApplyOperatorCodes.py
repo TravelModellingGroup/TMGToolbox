@@ -262,5 +262,8 @@ class ApplyOperatorCodes(_m.Tool()):
             if exatt.type == 'TRANSIT_LINE':
                 options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
         return "\n".join(options)
+    
+    def short_description(self):
+        return "Assigns transit lines to pre-set groupings, including NCS11."
         
         
