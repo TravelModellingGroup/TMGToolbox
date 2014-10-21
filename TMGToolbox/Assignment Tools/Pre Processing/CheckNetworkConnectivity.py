@@ -35,6 +35,8 @@
     
     1.0.0 Tested and published on 2014-05-02
     
+    1.0.1 Added searchability to mode selectors.
+    
 '''
 
 import traceback as _traceback
@@ -55,7 +57,7 @@ EMME_VERSION = _util.getEmmeVersion(float)
 
 class CheckNetworkConnectivity(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.0.1'
     tool_run_msg = ""
     number_of_tasks = 3 # For progress reporting, enter the integer number of tasks here
     
@@ -115,10 +117,12 @@ class CheckNetworkConnectivity(_m.Tool()):
             transitModeKeyval[id] = val
             
         pb.add_select(tool_attribute_name= 'AutoModeIds', keyvalues= autoModeKeyval,
-                      title= 'Select Auto Mode(s)', note= "Leave empty to disable checking for auto connectivity.")
+                      title= 'Select Auto Mode(s)', note= "Leave empty to disable checking for auto connectivity.",
+                      searchable= True)
         
         pb.add_select(tool_attribute_name= 'TransitModeIds', keyvalues= transitModeKeyval,
-                      title= "Select Transit Modes", note= "Leave empty to disable checking for transit connectivity.")
+                      title= "Select Transit Modes", note= "Leave empty to disable checking for transit connectivity.",
+                      searchable= True)
         
         pb.add_checkbox(tool_attribute_name= 'PreserveAssignmentFlag',
                         label= "Preserve existing assignment results?",
