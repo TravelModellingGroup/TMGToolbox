@@ -56,6 +56,14 @@ Import Network Package
     0.6.1 Tweaked the look of the metadata table. Also updated the file browser to not
             always start in the project Database folder.
     
+    1.0.0 Updated to better version numbering system. From here on out, the first digit
+            is a major version (i.e. a breaking change), the second digit is for new
+            features, and the last digit is for bug fixes. 
+            
+            Also added a feature to better handle scenarios, since Emme uses 5-digit
+            scenario numbers (regardless of how many scenarios are actually defined
+            in the Emmebank).
+    
 '''
 
 import inro.modeller as _m
@@ -68,6 +76,7 @@ import os as _os
 import shutil as _shutil
 import tempfile as _tf
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
+_bank = _MODELLER.emmebank
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
@@ -76,7 +85,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 
 class ImportNetworkPackage(_m.Tool()):
     
-    version = '0.6.1'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -90,14 +99,15 @@ class ImportNetworkPackage(_m.Tool()):
     ScenarioId = _m.Attribute(int) # common variable or parameter
     NetworkPackageFile = _m.Attribute(str)
     ScenarioDescription = _m.Attribute(str)
+    OverwriteScenarioFlag = _m.Attribute(bool)
     
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
         
         #---Set the defaults of parameters used by Modeller
-        self.ScenarioId = -1
         self.ScenarioDescription = ""
+        self.OverwriteScenarioFlag = False
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Import Network Package v%s" %self.version,
@@ -110,25 +120,27 @@ class ImportNetworkPackage(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name='NetworkPackageFile',
                            window_type='file',
-                           title="Network Pasckage File",
+                           title="Network Package File",
                            file_filter='*.nwp')
         
         pb.add_html("""<div class="t_element" id="NetworkPackageInfoDiv" style="padding: 0px inherit;">
         </div>""")
         
-        #pb.add_html("""<div class="t_element" id="NetworkPackageInfoDiv">
-        #<table border="1" width="90%" id="NetworkPackageInfoTable">
-        #</table>
-        #</div>""")
-        
+        pb.add_text_box(tool_attribute_name='ScenarioId',
+                        size=4,
+                        title="New Scenario Number",
+                        note="Enter a new or existing scenario")
+        '''
         pb.add_new_scenario_select(tool_attribute_name='ScenarioId',
                                   title="New Scenario Number",
                                   note="'Next' picks the next available scenario.")
+        '''
         
         pb.add_text_box(tool_attribute_name='ScenarioDescription',
                         size=60,
                         title="Scenario description")
         
+        #---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
@@ -150,6 +162,43 @@ class ImportNetworkPackage(_m.Tool()):
             $("#NetworkPackageInfoDiv").html(info);
                 
         });
+        
+        //$(this).parent().siblings(".t_after_widget").html(s);
+        
+        $("#ScenarioId").bind('change', function()
+        {
+            $(this).commit();
+            
+            var toolNote = $(this).parent().siblings(".t_after_widget");
+            
+            if (tool.check_scenario_exists())
+            {    
+                //Scenario exists
+                var h = "Scenario already exists. Overwrite? <input type='checkbox' id='ScenarioOverwrite' />"
+                toolNote.html(h);
+                
+                $("#ScenarioOverwrite").prop('checked', false)
+                    .bind('change', function()
+                {
+                    $(this).commit();
+                    
+                    if ($(this).prop('checked'))
+                    {
+                        tool.set_overwrite_scenario_flag_true();
+                    } else {
+                        tool.set_overwrite_scenario_flag_false();
+                    }
+                });
+                
+                $("#ScenarioDescription").val(tool.get_existing_scenario_title())
+                                        .trigger('change');
+                
+            } else {
+                toolNote.html("Select an existing or new scenario.");
+            }
+        });
+        
+        $("#ScenarioId").trigger('change');
     });
 </script>""" % pb.tool_proxy_tag)
         
@@ -161,11 +210,11 @@ class ImportNetworkPackage(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         
+        if self.ScenarioId < 1:
+            raise Exception("Scenario '%s' is not a valid scenario" %self.ScenarioId)
+        
         if self.NetworkPackageFile == None:
             raise IOError("Import file not specified")
-        
-        if self.ScenarioId < 0:
-            self.ScenarioId = _util.getAvailableScenarioNumber()
         
         try:
             self._Execute()
@@ -182,6 +231,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.NetworkPackageFile = NetworkPackageFile
         self.ScenarioDescription = ""
         self.ScenarioId = ScenarioId
+        self.OverwriteScenarioFlag = True
         
         try:
             self._Execute()
@@ -195,6 +245,9 @@ class ImportNetworkPackage(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
+            
+            if _bank.scenario(self.ScenarioId) != None and not self.OverwriteScenarioFlag:
+                raise IOError("Scenario %s exists and overwrite flag is set to false." %self.ScenarioId)
             
             importModeTool = _MODELLER.tool('inro.emme.data.network.mode.mode_transaction')
             importVehicleTool = _MODELLER.tool('inro.emme.data.network.transit.vehicle_transaction')
@@ -211,7 +264,14 @@ class ImportNetworkPackage(_m.Tool()):
                 
                 baseName = _path.splitext(_path.basename(self.NetworkPackageFile))[0] # Get the base name for file contents
                 
-                scenario = _MODELLER.emmebank.create_scenario(self.ScenarioId)
+                if _bank.scenario(self.ScenarioId) != None:
+                    if not self.OverwriteScenarioFlag:
+                        raise IOError("Scenario %s already exists." %self.ScenarioId)
+                    sc = _bank.scenario(self.ScenarioId)
+                    if sc.modify_protected or sc.delete_protected:
+                        raise IOError("Scenario %s is protected against modifications" %self.ScenarioId)
+                    _bank.delete_scenario(self.ScenarioId)
+                scenario = _bank.create_scenario(self.ScenarioId)
                 scenario.title = self.ScenarioDescription
                 
                 _m.logbook_write("Created new scenario %s" %self.ScenarioId)
@@ -423,7 +483,19 @@ class ImportNetworkPackage(_m.Tool()):
             
             return "<table border='1' width='90&#37'><tbody><tr><td valign='top'>%s</td></tr></tbody></table>" %cell
             
-            
-            
+    @_m.method()
+    def set_overwrite_scenario_flag_true(self):
+        self.OverwriteScenarioFlag = True
     
+    @_m.method()
+    def set_overwrite_scenario_flag_false(self):
+        self.OverwriteScenarioFlag = False
+    
+    @_m.method(return_type= bool)
+    def check_scenario_exists(self):
+        return _bank.scenario(self.ScenarioId) != None
+            
+    @_m.method(return_type= str)
+    def get_existing_scenario_title(self):
+        return _bank.scenario(self.ScenarioId).title
     
