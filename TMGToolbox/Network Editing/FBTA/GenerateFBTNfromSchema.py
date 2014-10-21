@@ -1199,7 +1199,7 @@ class FBTNFromSchema(_m.Tool()):
             includeAllElement = fareElement.find('include_all_groups')
             if includeAllElement != None:
                 includeAll = self.__BOOL_PARSER[includeAllElement.text]
-                _m.logbook_write("Inlcude all groups: %s" %includeAll)
+                _m.logbook_write("Include all groups: %s" %includeAll)
             else:
                 includeAll = True
             
