@@ -78,7 +78,7 @@ class SetWalkSpeed(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Set Walk Speed v%s" %self.version,
                      description="Sets the speed factor of all auxiliary transit modes to the \
                         specified value",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
