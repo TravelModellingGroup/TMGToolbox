@@ -37,6 +37,8 @@ Assign V4 Boarding Penalties
     1.0.0 Cleaned and published. Now accepts a list of scenarios, for easy use (Modeller only).
             Also changed the order of paramters to better match the order of groups used in
             GTAModel V4.
+            
+    1.0.1 Added short description
 '''
 
 import inro.modeller as _m
@@ -52,7 +54,7 @@ NullPointerException = _util.NullPointerException
 
 class AssignV4BoardingPenalties(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.0.1'
     tool_run_msg = ""
     number_of_tasks = 15 # For progress reporting, enter the integer number of tasks here
     
@@ -502,4 +504,6 @@ class AssignV4BoardingPenalties(_m.Tool()):
     @_m.method(return_type=unicode)
     def tool_run_msg_status(self):
         return self.tool_run_msg
-        
+    
+    def short_description(self):
+        return "Assign boarding penalties to pre-set line groups."
