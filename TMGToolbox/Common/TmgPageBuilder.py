@@ -181,7 +181,8 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
         self.root.add_select(tool_attribute_name,
                              keyvalues= options,
                              title= title,
-                             note= note)
+                             note= note,
+                             searchable= True)
     
     #-------------------------------------------------------------------------------------------
     
