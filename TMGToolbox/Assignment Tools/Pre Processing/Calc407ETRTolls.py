@@ -33,6 +33,9 @@ CALC 407 ETR TOLLS
 '''
     0.0.1 Created
     
+    1.0.0 Switched to new versioning system. Also: added searchability to comboboxes
+            and added tool defaults.
+    
 '''
 
 import inro.modeller as _m
@@ -49,7 +52,7 @@ NullPointerException = _util.NullPointerException
 
 class Calc407ETRTolls(_m.Tool()):
     
-    version = '0.0.1'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 2 # For progress reporting, enter the integer number of tasks here
     
@@ -75,7 +78,10 @@ class Calc407ETRTolls(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.LightZoneToll = 0.0
         self.RegularZoneToll = 0.0
-    
+        
+        self.ResultAttributeId = "@toll"
+        self.TollZoneAttributeId = "@z407"
+        
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Calculate 407 ETR Tolls v%s" %self.version,
                      description="Calculates a link extra attribute for the 407ETR toll highway\
@@ -98,20 +104,19 @@ class Calc407ETRTolls(_m.Tool()):
             descr = "{id} - LINK - {desc}".format(id=att.id, desc=att.description)
             keyval[att.id] = descr
 
-        with pb.add_table(visible_border=False) as t:
-            with t.table_cell():
-                pb.add_select(tool_attribute_name='ResultAttributeId',
+        pb.add_select(tool_attribute_name='ResultAttributeId',
                               keyvalues=keyval,
                               title="Result Attribute",
-                              note="Link attribute to save results into")
-            with t.table_cell():
-                pb.add_select(tool_attribute_name='TollZoneAttributeId',
+                              note="Link attribute to save results into",
+                              searchable= True)
+        pb.add_select(tool_attribute_name='TollZoneAttributeId',
                               keyvalues=keyval,
                               title="Toll Zone Attribute",
                               note="Flag indicating which toll zone: \
                               <br>   1: Light toll zone\
                               <br>   2: Regular toll zone\
-                              <br> All other values are assumed not to be tolled.")
+                              <br> All other values are assumed not to be tolled.",
+                              searchable= True)
 
         pb.add_header("TOLL COSTS")
 

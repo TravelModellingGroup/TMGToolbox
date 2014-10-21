@@ -222,7 +222,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
         
         self.root.add_select(tool_attribute_name=tool_attribute_name,
                              keyvalues=availableMatrixIds,
-                             title=title, note=note)
+                             title=title, note=note, searchable= True)
     
     #-------------------------------------------------------------------------------------------
     
