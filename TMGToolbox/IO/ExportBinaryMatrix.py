@@ -209,7 +209,7 @@ class ExportBinaryMatrix(_m.Tool()):
                 "self": self.__MODELLER_NAMESPACE__}
         
         if _util.databankHasDifferentZones(_bank):
-            atts['Scenario': self.Scenario]
+            atts['Scenario'] = self.Scenario
             
         return atts
         
