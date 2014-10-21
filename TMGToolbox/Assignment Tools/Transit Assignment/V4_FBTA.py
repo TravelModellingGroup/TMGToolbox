@@ -66,6 +66,11 @@ V4 Transit Assignment
             
     2.3.2 Added in re-calibrated default parameter values
     
+    2.4.0 Major bug fix: By default, IVTT already includes the congestion term. Prior
+            versions produce a 'double counted' matrix of IVTT + 2C instead of the 
+            intended IVTT + C. The tool now subtracts the congestion matrix to produce
+            'raw' times.
+    
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -91,7 +96,7 @@ EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.3.2'
+    version = '2.4.0'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -272,7 +277,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                         a matrix in which to save in-vehicle times")
 
         pb.add_checkbox(tool_attribute_name= 'CalculateCongestedIvttFlag',
-                        label= "Add congestion to in-vehicle times?")
+                        label= "Include congestion in total in-vehicle times?")
         
         pb.add_select_output_matrix(tool_attribute_name= 'WaitTimeMatrixId',
                                     include_existing= True,
@@ -397,12 +402,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                 title= "Relative Gap")
         
         if EMME_VERSION >= 4.1:
-            keyval3 = {}
+            keyval3 = []
             for i in range(cpu_count()):
                 if i == 0:
-                    keyval3[1] = "1 processor"
+                    tup = 1, "1 processor"
                 else:
-                    keyval3[i + 1] = "%s processors" %(i + 1)
+                    tup = i + 1, "%s processors" %(i + 1)
+                keyval3.insert(0, tup)
             
             pb.add_select(tool_attribute_name='NumberOfProcessors',
                           keyvalues= keyval3,
@@ -646,8 +652,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                         self._ExtractCostMatrix()
                     else: self.TRACKER.completeTask()
                     
-                    if self.InVehicleTimeMatrixId and self.CalculateCongestedIvttFlag:
-                        self._ExtractCongestionMatrix()
+                    if self.InVehicleTimeMatrixId and not self.CalculateCongestedIvttFlag:
+                        self._ExtractRawIvttMatrix()
                     else: 
                         self.TRACKER.completeTask()
 
@@ -930,7 +936,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
     
-    def _ExtractCongestionMatrix(self):
+    def _ExtractRawIvttMatrix(self):
         with _util.tempMatrixMANAGER("Congestion matrix") as congestionMatrix:
             analysisSpec = {
                          "trip_components": {
@@ -963,9 +969,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             
             self.TRACKER.runTool(strategyAnalysisTool, analysisSpec, scenario= self.Scenario)
             
-            expression = "{mfivtt} + {mfcong} * {cp}".format(mfivtt= self.InVehicleTimeMatrixId,
-                                                             mfcong= congestionMatrix.id,
-                                                             cp= self.CongestionPerception)
+            expression = "{mfivtt} - {mfcong}".format(mfivtt= self.InVehicleTimeMatrixId,
+                                                             mfcong= congestionMatrix.id)
             matrixCalcSpec = {
                             "expression": expression,
                             "result": self.InVehicleTimeMatrixId,
