@@ -440,7 +440,7 @@ class GridIndex():
             self._check_y(y0)
             self._check_y(y1)
             
-            addresses = self.self._index_line_segment(x0, y0, x1, y1)
+            addresses = self._index_line_segment(x0, y0, x1, y1)
             for col, row in addresses:
                 self._grid[col, row].add(obj)
             self._addressbook[obj] = addresses
