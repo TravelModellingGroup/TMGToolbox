@@ -61,7 +61,7 @@ def _insertlink(link, grid):
     inode = link.i_node
     jnode = link.j_node
     
-    coordinates = copy(link.vertices)
+    coordinates = [vertex for vertex in link.vertices]
     coordinates.insert(0, (inode.x, inode.y))
     coordinates.append((jnode.x, jnode.y))
     
