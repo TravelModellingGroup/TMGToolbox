@@ -166,7 +166,8 @@ _mtxNames = {'FULL' : 'mf',
              'ORIGIN' : 'mo',
              'SCALAR' : 'ms'}
 
-def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL'):
+def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL', \
+                     preserve_description= False):
     '''
     Utility function for creation and initialization of matrices. Only works
     for the current Emmebank.
@@ -188,6 +189,10 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
             or 'FULL'. If an ID is specified, the matrix type will be
             inferred from the ID's prefix. This argument is NOT optional
             if passing in an integer ID, or if requesting a new matrix.
+        - preserve_description (=False): Set to True to preserve the description of an 
+            existing matrix. This is useful if you don't know whether the matrix being 
+            initialized exists or is new, and you want to specify a 'default' 
+            description.
     
     Returns: The Emme Matrix object created or initialized.
     '''
@@ -223,7 +228,7 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
         
         mtx.initialize(value=default)
         if name: mtx.name = name[:6]
-        if description:  mtx.description = description[:40]
+        if description and not preserve_description:  mtx.description = description[:40]
         _m.logbook_write("Initialized existing matrix %s: '%s' (%s)." %(id, mtx.name, mtx.description))
         
     return mtx
@@ -320,7 +325,8 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
         - default (=0.0): The matrix's default value.
     '''
     
-    mtx = initializeMatrix(default=default, description=description, matrix_type=matrix_type)
+    mtx = initializeMatrix(default=default, description= 'Temporary %s' %description, \
+                           matrix_type=matrix_type)
     
     if mtx == None:
         raise Exception("Could not create temporary matrix: %s" %description)
