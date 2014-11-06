@@ -64,6 +64,9 @@ Import Network Package
             scenario numbers (regardless of how many scenarios are actually defined
             in the Emmebank).
     
+    1.1.0 Improved the way function conflicts are handled. Now, options are given to 
+            the MergeFunctions tool to handle.
+    
 '''
 
 import inro.modeller as _m
@@ -79,13 +82,13 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _bank = _MODELLER.emmebank
 _util = _MODELLER.module('TMG2.Common.Utilities')
 _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
-
+mergeFunctionsTool = _MODELLER.tool('TMG2.IO.MergeFunctions')
 
 ##########################################################################################################
 
 class ImportNetworkPackage(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.1.0'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -100,6 +103,7 @@ class ImportNetworkPackage(_m.Tool()):
     NetworkPackageFile = _m.Attribute(str)
     ScenarioDescription = _m.Attribute(str)
     OverwriteScenarioFlag = _m.Attribute(bool)
+    ConflictOption = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -108,6 +112,7 @@ class ImportNetworkPackage(_m.Tool()):
         #---Set the defaults of parameters used by Modeller
         self.ScenarioDescription = ""
         self.OverwriteScenarioFlag = False
+        self.ConflictOption = mergeFunctionsTool.EDIT_OPTION
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Import Network Package v%s" %self.version,
@@ -140,6 +145,12 @@ class ImportNetworkPackage(_m.Tool()):
                         size=60,
                         title="Scenario description")
         
+        pb.add_select(tool_attribute_name= 'ConflictOption',
+                      keyvalues= mergeFunctionsTool.OPTIONS_LIST,
+                      title= "Function Conflict Option",
+                      note= "Select an action to take if there are conflicts found \
+                      between the package and the current Emmebank.")
+                
         #---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
@@ -226,12 +237,13 @@ class ImportNetworkPackage(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario %s created." %self.ScenarioId)
     
     
-    def __call__(self, NetworkPackageFile, ScenarioId):
+    def __call__(self, NetworkPackageFile, ScenarioId, ConflictOption):
         
         self.NetworkPackageFile = NetworkPackageFile
         self.ScenarioDescription = ""
         self.ScenarioId = ScenarioId
         self.OverwriteScenarioFlag = True
+        self.ConflictOption = ConflictOption
         
         try:
             self._Execute()
@@ -256,7 +268,6 @@ class ImportNetworkPackage(_m.Tool()):
             importTransitTool = _MODELLER.tool('inro.emme.data.network.transit.transit_line_transaction')
             importTurnTool = _MODELLER.tool('inro.emme.data.network.turn.turn_transaction')
             importAttributesTool = _MODELLER.tool('inro.emme.data.network.import_attribute_values')
-            mergeFunctionsTool = _MODELLER.tool('TMG2.IO.MergeFunctions')
             
             with nested(self._zipFileMANAGER(), self._TempDirectoryMANAGER()) as (zf, tempFolder):
                 
@@ -333,6 +344,7 @@ class ImportNetworkPackage(_m.Tool()):
                 if "functions.411" in self.__components:       
                     zf.extract(self.__components[6], tempFolder)
                     mergeFunctionsTool.FunctionFile = "%s/%s" %(tempFolder, self.__components[6])
+                    mergeFunctionsTool.ConflictOption = self.ConflictOption
                     mergeFunctionsTool.run()
                 self.TRACKER.completeTask()
                         

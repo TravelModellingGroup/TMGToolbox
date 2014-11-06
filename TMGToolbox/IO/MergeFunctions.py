@@ -42,6 +42,9 @@ Merge Functions
     
     0.1.3 Conflicted functions are now sorted in alphabetical order
     
+    1.0.0 Switched versioning system to start at 1.0.0. Additionally, added flag options
+        to automate the tool.
+    
 '''
 
 import inro.modeller as _m
@@ -58,8 +61,7 @@ _tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
 ##########################################################################################################
 
 class MergeFunctions(_m.Tool()):
-    
-    version = '0.1.3'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 3 # For progress reporting, enter the integer number of tasks here
     
@@ -71,12 +73,26 @@ class MergeFunctions(_m.Tool()):
     FunctionFile = _m.Attribute(str)
     RevertOnError = _m.Attribute(bool)
     
+    ConflictOption = _m.Attribute(str)
+    
+    RAISE_OPTION = "RAISE"
+    PRESERVE_OPTION = "PRESERVE"
+    OVERWRITE_OPTION = "OVERWRITE"
+    EDIT_OPTION = "EDIT"
+    
+    OPTIONS_LIST = [(EDIT_OPTION, "EDIT - Launch an editor GUI to resolve conflicts manually."),
+                  (RAISE_OPTION, "RAISE - Raise an error if any conflicsts are detected."),
+                  (PRESERVE_OPTION, "PRESERVE - Preserve functional definitions from the current Emme project."),
+                  (OVERWRITE_OPTION, "OVERWRITE - Overwrite functional definitions from the function file.")]
+    
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
         
         #---Set the defaults of parameters used by Modeller
         self.RevertOnError = True
+        
+        self.ConflictOption = 'EDIT'
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Merge Functions v%s" % self.version,
@@ -93,6 +109,11 @@ class MergeFunctions(_m.Tool()):
         pb.add_select_file(tool_attribute_name='FunctionFile',
                            window_type='file', start_path=baseFolder,
                            title="Functions File")
+        
+        pb.add_select(tool_attribute_name= 'ConflictOption',
+                      keyvalues= self.OPTIONS_LIST, title= "Conflict resolution option",
+                      note= "Select an option for this tool to perform if \
+                      conflicts in functional definitions are detected.")
         
         pb.add_checkbox(tool_attribute_name='RevertOnError',
                         label="Revert on error?")
@@ -244,24 +265,45 @@ class MergeFunctions(_m.Tool()):
             
             if len(conflicts) > 0:
                 conflicts.sort()
-                dialog = FunctionConflictDialog(conflicts)
-                result = dialog.exec_()
                 
-                if result == dialog.Accepted:
-                    acceptedChanges = dialog.getFunctionsToChange()
-                    for fid, expression in acceptedChanges.iteritems():
-                        func = _MODELLER.emmebank.function(fid)
-                        oldExpression = func.expression
-                        func.expression = expression
-                        modifiedFunctions[fid] = oldExpression
-                        
-                        with _m.logbook_trace("Modified function %s" %fid.upper()):
-                            _m.logbook_write("Old expression: %s" %oldExpression)
-                            _m.logbook_write("New expression: %s" %expression)
-                dialog.deleteLater()
+                #If the PRESERVE option is selected, do nothing
+                
+                if self.ConflictOption == self.OVERWRITE_OPTION:
+                    #Overwrite exisiting functions with new ones
+                    for fid, database_expression, file_expression in conflicts:
+                        func = emmebank.function(fid)
+                        func.expression = file_expression
+                        modifiedFunctions[fid] = database_expression
+                        with _m.logbook_trace("Changed function %s" %fid):
+                            _m.logbook_write("Old expression: %s" %database_expression)
+                            _m.logbook_write("New expresion: %s" %file_expression)
+                elif self.ConflictOption == self.EDIT_OPTION:
+                    self._LaunchGUI(conflicts, modifiedFunctions)
+                elif self.ConflictOption == self.RAISE_OPTION:
+                    tup = len(conflicts), ', '.join([t[0] for t in conflicts])
+                    msg = "The following %s functions have conflicting definitions: %s" %tup
+                    raise Exception(msg)
                         
         return len(newFunctions), len(modifiedFunctions)
+    
+    
+    def _LaunchGUI(self, conflicts, modifiedFunctions):
+        dialog = FunctionConflictDialog(conflicts)
+        result = dialog.exec_()
         
+        if result == dialog.Accepted:
+            acceptedChanges = dialog.getFunctionsToChange()
+            for fid, expression in acceptedChanges.iteritems():
+                func = _MODELLER.emmebank.function(fid)
+                oldExpression = func.expression
+                func.expression = expression
+                modifiedFunctions[fid] = oldExpression
+                
+                with _m.logbook_trace("Modified function %s" %fid.upper()):
+                    _m.logbook_write("Old expression: %s" %oldExpression)
+                    _m.logbook_write("New expression: %s" %expression)
+        dialog.deleteLater()
+    
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
