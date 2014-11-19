@@ -59,6 +59,8 @@ Export Network Package
     
     0.6.0 Added metadata file to spec (NWP Version 4.0)
     
+    1.0.0 Switched to new versioning system. Also added searchability to extra attribute selector.
+    
 '''
 
 import inro.modeller as _m
@@ -80,7 +82,7 @@ _inroExportUtil = _MODELLER.module("inro.emme.utility.export_utilities")
 
 class ExportNetworkPackage(_m.Tool()):
     
-    version = '0.5.0'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 9 # For progress reporting, enter the integer number of tasks here
     
@@ -126,7 +128,7 @@ class ExportNetworkPackage(_m.Tool()):
         
         keyval = self._GetSelectAttributeOptionsJSON()
         pb.add_select(tool_attribute_name="AttributeIdsToExport", keyvalues=keyval,
-                    title="Extra Attributes",  
+                    title="Extra Attributes", searchable= True,  
                     note="Optional")
         
         pb.add_text_box(tool_attribute_name= 'ExportMetadata',
