@@ -71,6 +71,16 @@ V4 Transit Assignment
             intended IVTT + C. The tool now subtracts the congestion matrix to produce
             'raw' times.
     
+    3.0.0 Changed to use CONICAL delay function
+    
+    3.1.0 Added walking perception for PD1 (links with type 101).
+    
+    3.2.0 Added estimable congestion exponent term (not yet available from Modeller)
+    
+    3.3.0 Changed to apply a 1.0 walking perception to subway-to-subway links.
+    
+    3.4.0 Added new feature to optionally export congestion matrix.
+    
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -96,7 +106,7 @@ EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '2.4.0'
+    version = '3.4.0'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -120,11 +130,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     WaitTimeMatrixId = _m.Attribute(str)
     WalkTimeMatrixId = _m.Attribute(str)
     FareMatrixId = _m.Attribute(str)
+    CongestionMatrixId = _m.Attribute(str)
     
     xtmf_InVehicleTimeMatrixNumber = _m.Attribute(int)
     xtmf_WaitTimeMatrixNumber = _m.Attribute(int)
     xtmf_WalkTimeMatrixNumber = _m.Attribute(int)
     xtmf_FareMatrixNumber = _m.Attribute(int)
+    xtmf_CongestionMatrixNumber = _m.Attribute(int)
     
     CalculateCongestedIvttFlag = _m.Attribute(bool)
     
@@ -133,10 +145,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     WalkPerceptionNonToronto = _m.Attribute(float)
     WalkPerceptionTorontoConnectors = _m.Attribute(float)
     WalkPerceptionNonTorontoConnectors = _m.Attribute(float)
+    WalkPerceptionPD1 = _m.Attribute(float)
+    
+    CongestionPerception = _m.Attribute(float)
+    CongestionExponent = _m.Attribute(float)
     
     WaitPerception = _m.Attribute(float)
     BoardPerception = _m.Attribute(float)
-    CongestionPerception = _m.Attribute(float)
     FarePerception = _m.Attribute(float)
     AssignmentPeriod = _m.Attribute(float)
     GoTrainHeadwayFraction = _m.Attribute(float)
@@ -167,28 +182,30 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.CalculateCongestedIvttFlag = True
         
         self.WalkSpeed = 4
-        self.WaitPerception = 2.29
-        self.WalkPerceptionToronto = 1.76
-        self.WalkPerceptionNonToronto = 2.45
-        self.WalkPerceptionTorontoConnectors = 1.57
-        self.WalkPerceptionNonTorontoConnectors = 2.23
-        self.BoardPerception = 1.5
+        self.WaitPerception = 3.534
+        self.WalkPerceptionToronto = 1.8
+        self.WalkPerceptionNonToronto =3.845
+        self.WalkPerceptionTorontoConnectors = 2.26
+        self.WalkPerceptionNonTorontoConnectors = 1.12
+        self.WalkPerceptionPD1 = 1.14
+        self.BoardPerception = 1
         
-        self.CongestionPerception = 0.44
-        self.FarePerception = 9.78
+        self.CongestionPerception = 0.41
+        self.CongestionExponent = 1.62
+        
+        self.FarePerception = 10.694
         
         self.AssignmentPeriod = 2.04 
-        self.NormGap = 0.01
-        self.RelGap = 0.001
+        self.NormGap = 0
+        self.RelGap = 0
         self.Iterations = 5
-        self.GoTrainHeadwayFraction = 0.18
+        self.GoTrainHeadwayFraction = 0.20
         
         if EMME_VERSION >= 4.1:
             self.NumberOfProcessors = cpu_count()
         
         #---Private flags for calibration purposes only
         self._useLogitConnectorChoice = True
-        #self._connectorLogitScale = 0.2 #Use self.xtmf_OriginDistributionLogitScale
         self.xtmf_OriginDistributionLogitScale = 0.2
         self._connectorLogitTruncation = 0.05
         
@@ -197,9 +214,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self._auxTrLogitTruncation = 0.05
         
         self._useMultiCore = False
-        self._congestionFunctionType = "BPR" #"CONICAL"
+        self._congestionFunctionType = "CONICAL" #"BPR"
         self._considerTotalImpedance = True
-        self._exponent = 4        
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="V4 Fare-Based Transit Assignment v%s" %self.version,
@@ -279,6 +295,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         pb.add_checkbox(tool_attribute_name= 'CalculateCongestedIvttFlag',
                         label= "Include congestion in total in-vehicle times?")
         
+        pb.add_select_output_matrix(tool_attribute_name= 'CongestionMatrixId',
+                                    include_existing= True,
+                                    title= "Congestion Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to congestion values.")
+        
         pb.add_select_output_matrix(tool_attribute_name= 'WaitTimeMatrixId',
                                     include_existing= True,
                                     title= "Wait Times Matrix",
@@ -356,6 +378,14 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             t.new_row()
             
             with t.table_cell():
+                 pb.add_html("<b>PD1 Walk Time Perception:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'WalkPerceptionPD1', size= 10)
+            with t.table_cell():
+                pb.add_html("Walk perception on links in PD1 (type == 101)")
+            t.new_row()
+            
+            with t.table_cell():
                  pb.add_html("<b>Boarding Perception:</b>")
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'BoardPerception', size= 10)
@@ -369,6 +399,14 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 pb.add_text_box(tool_attribute_name= 'CongestionPerception', size= 10)
             with t.table_cell():
                 pb.add_html("Converts congestion impedance to impedance")
+            t.new_row()
+            
+            with t.table_cell():
+                 pb.add_html("<b>Congestion Exponent:</b>")
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name= 'CongestionExponent', size= 10)
+            with t.table_cell():
+                pb.add_html("Exponent applied to congestion function")
             t.new_row()
             
             with t.table_cell():
@@ -525,12 +563,16 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
                  WalkSpeed, WalkPerceptionToronto, WalkPerceptionNonToronto, 
                  WalkPerceptionTorontoConnectors, WalkPerceptionNonTorontoConnectors,
+                 WalkPerceptionPD1,
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
                  SegmentFareAttributeId,
                  BoardPerception, CongestionPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
-                 xtmf_FareMatrixNumber, xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag):
+                 xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag,
+                 CongestionExponent):
+        
+        
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -563,6 +605,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             self.WalkTimeMatrixId = "mf%s" %xtmf_WalkTimeMatrixNumber
         if xtmf_FareMatrixNumber:
             self.FareMatrixId = "mf%s" %xtmf_FareMatrixNumber
+        if xtmf_CongestionMatrixNumber:
+            self.CongestionMatrixId = "mf%s" %self.xtmf_CongestionMatrixNumber
         
         #---4 Set up other parameters
         self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
@@ -577,9 +621,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WalkPerceptionTorontoConnectors = WalkPerceptionTorontoConnectors
         self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
         self.BoardPerception = BoardPerception
+        self.WalkPerceptionPD1 = WalkPerceptionPD1
         
         self.CongestionPerception = CongestionPerception
         self.FarePerception = FarePerception
+        self.CongestionExponent = CongestionExponent
         
         self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
         
@@ -614,6 +660,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.InVehicleTimeMatrixId:
                 _util.initializeMatrix(id= self.InVehicleTimeMatrixId,
                                        description= "Transit in-vehicle travel times")
+            if self.CongestionMatrixId:
+                _util.initializeMatrix(id= self.CongestionMatrixId,
+                                       description= "Transit in-vehicle congestion")
             if self.WalkTimeMatrixId:
                 _util.initializeMatrix(id= self.WalkTimeMatrixId,
                                        description= "Transit total walk times")
@@ -643,19 +692,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                      impedances= impedanceMatrix,
                                      scenario= self.Scenario)                
                 
-                with _m.logbook_trace("Extracting result matrices"):
-                    if self.InVehicleTimeMatrixId or self.WalkTimeMatrixId or self.WaitTimeMatrixId:
-                        self._ExtractTimesMatrices()
-                    else: self.TRACKER.completeTask()
-                    
-                    if self.FareMatrixId:
-                        self._ExtractCostMatrix()
-                    else: self.TRACKER.completeTask()
-                    
-                    if self.InVehicleTimeMatrixId and not self.CalculateCongestedIvttFlag:
-                        self._ExtractRawIvttMatrix()
-                    else: 
-                        self.TRACKER.completeTask()
+                self._ExtractOutputMatrices()
 
     ##########################################################################################################
         
@@ -775,12 +812,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             networkCalcTool(spec, self.Scenario)
         
         with _m.logbook_trace("Assigning walk time perception factors"):
-            applySelection(self.WalkPerceptionTorontoConnectors, "i=0,1000 or j=0,1000")
-            applySelection(self.WalkPerceptionNonTorontoConnectors, "i=1000,7000 or j=1000,7000")
             applySelection(self.WalkPerceptionToronto, "i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000")
             applySelection(self.WalkPerceptionNonToronto, "i=20000,90000 or j=20000,90000")
+            applySelection(self.WalkPerceptionPD1, "type=101")
+            applySelection(self.WalkPerceptionTorontoConnectors, "i=0,1000 or j=0,1000")
+            applySelection(self.WalkPerceptionNonTorontoConnectors, "i=1000,7000 or j=1000,7000")
+            applySelection(1, "mode=t and i=97000,98000 and j=97000,98000")
             applySelection(0, "i=9700,10000 or j=9700,10000")
-            
     
     def _GetBaseAssignmentSpec(self):
         
@@ -873,7 +911,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         funcSpec = {
                     "type": self._congestionFunctionType,
                     "weight": self.CongestionPerception,
-                    "exponent": self._exponent,
+                    "exponent": self.CongestionExponent,
                     "assignment_period": self.AssignmentPeriod,
                     "orig_func": False,
                     "congestion_attribute": "us3" #Hard-coded to US3
@@ -889,6 +927,41 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                     }
         return stopSpec
     
+    def _ExtractOutputMatrices(self):
+        
+        #If any of the standard results matrices are required, extract them
+        if self.InVehicleTimeMatrixId or self.WalkTimeMatrixId or self.WaitTimeMatrixId:
+            self._ExtractTimesMatrices()
+        
+        #If extracting RAW IVTT and NOT also saving the congestion matrix,
+        #we need to create a temporary matrix in which to store congestion
+        #using a context manager
+        if not self.CongestionMatrixId and self.InVehicleTimeMatrixId and \
+                not self.CalculateCongestedIvttFlag:
+            congestionMatrixManager = _util.tempMatrixMANAGER()
+        else:
+            @contextmanager
+            def congestionMatrixManager():
+                try:
+                    yield _MODELLER.emmebank.matrix(self.CongestionMatrixId)
+                finally:
+                    pass
+        
+        #If the congestion matrix is required, or Raw IVTT matrix is required, extract the congestion matrix
+        if self.InVehicleTimeMatrixId and not self.CalculateCongestedIvttFlag or self.CongestionMatrixId:
+            with congestionMatrixManager() as congestionMatrix:
+                self._ExtractCongestionMatrix(congestionMatrix.id)
+            
+                #If Raw IVTT is required, use the congestion matrix to fix it
+                if self.InVehicleTimeMatrixId and not self.CalculateCongestedIvttFlag:
+                    self._FixRawIVTT(congestionMatrix.id)
+        
+        #If the fares matrix is required, extract that.
+        if self.FareMatrixId:
+            self._ExtractCostMatrix()
+                
+            
+
     def _ExtractTimesMatrices(self):
         spec = {
                 "by_mode_subset": {
@@ -935,6 +1008,56 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         
         self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
+    
+    def _ExtractCongestionMatrix(self, congestionMatrixId):
+        spec = {"trip_components": {
+                    "boarding": None,
+                    "in_vehicle": "@ccost",
+                    "aux_transit": None,
+                    "alighting": None
+                },
+                "sub_path_combination_operator": "+",
+                "sub_strategy_combination_operator": "average",
+                "selected_demand_and_transit_volumes": {
+                    "sub_strategies_to_retain": "ALL",
+                    "selection_threshold": {
+                        "lower": -999999,
+                        "upper": 999999
+                    }
+                },
+                "analyzed_demand": None,
+                "constraint": None,
+                "results": {
+                    "strategy_values":congestionMatrixId,
+                    "selected_demand": None,
+                    "transit_volumes": None,
+                    "aux_transit_volumes": None,
+                    "total_boardings": None,
+                    "total_alightings": None
+                },
+                "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
+            }
+        self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
+    
+    def _FixRawIVTT(self, congestionMatrixId):
+        expression = "{mfivtt} - {mfcong}".format(mfivtt= self.InVehicleTimeMatrixId,
+                                                 mfcong= congestionMatrixId)
+
+        matrixCalcSpec = {
+                "expression": expression,
+                "result": self.InVehicleTimeMatrixId,
+                "constraint": {
+                    "by_value": None,
+                    "by_zone": None
+                },
+                "aggregation": {
+                    "origins": None,
+                    "destinations": None
+                },
+                "type": "MATRIX_CALCULATION"
+            }
+        matrixCalcTool(matrixCalcSpec, scenario= self.Scenario)
+        
     
     def _ExtractRawIvttMatrix(self):
         with _util.tempMatrixMANAGER("Congestion matrix") as congestionMatrix:
