@@ -79,7 +79,7 @@ class ExtractCongestionMatrix(_m.Tool()):
                          a congested transit assignment run. The congestion cost must be stored \
                          in transit segment extra attribute '@ccost' which is used by default in \
                          the congested/capacitated assignment tools.",
-                     branding_text="TMG")
+                     branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
