@@ -665,7 +665,11 @@ class OperatorTransferMatrix(_m.Tool()):
                 if len(cells) != 3: continue
                 o = int(cells[0])
                 d = int(cells[1])
-                val = float(cells[2])
+                try:
+                    val = float(cells[2])
+                except ValueError:
+                    val = cells[2].replace('u', '.')
+                    val = float(val)
                 od = (o,d)
                 retval[od] = val
         return retval
