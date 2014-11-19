@@ -271,7 +271,27 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTO
             network.delete_transit_line(line.id)
         raise
     
-    # All new items are created. Delete the old ones
+    #All new links are created. Copy the turn attributes
+    turnAtts = [att for att in network.attributes('TURN')]
+    firstForwardLink = newLinksF[0]
+    for turn in link.incoming_turns():
+        newTurn = network.turn(turn.i_node.number, turn.j_node.number, firstForwardLink.j_node.number)
+        for att in turnAtts: newTurn[att] = turn[att]
+    lastForwardLink = newLinksF[-1]
+    for turn in link.outgoing_turns():
+        newTurn = network.turn(lastForwardLink.i_node.number, turn.j_node.number, turn.k_node.number)
+        for att in turnAtts: newTurn[att] = turn[att]
+    if link.reverse_link != None and twoWay:
+        firstRevrseLink = newLinksR[0]
+        for turn in link.reverse_link.incoming_turns():
+            newTurn = network.turn(turn.i_node.number, turn.j_node.number, firstRevrseLink.j_node.number)
+            for att in turnAtts: newTurn[att] = turn[att]
+        lastReverseLink = newLinksR[-1]
+        for turn in link.reverse_link.outgoing_turns():
+            newTurn = network.turn(lastReverseLink.i_node.number, turn.j_node.number, turn.k_node.number)
+            for att in turnAtts: newTurn[att] = turn[att]
+            
+    #Delete the original links
     if link.reverse_link != None:
         network.delete_link(link.j_node.number, link.i_node.number)
     network.delete_link(link.i_node.number, link.j_node.number)
