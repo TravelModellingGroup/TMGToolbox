@@ -442,8 +442,9 @@ class MTBXDatabase():
 #---MAIN METHOD
 
 def build_toolbox(toolbox_file, source_folder, title= 'TMG Toolbox', namespace= 'TMG', consolidate= False):
-    print "Build Toolbox Utility"
-    print "-------------"
+    print "------------------------"
+    print " Build Toolbox Utility"
+    print "------------------------"
     print ""
     print "toolbox: %s" %toolbox_file
     print "source folder: %s" %source_folder
