@@ -10,7 +10,7 @@ Deployment instructions:
  
   1. The toolbox works best with Emme 4 or newer (and not at all supported by versions older than Emme 3.4). Some tools work better in Emme 4.1, so be sure to grab the latest version.
   2. Using Git, download the source code to your local machine.
-  3. Using Python, run "Build Toolbox.bat". This will generate the file "TMG_Toolbox.mtbx" in the same folder.
+  3. Double-click on  "Build Toolbox.bat". This will generate the file "TMG_Toolbox.mtbx" in the same folder.
   4. In Emme, open Modeller
   5. In Modeller, right-click on 'Toolboxes' (by default in the upper-left corner), and click on 'Add a Toolbox' in the context menu.
   6. Browse to the location of TMG_Toolbox.mtbx and click 'Save' to add the toolbox to your current Emme project.
