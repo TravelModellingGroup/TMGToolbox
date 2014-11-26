@@ -22,8 +22,8 @@ import math as _math
 from warnings import warn as _warn
 import traceback as _traceback
 _MODELLER = _m.Modeller()
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_geolib = _MODELLER.module('TMG2.Common.Geometry')
+_util = _MODELLER.module('tmg.common.utilities')
+_geolib = _MODELLER.module('tmg.common.geometry')
 COORD_FACTOR = _MODELLER.emmebank.coord_unit_length
 
 

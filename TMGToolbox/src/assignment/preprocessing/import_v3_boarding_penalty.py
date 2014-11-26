@@ -20,7 +20,7 @@
 import os
 import inro.modeller as _m
 import traceback as _traceback
-_tmgTPB = _m.Modeller().module('TMG2.Common.TmgToolPageBuilder')
+_tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 
 class ImportBoardingPenalties(_m.Tool()):
     

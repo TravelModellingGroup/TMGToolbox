@@ -80,9 +80,9 @@ import shutil as _shutil
 import tempfile as _tf
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _bank = _MODELLER.emmebank
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
-mergeFunctionsTool = _MODELLER.tool('TMG2.IO.MergeFunctions')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+mergeFunctionsTool = _MODELLER.tool('tmg.input_output.merge_functions')
 
 ##########################################################################################################
 

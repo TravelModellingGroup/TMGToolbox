@@ -35,7 +35,7 @@ class CalculateStationFrequency(_m.Tool()):
     def page(self):
         pb = _m.ToolPageBuilder(self, title="CalculateStationFrequency",
                      description="Calculates the number of transit vehicles passing by station centroids.",
-                     branding_text="- TMG Toolbox"Tools")
+                            branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)

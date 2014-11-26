@@ -80,10 +80,10 @@ import math
 import inspect
 import numpy
 _MODELLER = _m.Modeller()
-_g = _MODELLER.module('TMG2.Common.Geometry')
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
-_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
+_g = _MODELLER.module('tmg.common.geometry')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+_spindex = _MODELLER.module('tmg.common.spatial_index')
 
 def _straightLineDist(x1, y1, x2, y2):
     return math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2))

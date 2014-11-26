@@ -41,8 +41,8 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
-_util = _m.Modeller().module('TMG2.Common.Utilities')
-_tmgTPB = _m.Modeller().module('TMG2.Common.TmgToolPageBuilder')
+_util = _m.Modeller().module('tmg.common.utilities')
+_tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 
 ##########################################################################################################
 

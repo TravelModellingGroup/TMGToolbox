@@ -26,7 +26,7 @@ import warnings as _warn
 import inro.modeller as _m
 
 _MODELLER = _m.Modeller()
-_util = _MODELLER.module('TMG2.Common.Utilities')
+_util = _MODELLER.module('tmg.common.utilities')
 
 ##################################################################################################################
 

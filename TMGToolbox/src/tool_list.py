@@ -41,8 +41,8 @@ from contextlib import contextmanager
 from contextlib import nested
 from html import HTML
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 ##########################################################################################################
 
@@ -58,7 +58,7 @@ class Index(_m.Tool()):
                          alphabetically by tool name, with links to each tool.",
                      branding_text="- TMG Toolbox", runnable= False)
         
-        tmg = [tb for tb in _MODELLER.toolboxes if tb.namespace() == 'TMG2'][0]
+        tmg = [tb for tb in _MODELLER.toolboxes if tb.namespace() == 'tmg'][0]
         toolNames = self.get_tool_names(tmg)
         topCategories = self.get_top_categories(tmg)
         

@@ -51,9 +51,9 @@ from contextlib import nested
 from os import path as _path
 from math import sqrt
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
-_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+_spindex = _MODELLER.module('tmg.common.spatial_index')
 
 ##########################################################################################################
 

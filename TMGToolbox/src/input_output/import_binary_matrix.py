@@ -39,8 +39,8 @@ import inro.modeller as _m
 import traceback as _traceback
 from inro.emme.matrix import MatrixData as _MatrixData
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _bank = _MODELLER.emmebank
 
 ##########################################################################################################

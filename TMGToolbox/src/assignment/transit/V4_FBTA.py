@@ -90,8 +90,8 @@ from multiprocessing import cpu_count
 import inro.modeller as _m
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
 networkCalcTool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')

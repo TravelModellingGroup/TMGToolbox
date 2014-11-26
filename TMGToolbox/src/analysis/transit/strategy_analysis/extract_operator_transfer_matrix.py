@@ -53,8 +53,8 @@ import tempfile as _tf
 import shutil as _shutil
 
 _MODELLER = _m.Modeller()
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 networkCalculator = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 traversalAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.traversal_analysis')
 networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.network_results')

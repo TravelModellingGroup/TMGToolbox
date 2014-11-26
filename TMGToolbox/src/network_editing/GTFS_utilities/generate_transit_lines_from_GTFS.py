@@ -66,9 +66,9 @@ from contextlib import contextmanager
 from contextlib import nested
 from os import path as _path
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_editing = _MODELLER.module('TMG2.Common.Editing')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_util = _MODELLER.module('tmg.common.utilities')
+_editing = _MODELLER.module('tmg.common.network_editing')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 ##########################################################################################################
 

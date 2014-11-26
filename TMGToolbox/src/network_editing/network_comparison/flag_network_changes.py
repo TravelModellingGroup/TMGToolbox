@@ -44,8 +44,8 @@ import os
 from os import path as _path
 import shutil as _shutil
 import tempfile as _tf
-_util = _m.Modeller().module('TMG2.Common.Utilities')
-_tmgTPB = _m.Modeller().module('TMG2.Common.TmgToolPageBuilder')
+_util = _m.Modeller().module('tmg.common.utilities')
+_tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 
 ##########################################################################################################

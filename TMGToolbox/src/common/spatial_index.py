@@ -34,7 +34,7 @@ from numpy import max as nmax
 import inro.modeller as _m
 from copy import copy
 _MODELLER = _m.Modeller()
-_util = _MODELLER.module('TMG2.Common.Utilities')
+_util = _MODELLER.module('tmg.common.utilities')
 
 class Face(_m.Tool()):
     def page(self):

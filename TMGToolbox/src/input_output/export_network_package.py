@@ -74,8 +74,8 @@ import shutil as _shutil
 import zipfile as _zipfile
 import tempfile as _tf
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _inroExportUtil = _MODELLER.module("inro.emme.utility.export_utilities")
 
 ##########################################################################################################

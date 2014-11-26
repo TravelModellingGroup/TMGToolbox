@@ -25,7 +25,7 @@ Analysis Tool for Extracting Travel Time Matrices
 '''
 import inro.modeller as _m
 import traceback as _traceback
-_util = _m.Modeller().module('TMG2.Common.Utilities')
+_util = _m.Modeller().module('tmg.common.utilities')
 
 class ExtractTravelTimeMatrices(_m.Tool()):
     

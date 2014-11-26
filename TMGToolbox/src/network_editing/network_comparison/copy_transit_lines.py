@@ -51,10 +51,10 @@ from html import HTML
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _building = _MODELLER.module('inro.emme.utility.transit_line_build_utilities')
 
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_geolib = _MODELLER.module('TMG2.Common.Geometry')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
-_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
+_util = _MODELLER.module('tmg.common.utilities')
+_geolib = _MODELLER.module('tmg.common.geometry')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+_spindex = _MODELLER.module('tmg.common.spatial_index')
 
 ShapefileWriter = _geolib.Shapely2ESRI
 NullPointerException = _util.NullPointerException

@@ -56,6 +56,9 @@ Fare-Based Transit Network (FBTN) From Schema
     1.1.5 Modified to use the new spatial index. Also changed the copy scenario call to NOT
         copy over strategy or path files as this considerably increases runtime.
     
+    1.2.0 Added new feature to accept relative paths for shapefiles. Absolute paths are still
+        supported.
+    
 '''
 from copy import copy
 from contextlib import contextmanager
@@ -70,11 +73,11 @@ import inro.modeller as _m
 from inro.emme.core.exception import ModuleError
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
-_geolib = _MODELLER.module('TMG2.Common.Geometry')
-_editing = _MODELLER.module('TMG2.Common.Editing')
-_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+_geolib = _MODELLER.module('tmg.common.geometry')
+_editing = _MODELLER.module('tmg.common.network_editing')
+_spindex = _MODELLER.module('tmg.common.spatial_index')
 Shapely2ESRI = _geolib.Shapely2ESRI
 GridIndex = _spindex.GridIndex
 TransitLineProxy = _editing.TransitLineProxy
@@ -132,7 +135,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.1.5'
+    version = '1.2.0'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -496,6 +499,7 @@ class FBTNFromSchema(_m.Tool()):
                 if not 'path' in shapefileElement.attrib:
                     raise XmlValidationError("Sahpefile '%s' must specify a 'path' attribute" %id)
                 p = shapefileElement.attrib['path']
+                p = self._GetAbsoluteFilepath(p) #Joins the path if it is relative.
                 
                 if not path.exists(p):
                     raise XmlValidationError("File not found for id '%s' at %s" %(id, p))
@@ -695,6 +699,7 @@ class FBTNFromSchema(_m.Tool()):
             for shapefileElement in zonesElement.findall('shapefile'):
                 id = shapefileElement.attrib['id']
                 pth = shapefileElement.attrib['path']
+                pth = self._GetAbsoluteFilepath(pth) #Join the path if it is relative
                 
                 reader = Shapely2ESRI(pth, 'r')
                 reader.open()
@@ -710,7 +715,12 @@ class FBTNFromSchema(_m.Tool()):
         return shapefiles
     
     def _IndexNodeGeometries(self):
-        #This part is magic, and COMPLETELY UNDOCUMENTED code
+        '''
+        Uses get_attribute_values() (Scenario function) to create proxy objects for Emme nodes.
+        
+        This is done to allow node locations to be loaded IN THE ORDER SPECIFIED BY THE FILE,
+        regardless of whether those nodes are specified by a selector or by geometry. 
+        '''
         indices, xtable, ytable = self.BaseScenario.get_attribute_values('NODE', ['x', 'y'])
         
         extents = min(xtable), min(ytable), max(xtable), max(ytable)
@@ -770,7 +780,17 @@ class FBTNFromSchema(_m.Tool()):
                 
                 if polygon.intersects(point):
                     proxy.zone = number
-                
+    
+    def _GetAbsoluteFilepath(self, otherPath):
+        '''
+        For the shapefile path, this function checks if it is a relative path or not.
+        If it is a relative path, it returns a valid absolute path based on the
+        location of the XML Schema File.
+        '''
+        if path.isabs(otherPath):
+            return otherPath
+        
+        return path.join(self.XMLSchemaFile, otherPath)
     
     
     #---

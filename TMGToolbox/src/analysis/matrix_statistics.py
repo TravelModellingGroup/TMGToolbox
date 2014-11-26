@@ -52,8 +52,8 @@ from inro.emme.matrix import submatrix as get_submatrix
 from datetime import datetime as dt
 from os import path
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 ##########################################################################################################
 

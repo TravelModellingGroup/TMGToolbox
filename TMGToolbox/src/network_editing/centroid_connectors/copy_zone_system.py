@@ -68,10 +68,10 @@ from contextlib import nested
 from inro.emme.database.emmebank import Emmebank
 from math import sqrt
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
-_util = _MODELLER.module('TMG2.Common.Utilities')
-_tmgTPB = _MODELLER.module('TMG2.Common.TmgToolPageBuilder')
-_geolib = _MODELLER.module('TMG2.Common.Geometry')
-_spindex = _MODELLER.module('TMG2.Common.SpatialIndex')
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+_geolib = _MODELLER.module('tmg.common.geometry')
+_spindex = _MODELLER.module('tmg.common.spatial_index')
 NullPointerException = _util.NullPointerException
 Shapely2ESRI = _geolib.Shapely2ESRI
 
