@@ -40,6 +40,7 @@ Export Countpost Results
     1.1.0 Added new feature to optionally select an alternate countpost attribute.
             Also, now countpost results will be reported in increasing order.
     
+    1.1.1 Fixed a bug in the tool page Javascript
 '''
 
 import inro.modeller as _m
@@ -56,7 +57,7 @@ NullPointerException = _util.NullPointerException
 
 class ExportCountpostResults(_m.Tool()):
     
-    version = '1.1.0'
+    version = '1.1.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -137,7 +138,8 @@ class ExportCountpostResults(_m.Tool()):
             
             $("#AlternateCountpostAttributeId")
                 .empty()
-                .append(tool._GetSelectAttributeOptionsHTML())
+                .append("<option value='-1'>None - No attribute</option>")
+                .append(tool.preload_scenario_attributes())
             inro.modeller.page.preload("#AlternateCountpostAttributeId");
             $("#AlternateCountpostAttributeId").trigger('change');
         });
