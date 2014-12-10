@@ -234,7 +234,7 @@ class BasicTransitAssignment(_m.Tool()):
         if self.demandMatrix == None:
             _m.logbook_write("Initializing temporary scalar demand matrix.")
             #def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL'):
-            self.demandMatrix = _utiil.initializeMatrix(matrix_type='SCALAR', name='trscal', description="Scalar matrix to get transit times")
+            self.demandMatrix = _util.initializeMatrix(matrix_type='SCALAR', name='trscal', description="Scalar matrix to get transit times")
             
             if self.demandMatrix == None:
                 raise Exception("Could not create temporary scalar demand matrix!")
