@@ -263,7 +263,7 @@ class Station2StationAssignment(_m.Tool()):
                                       scenario=self.scenario,
                                       add_volumes=self.UseAdditiveDemand) #TASK 3
                     
-                    # some error with progress reporting is ocurring here.
+                    # some error with progress reporting is occurring here.
                 
                 with _m.logbook_trace("Extracting output matrices"):
                     self._tracker.runTool(matrixResultsTool,
@@ -293,9 +293,10 @@ class Station2StationAssignment(_m.Tool()):
         #Code here is executed upon entry
         
         with _m.logbook_trace("Initializing temporary demand matrix"):
+            id=None
             if self.demandMatrix == None:
                 
-                self.demandMatrix = _util.initializeMatrix(id=None,
+                self.demandMatrix = _util.initializeMatrix(id,
                                                       matrix_type='SCALAR',
                                                       name='trscal',
                                                       description='Scalar matrix to get transit times')
