@@ -21,9 +21,9 @@
 '''
 LEGACY GTA Model fare-based transit assignment script
 
-    Authors: Eric Miller, Michael Hain, Peter Kucirek
+    Authors: Eric Miller, Michael Hain, Peter Kucirek, James Vaughan
 
-    Latest revision by: Peter Kucirek
+    Latest revision by: James Vaughan
     
     
     This legacy version sets up @tfare on centroid connectors, assuming an 'old' version
@@ -50,14 +50,17 @@ LEGACY GTA Model fare-based transit assignment script
         - Used Network Calculator Tool instead of a foreach loop for faster processing. 
     
     0.2.2 Testing for assignment results. Extracting travel times will produce accurate results.
+    0.2.3 Added Parallel processing for EMME 4.1+
 '''
 
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################
 
@@ -473,7 +476,10 @@ class LegacyFBTA(_m.Tool()):
                 "od_results": None,
                 "type": "EXTENDED_TRANSIT_ASSIGNMENT"
                 }
-        
+        if EMME_VERSION[0] + 0.1 * EMME_VERSION[1] >= 4.1:
+            spec["performance_settings"] = {
+                    "number_of_processors": cpu_count()
+                    }
         return spec
             
     @_m.method(return_type=unicode)

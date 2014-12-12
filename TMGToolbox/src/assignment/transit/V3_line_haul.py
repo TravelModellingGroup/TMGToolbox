@@ -23,7 +23,7 @@ GTAModel Legacy Rail transit line-haul assignment script
 
     Authors: Eric Miller, Michael Hain, Peter Kucirek
 
-    Latest revision by: Peter Kucirek
+    Latest revision by: James Vaughan
     
     
     This script executes a GO-rail station-to-station assignment, and reporting
@@ -50,6 +50,8 @@ GTAModel Legacy Rail transit line-haul assignment script
     0.2.4 Settled on not using fare-based impedances.
     
     0.2.5 Fixed a bug where the constraint matrix wasn't being applied correctly.
+
+    0.2.6 Added Parallel processing for EMME 4.1+
     
 '''
 
@@ -57,8 +59,10 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################
 
@@ -381,7 +385,10 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
                 "od_results": None,
                 "type": "EXTENDED_TRANSIT_ASSIGNMENT"
                 }
-        
+        if EMME_VERSION[0] + 0.1 * EMME_VERSION[1] >= 4.1:
+            spec["performance_settings"] = {
+                    "number_of_processors": cpu_count()
+                    }
         return spec
     
     def _getIVTTMatrixSpec(self):
