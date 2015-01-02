@@ -6,7 +6,6 @@ The TMG Toolbox is a suite of Python tools written for Emme transportation plann
 The TMG Toolbox is developed by the Travel Modelling Group at the University of Toronto. The authors hope that this toolbox will improve the practise of operational transportation planning by facilitating advanced analyses of travel demand forecasting models implemented in Emme.
 
 Deployment instructions:
-  [Still being developed]
  
   1. The toolbox works best with Emme 4 or newer (and not at all supported by versions older than Emme 3.4). Some tools work better in Emme 4.1, so be sure to grab the latest version.
   2. Using Git, download the source code to your local machine.
