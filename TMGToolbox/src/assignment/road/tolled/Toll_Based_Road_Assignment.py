@@ -21,9 +21,9 @@
 '''
 Toll-Based Road Assignment
 
-    Authors: Peter Kucirek, Eric Miller
+    Authors: Peter Kucirek, Eric Miller, James Vaughan
 
-    Latest revision by: pkucirek
+    Latest revision by: James Vaughan
     
     Executes a road assignment which allows for the generalized penalty of road tolls.
         
@@ -54,6 +54,8 @@ Toll-Based Road Assignment
         - All-or-nothing scenario manager doesn't copy over the transit strategy files.
         
     1.2.1 Removed a scaling factor being incorrectly applied to the Best Relative Gap
+
+    1.2.1 Added the ability to use a peak period matrix instead of just a scaling factor
 '''
 
 import inro.modeller as _m
@@ -92,7 +94,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     TollsMatrixId = _m.Attribute(str)
     RunTitle = _m.Attribute(str)
     
-    PeakHourFactor = _m.Attribute(float)
+    PeakHourFactor = _m.Attribute(str)
     LinkCost = _m.Attribute(float)
     TollCost = _m.Attribute(float)
     TollWeight = _m.Attribute(float)
@@ -114,7 +116,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             self.DemandMatrix = mf10
         
         self.SelectTollLinkExpression = "vdf=14"
-        self.PeakHourFactor = 0.43
+        self.PeakHourFactor = "0.43"
         self.LinkCost = 0
         self.TollCost = 0
         self.TollWeight = 0
