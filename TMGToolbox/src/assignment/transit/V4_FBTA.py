@@ -580,9 +580,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         #---2 Set up demand matrix
-        self.DemandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
-        if self.DemandMatrix == None:
-            raise Exception("Full matrix mf%s was not found!" %xtmf_DemandMatrixNumber)
+        if xtmf_DemandMatrixNumber == 0:
+            manager = _util.tempMatrixMANAGER(matrix_type= 'FULL')
+        else:
+            demandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
+            if demandMatrix == None:
+                raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
+            manager = blankManager(demandMatrix)
         
         if self.Scenario.extra_attribute(self.WalkAttributeId) == None:
             raise Exception("Walk perception attribute %s does not exist" %self.WalkAttributeId)
@@ -637,7 +641,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         print "Running V4 Transit Assignment"
         
         try:
-            self._Execute()
+            with manager as self.DemandMatrix:
+                self._Execute()
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
