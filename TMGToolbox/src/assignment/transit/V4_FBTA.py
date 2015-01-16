@@ -580,8 +580,10 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         #---2 Set up demand matrix
+        assignIdentityMatrix = False
         if xtmf_DemandMatrixNumber == 0:
             manager = _util.tempMatrixMANAGER(matrix_type= 'FULL')
+            assignIdentityMatrix = True
         else:
             demandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
             if demandMatrix == None:
@@ -642,6 +644,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         try:
             with manager as self.DemandMatrix:
+                if assignIdentityMatrix == True:
+                    demandMatrix = _MODELLER.emmebank.matrix(self.DemandMatrix.id)
+                    demandMatrix.initialize(0.0001)
                 self._Execute()
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
