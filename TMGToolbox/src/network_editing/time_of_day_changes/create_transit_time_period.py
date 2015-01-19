@@ -32,7 +32,7 @@ Create Time Period Networks
 #---VERSION HISTORY
 '''
     0.0.1 Created
-    0.0.2 Created on 2015-01-XX by mattaustin222
+    0.0.2 Created on 2015-01-19 by mattaustin222
     
 '''
 
@@ -221,6 +221,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             
             print "Publishing network"
             network.delete_attribute('TRANSIT_LINE', 'trips')
+            network.delete_attribute('TRANSIT_LINE', 'aggtype')
             newScenario.publish_network(network)
             
 
@@ -307,15 +308,15 @@ class CreateTimePeriodNetworks(_m.Tool()):
         return badIds
 
     def _LoadAggTypeSelect(self, network):
-        network.create_attribute('transit_line', 'aggtype', none)
+        network.create_attribute('TRANSIT_LINE', 'aggtype', None)
         
         badIds = set()
         
         with open(self.AggTypeSelectionFile) as reader:
             header = reader.readline()
-            cells = header.strip().split(self.comma)
+            cells = header.strip().split(self.COMMA)
             
-            emmeidCol = cells.index('emme_id')
+            emmeIdCol = cells.index('emme_id')
             aggCol = cells.index('agg_type')
             
             for num, line in enumerate(reader):
@@ -334,7 +335,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     print "Line " + num + " skipped: " + str(e)
                     continue
                                 
-                if transitLine.aggtype == None: transitLine.aggtype = [aggregation]
+                if transitLine.aggtype == None: transitLine.aggtype = aggregation
         
         return badIds
         
