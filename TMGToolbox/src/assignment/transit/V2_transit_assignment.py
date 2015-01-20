@@ -39,8 +39,10 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################
 
@@ -234,7 +236,7 @@ class BasicTransitAssignment(_m.Tool()):
         if self.demandMatrix == None:
             _m.logbook_write("Initializing temporary scalar demand matrix.")
             #def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL'):
-            self.demandMatrix = _utiil.initializeMatrix(matrix_type='SCALAR', name='trscal', description="Scalar matrix to get transit times")
+            self.demandMatrix = _util.initializeMatrix(matrix_type='SCALAR', name='trscal', description="Scalar matrix to get transit times")
             
             if self.demandMatrix == None:
                 raise Exception("Could not create temporary scalar demand matrix!")
@@ -337,7 +339,10 @@ class BasicTransitAssignment(_m.Tool()):
                 "od_results": None,
                 "type": "EXTENDED_TRANSIT_ASSIGNMENT"
                 }
-        
+        if EMME_VERSION[0] + 0.1 * EMME_VERSION[1] >= 4.1:
+            spec["performance_settings"] = {
+                    "number_of_processors": cpu_count()
+                }
         return spec
     
     @_m.method(return_type=_m.TupleType)

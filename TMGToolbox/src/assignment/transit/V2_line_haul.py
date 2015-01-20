@@ -23,7 +23,7 @@ Station to Station Assignment
 
     Authors: Peter Kucirek
 
-    Latest revision by: 
+    Latest revision by: James Vaughan
     
     
     [Description]
@@ -31,7 +31,7 @@ Station to Station Assignment
 '''
 #---VERSION HISTORY
 '''
-    0.1.0 [Description]
+    0.1.0 Added Parallel processing for EMME 4.1+
     
 '''
 
@@ -39,9 +39,10 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
-
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 ##########################################################################################################
 
 class Station2StationAssignment(_m.Tool()):
@@ -263,7 +264,7 @@ class Station2StationAssignment(_m.Tool()):
                                       scenario=self.scenario,
                                       add_volumes=self.UseAdditiveDemand) #TASK 3
                     
-                    # some error with progress reporting is ocurring here.
+                    # some error with progress reporting is occurring here.
                 
                 with _m.logbook_trace("Extracting output matrices"):
                     self._tracker.runTool(matrixResultsTool,
@@ -293,9 +294,10 @@ class Station2StationAssignment(_m.Tool()):
         #Code here is executed upon entry
         
         with _m.logbook_trace("Initializing temporary demand matrix"):
+            id=None
             if self.demandMatrix == None:
                 
-                self.demandMatrix = _util.initializeMatrix(id=None,
+                self.demandMatrix = _util.initializeMatrix(id,
                                                       matrix_type='SCALAR',
                                                       name='trscal',
                                                       description='Scalar matrix to get transit times')
@@ -354,7 +356,7 @@ class Station2StationAssignment(_m.Tool()):
                 }
     
     def _getAssignmentSpec(self):
-        return {
+        spec = {
                 "modes": self._modeList,
                 "demand": self.demandMatrix.id,
                 "waiting_time": {
@@ -397,6 +399,11 @@ class Station2StationAssignment(_m.Tool()):
                 "od_results": None,
                 "type": "EXTENDED_TRANSIT_ASSIGNMENT"
                 }
+        if EMME_VERSION[0] + 0.1 * EMME_VERSION[1] >= 4.1:
+            spec["performance_settings"] = {
+                    "number_of_processors": cpu_count()
+                    }
+        return spec
     
     def _getMatrixResultSpec(self, ivttMatrix, waitMatrix):
         return {

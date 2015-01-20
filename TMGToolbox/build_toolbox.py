@@ -30,7 +30,7 @@ build_toolbox.py
     file). Emme is a product of INRO Consultants Inc.     
     
     Usage: build_toolbox.py [-p toolbox_path] [-t toolbox_title] [-n toolbox_namespace] [-s source_folder]
-            [-w]
+            [-c]
     
         [-p toolbox_path]: Optional argument. Specifies the name of the MTBX file. If omitted,
             defaults to 'TMG_Toolbox.mtbx' inside the working directory.
