@@ -409,7 +409,8 @@ class Shapely2ESRI():
             self._canwrite = False
             self.invalidFeatureIDs = set()
         elif mode.lower().startswith("w"): #WRITE MODE
-            self.setProjection(projectionFile)
+            if projectionFile != None:
+                self.setProjection(projectionFile)
             self._canread = False
             self._canwrite = True
             if geometryType == None:
