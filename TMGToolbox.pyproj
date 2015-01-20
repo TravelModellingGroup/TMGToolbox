@@ -94,6 +94,9 @@
     <Compile Include="src\network_editing\reverse_transit_lines.py" />
     <Compile Include="src\network_editing\rotate_network.py" />
     <Compile Include="src\network_editing\time_of_day_changes\create_transit_time_period.py" />
+    <Compile Include="src\network_editing\time_of_day_changes\create_aggregation_selection_file.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\network_editing\transit_fare_hypernetworks\calculate_hypernetwork_size.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\generate_hypernetwork_from_schema.py" />
     <Compile Include="src\tool_list.py" />

@@ -32,7 +32,7 @@ Create Time Period Networks
 #---VERSION HISTORY
 '''
     0.0.1 Created
-    0.0.2 Created on 2015-01-19 by mattaustin222
+    0.1.1 Created on 2015-01-19 by mattaustin222
     
 '''
 
@@ -73,7 +73,7 @@ def averageAggregation(departures, start, end):
 
 class CreateTimePeriodNetworks(_m.Tool()):
     
-    version = '0.0.2'
+    version = '0.1.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -94,8 +94,6 @@ class CreateTimePeriodNetworks(_m.Tool()):
     
     TimePeriodStart = _m.Attribute(int)
     TimePeriodEnd = _m.Attribute(int)
-    
-    #CalcHeadwayOption = _m.Attribute(int)
     
     def __init__(self):
         #---Init internal variables
@@ -161,12 +159,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                                 size=4,
                                 title="Time period end",
                                 note="In integer hours e.g. 2:30 PM = 1430")
-        
-        #pb.add_select(tool_attribute_name='CalcHeadwayOption',
-        #              keyvalues={1: "Naive: Time / Num. Departures",
-        #                         2: "Average: Average headway in time period"},
-        #              title="Method for calculating headway")
-        
+                
         return pb.render()
     
     ##########################################################################################################
