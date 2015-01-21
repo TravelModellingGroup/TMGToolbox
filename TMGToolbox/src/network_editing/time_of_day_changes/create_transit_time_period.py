@@ -94,6 +94,8 @@ class CreateTimePeriodNetworks(_m.Tool()):
     
     TimePeriodStart = _m.Attribute(int)
     TimePeriodEnd = _m.Attribute(int)
+
+    DefaultAgg = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -101,6 +103,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.BaseScenario = _MODELLER.scenario #Default is primary scenario
+        self.DefaultAgg = 'n'
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Create Time Period Network v%s" %self.version,
@@ -146,6 +149,13 @@ class CreateTimePeriodNetworks(_m.Tool()):
 
         pb.add_header("TOOL INPUTS")
         
+        keyval1 = keyval1 = {'n':'Naive', 'a':'Average'}
+        pb.add_radio_group(tool_attribute_name='DefaultAgg', 
+                           keyvalues= keyval1,
+                           title= "Default Aggregation Type",
+                           note="Used if line not in\
+                               agg selection file")
+
         with pb.add_table(False) as t:
             
             with t.table_cell():
@@ -343,7 +353,12 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 aggregator = naiveAggregation
             elif line.aggtype == 'a':
                 aggregator = averageAggregation
-            else: raise Exception("Aggregator option unrecognized (%s)" %line.aggtype)
+            elif self.DefaultAgg == 'n':
+                aggregator = naiveAggregation
+                _m.logbook_write("Default aggregation was used for line %s" %(line.id))
+            else:
+                aggregator = averageAggregation
+                _m.logbook_write("Default aggregation was used for line %s" %(line.id))
 
             if not line.trips: #Line trips list is empty or None
                 toDelete.add(line.id)
