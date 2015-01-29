@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -21,7 +21,7 @@
 '''
 Create Aggregation Selection File
 
-    Authors: mattaustin222
+    Authors: Matt Austin
 
     Latest revision by: mattaustin222
     

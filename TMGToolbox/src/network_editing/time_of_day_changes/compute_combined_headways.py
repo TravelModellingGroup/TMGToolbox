@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -21,13 +21,15 @@
 '''
 Compute Combined Headways
 
-    Authors: mattaustin222
+    Authors: Matt Austin
 
     Latest revision by: mattaustin222
     
     
-    Calculates combined headways on inbound/outbound branches of lines.
+    Calculates combined headways on groups of lines.
     Takes in pattern matching .csv and outputs headways.
+    Typically used to compute combined headways along
+    each direction of a line.    
         
 '''
 #---VERSION HISTORY

@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -110,7 +110,11 @@ class CreateTimePeriodNetworks(_m.Tool()):
                      description="Creates a network for use in a given time period, from a \
                          24-hour base network and corresponding transit service table. \
                          Line speeds and headways are calculated from the service table.\
-                         Transit lines with no service in the time period are removed.",
+                         Transit lines with no service in the time period are removed.\
+                         Headway calculations are performed based on a choice of\
+                         aggregation type. Agg type by line is loaded in from a file\
+                         which can be generated using the Create Aggregation\
+                         Selection File tool.",
                      branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
@@ -143,13 +147,13 @@ class CreateTimePeriodNetworks(_m.Tool()):
         pb.add_select_file(tool_attribute_name='AggTypeSelectionFile',
                            window_type='file', file_filter='*.csv',
                            title="Aggregation Type Selection",
-                           note="Requires three columns:\
+                           note="Requires two columns:\
                                <ul><li>emme_id</li>\
                                <li>agg_type</li></ul>")
 
         pb.add_header("TOOL INPUTS")
         
-        keyval1 = keyval1 = {'n':'Naive', 'a':'Average'}
+        keyval1 = {'n':'Naive', 'a':'Average'}
         pb.add_radio_group(tool_attribute_name='DefaultAgg', 
                            keyvalues= keyval1,
                            title= "Default Aggregation Type",
