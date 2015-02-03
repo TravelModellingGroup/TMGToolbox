@@ -27,14 +27,14 @@ Line Set Conjoiner
     
     
     This tool takes in a set of transit lines that are to be
-    combined into one single, "looped" line that starts and ends
-    at the same node. EMME no longer restricts such loops, so 
-    for the purpose of cleaning networks, this is a useful tool.
+    combined into one single, "looped" line. EMME no longer 
+    restricts such loops, so for the purpose of cleaning
+    networks, this is a useful tool.
     
     It will allow for the combination of trips within a Combined
     Service Table, as well, so that the Create Transit Time
     Period tool will still be viable after a cleaning overhaul of 
-    a base network.
+    a base network. [FUTURE]
         
 '''
 #---VERSION HISTORY
@@ -47,6 +47,8 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+import csv
+import operator
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -61,7 +63,7 @@ class LineSetConjoiner(_m.Tool()):
     
     COLON = ':'
     COMMA = ','
-    
+                
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
     #    need to be placed here. Internal parameters (such as lists and dicts)
@@ -76,6 +78,7 @@ class LineSetConjoiner(_m.Tool()):
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
+        self.FailureFlag = False
         
         #---Set the defaults of parameters used by Modeller
         self.BaseScenario = _MODELLER.scenario #Default is primary scenario
@@ -87,7 +90,9 @@ class LineSetConjoiner(_m.Tool()):
                          Table accordingly so that accurate headways can be generated \
                          later using the Create Transit Time Period tool.\
                          Each line in the input file must be an sequential list of \
-                         transit line IDs.",
+                         transit line IDs. \
+                         <br><b>This tool is irreversible. Make sure to copy your \
+                         scenarios prior to running!</b>",
                      branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
@@ -99,22 +104,22 @@ class LineSetConjoiner(_m.Tool()):
 
         pb.add_header("DATA FILES")
         
-        #pb.add_select_file(tool_attribute_name='TransitServiceTableFile',
-        #                   window_type='file', file_filter='*.csv',
-        #                   title="Transit service table",
-        #                   note="Requires three columns:\
-        #                       <ul><li>emme_id</li>\
-        #                       <li>trip_depart</li>\
-        #                       <li>trip_arrive</li></ul>")
+        pb.add_select_file(tool_attribute_name='TransitServiceTableFile',
+                           window_type='file', file_filter='*.csv',
+                           title="Transit service table",
+                           note="Requires three columns:\
+                               <ul><li>emme_id</li>\
+                               <li>trip_depart</li>\
+                               <li>trip_arrive</li></ul>")
 
         pb.add_select_file(tool_attribute_name='LineSetFile',
                            window_type='file', file_filter='*.csv',
                            title="Line sets",
                            note="Input line IDs must be ordered")
 
-        #pb.add_select_file(tool_attribute_name='NewServiceTableFile',
-        #                   window_type='save_file', file_filter='*.csv',
-        #                   title="New output service table")
+        pb.add_select_file(tool_attribute_name='NewServiceTableFile',
+                           window_type='save_file', file_filter='*.csv',
+                           title="New output service table")
 
         return pb.render()
 
@@ -126,12 +131,16 @@ class LineSetConjoiner(_m.Tool()):
         
         try:
             self._Execute()
+            if self.FailureFlag:
+                msg = "Tool complete with errors. Please see logbook for details."
+            else:
+                msg = "Done."
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
-            raise
+            raise        
         
-        self.tool_run_msg = _m.PageBuilder.format_info("Done.")
+        self.tool_run_msg = _m.PageBuilder.format_info(msg)
 
     ##########################################################################################################    
         
@@ -142,15 +151,24 @@ class LineSetConjoiner(_m.Tool()):
             network = self.BaseScenario.get_network()
             print "Loaded network"
 
-            lineIds = self._ReadSetFile()
+            lineIds, lineList = self._ReadSetFile()
             print "Loaded lines"
 
+            unchangedSched, changedSched = self._LoadServiceTable(lineList)
+            print "Loaded service table"
+                                    
+            moddedSched = self._ModifySched(lineIds, changedSched)
+            self._WriteNewServiceTable(unchangedSched,moddedSched)
+            print "Created modified service table"       
+                 
             self._ConcatenateLines(network, lineIds)
             print "Lines concatenated"
-            
+
             print "Publishing network"
             self.BaseScenario.publish_network(network)
             self.TRACKER.completeTask()
+
+
 
     ##########################################################################################################    
     
@@ -167,19 +185,106 @@ class LineSetConjoiner(_m.Tool()):
     def _ReadSetFile(self):
         with open(self.LineSetFile) as reader:
             lines = []
+            fullLines = []
             for num, line in enumerate(reader):
                 cells = line.strip().split(self.COMMA)
                 lines.append(cells)
+                fullLines.extend(cells)
 
-        return lines
+        return lines, fullLines
 
     def _ConcatenateLines(self, network, lineIds):
-        #add in a logbook trace folder here
-        for lineSet in lineIds:
-            try:
-                _util.lineConcatenator(network, lineSet)
-            except Exception:
-                print 'This line set is not valid', lineSet
+        with _m.logbook_trace("Concatenating Lines"):
+            for lineSet in lineIds:
+                try:
+                    _util.lineConcatenator(network, lineSet)
+                    _m.logbook_write("Line set %s concatenated" %(lineSet))
+                except Exception:
+                    self.FailureFlag = True
+                    _m.logbook_write("This line set is not valid: %s" %(lineSet))          
+            
+    def _LoadServiceTable(self, lineList):                      
+        with open(self.TransitServiceTableFile) as reader:
+            header = reader.readline()
+            cells = header.strip().split(self.COMMA)
+            
+            emmeIdCol = cells.index('emme_id')
+            departureCol = cells.index('trip_depart')
+            arrivalCol = cells.index('trip_arrive')
+
+            unchangedSched = {}
+            changedSched = {}
+
+            for num, line in enumerate(reader):
+                cells = line.strip().split(self.COMMA)
+                
+                id = cells[emmeIdCol]
+                departure = cells[departureCol]
+                arrival = cells[arrivalCol]                                
+                trip = (departure, arrival)
+
+                if id in lineList:
+                    if id in changedSched:
+                        changedSched[id].append(trip)
+                    else:
+                        changedSched[id] = [trip]
+                else:
+                    if id in unchangedSched:
+                        unchangedSched[id].append(trip)
+                    else:
+                        unchangedSched[id] = [trip]
+                                
+        return unchangedSched, changedSched
+
+    def _ModifySched(self, lineIds, changedSched):
+        with _m.logbook_trace("Attempting to modify schedule"):
+            modSched = {}
+            for lineSet in lineIds:
+                modSched[lineSet[0]] = []
+                for tripNum, trips in enumerate(changedSched[lineSet[0]]):#loop through trips of first line        
+                    for num, line in enumerate(lineSet):
+                        if num == 0:
+                            currentArrival = trips[1] #set first arrival to check
+                        elif num == (len(lineSet) - 1):
+                            # when we get to the final line in the set, set new trip in the modded schedule
+                            # that corresponds to the departure of the first line and the final value
+                            # for arrival (ie. the last line's arrival time)
+                            modSched[lineSet[0]].append((trips[0], newArrival))
+                            break 
+                        nextLine = lineSet[num + 1]
+                        check = self._CheckSched(currentArrival, changedSched[nextLine])
+                        if check:
+                            newArrival = check
+                        else:
+                            _m.logbook_write("In line set %s, departure %s not valid" %(lineSet, trips[0]))
+                            break
+        return modSched
+            
+    def _CheckSched(self, arrival, sched):
+        newArrival = ''
+        for items in sched: # loop through schedule for next line in set
+            # check if arrival of line n is in the set of departures for line n+1
+            if arrival == items[0]:
+                newArrival = items[1] # if successfully finds a departure, sets next arrival to use
+                break
+        if newArrival:
+            return newArrival
+        else:
+            return None # doesn't cause a failure, but does report the issue in _ModifySched
+
+
+    def _WriteNewServiceTable(self, unchangedSched, modSched):
+        f = ['emme_id', 'trip_depart', 'trip_arrive']
+        with open(self.NewServiceTableFile, 'wb') as csvfile:
+            tableWrite = csv.writer(csvfile, delimiter = ',')
+            tableWrite.writerow(['emme_id', 'trip_depart', 'trip_arrive'])
+            fullSched = unchangedSched.copy()
+            fullSched.update(modSched)
+            for schedKey in sorted(fullSched):
+                for item in sorted(fullSched[schedKey], key=operator.itemgetter(1)): #secondary sort based on departure time
+                    value = [schedKey]
+                    value.extend(item)
+                    tableWrite.writerow(value)
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
