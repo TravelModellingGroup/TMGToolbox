@@ -48,7 +48,7 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 import csv
-import operator
+from operator import itemgetter
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -74,6 +74,9 @@ class LineSetConjoiner(_m.Tool()):
     TransitServiceTableFile = _m.Attribute(str)
     NewServiceTableFile = _m.Attribute(str)
     LineSetFile = _m.Attribute(str)
+    UnusedTripTableFile = _m.Attribute(str)
+
+    GlobalBuffer = _m.Attribute(float)
     
     def __init__(self):
         #---Init internal variables
@@ -82,6 +85,7 @@ class LineSetConjoiner(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.BaseScenario = _MODELLER.scenario #Default is primary scenario
+        self.GlobalBuffer = 2
 
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Line Set Conjoiner v%s" %self.version,
@@ -121,6 +125,16 @@ class LineSetConjoiner(_m.Tool()):
                            window_type='save_file', file_filter='*.csv',
                            title="New output service table")
 
+        pb.add_select_file(tool_attribute_name='UnusedTripTableFile',
+                           window_type='save_file', file_filter='*.csv',
+                           title="Trips not used in any conjoined trip")
+
+        pb.add_header("TOOL INPUTS")
+
+        pb.add_text_box(tool_attribute_name='GlobalBuffer',
+                        size=7,
+                        title='Allowable layover buffer (in minutes)')
+
         return pb.render()
 
     ##########################################################################################################
@@ -148,6 +162,8 @@ class LineSetConjoiner(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
+            self.GlobalBuffer *= 60 #convert to seconds
+
             network = self.BaseScenario.get_network()
             print "Loaded network"
 
@@ -156,13 +172,16 @@ class LineSetConjoiner(_m.Tool()):
 
             unchangedSched, changedSched = self._LoadServiceTable(lineList)
             print "Loaded service table"
-                                    
-            moddedSched = self._ModifySched(lineIds, changedSched)
-            self._WriteNewServiceTable(unchangedSched,moddedSched)
-            print "Created modified service table"       
-                 
-            self._ConcatenateLines(network, lineIds)
-            print "Lines concatenated"
+
+            newLineIds = self._ConcatenateLines(network, lineIds)
+            print "Lines concatenated"    
+                                
+            moddedSched, removedSched, leftoverSched = self._ModifySched(newLineIds, changedSched)
+            self._WriteNewServiceTable(unchangedSched, moddedSched)
+            print "Created modified service table"
+            
+            self._WriteUnusedTrips(removedSched, leftoverSched)
+            print "Created unused trip table"
 
             print "Publishing network"
             self.BaseScenario.publish_network(network)
@@ -182,6 +201,32 @@ class LineSetConjoiner(_m.Tool()):
             
         return atts 
 
+    
+    def _ParseStringTime(self, s):
+        try:
+            hms = s.split(self.COLON)
+            if len(hms) != 3: raise IOError()
+            
+            hours = int(hms[0])
+            minutes = int(hms[1])
+            seconds = int(hms[2])
+            
+            return hours * 3600.0 + minutes * 60.0 + float(seconds)
+        except Exception, e:
+            raise IOError("Error parsing time %s: %s" %(s, e)) 
+
+    def _RevertToString(self, f):
+        try:
+            hourRemain = f % 3600
+            hoursNum = (f - hourRemain) / 3600
+            minuteRemain = hourRemain % 60
+            minutesNum = (hourRemain - minuteRemain) / 60
+            secondsNum = minuteRemain
+
+            return "{:.0f}".format(hoursNum) + self.COLON + "{:0>2,.0f}".format(minutesNum) + self.COLON + "{:0>2,.0f}".format(secondsNum)
+        except Exception, e:
+            raise IOError("Error parsing time %s: %s" %(f, e)) 
+        
     def _ReadSetFile(self):
         with open(self.LineSetFile) as reader:
             lines = []
@@ -195,13 +240,17 @@ class LineSetConjoiner(_m.Tool()):
 
     def _ConcatenateLines(self, network, lineIds):
         with _m.logbook_trace("Concatenating Lines"):
+            newLineIds = []
             for lineSet in lineIds:
                 try:
                     _util.lineConcatenator(network, lineSet)
+                    newLineIds.append(lineSet) # creates a new list of lines that doesn't include those that cannot be concatenated
+                    # there is no sense altering schedules for lines that can't be joined
                     _m.logbook_write("Line set %s concatenated" %(lineSet))
                 except Exception:
                     self.FailureFlag = True
-                    _m.logbook_write("This line set is not valid: %s" %(lineSet))          
+                    _m.logbook_write("This line set is not valid: %s" %(lineSet))        
+        return newLineIds  
             
     def _LoadServiceTable(self, lineList):                      
         with open(self.TransitServiceTableFile) as reader:
@@ -221,7 +270,7 @@ class LineSetConjoiner(_m.Tool()):
                 id = cells[emmeIdCol]
                 departure = cells[departureCol]
                 arrival = cells[arrivalCol]                                
-                trip = (departure, arrival)
+                trip = (self._ParseStringTime(departure), self._ParseStringTime(arrival))
 
                 if id in lineList:
                     if id in changedSched:
@@ -233,12 +282,31 @@ class LineSetConjoiner(_m.Tool()):
                         unchangedSched[id].append(trip)
                     else:
                         unchangedSched[id] = [trip]
+
+            for id, tripList in changedSched.iteritems(): #ordering the trips so that we can run through them sequentially later
+                tripList.sort()
+
+            for id, tripList in unchangedSched.iteritems():
+                tripList.sort()
                                 
         return unchangedSched, changedSched
 
     def _ModifySched(self, lineIds, changedSched):
+        '''
+        This function allows us to chain together acceptable trips.
+        These are returned in the modSched dictionary, which is carried forward
+        to the new Service Table. Trips used to make the modSched are removed
+        from changedSched, which is essentially the choice set. removedSched
+        allows easy reporting later of those trips not chosen for use.
+        In one type of case (an unsuccessful attempt to create a modified trip,
+        followed by no more successful trips in that lineset), skipped trips
+        cannot be added to removedSched. Therefore, the full list of trips
+        not utilized in the modified schedule is the combination of removedSched
+        and changedSched.
+        '''
         with _m.logbook_trace("Attempting to modify schedule"):
             modSched = {}
+            removedSched = {}
             for lineSet in lineIds:
                 modSched[lineSet[0]] = []
                 for tripNum, trips in enumerate(changedSched[lineSet[0]]):#loop through trips of first line        
@@ -255,22 +323,49 @@ class LineSetConjoiner(_m.Tool()):
                         check = self._CheckSched(currentArrival, changedSched[nextLine])
                         if check:
                             newArrival = check
+                            # looping through trips in the next line
+                            # removes the trip with the newArrival
+                            # and removes all trips up to that
+                            toDelete = []
+                            for items in changedSched[nextLine]:
+                                if items[1] == newArrival:
+                                    toDelete.append(items)
+                                    break
+                                else:
+                                    # keep track of all ignored trips
+                                    if nextLine in removedSched:
+                                        removedSched[nextLine].append(items)
+                                    else:
+                                        removedSched[nextLine] = [items]
+                                    toDelete.append(items)
+                            for m in toDelete:
+                                # remove ignored and chosen trips from choice set
+                                changedSched[nextLine].remove(m)
+                            currentArrival = newArrival # move the current arrival forward in time
+
                         else:
-                            _m.logbook_write("In line set %s, departure %s not valid" %(lineSet, trips[0]))
+                            _m.logbook_write("In line set %s, departure %s not valid" %(lineSet, self._RevertToString(trips[0])))
+                            # keep track of the removed invalid trip
+                            if lineSet[0] in removedSched:
+                                removedSched[lineSet[0]].append(trips)
+                            else:
+                                removedSched[lineSet[0]] = [trips]                            
                             break
-        return modSched
+                del changedSched[lineSet[0]] #remove trips from choice set
+
+        return modSched, removedSched, changedSched
             
     def _CheckSched(self, arrival, sched):
         newArrival = ''
         for items in sched: # loop through schedule for next line in set
-            # check if arrival of line n is in the set of departures for line n+1
-            if arrival == items[0]:
+            # check if arrival of line n is within buffer for departures of line n+1
+            if 0 <= items[0] - arrival <= self.GlobalBuffer:
                 newArrival = items[1] # if successfully finds a departure, sets next arrival to use
                 break
-        if newArrival:
-            return newArrival
-        else:
-            return None # doesn't cause a failure, but does report the issue in _ModifySched
+            elif items[0] - arrival >= self.GlobalBuffer:
+                # doesn't cause a failure, but does report the issue in _ModifySched
+                break
+        return newArrival #will return an empty string if it completes the loop or exits due to exceeding buffer
 
 
     def _WriteNewServiceTable(self, unchangedSched, modSched):
@@ -281,9 +376,24 @@ class LineSetConjoiner(_m.Tool()):
             fullSched = unchangedSched.copy()
             fullSched.update(modSched)
             for schedKey in sorted(fullSched):
-                for item in sorted(fullSched[schedKey], key=operator.itemgetter(1)): #secondary sort based on departure time
+                for item in fullSched[schedKey]: 
                     value = [schedKey]
-                    value.extend(item)
+                    value.extend([self._RevertToString(item[0]),self._RevertToString(item[1])])
+                    tableWrite.writerow(value)
+
+    def _WriteUnusedTrips(self, sched, leftover):
+        f = ['emme_id', 'trip_depart', 'trip_arrive']
+        with open(self.UnusedTripTableFile, 'wb') as csvfile:
+            tableWrite = csv.writer(csvfile, delimiter = ',')
+            tableWrite.writerow(['emme_id', 'trip_depart', 'trip_arrive'])
+            # can't use update() to combine the two dictionaries, since we may have overlapping keys
+            for schedKey in sorted(sched):
+                for item in sorted(sched[schedKey]): 
+                    value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
+                    tableWrite.writerow(value)
+            for schedKey in sorted(leftover):
+                for item in sorted(leftover[schedKey]): 
+                    value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
                     tableWrite.writerow(value)
 
     @_m.method(return_type=_m.TupleType)

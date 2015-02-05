@@ -264,7 +264,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             
             return hours * 3600.0 + minutes * 60.0 + float(seconds)
         except Exception, e:
-            raise IOError("Error parsing time %s: %s" %(i, e)) 
+            raise IOError("Error parsing time %s: %s" %(s, e)) 
 
     def _ParseAggType(self, a):
         choiceSet = ('n', 'a')
