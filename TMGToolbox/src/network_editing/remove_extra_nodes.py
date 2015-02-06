@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -264,7 +264,32 @@ class RemoveExtraNodes(_m.Tool()):
 </script>""" % pb.tool_proxy_tag)
         
         return pb.render()
-    
+
+    ##########################################################################################################
+        
+    def __call__(self, baseScen, newScenId, newScenTitle, pubFlag, nodeFilter, stopFilter, connFilter, attAgg):
+        self.tool_run_msg = ""
+        self.TRACKER.reset()
+
+        self.BaseScenario = baseScen
+        self.NewScenarioId = newScenId
+        self.NewScenarioTitle = newScenTitle
+        self.PublishFlag = pubFlag
+        self.NodeFilterAttributeId = nodeFilter
+        self.StopFilterAttributeId = stopFilter
+        self.ConnectorFilterAttributeId = connFilter
+        self.AttributeAggregatorString = attAgg
+
+        try:
+            
+            self._Execute()
+        except Exception, e:
+            self.tool_run_msg = _m.PageBuilder.format_exception(
+                e, _traceback.format_exc(e))
+            raise
+        
+        self.tool_run_msg = _m.PageBuilder.format_info("Done.")    
+
     ##########################################################################################################
         
     def run(self):

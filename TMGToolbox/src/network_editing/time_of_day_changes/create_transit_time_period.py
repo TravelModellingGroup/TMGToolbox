@@ -177,6 +177,30 @@ class CreateTimePeriodNetworks(_m.Tool()):
         return pb.render()
     
     ##########################################################################################################
+    # allows for the tool to be called from another tool    
+    def __call__(self, baseScen, newScenNum, newScenDescrip, serviceFile, aggFile, defAgg, start, end):
+        self.tool_run_msg = ""
+        self.TRACKER.reset()
+
+        self.BaseScenario = baseScen
+        self.NewScenarioNumber = newScenNum
+        self.NewScenarioDescription = newScenDescrip
+        self.TransitServiceTableFile = serviceFile
+        self.AggTypeSelectionFile = aggFile
+        self.DefaultAgg = defAgg
+        self.TimePeriodStart = start
+        self.TimePeriodEnd = end
+        
+        try:            
+            self._Execute()
+        except Exception, e:
+            self.tool_run_msg = _m.PageBuilder.format_exception(
+                e, _traceback.format_exc(e))
+            raise
+        
+        self.tool_run_msg = _m.PageBuilder.format_info("Done.")
+
+    ##########################################################################################################
         
     def run(self):
         self.tool_run_msg = ""

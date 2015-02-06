@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -86,7 +86,26 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
                         size=100, multi_line=True)
         
         return pb.render()
-    
+
+    ##########################################################################################################
+        
+    def __call__(self, scen, filter):
+        self.tool_run_msg = ""
+        self.TRACKER.reset()
+        
+        self.Scenario = scen
+        self.LineFilterExpression = filter
+
+        try:
+           
+            linesModified = self._Execute()
+        except Exception, e:
+            self.tool_run_msg = _m.PageBuilder.format_exception(
+                e, _traceback.format_exc(e))
+            raise
+        
+        self.tool_run_msg = _m.PageBuilder.format_info("Done. %s lines modified" %linesModified)    
+
     ##########################################################################################################
         
     def run(self):
