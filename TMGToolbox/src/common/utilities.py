@@ -495,7 +495,7 @@ def fastLoadLinkAttributes(scenario, list_of_attributes):
 
 #-------------------------------------------------------------------------------------------
 
-def lineConcatenator(network, lineSet):
+def lineConcatenator(network, lineSet, newId):
 
     if len(lineSet) <= 1:
         raise Exception("Need at least two lines")
@@ -538,15 +538,10 @@ def lineConcatenator(network, lineSet):
 
     #Allow the recreated line to take on the attributes of the first line in the list
     newVehicleId = lines[0].vehicle.id
-    newId = lines[0].id    
     lineAttributes = {}
     for attName in lineAttNames:
         lineAttributes[attName] = lines[0][attName]
-
-        
-    #Remove old lines and recreate them as a single line
-    for line in lines:
-        network.delete_transit_line(line.id)
+                
     newLine = network.create_transit_line(newId, newVehicleId, combinedItinerary)
         
     for num, segment in enumerate(newLine.segments(False)):

@@ -34,7 +34,7 @@ Line Set Conjoiner
     It will allow for the combination of trips within a Combined
     Service Table, as well, so that the Create Transit Time
     Period tool will still be viable after a cleaning overhaul of 
-    a base network. [FUTURE]
+    a base network.
         
 '''
 #---VERSION HISTORY
@@ -74,7 +74,7 @@ class LineSetConjoiner(_m.Tool()):
     TransitServiceTableFile = _m.Attribute(str)
     NewServiceTableFile = _m.Attribute(str)
     LineSetFile = _m.Attribute(str)
-    UnusedTripTableFile = _m.Attribute(str)
+    #UnusedTripTableFile = _m.Attribute(str)
 
     GlobalBuffer = _m.Attribute(float)
     
@@ -125,9 +125,9 @@ class LineSetConjoiner(_m.Tool()):
                            window_type='save_file', file_filter='*.csv',
                            title="New output service table")
 
-        pb.add_select_file(tool_attribute_name='UnusedTripTableFile',
-                           window_type='save_file', file_filter='*.csv',
-                           title="Trips not used in any conjoined trip")
+        #pb.add_select_file(tool_attribute_name='UnusedTripTableFile',
+        #                   window_type='save_file', file_filter='*.csv',
+        #                   title="Trips not used in any conjoined trip")
 
         pb.add_header("TOOL INPUTS")
 
@@ -173,15 +173,15 @@ class LineSetConjoiner(_m.Tool()):
             unchangedSched, changedSched = self._LoadServiceTable(lineList)
             print "Loaded service table"
 
-            newLineIds = self._ConcatenateLines(network, lineIds)
-            print "Lines concatenated"    
+            #newLineIds = self._ConcatenateLines(network, lineIds)
+            #print "Lines concatenated"    
                                 
-            moddedSched, removedSched, leftoverSched = self._ModifySched(newLineIds, changedSched)
-            self._WriteNewServiceTable(unchangedSched, moddedSched)
+            moddedSched, removedSched, leftoverSched = self._ModifySched(network, lineIds, changedSched)
+            self._WriteNewServiceTable(unchangedSched, moddedSched, removedSched, leftoverSched)
             print "Created modified service table"
             
-            self._WriteUnusedTrips(removedSched, leftoverSched)
-            print "Created unused trip table"
+            #self._WriteUnusedTrips()
+            #print "Created unused trip table"
 
             print "Publishing network"
             self.BaseScenario.publish_network(network)
@@ -238,19 +238,48 @@ class LineSetConjoiner(_m.Tool()):
 
         return lines, fullLines
 
-    def _ConcatenateLines(self, network, lineIds):
-        with _m.logbook_trace("Concatenating Lines"):
-            newLineIds = []
-            for lineSet in lineIds:
-                try:
-                    _util.lineConcatenator(network, lineSet)
-                    newLineIds.append(lineSet) # creates a new list of lines that doesn't include those that cannot be concatenated
-                    # there is no sense altering schedules for lines that can't be joined
-                    _m.logbook_write("Line set %s concatenated" %(lineSet))
-                except Exception:
-                    self.FailureFlag = True
-                    _m.logbook_write("This line set is not valid: %s" %(lineSet))        
-        return newLineIds  
+    # From the first line in a set, create a suitable id for the full, concatenated line
+    def _GetNewId(self, originalId, network):
+        if ord('0') <= ord(originalId[-1]) <= ord('9'): # eg like some Durham lines (D100, etc.)
+            newId = originalId + 'c'
+            if network.transit_line(newId) == None:                
+                return newId
+            else:
+                raise Exception("Could not create a valid ID")
+        elif ord('a') <= ord(originalId[-1]) <= ord('z'):
+            if ord('A') <= ord(originalId[-2]) <= ord('Z'): # eg like TTC lines (T005Ab, etc.)
+                for count in range(1,26): #allows for a full alphabet cycle
+                    if ord(originalId[-2]) + count > ord('Z'):
+                        raise Exception("Could not create a valid ID") #fails if it needs to pass Z
+                    newId = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'c'
+                    newIdA = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'a' #need to make sure there is not a similarly named line
+                    newIdB = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'b'
+                    if network.transit_line(newId) == None and network.transit_line(newIdA) == None and network.transit_line(newIdB) == None:
+                        return newId #if it's valid, use the name. Otherwise, keep advancing throught the alphabet
+            else: # eg like some Durham lines (D100w, etc.)
+                newId = originalId[:-1] + 'c'
+                if network.transit_line(newId) == None:                
+                    return newId
+        elif ord('A') <= ord(originalId[-1]) <= ord('Z'): # eg like Brampton (B001B, etc.)
+            for count in range(1,26): #allows for a full alphabet cycle
+                    if ord(originalId[-1]) + count > ord('Z'):
+                        raise Exception("Could not create a valid ID") #fails if it needs to pass Z
+                    newId = originalId[:-1] + unichr(ord(originalId[-1]) + count)
+                    if network.transit_line(newId) == None:                
+                        return newId
+        else:
+            raise Exception("Could not create a valid ID")
+
+    def _ConcatenateLines(self, network, lineSet):
+        try:
+            newId = self._GetNewId(lineSet[0], network)
+            _util.lineConcatenator(network, lineSet, newId)
+            _m.logbook_write("Line set %s concatenated" %(lineSet))
+        except Exception:
+            self.FailureFlag = True
+            _m.logbook_write("This line set is not valid: %s" %(lineSet))
+            return None
+        return newId      
             
     def _LoadServiceTable(self, lineList):                      
         with open(self.TransitServiceTableFile) as reader:
@@ -291,7 +320,7 @@ class LineSetConjoiner(_m.Tool()):
                                 
         return unchangedSched, changedSched
 
-    def _ModifySched(self, lineIds, changedSched):
+    def _ModifySched(self, network, lineIds, changedSched):
         '''
         This function allows us to chain together acceptable trips.
         These are returned in the modSched dictionary, which is carried forward
@@ -304,11 +333,14 @@ class LineSetConjoiner(_m.Tool()):
         not utilized in the modified schedule is the combination of removedSched
         and changedSched.
         '''
-        with _m.logbook_trace("Attempting to modify schedule"):
+        with _m.logbook_trace("Attempting to modify schedule and concatenate lines"):
             modSched = {}
             removedSched = {}
             for lineSet in lineIds:
-                modSched[lineSet[0]] = []
+                newId = self._ConcatenateLines(network, lineSet)
+                if not newId:
+                    continue # if the concatenation fails, skip schedule modification for that line set
+                modSched[newId] = []
                 for tripNum, trips in enumerate(changedSched[lineSet[0]]):#loop through trips of first line        
                     for num, line in enumerate(lineSet):
                         if num == 0:
@@ -317,7 +349,7 @@ class LineSetConjoiner(_m.Tool()):
                             # when we get to the final line in the set, set new trip in the modded schedule
                             # that corresponds to the departure of the first line and the final value
                             # for arrival (ie. the last line's arrival time)
-                            modSched[lineSet[0]].append((trips[0], newArrival))
+                            modSched[newId].append((trips[0], newArrival))
                             break 
                         nextLine = lineSet[num + 1]
                         check = self._CheckSched(currentArrival, changedSched[nextLine])
@@ -368,7 +400,7 @@ class LineSetConjoiner(_m.Tool()):
         return newArrival #will return an empty string if it completes the loop or exits due to exceeding buffer
 
 
-    def _WriteNewServiceTable(self, unchangedSched, modSched):
+    def _WriteNewServiceTable(self, unchangedSched, modSched, sched, leftover):
         f = ['emme_id', 'trip_depart', 'trip_arrive']
         with open(self.NewServiceTableFile, 'wb') as csvfile:
             tableWrite = csv.writer(csvfile, delimiter = ',')
@@ -380,12 +412,6 @@ class LineSetConjoiner(_m.Tool()):
                     value = [schedKey]
                     value.extend([self._RevertToString(item[0]),self._RevertToString(item[1])])
                     tableWrite.writerow(value)
-
-    def _WriteUnusedTrips(self, sched, leftover):
-        f = ['emme_id', 'trip_depart', 'trip_arrive']
-        with open(self.UnusedTripTableFile, 'wb') as csvfile:
-            tableWrite = csv.writer(csvfile, delimiter = ',')
-            tableWrite.writerow(['emme_id', 'trip_depart', 'trip_arrive'])
             # can't use update() to combine the two dictionaries, since we may have overlapping keys
             for schedKey in sorted(sched):
                 for item in sorted(sched[schedKey]): 
@@ -395,6 +421,21 @@ class LineSetConjoiner(_m.Tool()):
                 for item in sorted(leftover[schedKey]): 
                     value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
                     tableWrite.writerow(value)
+
+    #def _WriteUnusedTrips(self, sched, leftover):
+    #    f = ['emme_id', 'trip_depart', 'trip_arrive']
+    #    with open(self.UnusedTripTableFile, 'wb') as csvfile:
+    #        tableWrite = csv.writer(csvfile, delimiter = ',')
+    #        tableWrite.writerow(['emme_id', 'trip_depart', 'trip_arrive'])
+    #        # can't use update() to combine the two dictionaries, since we may have overlapping keys
+    #        for schedKey in sorted(sched):
+    #            for item in sorted(sched[schedKey]): 
+    #                value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
+    #                tableWrite.writerow(value)
+    #        for schedKey in sorted(leftover):
+    #            for item in sorted(leftover[schedKey]): 
+    #                value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
+    #                tableWrite.writerow(value)
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
