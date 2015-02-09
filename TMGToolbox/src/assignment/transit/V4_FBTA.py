@@ -104,6 +104,15 @@ EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
+@contextmanager
+def blankManager(obj):
+    try:
+        yield obj
+    finally:
+        pass
+
+####
+
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
     version = '3.4.0'
@@ -646,7 +655,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             with manager as self.DemandMatrix:
                 if assignIdentityMatrix == True:
                     demandMatrix = _MODELLER.emmebank.matrix(self.DemandMatrix.id)
-                    demandMatrix.initialize(0.0001)
+                    demandMatrix.initialize(0.1)
                 self._Execute()
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
@@ -656,7 +665,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     ##########################################################################################################    
     
-    
+
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
