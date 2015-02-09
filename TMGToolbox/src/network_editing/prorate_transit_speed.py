@@ -93,7 +93,7 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         
-        self.Scenario = scen
+        self.Scenario = _MODELLER.emmebank.scenario(scen)
         self.LineFilterExpression = filter
 
         try:

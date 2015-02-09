@@ -271,7 +271,7 @@ class RemoveExtraNodes(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
 
-        self.BaseScenario = baseScen
+        self.BaseScenario = _MODELLER.emmebank.scenario(baseScen)
         self.NewScenarioId = newScenId
         self.NewScenarioTitle = newScenTitle
         self.PublishFlag = pubFlag
