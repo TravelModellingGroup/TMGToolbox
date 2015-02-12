@@ -85,7 +85,7 @@ class LineSetConjoiner(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.BaseScenario = _MODELLER.scenario #Default is primary scenario
-        self.GlobalBuffer = 2
+        self.GlobalBuffer = 5
 
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Line Set Conjoiner v%s" %self.version,
@@ -230,9 +230,13 @@ class LineSetConjoiner(_m.Tool()):
             lines = []
             fullLines = []
             for num, line in enumerate(reader):
+                set = []
                 cells = line.strip().split(self.COMMA)
-                lines.append(cells)
-                fullLines.extend(cells)
+                for item in cells:
+                    if item:
+                        set.append(item)
+                lines.append(set)
+                fullLines.extend(set)
 
         return lines, fullLines
 
