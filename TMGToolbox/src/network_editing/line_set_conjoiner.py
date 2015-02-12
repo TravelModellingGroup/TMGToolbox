@@ -162,8 +162,6 @@ class LineSetConjoiner(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
-            self.GlobalBuffer *= 60 #convert to seconds
-
             network = self.BaseScenario.get_network()
             print "Loaded network"
 
@@ -248,9 +246,12 @@ class LineSetConjoiner(_m.Tool()):
                 raise Exception("Could not create a valid ID")
         elif ord('a') <= ord(originalId[-1]) <= ord('z'):
             if ord('A') <= ord(originalId[-2]) <= ord('Z'): # eg like TTC lines (T005Ab, etc.)
-                for count in range(1,26): #allows for a full alphabet cycle
+                for count in range(1,80): #allows for a full dual alphabet cycle
                     if ord(originalId[-2]) + count > ord('Z'):
-                        raise Exception("Could not create a valid ID") #fails if it needs to pass Z
+                        if ord(originalId[-2]) + count > ord('z'):
+                            raise Exception("Could not create a valid ID") #fails if it needs to pass z
+                        elif ord(originalId[-2]) + count < ord('a'): #skip over the symbols between Z and a 
+                            continue
                     newId = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'c'
                     newIdA = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'a' #need to make sure there is not a similarly named line
                     newIdB = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'b'
@@ -389,12 +390,13 @@ class LineSetConjoiner(_m.Tool()):
             
     def _CheckSched(self, arrival, sched):
         newArrival = ''
+        buffer = 60 * self.GlobalBuffer
         for items in sched: # loop through schedule for next line in set
             # check if arrival of line n is within buffer for departures of line n+1
-            if 0 <= items[0] - arrival <= self.GlobalBuffer:
+            if 0 <= items[0] - arrival <= buffer:
                 newArrival = items[1] # if successfully finds a departure, sets next arrival to use
                 break
-            elif items[0] - arrival >= self.GlobalBuffer:
+            elif items[0] - arrival >= buffer:
                 # doesn't cause a failure, but does report the issue in _ModifySched
                 break
         return newArrival #will return an empty string if it completes the loop or exits due to exceeding buffer
