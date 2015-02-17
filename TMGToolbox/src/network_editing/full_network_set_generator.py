@@ -110,6 +110,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     DefaultAgg = _m.Attribute(str)  
     
     PublishFlag = _m.Attribute(bool)
+    OverwriteScenarioFlag = _m.Attribute(bool)
     
     NodeFilterAttributeId = _m.Attribute(str)
     StopFilterAttributeId = _m.Attribute(str)
@@ -164,6 +165,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.DefaultAgg = 'n'
         
         self.PublishFlag = True 
+        self.OverwriteScenarioFlag = False
         
         lines = ["vdf: force",
                  "length: sum",
@@ -180,14 +182,15 @@ class FullNetworkSetGenerator(_m.Tool()):
                  "us3: avg",
                  "ui1: avg",
                  "ui2: avg",
-                 "ui3: avg",
-                 "@stn1: force",
-                 "@stn2: force"]
+                 "ui3: avg"]
         
         domains = set(['NODE', 'LINK', 'TRANSIT_SEGMENT'])
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type in domains:
-                lines.append("%s: avg" %exatt.name)
+                if exatt.name == "@stn1" or exatt.name == "@stn2":
+                    lines.append("%s: force" %exatt.name)
+                else:
+                    lines.append("%s: avg" %exatt.name)
         self.AttributeAggregatorString = "\n".join(lines)
         
         #Set to -1 as this will be interpreted in the HTML
@@ -241,7 +244,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                                agg selection file")
 
         pb.add_header("SCENARIOS")
-
+        
         with pb.add_table(False) as t:
         
             t.add_table_header(['Scenario', 'Number', 'Description'])
@@ -344,6 +347,9 @@ class FullNetworkSetGenerator(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='Scen5Description',
                                 size=40)
+        
+        pb.add_checkbox(tool_attribute_name='OverwriteScenarioFlag',
+                           label="Overwrite Full Scenarios?")
         
         pb.add_checkbox(tool_attribute_name= 'PublishFlag',
                         label= "Publish network?")
@@ -463,9 +469,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                         the Emme Desktop attribute names (e.g. 'lanes') or the Modeller API names \
                         (e.g. 'num_lanes') can be used. Accepted functions are: " + str(ul) + \
                         "The default function for unspecified extra attribtues is 'sum.'")
-
-        return pb.render()
-
+        
         #---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
@@ -540,6 +544,9 @@ class FullNetworkSetGenerator(_m.Tool()):
                              self.Scen5Start, self.Scen5End)
             scenarioSet = [firstScenario, secondScenario, thirdScenario, fourthScenario, fifthScenario]
             
+            if self.OverwriteScenarioFlag:
+                self._DeleteOldScenarios(scenarioSet)
+            
             # Create time period networks in all the unclean scenario spots
             # Calls create_transit_time_period
             for scenarios in scenarioSet:
@@ -576,6 +583,14 @@ class FullNetworkSetGenerator(_m.Tool()):
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts 
+
+    def _DeleteOldScenarios(self, scenarios):
+        bank = _MODELLER.emmebank
+        for items in scenarios:
+            if bank.scenario(items[0]):
+                bank.delete_scenario(items[0])
+            if bank.scenario(items[1]):
+                bank.delete_scenario(items[1])
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
