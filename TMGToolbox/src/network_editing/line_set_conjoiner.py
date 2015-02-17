@@ -230,13 +230,13 @@ class LineSetConjoiner(_m.Tool()):
             lines = []
             fullLines = []
             for num, line in enumerate(reader):
-                set = []
+                lineOrder = []
                 cells = line.strip().split(self.COMMA)
                 for item in cells:
                     if item:
-                        set.append(item)
-                lines.append(set)
-                fullLines.extend(set)
+                        lineOrder.append(item)
+                lines.append(lineOrder)
+                fullLines.extend(lineOrder)
 
         return lines, fullLines
 
