@@ -36,6 +36,7 @@ Full Network Set Generator
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2015-02-09 by mattaustin222
+    0.1.0 Created on 2015-02-18 by mattaustin222 Made callable by XTMF
     
 '''
 
@@ -56,7 +57,7 @@ createTimePeriod = _MODELLER.tool('tmg.network_editing.time_of_day_changes.creat
 
 class FullNetworkSetGenerator(_m.Tool()):
     
-    version = '0.0.1'
+    version = '0.1.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -68,6 +69,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     #    need to be placed here. Internal parameters (such as lists and dicts)
     #    get intitialized during construction (__init__)
     
+    xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     BaseScenario = _m.Attribute(_m.InstanceType) 
         
     Scen1UnNumber = _m.Attribute(int)
@@ -524,7 +526,95 @@ class FullNetworkSetGenerator(_m.Tool()):
         return pb.render()
 
     ##########################################################################################################
-          
+    def __call__(self, xtmf_ScenarioNumber, Scen1UnNumber, Scen1UnDescription, Scen1Number,
+                 Scen1Description, Scen1Start, Scen1End, 
+                 Scen2UnNumber, Scen2UnDescription, Scen2Number, 
+                 Scen2Description, Scen2Start, Scen2End,
+                 Scen3UnNumber, Scen3UnDescription, Scen3Number, 
+                 Scen3Description, Scen3Start, Scen3End,
+                 Scen4UnNumber, Scen4UnDescription, Scen4Number, 
+                 Scen4Description, Scen4Start, Scen4End,
+                 Scen5UnNumber, Scen5UnDescription, Scen5Number, 
+                 Scen5Description, Scen5Start, Scen5End,
+                 TransitServiceTableFile, AggTypeSelectionFile, AlternativeDataFile,
+                 DefaultAgg, PublishFlag, OverwriteScenarioFlag, NodeFilterAttributeId,
+                 StopFilterAttributeId, ConnectorFilterAttributeId, AttributeAggregatorString,
+                 LineFilterExpression):
+        
+        #---1 Set up scenario
+        self.BaseScenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
+        if (self.BaseScenario == None):
+            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+
+        #---2 Set up attributes
+        if self.Scenario.extra_attribute(NodeFilterAttributeId) == None:
+            raise Exception("Node filter attribute %s does not exist" %NodeFilterAttributeId)
+        if self.Scenario.extra_attribute(StopFilterAttributeId) == None:
+            raise Exception("Stop filter attribute %s does not exist" %StopFilterAttributeId)
+        if self.Scenario.extra_attribute(ConnectorFilterAttributeId) == None:
+            raise Exception("Connector filter attribute %s does not exist" %ConnectorFilterAttributeId)
+
+        self.NodeFilterAttributeId = NodeFilterAttributeId
+        self.StopFilterAttributeId = StopFilterAttributeId
+        self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
+        
+        #--3 Set up other parameters
+        self.Scen1UnNumber = Scen1UnNumber
+        self.Scen1UnDescription = Scen1UnDescription
+        self.Scen1Number = Scen1Number
+        self.Scen1Description = Scen1Description
+        self.Scen1Start = Scen1Start
+        self.Scen1End = Scen1End
+
+        self.Scen2UnNumber = Scen2UnNumber
+        self.Scen2UnDescription = Scen2UnDescription
+        self.Scen2Number = Scen2Number
+        self.Scen2Description = Scen2Description
+        self.Scen2Start = Scen2Start
+        self.Scen2End = Scen2End
+
+        self.Scen3UnNumber = Scen3UnNumber
+        self.Scen3UnDescription = Scen3UnDescription
+        self.Scen3Number = Scen3Number
+        self.Scen3Description = Scen3Description
+        self.Scen3Start = Scen3Start
+        self.Scen3End = Scen3End
+
+        self.Scen4UnNumber = Scen4UnNumber
+        self.Scen4UnDescription = Scen4UnDescription
+        self.Scen4Number = Scen4Number
+        self.Scen4Description = Scen4Description
+        self.Scen4Start = Scen4Start
+        self.Scen4End = Scen4End
+
+        self.Scen5UnNumber = Scen5UnNumber
+        self.Scen5UnDescription = Scen5UnDescription
+        self.Scen5Number = Scen5Number
+        self.Scen5Description = Scen5Description
+        self.Scen5Start = Scen5Start
+        self.Scen5End = Scen5End
+
+        self.TransitServiceTableFile = TransitServiceTableFile
+        self.AggTypeSelectionFile = AggTypeSelectionFile
+        self.AlternativeDataFile = AlternativeDataFile
+        self.DefaultAgg = DefaultAgg
+        self.PublishFlag = PublishFlag
+        self.OverwriteScenarioFlag = OverwriteScenarioFlag
+        self.AttributeAggregatorString = AttributeAggregatorString
+        self.LineFilterExpression = LineFilterExpression
+
+        print "Running full network set generation"
+        
+        try:
+            self._Execute()
+        except Exception, e:
+            msg = str(e) + "\n" + _traceback.format_exc(e)
+            raise Exception(msg)
+        
+        print "Done full network generation"
+
+        
+    ##########################################################################################################          
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
