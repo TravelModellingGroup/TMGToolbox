@@ -33,6 +33,7 @@ Create Time Period Networks
 '''
     0.0.1 Created
     0.1.1 Created on 2015-01-19 by mattaustin222
+    0.1.2 Created on 2015-02-17 by mattaustin222 Allows for non-service table data to be processed
     
 '''
 
@@ -73,7 +74,7 @@ def averageAggregation(departures, start, end):
 
 class CreateTimePeriodNetworks(_m.Tool()):
     
-    version = '0.1.1'
+    version = '0.1.2'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -91,6 +92,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
     
     TransitServiceTableFile = _m.Attribute(str)
     AggTypeSelectionFile = _m.Attribute(str)
+    AlternativeDataFile = _m.Attribute(str)
     
     TimePeriodStart = _m.Attribute(int)
     TimePeriodEnd = _m.Attribute(int)
@@ -143,6 +145,19 @@ class CreateTimePeriodNetworks(_m.Tool()):
                                <ul><li>emme_id</li>\
                                <li>trip_depart</li>\
                                <li>trip_arrive</li></ul>")
+
+        pb.add_select_file(tool_attribute_name='AlternativeDataFile',
+                           window_type='file', file_filter='*.csv',
+                           title="Data for non-service table lines (optional)",
+                           note="Requires columns as follows,\
+                               where xxxx corresponds to\
+                               the desired time period start:\
+                               <ul><li>emme_id</li>\
+                               <li>xxxx_hdw</li>\
+                               <li>xxxx_spd</li></ul>.\
+                               Note: this will override\
+                               values calculated from\
+                               the service table")
         
         pb.add_select_file(tool_attribute_name='AggTypeSelectionFile',
                            window_type='file', file_filter='*.csv',
@@ -178,7 +193,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
     
     ##########################################################################################################
     # allows for the tool to be called from another tool    
-    def __call__(self, baseScen, newScenNum, newScenDescrip, serviceFile, aggFile, defAgg, start, end):
+    def __call__(self, baseScen, newScenNum, newScenDescrip, serviceFile, aggFile, altFile, defAgg, start, end):
         self.tool_run_msg = ""
         self.TRACKER.reset()
 
@@ -187,6 +202,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         self.NewScenarioDescription = newScenDescrip
         self.TransitServiceTableFile = serviceFile
         self.AggTypeSelectionFile = aggFile
+        self.AlternativeDataFile = altFile
         self.DefaultAgg = defAgg
         self.TimePeriodStart = start
         self.TimePeriodEnd = end
@@ -230,6 +246,10 @@ class CreateTimePeriodNetworks(_m.Tool()):
             end = self._ParseIntTime(self.TimePeriodEnd)
             
             badIdSet = self._LoadServiceTable(network, start, end).union(self._LoadAggTypeSelect(network))
+            if self.AlternativeDataFile:
+                altData = self._LoadAltFile()
+            else:
+                altData = None
             self.TRACKER.completeTask()
             print "Loaded service table"
             if len(badIdSet) > 0:
@@ -244,7 +264,11 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 _m.logbook_write("Some IDs were not found in the network. Click for details.",
                                  value=pb.render())
             
-            self._ProcessTransitLines(network, start, end)
+            
+                
+            self._ProcessTransitLines(network, start, end, altData)
+            if altData:
+                self._ProcessAltLines(network, altData)
             print "Done processing transit lines"
             
             newScenario = _MODELLER.emmebank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
@@ -369,11 +393,48 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 if transitLine.aggtype == None: transitLine.aggtype = aggregation
         
         return badIds
+
+    def _LoadAltFile(self):
+        with open(self.AlternativeDataFile) as reader:
+            header = reader.readline()
+            cells = header.strip().split(self.COMMA)
+            
+            emmeIdCol = cells.index('emme_id')
+            headwayTitle = "{:0>4,.0f}".format(self.TimePeriodStart) + '_hdw'
+            speedTitle = "{:0>4,.0f}".format(self.TimePeriodStart) + '_spd'
+            try:
+                headwayCol = cells.index(headwayTitle)
+            except ModuleError:
+                msg = "Error. No headway match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
+                _m.logbook_write(msg)
+                print msg
+            try:
+                speedCol = cells.index(speedTitle)
+            except ModuleError:
+                msg = "Error. No speed match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
+                _m.logbook_write(msg)
+                print msg
+
+            altData = {}
+            
+            for num, line in enumerate(reader):
+                cells = line.strip().split(self.COMMA)
+                
+                id = cells[emmeIdCol]
+                hdw = cells[headwayCol]
+                spd = cells[speedCol]
+                altData[id] = (float(hdw),float(spd))
         
-    def _ProcessTransitLines(self, network, start, end):              
+        return altData
+        
+    def _ProcessTransitLines(self, network, start, end, altData):              
         bounds = _util.FloatRange(0.01, 1000.0)
         
         toDelete = set()
+        if altData:
+            doNotDelete = altData.keys()
+        else:
+            doNotDelete = None
         self.TRACKER.startProcess(network.element_totals['transit_lines'])
         for line in network.transit_lines():
             #Pick aggregation type for given line
@@ -389,7 +450,11 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 _m.logbook_write("Default aggregation was used for line %s" %(line.id))
 
             if not line.trips: #Line trips list is empty or None
-                toDelete.add(line.id)
+                if doNotDelete:    
+                    if line.id not in doNotDelete: #don't delete lines whose headways we wish to manually set
+                        toDelete.add(line.id)
+                else:
+                    toDelete.add(line.id)
                 self.TRACKER.completeSubtask()
                 continue
             
@@ -416,6 +481,19 @@ class CreateTimePeriodNetworks(_m.Tool()):
             network.delete_transit_line(id)
         self.TRACKER.completeTask()
         
+    def _ProcessAltLines(self, network, altData):
+        bounds = _util.FloatRange(0.01, 1000.0)
+        for key, data in altData.iteritems():
+            line = network.transit_line(key)
+            if line:
+                if data[0] == 9999: #a headway of 9999 indicates an unused line
+                    network.delete_transit_line(line.id)
+                elif not data[0] in bounds: 
+                    print "%s: %s" %(line.id, data[0])
+                line.headway = data[0]
+                if not data[1] in bounds: print "%s: %s" %(line.id, data[1])                    
+                line.speed = data[1]
+
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()

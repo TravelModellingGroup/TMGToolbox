@@ -107,6 +107,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     
     TransitServiceTableFile = _m.Attribute(str)
     AggTypeSelectionFile = _m.Attribute(str)
+    AlternativeDataFile = _m.Attribute(str)
     DefaultAgg = _m.Attribute(str)  
     
     PublishFlag = _m.Attribute(bool)
@@ -228,6 +229,19 @@ class FullNetworkSetGenerator(_m.Tool()):
                                <ul><li>emme_id</li>\
                                <li>trip_depart</li>\
                                <li>trip_arrive</li></ul>")
+
+        pb.add_select_file(tool_attribute_name='AlternativeDataFile',
+                           window_type='file', file_filter='*.csv',
+                           title="Data for non-service table lines (optional)",
+                           note="Requires columns as follows,\
+                               where xxxx corresponds to\
+                               the desired time period start:\
+                               <ul><li>emme_id</li>\
+                               <li>xxxx_hdw</li>\
+                               <li>xxxx_spd</li></ul>.\
+                               Note: this will override\
+                               values calculated from\
+                               the service table")
 
         pb.add_select_file(tool_attribute_name='AggTypeSelectionFile',
                            window_type='file', file_filter='*.csv',
@@ -551,7 +565,8 @@ class FullNetworkSetGenerator(_m.Tool()):
             # Calls create_transit_time_period
             for scenarios in scenarioSet:
                 createTimePeriod(self.BaseScenario, scenarios[0], scenarios[2], self.TransitServiceTableFile,
-                                 self.AggTypeSelectionFile, self.DefaultAgg, scenarios[4], scenarios[5])
+                                 self.AggTypeSelectionFile, self.AlternativeDataFile,
+                                 self.DefaultAgg, scenarios[4], scenarios[5])
 
             print "Created uncleaned time period networks"
 
