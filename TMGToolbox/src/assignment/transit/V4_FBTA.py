@@ -23,7 +23,7 @@ V4 Transit Assignment
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: mattaustin222
     
     
     Transit Assignment Tool created for GTAModel Version 4.0
@@ -80,6 +80,8 @@ V4 Transit Assignment
     3.3.0 Changed to apply a 1.0 walking perception to subway-to-subway links.
     
     3.4.0 Added new feature to optionally export congestion matrix.
+
+    3.4.1 Fixed bug causing congestion matrix number to not be passed in from XTMF.
     
 '''
 import traceback as _traceback
@@ -115,7 +117,7 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '3.4.0'
+    version = '3.4.1'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -621,7 +623,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         if xtmf_FareMatrixNumber:
             self.FareMatrixId = "mf%s" %xtmf_FareMatrixNumber
         if xtmf_CongestionMatrixNumber:
-            self.CongestionMatrixId = "mf%s" %self.xtmf_CongestionMatrixNumber
+            self.CongestionMatrixId = "mf%s" %xtmf_CongestionMatrixNumber
         
         #---4 Set up other parameters
         self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
