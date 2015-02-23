@@ -28,6 +28,8 @@ Toll-Based Road Assignment
     Executes a multi-class road assignment which allows for the generalized penalty of road tolls.
     
     V 1.0.0
+
+    V 1.1.0 Added link volume attributes for increased resolution of analysis.
         
 '''
 
@@ -196,8 +198,24 @@ class MultiClassRoadAssignment(_m.Tool()):
             
             
             with nested(self._costAttributeMANAGER(), self._transitTrafficAttributeMANAGER()) \
-                    as (costAttribute, bgTransitAttribute): #bgTransitAttribute is None
-            
+                     as (costAttribute, bgTransitAttribute): #bgTransitAttribute is None          
+               
+           
+                #Adding @ for the process of generating link cost attributes and declaring list variables
+                
+                Mode_List_for_attributes = self.Mode_List_Split
+                for i in range(len(self.Demand_List)):
+                    Mode_List_for_attributes[i]= "@"+ Mode_List_for_attributes[i]
+                
+                for name in Mode_List_for_attributes:
+                    
+                    if self.Scenario.extra_attribute(name) is not None:
+                        _m.logbook_write("Deleting Previous Extra Attributes.")
+                        self.Scenario.delete_extra_attribute(name)
+                    _m.logbook_write("Creating link cost attribute '@(mode)'.")
+                    self.Scenario.create_extra_attribute('LINK',name, default_value=0)
+                    
+                
                 with nested (*(_util.tempMatrixMANAGER(description="Peak hour matrix") \
                                for Demand in self.Demand_List)) as peakHourMatrix:                
                                          
@@ -222,7 +240,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                         with _m.logbook_trace("Running primary road assignment."):                    
                            
                             spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List,\
-                                                             self.TollsMatrixId, self.TimesMatrixId)
+                                                             self.TollsMatrixId, self.TimesMatrixId,  Mode_List_for_attributes)
                             
                                
                             report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
@@ -306,7 +324,8 @@ class MultiClassRoadAssignment(_m.Tool()):
             # Code here is executed in all cases.
             _MODELLER.emmebank.delete_scenario(tempScenarioNumber)
             _m.logbook_write("Deleted temporary Scenario %s" %tempScenarioNumber)
-    
+            
+ 
     @contextmanager
     def _costAttributeMANAGER(self):
         #Code here is executed upon entry
@@ -437,7 +456,9 @@ class MultiClassRoadAssignment(_m.Tool()):
             appliedTollFactor = 60.0 / self.TollWeight #Toll weight is in $/hr, needs to be converted to min/$
         return appliedTollFactor
     
-    def _getPrimarySOLASpec(self, peakHourMatrixId, appliedTollFactor, Mode_List, TimesMatrixId, TollsMatrixId):
+    def _getPrimarySOLASpec(self, peakHourMatrixId, appliedTollFactor, Mode_List, TimesMatrixId,\
+            TollsMatrixId, linkvolumeattributes):
+        
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -512,6 +533,7 @@ class MultiClassRoadAssignment(_m.Tool()):
            SOLA_Class_Generator[i]['demand'] = peakHourMatrixId[i].id
            SOLA_Class_Generator[i]['results']['od_travel_times']['shortest_paths'] = TimesMatrixId[i]
            SOLA_Class_Generator[i]['analysis']['results']['od_values'] = TollsMatrixId[i]
+           SOLA_Class_Generator[i]['results']['link_volumes'] = linkvolumeattributes[i]
            i = i + 1               
         SOLA_spec['classes'] = SOLA_Class_Generator
         
