@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -34,7 +34,7 @@ Apply Batch Line Edits
 '''
 #---VERSION HISTORY
 '''
-    0.0.1 Created on 2014-02-24 by mattaustin222
+    0.0.1 Created on 2015-02-24 by mattaustin222
     
 '''
 
