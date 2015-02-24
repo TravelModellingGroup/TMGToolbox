@@ -51,6 +51,7 @@ import csv
 from operator import itemgetter
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
+_netedit = _MODELLER.module('tmg.common.network_editing')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 ##########################################################################################################
@@ -278,7 +279,7 @@ class LineSetConjoiner(_m.Tool()):
     def _ConcatenateLines(self, network, lineSet):
         try:
             newId = self._GetNewId(lineSet[0], network)
-            _util.lineConcatenator(network, lineSet, newId)
+            _netedit.lineConcatenator(network, lineSet, newId)
             _m.logbook_write("Line set %s concatenated" %(lineSet))
         except Exception:
             self.FailureFlag = True

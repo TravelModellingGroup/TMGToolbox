@@ -393,6 +393,67 @@ def renumberTransitVehicle(oldVehicle, newId):
 
 #===========================================================================================
 
+def lineConcatenator(network, lineSet, newId):
+
+    if len(lineSet) <= 1:
+        raise Exception("Need at least two lines")
+    
+    lines = []
+    for lineId in lineSet:
+        lines.append(network.transit_line(lineId))
+    itineraries = []
+    for line in lines:
+        itineraries.append([node.number for node in line.itinerary()])
+    
+    #Check if end points match and combine itineraries
+    combinedItinerary = itineraries[0]
+    for num, item in enumerate(itineraries):
+        if num == (len(itineraries) - 1):
+            combinedItinerary += item[1:]
+            break #don't test the final line
+        
+        nextItem = itineraries[num + 1]
+
+        if item[-1] != nextItem[0]: #compare final stop of current line to first stop of next line
+            raise Exception("Lines don't connect!")
+        elif num == 0: #don't need to add the first line's itinerary
+            continue
+        else:
+            combinedItinerary += item[1:] #combine stop lists, removing the redundant start node
+                      
+    attNames = network.attributes('TRANSIT_SEGMENT')
+    lineAttNames = network.attributes('TRANSIT_LINE') 
+    #Grabbing segment attributes. 
+    combinedSegmentAttributes = []
+    for line in lines:
+        segmentAttributes = []
+        for segment in line.segments(False):
+            d = {}
+            for attName in attNames:
+                d[attName] = segment[attName]
+            segmentAttributes.append(d) 
+        combinedSegmentAttributes += segmentAttributes  
+
+    #Allow the recreated line to take on the attributes of the first line in the list
+    newVehicleId = lines[0].vehicle.id
+    lineAttributes = {}
+    for attName in lineAttNames:
+        lineAttributes[attName] = lines[0][attName]
+                
+    newLine = network.create_transit_line(newId, newVehicleId, combinedItinerary)
+        
+    for num, segment in enumerate(newLine.segments(False)):
+        d = combinedSegmentAttributes[num] 
+        for attName, value in d.iteritems():
+            segment[attName] = value
+        
+    for attName, value in lineAttributes.iteritems():
+        newLine[attName] = value
+
+
+
+#===========================================================================================
+
 #---
 #---LINK MERGING
 
