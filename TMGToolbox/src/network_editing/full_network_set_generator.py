@@ -52,6 +52,7 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 removeExtraNodes = _MODELLER.tool('tmg.network_editing.remove_extra_nodes')
 prorateTransitSpeed = _MODELLER.tool('tmg.network_editing.prorate_transit_speed')
 createTimePeriod = _MODELLER.tool('tmg.network_editing.time_of_day_changes.create_transit_time_period')
+lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_line_batch_edits')
 
 ##########################################################################################################
 
@@ -110,6 +111,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     TransitServiceTableFile = _m.Attribute(str)
     AggTypeSelectionFile = _m.Attribute(str)
     AlternativeDataFile = _m.Attribute(str)
+    BatchEditFile = _m.Attribute(str)
     DefaultAgg = _m.Attribute(str)  
     
     PublishFlag = _m.Attribute(bool)
@@ -251,6 +253,16 @@ class FullNetworkSetGenerator(_m.Tool()):
                            note="Requires two columns:\
                                <ul><li>emme_id</li>\
                                <li>agg_type</li></ul>")
+
+        pb.add_select_file(tool_attribute_name='BatchEditFile',
+                           window_type='file', file_filter='*.csv',
+                           title="Batch Line Editing (optional)",
+                           note="Requires at least three columns\
+                               (multiple additional hdw/spd pairs can\
+                               be added; x refers to a scenario number):\
+                               <ul><li>filter</li>\
+                               <li>x_hdwchange</li>\
+                               <li>x_spdchange</li></ul>")
 
         keyval1 = {'n':'Naive', 'a':'Average'}
         pb.add_radio_group(tool_attribute_name='DefaultAgg', 
@@ -536,7 +548,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                  Scen4Description, Scen4Start, Scen4End,
                  Scen5UnNumber, Scen5UnDescription, Scen5Number, 
                  Scen5Description, Scen5Start, Scen5End,
-                 TransitServiceTableFile, AggTypeSelectionFile, AlternativeDataFile,
+                 TransitServiceTableFile, AggTypeSelectionFile, AlternativeDataFile, BatchEditFile,
                  DefaultAgg, PublishFlag, OverwriteScenarioFlag, NodeFilterAttributeId,
                  StopFilterAttributeId, ConnectorFilterAttributeId, AttributeAggregatorString,
                  LineFilterExpression):
@@ -597,6 +609,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.TransitServiceTableFile = TransitServiceTableFile
         self.AggTypeSelectionFile = AggTypeSelectionFile
         self.AlternativeDataFile = AlternativeDataFile
+        self.BatchEditFile = BatchEditFile
         self.DefaultAgg = DefaultAgg
         self.PublishFlag = PublishFlag
         self.OverwriteScenarioFlag = OverwriteScenarioFlag
@@ -659,6 +672,11 @@ class FullNetworkSetGenerator(_m.Tool()):
                                  self.DefaultAgg, scenarios[4], scenarios[5])
 
             print "Created uncleaned time period networks"
+
+            if self.BatchEditFile:
+                for scenarios in scenarioSet:
+                    lineEdit(scenarios[0], self.BatchEditFile) #note that batch edit file should use uncleaned scenario numbers
+                print "Edited transit line data"
 
             # Prorate the transit speeds in all uncleaned networks
             for scenarios in scenarioSet:
