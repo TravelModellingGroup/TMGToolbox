@@ -120,8 +120,11 @@ class ApplyBatchLineEdits(_m.Tool()):
 
             changesToApply = self._LoadFile()
             print "Instruction file loaded"
-            self._ApplyLineChanges(changesToApply)
-            print "Headway and speed changes applied"
+            if changesToApply: 
+                self._ApplyLineChanges(changesToApply)
+                print "Headway and speed changes applied"
+            else:
+                print "No changes available in this scenario"
 
             self.TRACKER.completeTask()
 
@@ -148,16 +151,18 @@ class ApplyBatchLineEdits(_m.Tool()):
             speedTitle = self.Scenario.id + '_spdchange'
             try:
                 headwayCol = cells.index(headwayTitle)
-            except ModuleError:
+            except Exception, e:
                 msg = "Error. No headway match for specified scenario: '%s'." %self.Scenario.id
                 _m.logbook_write(msg)
                 print msg
+                return
             try:
                 speedCol = cells.index(speedTitle)
-            except ModuleError:
+            except Exception, e:
                 msg = "Error. No speed match for specified scenario: '%s'." %self.Scenario.id
                 _m.logbook_write(msg)
                 print msg
+                return
 
             instructionData = {}
             
@@ -186,7 +191,7 @@ class ApplyBatchLineEdits(_m.Tool()):
                     "result": "hdw",
                     "selections": {
                         "transit_line": filter}}
-                netCalc(spec)
+                netCalc(spec, self.Scenario)
             if factors[1] != 1:
                 spec = {
                     "type": "NETWORK_CALCULATION",
@@ -194,7 +199,7 @@ class ApplyBatchLineEdits(_m.Tool()):
                     "result": "speed",
                     "selections": {
                         "transit_line": filter}}
-                netCalc(spec)
+                netCalc(spec, self.Scenario)
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):

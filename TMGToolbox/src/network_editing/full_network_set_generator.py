@@ -52,7 +52,7 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 removeExtraNodes = _MODELLER.tool('tmg.network_editing.remove_extra_nodes')
 prorateTransitSpeed = _MODELLER.tool('tmg.network_editing.prorate_transit_speed')
 createTimePeriod = _MODELLER.tool('tmg.network_editing.time_of_day_changes.create_transit_time_period')
-lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_line_batch_edits')
+lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_batch_line_edits')
 
 ##########################################################################################################
 

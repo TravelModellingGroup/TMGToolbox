@@ -404,13 +404,13 @@ class CreateTimePeriodNetworks(_m.Tool()):
             speedTitle = "{:0>4,.0f}".format(self.TimePeriodStart) + '_spd'
             try:
                 headwayCol = cells.index(headwayTitle)
-            except ModuleError:
+            except Exception, e:
                 msg = "Error. No headway match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
                 _m.logbook_write(msg)
                 print msg
             try:
                 speedCol = cells.index(speedTitle)
-            except ModuleError:
+            except Exception, e:
                 msg = "Error. No speed match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
                 _m.logbook_write(msg)
                 print msg
