@@ -70,6 +70,7 @@
     <Compile Include="src\network_editing\calculate_station_frequencies.py" />
     <Compile Include="src\network_editing\centroid_connectors\CCGEN.py" />
     <Compile Include="src\network_editing\centroid_connectors\copy_zone_system.py" />
+    <Compile Include="src\network_editing\full_network_set_generator.py" />
     <Compile Include="src\network_editing\GTFS_utilities\clean_GTFS.py" />
     <Compile Include="src\network_editing\GTFS_utilities\export_GTFS_stops_as_shapefile.py" />
     <Compile Include="src\network_editing\GTFS_utilities\generate_transit_lines_from_GTFS.py" />
@@ -109,6 +110,7 @@
     <Compile Include="src\XTMF_internal\export_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_network_batch_file.py" />
     <Compile Include="src\XTMF_internal\import_matrix_batch_file.py" />
+    <Compile Include="src\XTMF_internal\multi_class_road_assignment.py" />
     <Compile Include="src\XTMF_internal\return_boardings.py" />
     <Compile Include="src\XTMF_internal\return_boardings_and_WAW.py" />
     <Compile Include="src\XTMF_internal\return_boarding_types.py" />

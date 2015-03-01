@@ -240,7 +240,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                         with _m.logbook_trace("Running primary road assignment."):                    
                            
                             spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List,\
-                                                             self.TollsMatrixId, self.TimesMatrixId,  Mode_List_for_attributes)
+                                                             self.TimesMatrixId, self.TollsMatrixId,  Mode_List_for_attributes)
                             
                                
                             report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
