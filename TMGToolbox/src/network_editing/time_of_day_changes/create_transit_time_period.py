@@ -488,10 +488,15 @@ class CreateTimePeriodNetworks(_m.Tool()):
             if line:
                 if data[0] == 9999: #a headway of 9999 indicates an unused line
                     network.delete_transit_line(line.id)
-                elif not data[0] in bounds: 
+                elif not data[0] in bounds: #a headway of 0 allows for a line to be in the alt data file without affecting anything
                     print "%s: %s" %(line.id, data[0])
+                    _m.logbook_write("Headway out of bounds line %s: %s minutes" %(line.id, data[0]))
+                    continue
                 line.headway = data[0]
-                if not data[1] in bounds: print "%s: %s" %(line.id, data[1])                    
+                if not data[1] in bounds: 
+                    print "%s: %s" %(line.id, data[1])    
+                    _m.logbook_write("Speed out of bounds line %s: %s km/h" %(line.id, data[1]))         
+                    continue       
                 line.speed = data[1]
 
     @_m.method(return_type=_m.TupleType)
