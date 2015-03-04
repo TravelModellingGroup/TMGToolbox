@@ -55,6 +55,9 @@
     <Compile Include="src\assignment\transit\V3_line_haul.py" />
     <Compile Include="src\assignment\transit\V4_FBTA.py" />
     <Compile Include="src\common\geometry.py" />
+    <Compile Include="src\common\import_binary_export_csv.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\common\network_editing.py" />
     <Compile Include="src\common\spatial_index.py" />
     <Compile Include="src\common\TMG_tool_page_builder.py" />
@@ -74,6 +77,12 @@
     <Compile Include="src\network_editing\GTFS_utilities\export_GTFS_stops_as_shapefile.py" />
     <Compile Include="src\network_editing\GTFS_utilities\generate_transit_lines_from_GTFS.py" />
     <Compile Include="src\network_editing\load_attribute_from_polygon.py" />
+    <Compile Include="src\network_editing\line_set_conjoiner.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\full_network_set_generator.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\network_editing\NCS11\conversion\apply_operator_codes.py" />
     <Compile Include="src\network_editing\NCS11\conversion\convert_VDFs.py" />
     <Compile Include="src\network_editing\NCS11\conversion\convert_vehicles.py" />
@@ -103,12 +112,19 @@
     <Compile Include="src\network_editing\time_of_day_changes\compute_combined_headways.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\network_editing\time_of_day_changes\find_unnecessary_lines.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\network_editing\transit_fare_hypernetworks\calculate_hypernetwork_size.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\generate_hypernetwork_from_schema.py" />
     <Compile Include="src\tool_list.py" />
     <Compile Include="src\XTMF_internal\export_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_network_batch_file.py" />
     <Compile Include="src\XTMF_internal\import_matrix_batch_file.py" />
+    <Compile Include="src\XTMF_internal\apply_batch_line_edits.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\XTMF_internal\multi_class_road_assignment.py" />
     <Compile Include="src\XTMF_internal\return_boardings.py" />
     <Compile Include="src\XTMF_internal\return_boardings_and_WAW.py" />
     <Compile Include="src\XTMF_internal\return_boarding_types.py" />
