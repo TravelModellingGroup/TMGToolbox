@@ -82,6 +82,11 @@ V4 Transit Assignment
     3.4.0 Added new feature to optionally export congestion matrix.
 
     3.4.1 Fixed bug causing congestion matrix number to not be passed in from XTMF.
+
+    3.5.0 Removed all mention of GO Transit. Now applying a global 0.5 headway fraction 
+            and using a global function to apply effective headways, resulting in
+            an equivalent wait time of applying a 0.5 fraction up to 15 minute
+            headways and a 0.2 fraction for all additional headway beyond 15 minutes.
     
 '''
 import traceback as _traceback
@@ -117,7 +122,7 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '3.4.1'
+    version = '3.5.0'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -134,6 +139,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     WalkAttributeId = _m.Attribute(str)
     HeadwayFractionAttributeId = _m.Attribute(str)
+    EffectiveHeadwayAttributeId = _m.Attribute(str)
     LinkFareAttributeId = _m.Attribute(str)
     SegmentFareAttributeId = _m.Attribute(str)
     
@@ -160,12 +166,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     CongestionPerception = _m.Attribute(float)
     CongestionExponent = _m.Attribute(float)
+
+    EffectiveHeadwaySlope = _m.Attribute(float)
     
     WaitPerception = _m.Attribute(float)
     BoardPerception = _m.Attribute(float)
     FarePerception = _m.Attribute(float)
     AssignmentPeriod = _m.Attribute(float)
-    GoTrainHeadwayFraction = _m.Attribute(float)
     
     xtmf_OriginDistributionLogitScale = _m.Attribute(float)
     xtmf_WalkDistributionLogitScale = _m.Attribute(float)
@@ -188,6 +195,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.LinkFareAttributeId = "@lfare"
         self.SegmentFareAttributeId = "@sfare"
         self.HeadwayFractionAttributeId = "@frac"
+        self.EffectiveHeadwayAttributeId = "@ehdw"
         self.WalkAttributeId = "@walkp"
         
         self.CalculateCongestedIvttFlag = True
@@ -203,6 +211,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.CongestionPerception = 0.41
         self.CongestionExponent = 1.62
+
+        self.EffectiveHeadwaySlope = 0.20
         
         self.FarePerception = 10.694
         
@@ -210,7 +220,6 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.NormGap = 0
         self.RelGap = 0
         self.Iterations = 5
-        self.GoTrainHeadwayFraction = 0.20
         
         if EMME_VERSION >= 4.1:
             self.NumberOfProcessors = cpu_count()
@@ -259,6 +268,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         keyval2 = [(-1, 'None')]
         keyval3 = []
         keyval4 = []
+        keyval5 = [(-1, 'None')]
         for exatt in self.Scenario.extra_attributes():
             tup = (exatt.id, "%s - %s" %(exatt.id, exatt.description))
             if exatt.type == 'NODE':
@@ -268,10 +278,20 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 keyval3.append(tup)
             elif exatt.type == 'TRANSIT_SEGMENT':
                 keyval4.append(tup)
+            elif exatt.type == 'TRANSIT_LINE':
+                keyval5.append(tup)
         
         pb.add_select(tool_attribute_name='HeadwayFractionAttributeId',
                       keyvalues= keyval1, title= "Headway Fraction Attribute",
                       note= "NODE extra attribute to store headway fraction value. \
+                          Select NONE to create a temporary attribute. \
+                          <br><font color='red'><b>Warning:</b></font>\
+                          using a temporary attribute causes an error with \
+                          subsequent strategy-based analyses.")
+
+        pb.add_select(tool_attribute_name='EffectiveHeadwayAttributeId',
+                      keyvalues= keyval5, title= "Effective Headway Attribute",
+                      note= "TRANSIT_LINE extra attribute to store effective headway value. \
                           Select NONE to create a temporary attribute. \
                           <br><font color='red'><b>Warning:</b></font>\
                           using a temporary attribute causes an error with \
@@ -332,12 +352,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
+
             with t.table_cell():
-                 pb.add_html("<b>GO Rail Headway Fraction:</b>")
+                 pb.add_html("<b>Effective Headway Function Slope:</b>")
             with t.table_cell():
-                pb.add_text_box(tool_attribute_name= 'GoTrainHeadwayFraction', size= 10)
+                pb.add_text_box(tool_attribute_name= 'EffectiveHeadwaySlope', size= 10)
             with t.table_cell():
-                pb.add_html("Applied to GO Rail nodes only (98000 <= i < 99000).")
+                pb.add_html("Applies to headways greater than 15 minutes.")
             t.new_row()
             
             with t.table_cell():
@@ -478,6 +499,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 .append(tool.get_scenario_node_attributes())
             inro.modeller.page.preload("#HeadwayFractionAttributeId");
             $("#HeadwayFractionAttributeId").trigger('change');
+
+            $(this).commit();
+            $("#EffectiveHeadwayAttributeId")
+                .empty()
+                .append(tool.get_scenario_node_attributes())
+            inro.modeller.page.preload("#EffectiveHeadwayAttributeId");
+            $("#EffectiveHeadwayAttributeId").trigger('change');
             
             $("#WalkAttributeId")
                 .empty()
@@ -532,6 +560,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.Iterations == None: raise NullPointerException("Maximum iterations not specified")
             if self.NormGap == None: raise NullPointerException("Normalized gap not specified")
             if self.RelGap == None: raise NullPointerException("Relative gap not specified")
+            if self.EffectiveHeadwaySlope == None: raise NullPointerException("Effective headway slope not specified")
             if self.LinkFareAttributeId == None: raise NullPointerException("Link fare attribute not specified")
             if self.SegmentFareAttributeId == None: raise NullPointerException("Segment fare attribute not specified")
             
@@ -552,15 +581,20 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.WalkAttributeId == None:
                 manager2 = _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', default= 1.0)
             else: manager2 = blank(self.Scenario.extra_attribute(self.WalkAttributeId))
-            nest = nested(manager1, manager2)
+            if self.EffectiveHeadwayAttributeId == None:
+                manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default= 0.0)
+            else: manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
+            nest = nested(manager1, manager2, manager3)
             
-            with nest as (headwayAttribute, walkAttribute):
+            with nest as (headwayAttribute, walkAttribute, effectiveHeadwayAttribute):
                 # Set attributes to default values.
                 headwayAttribute.initialize(0.5) 
                 walkAttribute.initialize(1.0)
+                effectiveHeadwayAttribute.initialize(0.0)
                                 
                 self.HeadwayFractionAttributeId = headwayAttribute.id
                 self.WalkAttributeId = walkAttribute.id
+                self.EffectiveHeadwayAttributeId = effectiveHeadwayAttribute.id
                 
                 self._Execute()
                 
@@ -571,12 +605,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
-    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, GoTrainHeadwayFraction, WaitPerception,
+    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, WaitPerception,
                  WalkSpeed, WalkPerceptionToronto, WalkPerceptionNonToronto, 
                  WalkPerceptionTorontoConnectors, WalkPerceptionNonTorontoConnectors,
                  WalkPerceptionPD1,
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
-                 SegmentFareAttributeId,
+                 SegmentFareAttributeId, EffectiveHeadwaySlope,
                  BoardPerception, CongestionPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
@@ -606,6 +640,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) == None:
             raise Exception("Headway fraction attribute %s does not exist" %self.HeadwayFractionAttributeId)
+
+        if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) == None:
+            raise Exception("Effective headway attribute %s does not exist" %self.EffectiveHeadwayAttributeId)
         
         if self.Scenario.extra_attribute(self.LinkFareAttributeId) == None:
             raise Exception("Link fare attribute %s does not exist" %self.LinkFareAttributeId)
@@ -626,7 +663,6 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             self.CongestionMatrixId = "mf%s" %xtmf_CongestionMatrixNumber
         
         #---4 Set up other parameters
-        self.GoTrainHeadwayFraction = GoTrainHeadwayFraction
         self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
         self.WalkAttributeId = WalkAttributeId
         self.LinkFareAttributeId = LinkFareAttributeId
@@ -639,6 +675,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
         self.BoardPerception = BoardPerception
         self.WalkPerceptionPD1 = WalkPerceptionPD1
+
+        self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         
         self.CongestionPerception = CongestionPerception
         self.FarePerception = FarePerception
@@ -696,9 +734,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             
             with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
                                 
-                self.TRACKER.startProcess(2)
+                self.TRACKER.startProcess(3)
                 
                 self._AssignHeadwayFraction()
+                self.TRACKER.completeSubtask()
+
+                self._AssignEffectiveHeadway()
                 self.TRACKER.completeSubtask()
                 
                 self._AssignWalkPerception()
@@ -803,19 +844,31 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     def _AssignHeadwayFraction(self):
         exatt = self.Scenario.extra_attribute(self.HeadwayFractionAttributeId)
         exatt.initialize(0.5)
-        
-        spec = {
-                "result": self.HeadwayFractionAttributeId,
-                "expression": str(self.GoTrainHeadwayFraction),
-                "aggregation": None,
-                "selections": {
-                    "node": "i=98000,99000"
-                },
-                "type": "NETWORK_CALCULATION"
-            }
-        
-        networkCalcTool(specification= spec, scenario= self.Scenario)
-    
+
+    def _AssignEffectiveHeadway(self):
+        exatt = self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId)
+        exatt.initialize(0.0)
+        smallHeadwaySpec = {
+                    "result": self.EffectiveHeadwayAttributeId,
+                    "expression": "hdw",
+                    "aggregation": None,
+                    "selections": {
+                        "transit_line": "hdw=0,15"
+                    },
+                    "type": "NETWORK_CALCULATION"
+                }
+        largeHeadwaySpec = {
+                    "result": self.EffectiveHeadwayAttributeId,
+                    "expression": "15+2*" + str(self.EffectiveHeadwaySlope) + "*(hdw-15)", 
+                    "aggregation": None,
+                    "selections": {
+                        "transit_line": "hdw=15,999"
+                    },
+                    "type": "NETWORK_CALCULATION"
+                }
+        networkCalcTool(smallHeadwaySpec, self.Scenario)
+        networkCalcTool(largeHeadwaySpec, self.Scenario)
+
     def _AssignWalkPerception(self):
         exatt = self.Scenario.extra_attribute(self.WalkAttributeId)
         exatt.initialize(1.0)
@@ -853,7 +906,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 "demand": self.DemandMatrix.id,
                 "waiting_time": {
                     "headway_fraction": self.HeadwayFractionAttributeId,
-                    "effective_headways": "hdw",
+                    "effective_headways": self.EffectiveHeadwayAttributeId,
                     "spread_factor": 1,
                     "perception_factor": self.WaitPerception
                 },
