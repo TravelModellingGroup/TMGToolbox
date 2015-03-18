@@ -610,15 +610,42 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  WalkPerceptionTorontoConnectors, WalkPerceptionNonTorontoConnectors,
                  WalkPerceptionPD1,
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
-                 SegmentFareAttributeId, EffectiveHeadwaySlope,
+                 SegmentFareAttributeId, EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,
                  BoardPerception, CongestionPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
                  xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag,
                  CongestionExponent):
         
+        #---4 Set up parameters
+        self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
+                
+        self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
+        self.WalkAttributeId = WalkAttributeId
+        self.LinkFareAttributeId = LinkFareAttributeId
+        self.SegmentFareAttributeId = SegmentFareAttributeId
         
+        self.WaitPerception = WaitPerception
+        self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
+        self.WalkPerceptionToronto = WalkPerceptionToronto
+        self.WalkPerceptionTorontoConnectors = WalkPerceptionTorontoConnectors
+        self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
+        self.BoardPerception = BoardPerception
+        self.WalkPerceptionPD1 = WalkPerceptionPD1
+
+        self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         
+        self.CongestionPerception = CongestionPerception
+        self.FarePerception = FarePerception
+        self.CongestionExponent = CongestionExponent
+        
+        self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
+        
+        self.AssignmentPeriod = AssignmentPeriod
+        self.Iterations = Iterations
+        self.NormGap = NormGap
+        self.RelGap = RelGap
+
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -661,33 +688,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             self.FareMatrixId = "mf%s" %xtmf_FareMatrixNumber
         if xtmf_CongestionMatrixNumber:
             self.CongestionMatrixId = "mf%s" %xtmf_CongestionMatrixNumber
-        
-        #---4 Set up other parameters
-        self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
-        self.WalkAttributeId = WalkAttributeId
-        self.LinkFareAttributeId = LinkFareAttributeId
-        self.SegmentFareAttributeId = SegmentFareAttributeId
-        
-        self.WaitPerception = WaitPerception
-        self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
-        self.WalkPerceptionToronto = WalkPerceptionToronto
-        self.WalkPerceptionTorontoConnectors = WalkPerceptionTorontoConnectors
-        self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
-        self.BoardPerception = BoardPerception
-        self.WalkPerceptionPD1 = WalkPerceptionPD1
-
-        self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
-        
-        self.CongestionPerception = CongestionPerception
-        self.FarePerception = FarePerception
-        self.CongestionExponent = CongestionExponent
-        
-        self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
-        
-        self.AssignmentPeriod = AssignmentPeriod
-        self.Iterations = Iterations
-        self.NormGap = NormGap
-        self.RelGap = RelGap
+       
         
         print "Running V4 Transit Assignment"
         
