@@ -214,7 +214,10 @@ class FullNetworkSetGenerator(_m.Tool()):
                          from a single base network. Make sure that the base network \
                          includes a zone system before running the tool. \
                          <br><b>Warning: this tool will overwrite scenarios in the  \
-                         selected locations!</b>",
+                         selected locations!</b> \
+                         <br><b>Warning: changing the base scenario may cause \
+                         errors. It is recommended that you make your desired \
+                         base scenario active first.</b>",
                      branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
