@@ -87,6 +87,8 @@ V4 Transit Assignment
             and using a global function to apply effective headways, resulting in
             an equivalent wait time of applying a 0.5 fraction up to 15 minute
             headways and a 0.2 fraction for all additional headway beyond 15 minutes.
+
+    3.5.1 Added new feature to optionally export boarding penalty matrix.
     
 '''
 import traceback as _traceback
@@ -122,9 +124,9 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '3.5.0'
+    version = '3.5.1'
     tool_run_msg = ""
-    number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 7 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -148,12 +150,14 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     WalkTimeMatrixId = _m.Attribute(str)
     FareMatrixId = _m.Attribute(str)
     CongestionMatrixId = _m.Attribute(str)
+    PenaltyMatrixId = _m.Attribute(str)
     
     xtmf_InVehicleTimeMatrixNumber = _m.Attribute(int)
     xtmf_WaitTimeMatrixNumber = _m.Attribute(int)
     xtmf_WalkTimeMatrixNumber = _m.Attribute(int)
     xtmf_FareMatrixNumber = _m.Attribute(int)
     xtmf_CongestionMatrixNumber = _m.Attribute(int)
+    xtmf_PenaltyMatrixNumber = _m.Attribute(int)
     
     CalculateCongestedIvttFlag = _m.Attribute(bool)
     
@@ -349,6 +353,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                     title= "Fares Matrix",
                                     note= "<font color='green'><b>Optional.</b></font> Select \
                                         a matrix in which to save fares.")
+
+        pb.add_select_output_matrix(tool_attribute_name= 'PenaltyMatrixId',
+                                    include_existing= True,
+                                    title= "Boarding Penalties Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to save accrued boarding penalties.")
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
@@ -610,15 +620,42 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  WalkPerceptionTorontoConnectors, WalkPerceptionNonTorontoConnectors,
                  WalkPerceptionPD1,
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
-                 SegmentFareAttributeId, EffectiveHeadwaySlope,
+                 SegmentFareAttributeId, EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,
                  BoardPerception, CongestionPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
-                 xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag,
-                 CongestionExponent):
+                 xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_PenaltyMatrixNumber, xtmf_OriginDistributionLogitScale, 
+                 CalculateCongestedIvttFlag, CongestionExponent):                 
         
+        #---4 Set up parameters
+        self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
+                
+        self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
+        self.WalkAttributeId = WalkAttributeId
+        self.LinkFareAttributeId = LinkFareAttributeId
+        self.SegmentFareAttributeId = SegmentFareAttributeId
         
+        self.WaitPerception = WaitPerception
+        self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
+        self.WalkPerceptionToronto = WalkPerceptionToronto
+        self.WalkPerceptionTorontoConnectors = WalkPerceptionTorontoConnectors
+        self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
+        self.BoardPerception = BoardPerception
+        self.WalkPerceptionPD1 = WalkPerceptionPD1
+
+        self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         
+        self.CongestionPerception = CongestionPerception
+        self.FarePerception = FarePerception
+        self.CongestionExponent = CongestionExponent
+        
+        self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
+        
+        self.AssignmentPeriod = AssignmentPeriod
+        self.Iterations = Iterations
+        self.NormGap = NormGap
+        self.RelGap = RelGap
+
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -661,33 +698,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             self.FareMatrixId = "mf%s" %xtmf_FareMatrixNumber
         if xtmf_CongestionMatrixNumber:
             self.CongestionMatrixId = "mf%s" %xtmf_CongestionMatrixNumber
-        
-        #---4 Set up other parameters
-        self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
-        self.WalkAttributeId = WalkAttributeId
-        self.LinkFareAttributeId = LinkFareAttributeId
-        self.SegmentFareAttributeId = SegmentFareAttributeId
-        
-        self.WaitPerception = WaitPerception
-        self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
-        self.WalkPerceptionToronto = WalkPerceptionToronto
-        self.WalkPerceptionTorontoConnectors = WalkPerceptionTorontoConnectors
-        self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
-        self.BoardPerception = BoardPerception
-        self.WalkPerceptionPD1 = WalkPerceptionPD1
-
-        self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
-        
-        self.CongestionPerception = CongestionPerception
-        self.FarePerception = FarePerception
-        self.CongestionExponent = CongestionExponent
-        
-        self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
-        
-        self.AssignmentPeriod = AssignmentPeriod
-        self.Iterations = Iterations
-        self.NormGap = NormGap
-        self.RelGap = RelGap
+        if xtmf_PenaltyMatrixNumber:
+            self.PenaltyMatrixId = "mf%s" %xtmf_PenaltyMatrixNumber
+       
         
         print "Running V4 Transit Assignment"
         
@@ -731,6 +744,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.FareMatrixId:
                 _util.initializeMatrix(id= self.FareMatrixId,
                                        description= "Transit total fare costs")
+            if self.PenaltyMatrixId:
+                _util.initializeMatrix(id= self.PenaltyMatrixId,
+                                       description= "Transit total boarding penalties")
             
             with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
                                 
@@ -1033,7 +1049,10 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         #If the fares matrix is required, extract that.
         if self.FareMatrixId:
             self._ExtractCostMatrix()
-                
+        
+        #If the penalties matrix is required, extract that.
+        if self.PenaltyMatrixId:
+            self._ExtractPenaltyMatrix()
             
 
     def _ExtractTimesMatrices(self):
@@ -1083,6 +1102,38 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
     
+    def _ExtractPenaltyMatrix(self):
+        spec = {
+                "trip_components": {
+                    "boarding": "ut3",
+                    "in_vehicle": None,
+                    "aux_transit": None,
+                    "alighting": None
+                },
+                "sub_path_combination_operator": "+",
+                "sub_strategy_combination_operator": "average",
+                "selected_demand_and_transit_volumes": {
+                    "sub_strategies_to_retain": "ALL",
+                    "selection_threshold": {
+                        "lower": -999999,
+                        "upper": 999999
+                    }
+                },
+                "analyzed_demand": self.DemandMatrix.id,
+                "constraint": None,
+                "results": {
+                    "strategy_values": self.PenaltyMatrixId,
+                    "selected_demand": None,
+                    "transit_volumes": None,
+                    "aux_transit_volumes": None,
+                    "total_boardings": None,
+                    "total_alightings": None
+                },
+                "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
+            }     
+                
+        self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
+
     def _ExtractCongestionMatrix(self, congestionMatrixId):
         spec = {"trip_components": {
                     "boarding": None,
