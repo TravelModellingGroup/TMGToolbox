@@ -28,6 +28,8 @@
     <Compile Include="src\analysis\matrix_statistics.py" />
     <Compile Include="src\analysis\traffic\export_countpost_results.py" />
     <Compile Include="src\analysis\traffic\export_screenline_results.py" />
+    <Compile Include="src\analysis\traffic\Export_Count_Station_Location.py" />
+    <Compile Include="src\analysis\traffic\Import_Cordon_Counts.py" />
     <Compile Include="src\analysis\transit\create_station_access_file.py" />
     <Compile Include="src\analysis\transit\export_boardings.py" />
     <Compile Include="src\analysis\transit\strategy_analysis\extract_constrained_LOS_matrices.py" />
@@ -106,9 +108,11 @@
     </Compile>
     <Compile Include="src\network_editing\transit_fare_hypernetworks\calculate_hypernetwork_size.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\generate_hypernetwork_from_schema.py" />
+    <Compile Include="src\network_editing\transit_fare_hypernetworks\Hypernetwork_Volume_Importer.py" />
     <Compile Include="src\tool_list.py" />
     <Compile Include="src\XTMF_internal\export_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_network_batch_file.py" />
+    <Compile Include="src\XTMF_internal\export_worksheet.py" />
     <Compile Include="src\XTMF_internal\import_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\multi_class_road_assignment.py" />
     <Compile Include="src\XTMF_internal\return_boardings.py" />

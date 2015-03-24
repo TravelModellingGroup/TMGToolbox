@@ -53,6 +53,7 @@ from datetime import datetime as _dt
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+_spindex = _MODELLER.module('tmg.common.spatial_index')
 
 
 ##########################################################################################################
