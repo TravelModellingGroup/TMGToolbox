@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -23,11 +23,11 @@ Assign V4 Boarding Penalties
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: mattaustin222
     
     
-    Assigns line-specific boarding penalties (stored in UT3) based on pre-specified (e.g.
-    hard-coded) groupings, for transit assignment estimation.
+    Assigns line-specific boarding penalties (stored in UT3) based on specified
+    groupings, for transit assignment estimation.
         
 '''
 #---VERSION HISTORY
@@ -35,16 +35,20 @@ Assign V4 Boarding Penalties
     0.0.1 Created on 2014-02-14 by pkucirek
     
     1.0.0 Cleaned and published. Now accepts a list of scenarios, for easy use (Modeller only).
-            Also changed the order of paramters to better match the order of groups used in
+            Also changed the order of parameters to better match the order of groups used in
             GTAModel V4.
             
     1.0.1 Added short description
+
+    1.1.0 Line groups are no longer hard-coded. Instead, user-inputted selector expressions are used
+            and the number of line groups is open-ended.
 '''
 
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from re import split as _regex_split
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -54,7 +58,7 @@ NullPointerException = _util.NullPointerException
 
 class AssignV4BoardingPenalties(_m.Tool()):
     
-    version = '1.0.1'
+    version = '1.1.0'
     tool_run_msg = ""
     number_of_tasks = 15 # For progress reporting, enter the integer number of tasks here
     
@@ -66,45 +70,32 @@ class AssignV4BoardingPenalties(_m.Tool()):
     xtmf_ScenarioNumbers = _m.Attribute(str) # parameter used by XTMF only
     Scenarios = _m.Attribute(_m.ListType) # common variable or parameter
     
-    SubwayBoardingPenalty = _m.Attribute(float)
-    GoTrainBoardingPenalty = _m.Attribute(float)
-    GoBusBoardingPenalty = _m.Attribute(float)
-    StreetcarXROWBoardingPenalty = _m.Attribute(float)
-    StreetcarBoardingPenalty = _m.Attribute(float)
-    TTCBusBoardingPenalty = _m.Attribute(float)
-    YRTBoardingPenalty = _m.Attribute(float)
-    VIVABoardingPenalty = _m.Attribute(float)
-    BramptonBoardingPenalty = _m.Attribute(float)
-    ZUMBoardingPenalty = _m.Attribute(float)
-    MiWayBoardingPenalty = _m.Attribute(float)
-    DurhamBoardingPenalty = _m.Attribute(float)
-    HaltonBoardingPenalty = _m.Attribute(float)
-    HSRBoardingPenalty = _m.Attribute(float)
-    
+    PenaltyFilterString = _m.Attribute(str)
+
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
         
         #---Set the defaults of parameters used by Modeller
-        self.SubwayBoardingPenalty = 1.0
-        self.GoTrainBoardingPenalty = 1.0
-        self.GoBusBoardingPenalty = 1.0
-        self.StreetcarBoardingPenalty = 1.0
-        self.StreetcarXROWBoardingPenalty = 1.0
-        self.TTCBusBoardingPenalty = 1.0
-        self.YRTBoardingPenalty = 1.0
-        self.VIVABoardingPenalty = 1.0
-        self.BramptonBoardingPenalty = 1.0
-        self.ZUMBoardingPenalty = 1.0
-        self.MiWayBoardingPenalty = 1.0
-        self.DurhamBoardingPenalty = 1.0
-        self.HaltonBoardingPenalty = 1.0
-        self.HSRBoardingPenalty = 1.0
+        lines = ["GO Train: mode=r: 1.0",
+                 "GO Bus: mode=g: 1.0",
+                 "Subway: mode=m: 1.0",
+                 "Streetcar: mode=s: 1.0",
+                 "TTC Bus: line=T_____ and mode=bp: 1.0",
+                 "YRT: line=Y_____: 1.0",
+                 "VIVA: line=YV____: 1.0",
+                 "Brampton: line=B_____: 1.0",
+                 "MiWay: line=M_____: 1.0",
+                 "Durham: line=D_____: 1.0",
+                 "Halton: line=H_____: 1.0",
+                 "Hamilton: line=W_____: 1.0"]
+
+        self.PenaltyFilterString = "\n".join(lines)
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Assign V4 Boarding Penalties v%s" %self.version,
                      description="Assigns line-specific boarding penalties (stored in UT3) \
-                         based on hard-coded line groupings.",
+                         based on specified line groupings.",
                      branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
@@ -112,51 +103,32 @@ class AssignV4BoardingPenalties(_m.Tool()):
             
         pb.add_select_scenario(tool_attribute_name='Scenarios',
                                title='Scenarios:')
+
+        pb.add_text_box(tool_attribute_name='PenaltyFilterString', 
+                        size= 500, multi_line=True,
+                        title = "Line Group Boarding Penalties",
+                        note= "List of filters and boarding penalties for line groups. \
+                        <br><br><b>Syntax:</b> [<em>label (line group name)</em>] : [<em>network selector expression</em>] \
+                        : [<em>boarding penalty</em>] ... \
+                        <br><br>Separate (label-filter-penalty) groups with a comma or new line.\
+                        <br><br>Note that order matters, since penalties are applied sequentially.")
+
+        #---JAVASCRIPT
+        pb.add_html("""
+<script type="text/javascript">
+    $(document).ready( function ()
+    {
+        var tool = new inro.modeller.util.Proxy(%s);
+    
+        //Modeller likes to make multi-line text boxes very
+        //short, so this line changes the default height
+        //to something a little more visible.
+        $("#PenaltyFilterString").css({height: '200px'});
+        $("#PenaltyFilterString").css({width: '400px'});
         
-        pb.add_text_box(tool_attribute_name='BramptonBoardingPenalty',
-                        size=10, title="Brampton Transit (non-ZUM) Boarding Penalty")
         
-        pb.add_text_box(tool_attribute_name='ZUMBoardingPenalty',
-                        size=10, title="Brampton ZUM Boarding Penalty",
-                        note="Currently hard-coded to B501 and B502")
-        
-        pb.add_text_box(tool_attribute_name='DurhamBoardingPenalty',
-                        size=10, title="Durham Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='GoBusBoardingPenalty',
-                        size=10, title="GO Bus Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='GoTrainBoardingPenalty',
-                        size=10, title="GO Train Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='HaltonBoardingPenalty',
-                        size=10, title="Halton Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='HSRBoardingPenalty',
-                        size=10, title="HSR (Hamilton) Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='MiWayBoardingPenalty',
-                        size=10, title="MiWay (Mississauga) Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='StreetcarBoardingPenalty',
-                        size=10, title="Streetcar Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='StreetcarXROWBoardingPenalty',
-                        size=10, title="Streetcar (Excl. ROW) Boarding Penalty",
-                        note="Currently hard-coded to T509, T510, and T512")
-        
-        pb.add_text_box(tool_attribute_name='SubwayBoardingPenalty',
-                        size=10, title="Subway Boarding Penalty")
-        
-        pb.add_text_box(tool_attribute_name='TTCBusBoardingPenalty',
-                        size=10, title="TTC Bus Boarding Penalty")
-                
-        pb.add_text_box(tool_attribute_name='VIVABoardingPenalty',
-                        size=10, title="YRT VIVA Boarding Penalty",
-                        note="Currently hard-coded to lines beginning with 'YV'")
-        
-        pb.add_text_box(tool_attribute_name='YRTBoardingPenalty',
-                        size=10, title="YRT (non-VIVA) Boarding Penalty")
+    });
+</script>""" % pb.tool_proxy_tag)
         
         return pb.render()
     
@@ -164,24 +136,10 @@ class AssignV4BoardingPenalties(_m.Tool()):
         
     def run(self):
         self.tool_run_msg = ""
-        self.TRACKER.reset()
         
         try:
             if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")
-            if self.SubwayBoardingPenalty == None: raise NullPointerException("Subway boarding penalty not specified")
-            if self.GoTrainBoardingPenalty == None: raise NullPointerException("GO Train boarding penalty not specified")
-            if self.GoBusBoardingPenalty == None: raise NullPointerException("GO Bus boarding penalty not specified")
-            if self.StreetcarXROWBoardingPenalty == None: raise NullPointerException("Streetcar XROW boarding penalty not specified")
-            if self.StreetcarBoardingPenalty == None: raise NullPointerException("Streetcar boarding penalty not specified")
-            if self.TTCBusBoardingPenalty == None: raise NullPointerException("TTC Bus boarding penalty not specified")
-            if self.YRTBoardingPenalty == None: raise NullPointerException("YRT boarding penalty not specified")
-            if self.VIVABoardingPenalty == None: raise NullPointerException("VIVA boarding penalty not specified")
-            if self.BramptonBoardingPenalty == None: raise NullPointerException("Brampton boarding penalty not specified")
-            if self.ZUMBoardingPenalty == None: raise NullPointerException("ZUM boarding penalty not specified")
-            if self.MiWayBoardingPenalty == None: raise NullPointerException("MiWay boarding penalty not specified")
-            if self.DurhamBoardingPenalty == None: raise NullPointerException("Durham boarding penalty not specified")
-            if self.HaltonBoardingPenalty == None: raise NullPointerException("Halton boarding penalty not specified")
-            if self.HSRBoardingPenalty == None: raise NullPointerException("HSR boarding penalty not specified")          
+            if self.PenaltyFilterString == None: raise NullPointerException("Penalties not specified")                
             
             self._Execute()
         except Exception, e:
@@ -192,20 +150,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     def __call__(self, xtmf_ScenarioNumbers,
-                 SubwayBoardingPenalty,
-                 GoTrainBoardingPenalty,
-                 GoBusBoardingPenalty,
-                 StreetcarXROWBoardingPenalty,
-                 StreetcarBoardingPenalty,
-                 TTCBusBoardingPenalty,
-                 YRTBoardingPenalty,
-                 VIVABoardingPenalty,
-                 BramptonBoardingPenalty,
-                 ZUMBoardingPenalty,
-                 MiWayBoardingPenalty,
-                 DurhamBoardingPenalty,
-                 HaltonBoardingPenalty,
-                 HSRBoardingPenalty):
+                 PenaltyFilterString):
         
         #---1 Set up scenarios
         self.Scenarios = []
@@ -215,20 +160,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
                 raise Exception("Scenarios %s was not found!" %number)
             self.Scenarios.append(sc)
         
-        self.SubwayBoardingPenalty = SubwayBoardingPenalty
-        self.GoTrainBoardingPenalty = GoTrainBoardingPenalty
-        self.GoBusBoardingPenalty = GoBusBoardingPenalty
-        self.StreetcarXROWBoardingPenalty = StreetcarXROWBoardingPenalty
-        self.StreetcarBoardingPenalty = StreetcarBoardingPenalty
-        self.TTCBusBoardingPenalty = TTCBusBoardingPenalty
-        self.YRTBoardingPenalty = YRTBoardingPenalty
-        self.VIVABoardingPenalty = VIVABoardingPenalty
-        self.BramptonBoardingPenalty = BramptonBoardingPenalty
-        self.ZUMBoardingPenalty = ZUMBoardingPenalty
-        self.MiWayBoardingPenalty = MiWayBoardingPenalty
-        self.DurhamBoardingPenalty = DurhamBoardingPenalty
-        self.HaltonBoardingPenalty = HaltonBoardingPenalty
-        self.HSRBoardingPenalty = HSRBoardingPenalty
+        self.PenaltyFilterString = PenaltyFilterString
         
         try:
             self._Execute()
@@ -246,10 +178,12 @@ class AssignV4BoardingPenalties(_m.Tool()):
             tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
             
             self.TRACKER.reset(len(self.Scenarios))
+
+            filterList = self._ParseFilterString(self.PenaltyFilterString)
             
             for scenario in self.Scenarios:
                 with _m.logbook_trace("Processing scenario %s" %scenario):
-                    self._ProcessScenario(scenario)
+                    self._ProcessScenario(scenario, filterList)
                 self.TRACKER.completeTask()
                 
             _MODELLER.desktop.refresh_needed(True)
@@ -266,71 +200,37 @@ class AssignV4BoardingPenalties(_m.Tool()):
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts 
+
+    def _ParseFilterString(self, filterString):
+        penaltyFilterList = []
+        components = _regex_split('\n|,', filterString) #Supports newline and/or commas
+        for component in components:
+            if component.isspace(): continue #Skip if totally empty
+            
+            parts = component.split(':')
+            if len(parts) != 3:
+                msg = "Error parsing penalty and filter string: Separate label, filter and penalty with colons label:filter:penalty"
+                msg += ". [%s]" %component 
+                raise SyntaxError(msg)
+            strippedParts = [item.strip() for item in parts]
+            penaltyFilterList.append(strippedParts)
+
+        return penaltyFilterList
+
     
-    def _ProcessScenario(self, scenario):
+    def _ProcessScenario(self, scenario, penaltyFilterList):
         tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
         
-        self.TRACKER.startProcess(15)
+        self.TRACKER.startProcess(len(penaltyFilterList) + 1)
         
         with _m.logbook_trace("Resetting UT3 to 0"):
             tool(specification=self._GetClearAllSpec(), scenario=scenario)
             self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying GO Train BP"):
-            tool(specification=self._GetGoTrainSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying GO Bus BP"):
-            tool(specification=self._GetGoBusSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying Subway BP"):
-            tool(specification=self._GetSubwaySpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying Streetcar BP"):
-            tool(specification=self._GetAllStreetcarSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying Streetcar XROW BP"):
-            tool(specification=self._GetStreetcarXROWSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying TTC Bus BP"):
-            tool(specification=self._GetTTCBusSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-            
-        with _m.logbook_trace("Applying YRT BP"):
-            tool(specification=self._GetAllYRTSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying VIVA BP"):
-            tool(specification=self._GetVIVASpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying Brampton Transit BP"):
-            tool(specification=self._GetAllBramptonSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying ZUM BP"):
-            tool(specification=self._GetZUMSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-            
-        with _m.logbook_trace("Applying MiWay BP"):
-            tool(specification=self._GetMiWaySpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-            
-        with _m.logbook_trace("Applying Durham BP"):
-            tool(specification=self._GetDurhamSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-        
-        with _m.logbook_trace("Applying Halton BP"):
-            tool(specification=self._GetHaltonSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
-            
-        with _m.logbook_trace("Applying Hamilton BP"):
-            tool(specification=self._GetHamiltonSpec(), scenario=scenario)
-            self.TRACKER.completeSubtask()
+
+        for group in penaltyFilterList:
+            with _m.logbook_trace("Applying " + group[0] + " BP"):
+                tool(specification=self._GetGroupSpec(group), scenario=scenario)
+                self.TRACKER.completeSubtask()
     
     def _GetClearAllSpec(self):
         return {
@@ -343,160 +243,16 @@ class AssignV4BoardingPenalties(_m.Tool()):
                     "type": "NETWORK_CALCULATION"
                 }
     
-    def _GetSubwaySpec(self):
+    def _GetGroupSpec(self, group):
         return {
                     "result": "ut3",
-                    "expression": self.SubwayBoardingPenalty.__str__(),
+                    "expression": group[2],
                     "aggregation": None,
                     "selections": {
-                        "transit_line": "mode=m"
+                        "transit_line": group[1]
                     },
                     "type": "NETWORK_CALCULATION"
                 }
-    
-    def _GetGoTrainSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.GoTrainBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "mode=r"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetGoBusSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.GoBusBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "mode=g"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-        
-    def _GetAllStreetcarSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.StreetcarBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "mode=s"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetStreetcarXROWSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.StreetcarXROWBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=T509__ or line=T510__ or line=T512__"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetTTCBusSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.TTCBusBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=T_____ and mode=bp"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetAllYRTSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.YRTBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=Y_____"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetVIVASpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.VIVABoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=YV____"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetAllBramptonSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.BramptonBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=B_____"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetZUMSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.ZUMBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=B501__ or line=B502__"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-        
-    def _GetMiWaySpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.MiWayBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=M_____"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetDurhamSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.DurhamBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=D_____"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetHaltonSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.HaltonBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=H_____"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
-    def _GetHamiltonSpec(self):
-        return {
-                    "result": "ut3",
-                    "expression": self.HSRBoardingPenalty.__str__(),
-                    "aggregation": None,
-                    "selections": {
-                        "transit_line": "line=W_____"
-                    },
-                    "type": "NETWORK_CALCULATION"
-                }
-    
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
@@ -506,4 +262,4 @@ class AssignV4BoardingPenalties(_m.Tool()):
         return self.tool_run_msg
     
     def short_description(self):
-        return "Assign boarding penalties to pre-set line groups."
+        return "Assign boarding penalties to line groups."
