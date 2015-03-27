@@ -34,6 +34,7 @@ Create Time Period Networks
     0.0.1 Created
     0.1.1 Created on 2015-01-19 by mattaustin222
     0.1.2 Created on 2015-02-17 by mattaustin222 Allows for non-service table data to be processed
+    0.1.3 Zero values in the alt data file no longer restricts a line from being rightfully deleted
     
 '''
 
@@ -425,6 +426,8 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 spd = cells[speedCol]
                 altData[id] = (float(hdw),float(spd))
         
+            
+
         return altData
         
     def _ProcessTransitLines(self, network, start, end, altData):              
@@ -432,6 +435,9 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
         toDelete = set()
         if altData:
+            for k, v in altData.items(): #check if any headways or speeds are zero. Allow those lines to be deletable
+                if v[0] == 0 or v[1] == 0:
+                    del altData[k]
             doNotDelete = altData.keys()
         else:
             doNotDelete = None
