@@ -188,7 +188,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     NormGap = _m.Attribute(float)
     RelGap = _m.Attribute(float)
     
-    if EMME_VERSION >= 4.1:
+    if EMME_VERSION >= (4,1):
         NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
@@ -232,7 +232,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.RelGap = 0
         self.Iterations = 5
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             self.NumberOfProcessors = cpu_count()
         
         #---Private flags for calibration purposes only
@@ -250,13 +250,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     def page(self):        
 
-        if EMME_VERSION[0] >= 4:
-            if EMME_VERSION[1] == 1:
-                if EMME_VERSION[2] < 5:
-                    raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
-            elif EMME_VERSION[1] == 0:
-                raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
-        else:
+        if EMME_VERSION < (4,1,5):
             raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
 
         pb = _tmgTPB.TmgToolPageBuilder(self, title="V4 Fare-Based Transit Assignment v%s" %self.version,
@@ -495,7 +489,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 pb.add_text_box(tool_attribute_name= 'RelGap', size= 12,
                                 title= "Relative Gap")
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             keyval3 = []
             for i in range(cpu_count()):
                 if i == 0:
@@ -643,13 +637,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_PenaltyMatrixNumber, xtmf_OriginDistributionLogitScale, 
                  CalculateCongestedIvttFlag, CongestionExponentString):                 
         
-        if EMME_VERSION[0] == 4:
-            if EMME_VERSION[1] == 1:
-                if EMME_VERSION[2] < 5:
-                    raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
-            elif EMME_VERSION[1] == 0:
-                raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
-        else:
+        if EMME_VERSION < (4,1,5):
             raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
         
         #---4 Set up parameters
@@ -856,7 +844,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     
     def _ChangeWalkSpeed(self):
         with _m.logbook_trace("Setting walk speeds to %s" %self.WalkSpeed):
-            if EMME_VERSION >= 4.1:
+            if EMME_VERSION >= (4,1):
                 self._ChangeWalkSpeed4p1()
             else:
                 self._ChangeWalkSpeed4p0()
