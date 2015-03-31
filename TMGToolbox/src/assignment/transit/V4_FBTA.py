@@ -89,6 +89,10 @@ V4 Transit Assignment
             headways and a 0.2 fraction for all additional headway beyond 15 minutes.
 
     3.5.1 Added new feature to optionally export boarding penalty matrix.
+
+    4.0.0 Changed to use custom congestion functions. Allows for different conical
+        weights and exponents based on ttf value of segment. Tool no longer available
+        for < 4.1.5
     
 '''
 import traceback as _traceback
@@ -124,7 +128,7 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '3.5.1'
+    version = '4.0.0'
     tool_run_msg = ""
     number_of_tasks = 7 # For progress reporting, enter the integer number of tasks here
     
@@ -168,8 +172,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     WalkPerceptionNonTorontoConnectors = _m.Attribute(float)
     WalkPerceptionPD1 = _m.Attribute(float)
     
-    CongestionPerception = _m.Attribute(float)
-    CongestionExponent = _m.Attribute(float)
+    CongestionExponentString = _m.Attribute(str)
 
     EffectiveHeadwaySlope = _m.Attribute(float)
     
@@ -213,8 +216,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WalkPerceptionPD1 = 1.14
         self.BoardPerception = 1
         
-        self.CongestionPerception = 0.41
-        self.CongestionExponent = 1.62
+        lines = ["1: 0.41: 1.62",                 
+                 "2: 0.41: 1.62",
+                 "3: 0.41: 1.62",
+                 "4: 0.41: 1.62"]
+
+        self.CongestionExponentString = "\n".join(lines)
 
         self.EffectiveHeadwaySlope = 0.20
         
@@ -238,10 +245,20 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self._auxTrLogitTruncation = 0.05
         
         self._useMultiCore = False
-        self._congestionFunctionType = "CONICAL" #"BPR"
+        self._congestionFunctionType = "CONICAL" #"BPR" 
         self._considerTotalImpedance = True
     
-    def page(self):
+    def page(self):        
+
+        if EMME_VERSION[0] >= 4:
+            if EMME_VERSION[1] == 1:
+                if EMME_VERSION[2] < 5:
+                    raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
+            elif EMME_VERSION[1] == 0:
+                raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
+        else:
+            raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
+
         pb = _tmgTPB.TmgToolPageBuilder(self, title="V4 Fare-Based Transit Assignment v%s" %self.version,
                      description="Executes a congested transit assignment procedure \
                         for GTAModel V4.0. \
@@ -251,11 +268,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                         <li> In-vehicle time perception is 1.0</li>\
                         <li> All available transit modes will be used.</li>\
                         </ul>\
-                        <font color='red'>This tool is only compatible with Emme 4 and later versions</font>",
+                        <font color='red'>This tool is only compatible with Emme 4.1.5 and later versions</font>",
                      branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
-            pb.tool_run_status(self.tool_run_msg_status)
+            pb.tool_run_status(self.tool_run_msg_status)            
         
         pb.add_header("SCENARIO INPUTS")
         
@@ -433,23 +450,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 pb.add_text_box(tool_attribute_name= 'BoardPerception', size= 10)
             with t.table_cell():
                 pb.add_html("Converts boarding impedance to impedance")
-            t.new_row()
-            
-            with t.table_cell():
-                 pb.add_html("<b>Congestion Perception:</b>")
-            with t.table_cell():
-                pb.add_text_box(tool_attribute_name= 'CongestionPerception', size= 10)
-            with t.table_cell():
-                pb.add_html("Converts congestion impedance to impedance")
-            t.new_row()
-            
-            with t.table_cell():
-                 pb.add_html("<b>Congestion Exponent:</b>")
-            with t.table_cell():
-                pb.add_text_box(tool_attribute_name= 'CongestionExponent', size= 10)
-            with t.table_cell():
-                pb.add_html("Exponent applied to congestion function")
-            t.new_row()
+            t.new_row()  
             
             with t.table_cell():
                  pb.add_html("<b>Fare Perception:</b>")
@@ -466,7 +467,20 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             with t.table_cell():
                 pb.add_html("Converts multiple-hour demand to a single assignment hour.")
             t.new_row()
-        
+
+        pb.add_header("CONGESTION PARAMETERS")
+
+        pb.add_text_box(tool_attribute_name='CongestionExponentString', 
+            size= 500, multi_line=True,
+            note= "List of congestion perceptions and exponents. \
+            Applies different congestion parameter values based on a segment's ttf value.\
+            <br><br><b>Syntax:</b> [<em>ttf</em>] : [<em>perception</em>] \
+            : [<em>exponent</em>] ... \
+            <br><br>Separate (ttf-perception-exponent) groups with a comma or new line.\
+            <br><br>The ttf value must be an integer.\
+            <br><br>Any segments with a ttf not specified above will be assigned the congestion \
+            parameters of the final group in the list.")
+
         pb.add_header("CONVERGANCE CRITERIA")
         with pb.add_table(False) as t:
             with t.table_cell():
@@ -549,6 +563,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         });
         
         $("#InVehicleTimeMatrixId").trigger('change');
+
+        $("#CongestionExponentString").css({height: '70px'});
     });
 </script>""" % pb.tool_proxy_tag)
         
@@ -566,7 +582,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.WalkPerceptionToronto == None: raise NullPointerException("Toronto walk perception not specified")
             if self.WalkPerceptionNonToronto == None: raise NullPointerException("Non-Toronto walk perception not specified")
             if self.BoardPerception == None: raise NullPointerException("Boarding perception not specified")
-            if self.CongestionPerception == None: raise NullPointerException("Congestion perception not specified")
+            if self.CongestionExponentString == None: raise NullPointerException("Congestion parameters not specified")
             if self.Iterations == None: raise NullPointerException("Maximum iterations not specified")
             if self.NormGap == None: raise NullPointerException("Normalized gap not specified")
             if self.RelGap == None: raise NullPointerException("Relative gap not specified")
@@ -621,11 +637,20 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  WalkPerceptionPD1,
                  WalkAttributeId, HeadwayFractionAttributeId, LinkFareAttributeId,
                  SegmentFareAttributeId, EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,
-                 BoardPerception, CongestionPerception, FarePerception,
+                 BoardPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
                  xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_PenaltyMatrixNumber, xtmf_OriginDistributionLogitScale, 
-                 CalculateCongestedIvttFlag, CongestionExponent):                 
+                 CalculateCongestedIvttFlag, CongestionExponentString):                 
+        
+        if EMME_VERSION[0] == 4:
+            if EMME_VERSION[1] == 1:
+                if EMME_VERSION[2] < 5:
+                    raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
+            elif EMME_VERSION[1] == 0:
+                raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
+        else:
+            raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
         
         #---4 Set up parameters
         self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
@@ -645,9 +670,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
 
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         
-        self.CongestionPerception = CongestionPerception
         self.FarePerception = FarePerception
-        self.CongestionExponent = CongestionExponent
+        self.CongestionExponentString = CongestionExponentString
         
         self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
         
@@ -747,7 +771,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.PenaltyMatrixId:
                 _util.initializeMatrix(id= self.PenaltyMatrixId,
                                        description= "Transit total boarding penalties")
-            
+                            
             with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
                                 
                 self.TRACKER.startProcess(3)
@@ -787,7 +811,6 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 "Non-Toronto Walk Perception": self.WalkPerceptionNonToronto,
                 "Toronto Access Perception": self.WalkPerceptionTorontoConnectors,
                 "Non-Toronto Access Perception": self.WalkPerceptionNonTorontoConnectors,
-                "Congestion Perception": self.CongestionPerception,
                 "Assignment Period": self.AssignmentPeriod,
                 "Boarding Perception": self.BoardPerception,
                 "Iterations": self.Iterations,
@@ -857,6 +880,40 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         baton = partialNetwork.get_attribute_values('MODE', ['speed'])
         self.Scenario.set_attribute_values('MODE', ['speed'], baton)
     
+    def _ParseExponentString(self):
+        exponentList = []
+        components = _regex_split('\n|,', self.CongestionExponentString) #Supports newline and/or commas
+        for component in components:
+            if component.isspace(): continue #Skip if totally empty
+            
+            parts = component.split(':')
+            if len(parts) != 3:
+                msg = "Error parsing penalty and filter string: Separate ttf, perception and exponent with colons ttf:perception:exponent"
+                msg += ". [%s]" %component 
+                raise SyntaxError(msg)
+            strippedParts = [item.strip() for item in parts]
+            try:
+                ttf = int(strippedParts[0])
+            except:
+                msg = "ttf value must be an integer"
+                msg += ". [%s]" %component
+                raise SyntaxError(msg)
+            try:
+                perception = float(strippedParts[1])
+            except:
+                msg = "Perception value must be a number"
+                msg += ". [%s]" %component
+                raise SyntaxError(msg)
+            try:
+                exponent = float(strippedParts[2])
+            except:
+                msg = "Exponent value must be a number"
+                msg += ". [%s]" %component
+                raise SyntaxError(msg)   
+            exponentList.append(strippedParts)
+
+        return exponentList
+        
     def _AssignHeadwayFraction(self):
         exatt = self.Scenario.extra_attribute(self.HeadwayFractionAttributeId)
         exatt.initialize(0.5)
@@ -998,15 +1055,43 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         return baseSpec
     
     def _GetFuncSpec(self):
+
+        parameterList = self._ParseExponentString()
+
+        partialSpec = """
+        import math 
+        def calc_segment_cost(transit_volume, capacity, segment): """
+
+        for count, item in enumerate(parameterList):
+            alpha = float(item[2])
+            beta = (2 * alpha - 1) / (2 * alpha - 2)
+            if count == 0:                
+                partialSpec += """
+            if segment.transit_time_func == """ + item[0] + """: 
+                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alpha) + """ ** 2 * 
+                    (1 - transit_volume / capacity) ** 2 + """ + str(beta) + """ ** 2) - """ + str(alpha) + """ 
+                    * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
+            elif count == (len(parameterList) - 1):
+                partialSpec += """
+            else: 
+                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alpha) + """ ** 2 * 
+                    (1 - transit_volume / capacity) ** 2 + """ + str(beta) + """ ** 2) - """ + str(alpha) + """ 
+                    * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
+            else: 
+                partialSpec += """
+            elif segment.transit_time_func == """ + item[0] + """: 
+                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alpha) + """ ** 2 * 
+                    (1 - transit_volume / capacity) ** 2 + """ + str(beta) + """ ** 2) - """ + str(alpha) + """ 
+                    * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
+
         funcSpec = {
-                    "type": self._congestionFunctionType,
-                    "weight": self.CongestionPerception,
-                    "exponent": self.CongestionExponent,
-                    "assignment_period": self.AssignmentPeriod,
-                    "orig_func": False,
-                    "congestion_attribute": "us3" #Hard-coded to US3
-                    }
-        
+            "type": "CUSTOM",
+            "assignment_period": self.AssignmentPeriod,
+            "orig_func": False,
+            "congestion_attribute": "us3", #Hard-coded to US3
+            "python_function": partialSpec                     
+            }
+               
         return funcSpec
     
     def _GetStopSpec(self):
