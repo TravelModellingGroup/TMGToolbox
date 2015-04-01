@@ -1053,23 +1053,25 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         for count, item in enumerate(parameterList):
             alpha = float(item[2])
             beta = (2 * alpha - 1) / (2 * alpha - 2)
+            alphaSquare = alpha ** 2
+            betaSquare = beta ** 2
             if count == 0:                
                 partialSpec += """
             if segment.transit_time_func == """ + item[0] + """: 
-                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alpha) + """ ** 2 * 
-                    (1 - transit_volume / capacity) ** 2 + """ + str(beta) + """ ** 2) - """ + str(alpha) + """ 
+                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ * 
+                    (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
                     * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
             elif count == (len(parameterList) - 1):
                 partialSpec += """
             else: 
-                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alpha) + """ ** 2 * 
-                    (1 - transit_volume / capacity) ** 2 + """ + str(beta) + """ ** 2) - """ + str(alpha) + """ 
+                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
+                    (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
                     * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
             else: 
                 partialSpec += """
             elif segment.transit_time_func == """ + item[0] + """: 
-                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alpha) + """ ** 2 * 
-                    (1 - transit_volume / capacity) ** 2 + """ + str(beta) + """ ** 2) - """ + str(alpha) + """ 
+                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
+                    (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
                     * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
 
         funcSpec = {

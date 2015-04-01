@@ -92,9 +92,6 @@
     <Compile Include="src\network_editing\network_comparison\copy_transit_lines.py" />
     <Compile Include="src\network_editing\network_comparison\create_network_correspondence_file.py" />
     <Compile Include="src\network_editing\network_comparison\flag_network_changes.py" />
-    <Compile Include="src\network_editing\network_comparison\find_network_differences.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="src\network_editing\prorate_transit_speed.py" />
     <Compile Include="src\network_editing\remove_extra_nodes.py" />
     <Compile Include="src\network_editing\reverse_transit_lines.py" />
