@@ -1047,9 +1047,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
 
         parameterList = self._ParseExponentString()
 
-        partialSpec = """
-        import math 
-        def calc_segment_cost(transit_volume, capacity, segment): """
+        partialSpec = """import math 
+def calc_segment_cost(transit_volume, capacity, segment): """
 
         for count, item in enumerate(parameterList):
             alpha = float(item[2])
@@ -1058,22 +1057,22 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             betaSquare = beta ** 2
             if count == 0:                
                 partialSpec += """
-            if segment.transit_time_func == """ + item[0] + """: 
-                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ * 
-                    (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
-                    * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
+    if segment.transit_time_func == """ + item[0] + """: 
+        return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ * 
+            (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
+            * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
             elif count == (len(parameterList) - 1):
                 partialSpec += """
-            else: 
-                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
-                    (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
-                    * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
+    else: 
+        return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
+            (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
+            * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
             else: 
                 partialSpec += """
-            elif segment.transit_time_func == """ + item[0] + """: 
-                return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
-                    (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
-                    * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
+    elif segment.transit_time_func == """ + item[0] + """: 
+        return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
+            (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
+            * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
 
         funcSpec = {
             "type": "CUSTOM",
