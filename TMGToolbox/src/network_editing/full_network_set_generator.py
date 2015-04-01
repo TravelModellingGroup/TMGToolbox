@@ -37,6 +37,7 @@ Full Network Set Generator
 '''
     0.0.1 Created on 2015-02-09 by mattaustin222
     0.1.0 Created on 2015-02-18 by mattaustin222 Made callable by XTMF
+    0.1.1 Added ability to apply .nup files to uncleaned time period networks
     
 '''
 
@@ -52,13 +53,14 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 removeExtraNodes = _MODELLER.tool('tmg.network_editing.remove_extra_nodes')
 prorateTransitSpeed = _MODELLER.tool('tmg.network_editing.prorate_transit_speed')
 createTimePeriod = _MODELLER.tool('tmg.network_editing.time_of_day_changes.create_transit_time_period')
+applyNetUpdate = _MODELLER.tool('tmg.input_output.import_network_update')
 lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_batch_line_edits')
 
 ##########################################################################################################
 
 class FullNetworkSetGenerator(_m.Tool()):
     
-    version = '0.1.0'
+    version = '0.1.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -74,25 +76,28 @@ class FullNetworkSetGenerator(_m.Tool()):
     BaseScenario = _m.Attribute(_m.InstanceType) 
         
     Scen1UnNumber = _m.Attribute(int)
-    Scen1UnDescription = _m.Attribute(str)
+    Scen1UnDescription = _m.Attribute(str)    
     Scen1Number = _m.Attribute(int)
     Scen1Description = _m.Attribute(str)    
     Scen1Start = _m.Attribute(int)
     Scen1End = _m.Attribute(int)
+    Scen1NetworkUpdateFile = _m.Attribute(str)
 
     Scen2UnNumber = _m.Attribute(int)
     Scen2UnDescription = _m.Attribute(str)
     Scen2Number = _m.Attribute(int)
     Scen2Description = _m.Attribute(str)    
     Scen2Start = _m.Attribute(int)
-    Scen2End = _m.Attribute(int)
+    Scen2End = _m.Attribute(int)    
+    Scen2NetworkUpdateFile = _m.Attribute(str)
 
     Scen3UnNumber = _m.Attribute(int)
     Scen3UnDescription = _m.Attribute(str)
     Scen3Number = _m.Attribute(int)
     Scen3Description = _m.Attribute(str)    
     Scen3Start = _m.Attribute(int)
-    Scen3End = _m.Attribute(int)
+    Scen3End = _m.Attribute(int)    
+    Scen3NetworkUpdateFile = _m.Attribute(str)
 
     Scen4UnNumber = _m.Attribute(int)
     Scen4UnDescription = _m.Attribute(str)
@@ -100,6 +105,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     Scen4Description = _m.Attribute(str)    
     Scen4Start = _m.Attribute(int)
     Scen4End = _m.Attribute(int)
+    Scen4NetworkUpdateFile = _m.Attribute(str)
 
     Scen5UnNumber = _m.Attribute(int)
     Scen5UnDescription = _m.Attribute(str)
@@ -107,6 +113,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     Scen5Description = _m.Attribute(str)    
     Scen5Start = _m.Attribute(int)
     Scen5End = _m.Attribute(int)
+    Scen5NetworkUpdateFile = _m.Attribute(str)
     
     TransitServiceTableFile = _m.Attribute(str)
     AggTypeSelectionFile = _m.Attribute(str)
@@ -245,7 +252,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                                the desired time period start:\
                                <ul><li>emme_id</li>\
                                <li>xxxx_hdw</li>\
-                               <li>xxxx_spd</li></ul>.\
+                               <li>xxxx_spd</li></ul>\
                                Note: this will override\
                                values calculated from\
                                the service table")
@@ -275,6 +282,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                                agg selection file")
 
         pb.add_header("SCENARIOS")
+        pb.add_text_element("Note that network update files (*.nup) are applied to the uncleaned scenarios only.")
         
         with pb.add_table(False) as t:
         
@@ -287,7 +295,8 @@ class FullNetworkSetGenerator(_m.Tool()):
                                 size=10)
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='Scen1UnDescription',
-                                size=40)
+                                size=40)            
+
             t.new_row()
 
             with t.table_cell():
@@ -298,7 +307,21 @@ class FullNetworkSetGenerator(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='Scen1Description',
                                 size=40)
+                                
             t.new_row()
+
+            with t.table_cell():
+                pb.add_html("")
+
+            with t.table_cell():
+                pb.add_html("Scenario 1 network update file")
+            
+            with t.table_cell():
+                pb.add_select_file(tool_attribute_name='Scen1NetworkUpdateFile',
+                           window_type='file', file_filter='*.nup')
+
+            t.new_row()
+
 
             with t.table_cell():
                 pb.add_html("Scenario 2 uncleaned")
@@ -318,6 +341,19 @@ class FullNetworkSetGenerator(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='Scen2Description',
                                 size=40)
+
+            t.new_row()
+
+            with t.table_cell():
+                pb.add_html("")
+
+            with t.table_cell():
+                pb.add_html("Scenario 2 network update file")
+            
+            with t.table_cell():
+                pb.add_select_file(tool_attribute_name='Scen2NetworkUpdateFile',
+                           window_type='file', file_filter='*.nup')
+
             t.new_row()
 
             with t.table_cell():
@@ -338,6 +374,18 @@ class FullNetworkSetGenerator(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='Scen3Description',
                                 size=40)
+            
+            t.new_row()
+
+            with t.table_cell():
+                pb.add_html("")
+
+            with t.table_cell():
+                pb.add_html("Scenario 3 network update file")
+            
+            with t.table_cell():
+                pb.add_select_file(tool_attribute_name='Scen3NetworkUpdateFile',
+                           window_type='file', file_filter='*.nup')
             t.new_row()
 
             with t.table_cell():
@@ -358,6 +406,19 @@ class FullNetworkSetGenerator(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='Scen4Description',
                                 size=40)
+
+            t.new_row()
+
+            with t.table_cell():
+                pb.add_html("")
+
+            with t.table_cell():
+                pb.add_html("Scenario 4 network update file")
+            
+            with t.table_cell():
+                pb.add_select_file(tool_attribute_name='Scen4NetworkUpdateFile',
+                           window_type='file', file_filter='*.nup')
+
             t.new_row()
 
             with t.table_cell():
@@ -378,6 +439,18 @@ class FullNetworkSetGenerator(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='Scen5Description',
                                 size=40)
+
+            t.new_row()
+
+            with t.table_cell():
+                pb.add_html("")
+
+            with t.table_cell():
+                pb.add_html("Scenario 5 network update file")
+            
+            with t.table_cell():
+                pb.add_select_file(tool_attribute_name='Scen5NetworkUpdateFile',
+                           window_type='file', file_filter='*.nup')
         
         pb.add_checkbox(tool_attribute_name='OverwriteScenarioFlag',
                            label="Overwrite Full Scenarios?")
@@ -386,7 +459,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                         label= "Publish network?")
 
         pb.add_header("TIME PERIODS")
-        pb.add_html("In integer hours e.g. 2:30 PM = 1430")
+        
 
         with pb.add_table(False) as t:
         
@@ -441,6 +514,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                 pb.add_text_box(tool_attribute_name='Scen5End',
                                 size=4)
                     
+        pb.add_text_element("In integer hours e.g. 2:30 PM = 1430")
         pb.add_header("NETWORK FILTERS")
         
         nodeKV = [(-1, 'No attribute')]
@@ -542,15 +616,15 @@ class FullNetworkSetGenerator(_m.Tool()):
 
     ##########################################################################################################
     def __call__(self, xtmf_ScenarioNumber, Scen1UnNumber, Scen1UnDescription, Scen1Number,
-                 Scen1Description, Scen1Start, Scen1End, 
+                 Scen1Description, Scen1Start, Scen1End, Scen1NetworkUpdateFile,
                  Scen2UnNumber, Scen2UnDescription, Scen2Number, 
-                 Scen2Description, Scen2Start, Scen2End,
+                 Scen2Description, Scen2Start, Scen2End, Scen2NetworkUpdateFile,
                  Scen3UnNumber, Scen3UnDescription, Scen3Number, 
-                 Scen3Description, Scen3Start, Scen3End,
+                 Scen3Description, Scen3Start, Scen3End, Scen3NetworkUpdateFile,
                  Scen4UnNumber, Scen4UnDescription, Scen4Number, 
-                 Scen4Description, Scen4Start, Scen4End,
+                 Scen4Description, Scen4Start, Scen4End, Scen4NetworkUpdateFile,
                  Scen5UnNumber, Scen5UnDescription, Scen5Number, 
-                 Scen5Description, Scen5Start, Scen5End,
+                 Scen5Description, Scen5Start, Scen5End, Scen5NetworkUpdateFile,
                  TransitServiceTableFile, AggTypeSelectionFile, AlternativeDataFile, BatchEditFile,
                  DefaultAgg, PublishFlag, OverwriteScenarioFlag, NodeFilterAttributeId,
                  StopFilterAttributeId, ConnectorFilterAttributeId, AttributeAggregatorString,
@@ -580,6 +654,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.Scen1Description = Scen1Description
         self.Scen1Start = Scen1Start
         self.Scen1End = Scen1End
+        self.Scen1NetworkUpdateFile = Scen1NetworkUpdateFile
 
         self.Scen2UnNumber = Scen2UnNumber
         self.Scen2UnDescription = Scen2UnDescription
@@ -587,6 +662,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.Scen2Description = Scen2Description
         self.Scen2Start = Scen2Start
         self.Scen2End = Scen2End
+        self.Scen2NetworkUpdateFile = Scen2NetworkUpdateFile
 
         self.Scen3UnNumber = Scen3UnNumber
         self.Scen3UnDescription = Scen3UnDescription
@@ -594,6 +670,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.Scen3Description = Scen3Description
         self.Scen3Start = Scen3Start
         self.Scen3End = Scen3End
+        self.Scen3NetworkUpdateFile = Scen3NetworkUpdateFile
 
         self.Scen4UnNumber = Scen4UnNumber
         self.Scen4UnDescription = Scen4UnDescription
@@ -601,6 +678,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.Scen4Description = Scen4Description
         self.Scen4Start = Scen4Start
         self.Scen4End = Scen4End
+        self.Scen4NetworkUpdateFile = Scen4NetworkUpdateFile
 
         self.Scen5UnNumber = Scen5UnNumber
         self.Scen5UnDescription = Scen5UnDescription
@@ -608,6 +686,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.Scen5Description = Scen5Description
         self.Scen5Start = Scen5Start
         self.Scen5End = Scen5End
+        self.Scen5NetworkUpdateFile = Scen5NetworkUpdateFile
 
         self.TransitServiceTableFile = TransitServiceTableFile
         self.AggTypeSelectionFile = AggTypeSelectionFile
@@ -653,15 +732,15 @@ class FullNetworkSetGenerator(_m.Tool()):
             network = self.BaseScenario.get_network()
             
             firstScenario = (self.Scen1UnNumber, self.Scen1Number, self.Scen1UnDescription, self.Scen1Description,
-                             self.Scen1Start, self.Scen1End)
+                             self.Scen1Start, self.Scen1End, self.Scen1NetworkUpdateFile)
             secondScenario = (self.Scen2UnNumber, self.Scen2Number, self.Scen2UnDescription, self.Scen2Description,
-                             self.Scen2Start, self.Scen2End)
+                             self.Scen2Start, self.Scen2End, self.Scen2NetworkUpdateFile)
             thirdScenario = (self.Scen3UnNumber, self.Scen3Number, self.Scen3UnDescription, self.Scen3Description,
-                             self.Scen3Start, self.Scen3End)
+                             self.Scen3Start, self.Scen3End, self.Scen3NetworkUpdateFile)
             fourthScenario = (self.Scen4UnNumber, self.Scen4Number, self.Scen4UnDescription, self.Scen4Description,
-                             self.Scen4Start, self.Scen4End)
+                             self.Scen4Start, self.Scen4End, self.Scen4NetworkUpdateFile)
             fifthScenario = (self.Scen5UnNumber, self.Scen5Number, self.Scen5UnDescription, self.Scen5Description,
-                             self.Scen5Start, self.Scen5End)
+                             self.Scen5Start, self.Scen5End, self.Scen5NetworkUpdateFile)
             scenarioSet = [firstScenario, secondScenario, thirdScenario, fourthScenario, fifthScenario]
             
             if self.OverwriteScenarioFlag:
@@ -673,8 +752,10 @@ class FullNetworkSetGenerator(_m.Tool()):
                 createTimePeriod(self.BaseScenario, scenarios[0], scenarios[2], self.TransitServiceTableFile,
                                  self.AggTypeSelectionFile, self.AlternativeDataFile,
                                  self.DefaultAgg, scenarios[4], scenarios[5])
+                if scenarios[6]:    
+                    applyNetUpdate(str(scenarios[0]),scenarios[6])
 
-            print "Created uncleaned time period networks"
+            print "Created uncleaned time period networks and applied network updates"
 
             if self.BatchEditFile:
                 for scenarios in scenarioSet:

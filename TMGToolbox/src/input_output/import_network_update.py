@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -23,7 +23,7 @@ IMPORT NETWORK UPDATE
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: mattaustin222
     
     
     Opens a Network Update (*.nup) file and applies it to selected scenarios.
@@ -82,6 +82,8 @@ IMPORT NETWORK UPDATE
     0.1.1 Added better support for reports
     
     0.2.0 Added support for Python scripts
+
+    0.3.0 Made callable 
     
 '''
 
@@ -112,7 +114,7 @@ class redirectPrint():
 
 class ImportNetworkUpdate(_m.Tool()):
     
-    version = '0.2.0'
+    version = '0.3.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -123,6 +125,8 @@ class ImportNetworkUpdate(_m.Tool()):
     
     Scenarios = _m.Attribute(_m.ListType) # common variable or parameter
     NetworkUpdateFile = _m.Attribute(str)
+
+    xtmf_ScenarioString = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -136,7 +140,7 @@ class ImportNetworkUpdate(_m.Tool()):
                          Emme's Network Editor, which can sometimes cause an error \
                          when network elements are missing. It is recommended to check \
                          the Database directory for the created reports file(s). \
-                         <br><br><font color='red'><b>Wanring:</b></font> This tool \
+                         <br><br><font color='red'><b>Warning:</b></font> This tool \
                          makes irreversible changes to your scenarios. Make sure to \
                          test the update on copies first.",
                      branding_text="- TMG Toolbox")
@@ -178,6 +182,29 @@ class ImportNetworkUpdate(_m.Tool()):
         return pb.render()
     
     ##########################################################################################################
+    def __call__(self, xtmf_ScenarioString, NetworkUpdateFile):
+        
+        xtmf_ScenarioList = xtmf_ScenarioString.split(',')
+        if xtmf_ScenarioList == None:
+            raise Exception("No scenarios chosen!")
+
+        self.Scenarios = []
+        for sc in xtmf_ScenarioList:
+            try:
+                self.Scenarios.append(_m.Modeller().emmebank.scenario(int(sc))) 
+            except:
+                raise Exception("Error adding scenario %s" %sc)
+            
+        self.NetworkUpdateFile = NetworkUpdateFile
+
+        if not self.NetworkUpdateFile:
+            print "No network update file selected" # won't throw an error if called without a nup file
+        else:
+            try:
+                self._Execute()
+            except Exception, e:
+                msg = str(e) + "\n" + _traceback.format_exc(e)
+                raise Exception(msg)        
         
     def run(self):
         self.tool_run_msg = ""
