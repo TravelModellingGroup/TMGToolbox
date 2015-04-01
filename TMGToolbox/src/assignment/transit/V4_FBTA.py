@@ -99,6 +99,7 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 from multiprocessing import cpu_count
+from re import split as _regex_split
 
 import inro.modeller as _m
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
