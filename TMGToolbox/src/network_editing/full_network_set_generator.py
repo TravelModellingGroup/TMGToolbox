@@ -752,8 +752,8 @@ class FullNetworkSetGenerator(_m.Tool()):
                 createTimePeriod(self.BaseScenario, scenarios[0], scenarios[2], self.TransitServiceTableFile,
                                  self.AggTypeSelectionFile, self.AlternativeDataFile,
                                  self.DefaultAgg, scenarios[4], scenarios[5])
-                if scenarios[6]:    
-                    applyNetUpdate(str(scenarios[0]),scenarios[6])
+                if not (scenarios[6] == None or scenarios[6].lower() == "none"):
+                    applyNetUpdate(str(scenarios[0]),scenarios[6])                
 
             print "Created uncleaned time period networks and applied network updates"
 

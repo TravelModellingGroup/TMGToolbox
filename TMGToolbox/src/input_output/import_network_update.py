@@ -197,7 +197,7 @@ class ImportNetworkUpdate(_m.Tool()):
             
         self.NetworkUpdateFile = NetworkUpdateFile
 
-        if not self.NetworkUpdateFile:
+        if self.NetworkUpdateFile == None or self.NetworkUpdateFile.lower() == "none":
             print "No network update file selected" # won't throw an error if called without a nup file
         else:
             try:
