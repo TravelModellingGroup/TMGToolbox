@@ -656,7 +656,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
         self.BoardPerception = BoardPerception
         self.WalkPerceptionPD1 = WalkPerceptionPD1
-
+        self.CalculateCongestedIvttFlag = CalculateCongestedIvttFlag
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         
         self.FarePerception = FarePerception
