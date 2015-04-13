@@ -1136,7 +1136,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 "actual_total_waiting_times": self.WaitTimeMatrixId
             }
         if self.PenaltyMatrixId:
-            spec["by_mode_subset"]["actual_total_boarding_costs"] = self.PenaltyMatrixId
+            spec["by_mode_subset"]["actual_total_boarding_times"] = self.PenaltyMatrixId
         self.TRACKER.runTool(matrixResultsTool, spec, scenario= self.Scenario)
     
     def _ExtractCostMatrix(self):
