@@ -1123,12 +1123,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         
         #If the fares matrix is required, extract that.
         if self.FareMatrixId:
-            self._ExtractCostMatrix()
-        
-        #If the penalties matrix is required, extract that.
-        if self.PenaltyMatrixId:
-            self._ExtractPenaltyMatrix()
-            
+            self._ExtractCostMatrix()          
 
     def _ExtractTimesMatrices(self):
         spec = {
@@ -1140,7 +1135,8 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
                 "actual_total_waiting_times": self.WaitTimeMatrixId
             }
-        
+        if self.PenaltyMatrixId:
+            spec["by_mode_subset"]["actual_total_boarding_costs"] = self.PenaltyMatrixId
         self.TRACKER.runTool(matrixResultsTool, spec, scenario= self.Scenario)
     
     def _ExtractCostMatrix(self):
@@ -1177,38 +1173,6 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         
         self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
     
-    def _ExtractPenaltyMatrix(self):
-        spec = {
-                "trip_components": {
-                    "boarding": "ut3",
-                    "in_vehicle": None,
-                    "aux_transit": None,
-                    "alighting": None
-                },
-                "sub_path_combination_operator": "+",
-                "sub_strategy_combination_operator": "average",
-                "selected_demand_and_transit_volumes": {
-                    "sub_strategies_to_retain": "ALL",
-                    "selection_threshold": {
-                        "lower": -999999,
-                        "upper": 999999
-                    }
-                },
-                "analyzed_demand": self.DemandMatrix.id,
-                "constraint": None,
-                "results": {
-                    "strategy_values": self.PenaltyMatrixId,
-                    "selected_demand": None,
-                    "transit_volumes": None,
-                    "aux_transit_volumes": None,
-                    "total_boardings": None,
-                    "total_alightings": None
-                },
-                "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
-            }     
-                
-        self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
-
     def _ExtractCongestionMatrix(self, congestionMatrixId):
         spec = {"trip_components": {
                     "boarding": None,
