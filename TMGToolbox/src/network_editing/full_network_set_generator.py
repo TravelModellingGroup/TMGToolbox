@@ -636,18 +636,45 @@ class FullNetworkSetGenerator(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         #---2 Set up attributes
-        if self.Scenario.extra_attribute(NodeFilterAttributeId) == None:
-            raise Exception("Node filter attribute %s does not exist" %NodeFilterAttributeId)
-        if self.Scenario.extra_attribute(StopFilterAttributeId) == None:
-            raise Exception("Stop filter attribute %s does not exist" %StopFilterAttributeId)
-        if self.Scenario.extra_attribute(ConnectorFilterAttributeId) == None:
-            raise Exception("Connector filter attribute %s does not exist" %ConnectorFilterAttributeId)
+        if NodeFilterAttributeId.lower() == "none":
+            self.NodeFilterAttributeId = None
+        else:
+            if self.Scenario.extra_attribute(NodeFilterAttributeId) == None:
+                raise Exception("Node filter attribute %s does not exist" %NodeFilterAttributeId)
+            self.NodeFilterAttributeId = NodeFilterAttributeId
 
-        self.NodeFilterAttributeId = NodeFilterAttributeId
-        self.StopFilterAttributeId = StopFilterAttributeId
-        self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
+        if StopFilterAttributeId.lower() == "none":
+            self.StopFilterAttributeId = None
+        else:
+            if self.Scenario.extra_attribute(StopFilterAttributeId) == None:
+                raise Exception("Stop filter attribute %s does not exist" %StopFilterAttributeId)
+            self.StopFilterAttributeId = StopFilterAttributeId
+        if ConnectorFilterAttributeId.lower() == "none":
+            self.ConnectorFilterAttributeId = None
+        else:
+            if self.Scenario.extra_attribute(ConnectorFilterAttributeId) == None:
+                raise Exception("Connector filter attribute %s does not exist" %ConnectorFilterAttributeId)
+            self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
         
         #--3 Set up other parameters
+        self.TransitServiceTableFile = TransitServiceTableFile
+        self.AggTypeSelectionFile = AggTypeSelectionFile
+        
+        if AlternativeDataFile.lower() == "none":
+            self.AlternativeDataFile = None
+        else:
+            self.AlternativeDataFile = AlternativeDataFile
+        if BatchEditFile.lower() == "none":
+            self.BatchEditFile = None
+        else:
+            self.BatchEditFile = BatchEditFile
+
+        self.DefaultAgg = DefaultAgg
+        self.PublishFlag = PublishFlag
+        self.OverwriteScenarioFlag = OverwriteScenarioFlag
+        self.AttributeAggregatorString = AttributeAggregatorString
+        self.LineFilterExpression = LineFilterExpression
+        
         self.Scen1UnNumber = Scen1UnNumber
         self.Scen1UnDescription = Scen1UnDescription
         self.Scen1Number = Scen1Number
@@ -688,15 +715,6 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.Scen5End = Scen5End
         self.Scen5NetworkUpdateFile = Scen5NetworkUpdateFile
 
-        self.TransitServiceTableFile = TransitServiceTableFile
-        self.AggTypeSelectionFile = AggTypeSelectionFile
-        self.AlternativeDataFile = AlternativeDataFile
-        self.BatchEditFile = BatchEditFile
-        self.DefaultAgg = DefaultAgg
-        self.PublishFlag = PublishFlag
-        self.OverwriteScenarioFlag = OverwriteScenarioFlag
-        self.AttributeAggregatorString = AttributeAggregatorString
-        self.LineFilterExpression = LineFilterExpression
 
         print "Running full network set generation"
         
