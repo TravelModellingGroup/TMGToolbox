@@ -639,20 +639,20 @@ class FullNetworkSetGenerator(_m.Tool()):
         if NodeFilterAttributeId.lower() == "none":
             self.NodeFilterAttributeId = None
         else:
-            if self.Scenario.extra_attribute(NodeFilterAttributeId) == None:
+            if self.BaseScenario.extra_attribute(NodeFilterAttributeId) == None:
                 raise Exception("Node filter attribute %s does not exist" %NodeFilterAttributeId)
             self.NodeFilterAttributeId = NodeFilterAttributeId
 
         if StopFilterAttributeId.lower() == "none":
             self.StopFilterAttributeId = None
         else:
-            if self.Scenario.extra_attribute(StopFilterAttributeId) == None:
+            if self.BaseScenario.extra_attribute(StopFilterAttributeId) == None:
                 raise Exception("Stop filter attribute %s does not exist" %StopFilterAttributeId)
             self.StopFilterAttributeId = StopFilterAttributeId
         if ConnectorFilterAttributeId.lower() == "none":
             self.ConnectorFilterAttributeId = None
         else:
-            if self.Scenario.extra_attribute(ConnectorFilterAttributeId) == None:
+            if self.BaseScenario.extra_attribute(ConnectorFilterAttributeId) == None:
                 raise Exception("Connector filter attribute %s does not exist" %ConnectorFilterAttributeId)
             self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
         
