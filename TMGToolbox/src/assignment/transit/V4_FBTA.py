@@ -94,6 +94,9 @@ V4 Transit Assignment
         weights and exponents based on ttf value of segment. Tool no longer available
         for < 4.1.5
     
+    4.0.1 Congestion function will now raise an Exception if a used ttf value is
+        not assigned congestion parameters.
+
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -129,7 +132,7 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '4.0.0'
+    version = '4.0.1'
     tool_run_msg = ""
     number_of_tasks = 7 # For progress reporting, enter the integer number of tasks here
     
@@ -656,7 +659,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WalkPerceptionNonTorontoConnectors = WalkPerceptionNonTorontoConnectors
         self.BoardPerception = BoardPerception
         self.WalkPerceptionPD1 = WalkPerceptionPD1
-
+        self.CalculateCongestedIvttFlag = CalculateCongestedIvttFlag
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         
         self.FarePerception = FarePerception
@@ -1061,19 +1064,17 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ * 
             (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
             * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
-            elif count == (len(parameterList) - 1):
-                partialSpec += """
-    else: 
-        return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
-            (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
-            * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
             else: 
                 partialSpec += """
     elif segment.transit_time_func == """ + item[0] + """: 
         return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
             (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
             * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
-
+        
+        partialSpec += """
+    else: 
+        raise Exception("ttf=%s congestion values not defined in input" %segment.transit_time_func)"""
+            
         funcSpec = {
             "type": "CUSTOM",
             "assignment_period": self.AssignmentPeriod,
@@ -1123,12 +1124,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         
         #If the fares matrix is required, extract that.
         if self.FareMatrixId:
-            self._ExtractCostMatrix()
-        
-        #If the penalties matrix is required, extract that.
-        if self.PenaltyMatrixId:
-            self._ExtractPenaltyMatrix()
-            
+            self._ExtractCostMatrix()          
 
     def _ExtractTimesMatrices(self):
         spec = {
@@ -1140,7 +1136,8 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 "type": "EXTENDED_TRANSIT_MATRIX_RESULTS",
                 "actual_total_waiting_times": self.WaitTimeMatrixId
             }
-        
+        if self.PenaltyMatrixId:
+            spec["by_mode_subset"]["actual_total_boarding_times"] = self.PenaltyMatrixId
         self.TRACKER.runTool(matrixResultsTool, spec, scenario= self.Scenario)
     
     def _ExtractCostMatrix(self):
@@ -1177,38 +1174,6 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         
         self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
     
-    def _ExtractPenaltyMatrix(self):
-        spec = {
-                "trip_components": {
-                    "boarding": "ut3",
-                    "in_vehicle": None,
-                    "aux_transit": None,
-                    "alighting": None
-                },
-                "sub_path_combination_operator": "+",
-                "sub_strategy_combination_operator": "average",
-                "selected_demand_and_transit_volumes": {
-                    "sub_strategies_to_retain": "ALL",
-                    "selection_threshold": {
-                        "lower": -999999,
-                        "upper": 999999
-                    }
-                },
-                "analyzed_demand": self.DemandMatrix.id,
-                "constraint": None,
-                "results": {
-                    "strategy_values": self.PenaltyMatrixId,
-                    "selected_demand": None,
-                    "transit_volumes": None,
-                    "aux_transit_volumes": None,
-                    "total_boardings": None,
-                    "total_alightings": None
-                },
-                "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
-            }     
-                
-        self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
-
     def _ExtractCongestionMatrix(self, congestionMatrixId):
         spec = {"trip_components": {
                     "boarding": None,
