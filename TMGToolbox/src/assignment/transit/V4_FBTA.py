@@ -94,6 +94,9 @@ V4 Transit Assignment
         weights and exponents based on ttf value of segment. Tool no longer available
         for < 4.1.5
     
+    4.0.1 Congestion function will now raise an Exception if a used ttf value is
+        not assigned congestion parameters.
+
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -129,7 +132,7 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '4.0.0'
+    version = '4.0.1'
     tool_run_msg = ""
     number_of_tasks = 7 # For progress reporting, enter the integer number of tasks here
     
@@ -1061,19 +1064,17 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ * 
             (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
             * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
-            elif count == (len(parameterList) - 1):
-                partialSpec += """
-    else: 
-        return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
-            (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
-            * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
             else: 
                 partialSpec += """
     elif segment.transit_time_func == """ + item[0] + """: 
         return (""" + item[1] + """ * (1 + math.sqrt(""" + str(alphaSquare) + """ *  
             (1 - transit_volume / capacity) ** 2 + """ + str(betaSquare) + """) - """ + str(alpha) + """ 
             * (1 - transit_volume / capacity) - """ + str(beta) + """))"""
-
+        
+        partialSpec += """
+    else: 
+        raise Exception("ttf=%s congestion values not defined in input" %segment.transit_time_func)"""
+            
         funcSpec = {
             "type": "CUSTOM",
             "assignment_period": self.AssignmentPeriod,
