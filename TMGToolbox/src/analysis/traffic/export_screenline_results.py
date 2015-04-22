@@ -23,7 +23,7 @@
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: David King
     
     
     [Description]
@@ -35,6 +35,7 @@
     
     1.0.0 Published on 2014-11-19
     
+    1.1.0 Added functionality for XTMF
 '''
 
 import inro.modeller as _m
@@ -49,7 +50,7 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 class ExportScreenlineResults(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.1.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -236,12 +237,25 @@ class ExportScreenlineResults(_m.Tool()):
     #---
     #---XTMF INTERFACE METHODS
     
-    def __call__(self, xtmf_ScenarioNumber):
+    def __call__(self, xtmf_ScenarioNumber, CountpostFlagAttribute, AlternateFlagAttribute, ScreenlineFile, ExportFile):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+
+        linkAtts = set([att.id for att in self.Scenario.extra_attributes() if att.type == 'LINK'])
+        
+        if not CountpostAttributeId in linkAtts:
+            raise NullPointerException("'%s' is not a valid link attribute" %CountpostAttributeId)
+        if not AlternateCountpostAttributeId in linkAtts:
+            raise NullPointerException("'%s' is not a valid link attribute" %AlternateCountpostAttributeId)
+
+        #---2 Set up parameters
+        self.CountpostFlagAttribute = CountpostFlagAttribute
+        self.AlternateFlagAttribute = AlternateFlagAttribute
+        self.ScreenlineFile = ScreenlineFile
+        self.ExportFile = ExportFile
         
         try:
             self._Execute()

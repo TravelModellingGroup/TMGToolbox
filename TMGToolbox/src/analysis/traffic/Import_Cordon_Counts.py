@@ -33,7 +33,7 @@ Import TTS Count Station Data
 '''
     0.0.1 Created
     0.1.1 Created on 2015-03-12 by David King
-    
+    1.0.0 Added functionality, to be called from XTMF
     
 '''
 
@@ -49,7 +49,7 @@ _tmgTPB = _mm.module('tmg.common.TMG_tool_page_builder')
 
 class ImportCordonCounts(_m.Tool()):
     
-    version = '0.1.1'
+    version = '1.0.0'
     tool_run_msg = ""
     number_of_tasks = 1
     Scenario = _m.Attribute(_m.InstanceType)

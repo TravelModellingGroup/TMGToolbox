@@ -23,7 +23,7 @@ Export Countpost Results
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: David King
     
     
     [Description]
@@ -41,6 +41,8 @@ Export Countpost Results
             Also, now countpost results will be reported in increasing order.
     
     1.1.1 Fixed a bug in the tool page Javascript
+
+    1.1.2 Added additional functionality for XTMF
 '''
 
 import inro.modeller as _m
@@ -73,6 +75,7 @@ class ExportCountpostResults(_m.Tool()):
     AlternateCountpostAttributeId = _m.Attribute(str)
     
     ExportFile = _m.Attribute(str)
+    version = '1.1.2'
     
     def __init__(self):
         #---Init internal variables
@@ -81,7 +84,7 @@ class ExportCountpostResults(_m.Tool()):
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.CountpostAttributeId = "@stn1"
-        self.AlternateCountpostAttributeId = "@stn2"
+        self.AlternateCountpostAttributeId = "@stn2"        
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Countpost Results v%s" %self.version,
