@@ -246,10 +246,10 @@ class ExportScreenlineResults(_m.Tool()):
 
         linkAtts = set([att.id for att in self.Scenario.extra_attributes() if att.type == 'LINK'])
         
-        if not CountpostAttributeId in linkAtts:
-            raise NullPointerException("'%s' is not a valid link attribute" %CountpostAttributeId)
-        if not AlternateCountpostAttributeId in linkAtts:
-            raise NullPointerException("'%s' is not a valid link attribute" %AlternateCountpostAttributeId)
+        if not CountpostFlagAttribute in linkAtts:
+            raise NullPointerException("'%s' is not a valid link attribute" %CountpostFlagAttribute)
+        if not AlternateFlagAttribute in linkAtts:
+            raise NullPointerException("'%s' is not a valid link attribute" %AlternateFlagAttribute)
 
         #---2 Set up parameters
         self.CountpostFlagAttribute = CountpostFlagAttribute
