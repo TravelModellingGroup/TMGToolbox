@@ -35,6 +35,7 @@ Create Time Period Networks
     0.1.1 Created on 2015-01-19 by mattaustin222
     0.1.2 Created on 2015-02-17 by mattaustin222 Allows for non-service table data to be processed
     0.1.3 Zero values in the alt data file no longer restricts a line from being rightfully deleted
+    0.1.4 Fixed error in formatting integer times from alt file header
     
 '''
 
@@ -75,7 +76,7 @@ def averageAggregation(departures, start, end):
 
 class CreateTimePeriodNetworks(_m.Tool()):
     
-    version = '0.1.2'
+    version = '0.1.4'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -401,8 +402,8 @@ class CreateTimePeriodNetworks(_m.Tool()):
             cells = header.strip().split(self.COMMA)
             
             emmeIdCol = cells.index('emme_id')
-            headwayTitle = "{:0>4,.0f}".format(self.TimePeriodStart) + '_hdw'
-            speedTitle = "{:0>4,.0f}".format(self.TimePeriodStart) + '_spd'
+            headwayTitle = "{:0>4.0f}".format(self.TimePeriodStart) + '_hdw'
+            speedTitle = "{:0>4.0f}".format(self.TimePeriodStart) + '_spd'
             try:
                 headwayCol = cells.index(headwayTitle)
             except Exception, e:
