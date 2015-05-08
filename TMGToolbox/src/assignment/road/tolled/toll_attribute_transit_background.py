@@ -65,6 +65,15 @@ Toll-Based Road Assignment
         - All-or-nothing scenario manager doesn't copy over the transit strategy files.
         
     3.2.1 Removed a scaling factor being incorrectly applied to the Best Relative Gap
+
+    3.3.0 Major change. Features:
+        - No more all-or-nothing assignment.
+        - Primary assignment now exports full cost (link costs + tolls)
+        - Secondary assignment is only run if a toll matrix is chosen
+        - Secondary assignment is identical to the primary, but outputs toll matrix
+        - Secondary assignment no longer run in temporary scenario
+        - Changed transit background calculation to include ttf>=3
+        
     
 '''
 
@@ -213,7 +222,8 @@ class TollBasedRoadAssignment(_m.Tool()):
                         overwrite_existing=True,
                         matrix_type='FULL',
                         note='Create or override',
-                        title='Tolls matrix')
+                        title='Tolls matrix',
+                        allow_none=True)
                 
         pb.add_text_box(tool_attribute_name='RunTitle',
                         size=25, title="Run Title",
@@ -257,7 +267,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             with t.table_cell():
                 pb.add_html("The generalized perception of toll, in $/hr")
         
-        pb.add_header("CONVERGANCE CRITERIA")
+        pb.add_header("CONVERGENCE CRITERIA")
         
         with pb.add_table(visible_border=False) as t:
             with t.table_cell():
@@ -359,7 +369,10 @@ class TollBasedRoadAssignment(_m.Tool()):
         #---2. Pass in remaining args
         self.TimesMatrixId = TimesMatrixId
         self.CostMatrixId = CostMatrixId
-        self.TollsMatrixId = TollsMatrixId
+        if TollsMatrixId == mf0:
+            self.TollsMatrixId = None
+        else:
+            self.TollsMatrixId = TollsMatrixId
         self.PeakHourFactor = PeakHourFactor
         self.LinkCost = LinkCost
         self.TollWeight = TollWeight
@@ -436,7 +449,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                 with _m.logbook_trace("Running primary road assignment."):
                     
                     if self.SOLAFlag:
-                        spec = self._getPrimarySOLASpec(peakHourMatrix.id, appliedTollFactor)
+                        spec = self._getPrimarySOLASpec(peakHourMatrix.id, costAttribute.id, appliedTollFactor)
                     else:
                         spec = self._getPrimaryRoadAssignmentSpec(peakHourMatrix.id, costAttribute.id, 
                                                               appliedTollFactor)
@@ -466,30 +479,30 @@ class TollBasedRoadAssignment(_m.Tool()):
                     print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
 
                 self._tracker.startProcess(3)
-                with self._AoNScenarioMANAGER() as allOrNothingScenario:
+                if not (self.TollsMatrixId == "null" or self.TollsMatrixId == None):
                     self._tracker.completeSubtask
                     
-                    with _m.logbook_trace("All or nothing assignment to recover costs:"):
+                    with _m.logbook_trace("Secondary assignment to recover toll costs separately:"):
                         
-                        with _m.logbook_trace("Copying auto times into UL2"):
-                            networkCalculationTool(self._getSaveAutoTimesSpec(), scenario=allOrNothingScenario)
-                            self._tracker.completeSubtask
+                        #with _m.logbook_trace("Copying auto times into UL2"):
+                        #    networkCalculationTool(self._getSaveAutoTimesSpec(appliedTollFactor), scenario=allOrNothingScenario)
+                        #    self._tracker.completeSubtask
                         
-                        with _m.logbook_trace("Preparing function 98 for assignment"):
-                            self._modifyFunctionForAoNAssignment()
-                            networkCalculationTool(self._getChangeLinkVDFto98Spec(), scenario=allOrNothingScenario)
-                            self._tracker.completeSubtask
+                        #with _m.logbook_trace("Preparing function 98 for assignment"):
+                        #    self._modifyFunctionForAoNAssignment()
+                        #    networkCalculationTool(self._getChangeLinkVDFto98Spec(), scenario=allOrNothingScenario)
+                        #    self._tracker.completeSubtask
                         
                         self._tracker.completeTask()
                         
-                        with _m.logbook_trace("Running all or nothing assignment"):
+                        with _m.logbook_trace("Running secondary assignment"):
                             if self.SOLAFlag:
-                                spec = self._getAllOrNothingSOLASpec(peakHourMatrix.id, costAttribute.id)
+                                spec = self._getSecondarySOLASpec(peakHourMatrix.id, costAttribute.id, appliedTollFactor)
                             else:
-                                spec = self._getAoNAssignmentSpec(peakHourMatrix.id, costAttribute.id)
+                                spec = self._getSecondaryAssignmentSpec(peakHourMatrix.id, costAttribute.id, appliedTollFactor)
                                 
                             self._tracker.runTool(trafficAssignmentTool,
-                                                  spec, scenario=allOrNothingScenario)                               
+                                                  spec, scenario=self.Scenario)                               
 
     ##########################################################################################################
 
@@ -605,7 +618,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     def _getTransitBGSpec(self):
         return {
                 "result": "@tvph",
-                "expression": "(60 / hdw) * (vauteq) * (ttf == 3)",
+                "expression": "(60 / hdw) * (vauteq) * (ttf >= 3)",
                 "aggregation": "+",
                 "selections": {
                                 "link": "all",
@@ -618,12 +631,13 @@ class TollBasedRoadAssignment(_m.Tool()):
         with _m.logbook_trace("Initializing output matrices:"):
             _util.initializeMatrix(self.CostMatrixId, name='acost', description='AUTO COST: %s' %self.RunTitle)
             _util.initializeMatrix(self.TimesMatrixId, name='aivtt', description='AUTO TIME: %s' %self.RunTitle)
-            _util.initializeMatrix(self.TollsMatrixId, name='atoll', description='AUTO TOLL: %s' %self.RunTitle)
+            if not (self.TollsMatrixId == "null" or self.TollsMatrixId == None):
+                _util.initializeMatrix(self.TollsMatrixId, name='atoll', description='AUTO TOLL: %s' %self.RunTitle)
     
     def _getLinkCostCalcSpec(self, costAttributeId):
         return {
                 "result": costAttributeId,
-                "expression": "length * %f" %self.LinkCost,
+                "expression": "length * %f + %s" %(self.LinkCost, self.LinkTollAttributeId),
                 "aggregation": None,
                 "selections": {
                                "link": "all"
@@ -652,7 +666,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             appliedTollFactor = 60.0 / self.TollWeight #Toll weight is in $/hr, needs to be converted to min/$
         return appliedTollFactor
     
-    def _getPrimarySOLASpec(self, peakHourMatrixId, appliedTollFactor):
+    def _getPrimarySOLASpec(self, peakHourMatrixId, costAttributeId, appliedTollFactor):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -680,7 +694,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                             }
                         },
                         "path_analysis": {
-                            "link_component": self.LinkTollAttributeId,
+                            "link_component": costAttributeId,
                             "turn_component": None,
                             "operator": "+",
                             "selection_threshold": {
@@ -700,7 +714,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         "analysis": {
                             "analyzed_demand": None,
                             "results": {
-                                "od_values": self.TollsMatrixId,
+                                "od_values": self.CostMatrixId,
                                 "selected_link_volumes": None,
                                 "selected_turn_volumes": None
                             }
@@ -750,7 +764,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                              "analysis": {
                                           "analyzed_demand": peakHourMatrixId,
                                           "results": {
-                                                      "od_values": self.TollsMatrixId,
+                                                      "od_values": self.CostMatrixId,
                                                       "selected_link_volumes": None,
                                                       "selected_turn_volumes": None
                                                       }
@@ -762,7 +776,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                          },
                 "background_traffic": None,
                 "path_analysis": {
-                                  "link_component": self.LinkTollAttributeId,
+                                  "link_component": costAttributeId,
                                   "turn_component": None,
                                   "operator": "+",
                                   "selection_threshold": {
@@ -787,36 +801,36 @@ class TollBasedRoadAssignment(_m.Tool()):
                                       }
                 }
     
-    def _getSaveAutoTimesSpec(self):
-        return {
-                "result": "ul2",
-                "expression": "timau",
-                "aggregation": None,
-                "selections": {
-                               "link": "all"
-                               },
-                "type": "NETWORK_CALCULATION"
-                }
+    #def _getSaveAutoTimesSpec(self, appliedTollFactor):
+    #    return {
+    #            "result": "ul2",
+    #            "expression": "timau + " + self.LinkTollAttributeId + " * %f" %appliedTollFactor,
+    #            "aggregation": None,
+    #            "selections": {
+    #                           "link": "all"
+    #                           },
+    #            "type": "NETWORK_CALCULATION"
+    #            }
     
-    def _modifyFunctionForAoNAssignment(self):
-        allOrNothingFunc = _MODELLER.emmebank.function('fd98')
-        if allOrNothingFunc == None:
-            allOrNothingFunc = _MODELLER.emmebank.create_function('fd98', 'ul2')
-        else:
-            allOrNothingFunc.expression = 'ul2'
+    #def _modifyFunctionForAoNAssignment(self):
+    #    allOrNothingFunc = _MODELLER.emmebank.function('fd98')
+    #    if allOrNothingFunc == None:
+    #        allOrNothingFunc = _MODELLER.emmebank.create_function('fd98', 'ul2')
+    #    else:
+    #        allOrNothingFunc.expression = 'ul2'
         
-    def _getChangeLinkVDFto98Spec(self):
-        return {
-                "result": "vdf",
-                "expression": "98",
-                "aggregation": None,
-                "selections": {
-                               "link": "all"
-                               },
-                "type": "NETWORK_CALCULATION"
-                }
+    #def _getChangeLinkVDFto98Spec(self):
+    #    return {
+    #            "result": "vdf",
+    #            "expression": "98",
+    #            "aggregation": None,
+    #            "selections": {
+    #                           "link": "all"
+    #                           },
+    #            "type": "NETWORK_CALCULATION"
+    #            }
     
-    def _getAllOrNothingSOLASpec(self, peakHourMatrixId, costAttributeId):
+    def _getSecondarySOLASpec(self, peakHourMatrixId, costAttributeId, appliedTollFactor):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -832,7 +846,10 @@ class TollBasedRoadAssignment(_m.Tool()):
                     {
                         "mode": modeId,
                         "demand": peakHourMatrixId,
-                        "generalized_cost": None,
+                        "generalized_cost": {
+                            "link_costs": self.LinkTollAttributeId,
+                            "perception_factor": appliedTollFactor
+                            },
                         "results": {
                             "link_volumes": None,
                             "turn_volumes": None,
@@ -841,7 +858,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                             }
                         },
                         "path_analysis": {
-                            "link_component": costAttributeId,
+                            "link_component": self.LinkTollAttributeId,
                             "turn_component": None,
                             "operator": "+",
                             "selection_threshold": {
@@ -861,7 +878,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         "analysis": {
                             "analyzed_demand": None,
                             "results": {
-                                "od_values": self.CostMatrixId,
+                                "od_values": self.TollsMatrixId,
                                 "selected_link_volumes": None,
                                 "selected_turn_volumes": None
                             }
@@ -876,15 +893,15 @@ class TollBasedRoadAssignment(_m.Tool()):
                 },
                 "background_traffic": None,
                 "stopping_criteria": {
-                    "max_iterations": 0,
-                    "relative_gap": 0,
-                    "best_relative_gap": 0,
-                    "normalized_gap": 0
+                    "max_iterations": self.Iterations,
+                    "best_relative_gap": self.brGap,
+                    "relative_gap": self.rGap,
+                    "normalized_gap": self.normGap
                 }
             }
     
       
-    def _getAoNAssignmentSpec(self, peakHourMatrixId, costAttributeId):
+    def _getSecondaryAssignmentSpec(self, peakHourMatrixId, costAttributeId):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -896,7 +913,10 @@ class TollBasedRoadAssignment(_m.Tool()):
                                      {
                                       "mode": "c",
                                       "demand": peakHourMatrixId,
-                                      "generalized_cost": None,
+                                      "generalized_cost": {
+                                                    "link_costs": self.LinkTollAttributeId,
+                                                    "perception_factor": appliedTollFactor
+                                                    },
                                       "results": {
                                                   "link_volumes": None,
                                                   "turn_volumes": None,
@@ -907,7 +927,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                       "analysis": {
                                                    "analyzed_demand": None,
                                                    "results": {
-                                                               "od_values": self.CostMatrixId,
+                                                               "od_values": self.TollsMatrixId,
                                                                "selected_link_volumes": None,
                                                                "selected_turn_volumes": None
                                                                }
@@ -937,10 +957,10 @@ class TollBasedRoadAssignment(_m.Tool()):
                          "cutoff_analysis": None,
                          "traversal_analysis": None,
                          "stopping_criteria": {
-                                               "max_iterations": 0,
-                                               "best_relative_gap": 0,
-                                               "relative_gap": 0,
-                                               "normalized_gap": 0.01
+                                               "max_iterations": self.Iterations,
+                                                "best_relative_gap": self.brGap,
+                                                "relative_gap": self.rGap,
+                                                "normalized_gap": self.normGap
                                                }
                          }
     
