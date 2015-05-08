@@ -23,7 +23,7 @@ Toll-Based Road Assignment
 
     Authors: Peter Kucirek, Eric Miller
 
-    Latest revision by: pkucirek
+    Latest revision by: mattaustin222
     
     Executes a road assignment which allows for the generalized penalty of road tolls.
         
@@ -98,7 +98,7 @@ def blankManager(obj):
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '3.2.1'
+    version = '3.3.0'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
