@@ -73,6 +73,8 @@ Toll-Based Road Assignment
         - Secondary assignment is identical to the primary, but outputs toll matrix
         - Secondary assignment no longer run in temporary scenario
         - Changed transit background calculation to include ttf>=3
+
+    3.3.1 Added new assignment to calculate true travel time, not shortest path generalized cost.
         
     
 '''
@@ -98,9 +100,9 @@ def blankManager(obj):
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '3.3.0'
+    version = '3.3.1'
     tool_run_msg = ""
-    number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -427,8 +429,9 @@ class TollBasedRoadAssignment(_m.Tool()):
             
             with nested(self._costAttributeMANAGER(),
                         _util.tempMatrixMANAGER(description="Peak hour matrix"),
-                        self._transitTrafficAttributeMANAGER()) \
-                    as (costAttribute, peakHourMatrix, bgTransitAttribute): #bgTransitAttribute is None
+                        self._transitTrafficAttributeMANAGER(),
+                        self._timeAttributeMANAGER()) \
+                    as (costAttribute, peakHourMatrix, bgTransitAttribute, timeAttribute): #bgTransitAttribute is None
                 
                 with _m.logbook_trace("Calculating transit background traffic"):
                     networkCalculationTool(self._getTransitBGSpec(), scenario=self.Scenario)
@@ -478,11 +481,27 @@ class TollBasedRoadAssignment(_m.Tool()):
                     print "Primary assignment complete at %s iterations." %number
                     print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
 
-                self._tracker.startProcess(3)
+                self._tracker.startProcess(1)
+                with _m.logbook_trace("Secondary assignment to recover true travel times:"):
+                        
+                    with _m.logbook_trace("Copying auto times into @ltime"):
+                            networkCalculationTool(self._getSaveAutoTimesSpec(timeAttribute.id), scenario=self.Scenario)
+                            self._tracker.completeSubtask
+                        
+                    with _m.logbook_trace("Running secondary assignment"):
+                        if self.SOLAFlag:
+                            spec = self._getSecondarySOLASpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor)
+                        else:
+                            spec = self._getSecondaryAssignmentSpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor)
+                                
+                        self._tracker.runTool(trafficAssignmentTool,
+                                                spec, scenario=self.Scenario)                  
+                    
+                self._tracker.startProcess(1)
                 if not (self.TollsMatrixId == "null" or self.TollsMatrixId == None):
                     self._tracker.completeSubtask
                     
-                    with _m.logbook_trace("Secondary assignment to recover toll costs separately:"):
+                    with _m.logbook_trace("Tertiary assignment to recover toll costs separately:"):
                         
                         #with _m.logbook_trace("Copying auto times into UL2"):
                         #    networkCalculationTool(self._getSaveAutoTimesSpec(appliedTollFactor), scenario=allOrNothingScenario)
@@ -497,9 +516,9 @@ class TollBasedRoadAssignment(_m.Tool()):
                         
                         with _m.logbook_trace("Running secondary assignment"):
                             if self.SOLAFlag:
-                                spec = self._getSecondarySOLASpec(peakHourMatrix.id, costAttribute.id, appliedTollFactor)
+                                spec = self._getTertiarySOLASpec(peakHourMatrix.id, appliedTollFactor)
                             else:
-                                spec = self._getSecondaryAssignmentSpec(peakHourMatrix.id, costAttribute.id, appliedTollFactor)
+                                spec = self._getTertiaryyAssignmentSpec(peakHourMatrix.id, appliedTollFactor)
                                 
                             self._tracker.runTool(trafficAssignmentTool,
                                                   spec, scenario=self.Scenario)                               
@@ -567,6 +586,38 @@ class TollBasedRoadAssignment(_m.Tool()):
             if attributeCreated: 
                 _m.logbook_write("Deleting temporary link cost attribute.")
                 self.Scenario.delete_extra_attribute(costAttribute.id)
+                 # Delete the extra cost attribute only if it didn't exist before.   
+    @contextmanager
+    def _timeAttributeMANAGER(self):
+        #Code here is executed upon entry
+        
+        attributeCreated = False
+        
+        timeAttribute = self.Scenario.extra_attribute('@ltime')
+        if timeAttribute == None:
+            #@ltime hasn't been defined
+            _m.logbook_write("Creating temporary link cost attribute '@ltime'.")
+            timeAttribute = self.Scenario.create_extra_attribute('LINK', '@ltime', default_value=0)
+            attributeCreated = True
+            
+        elif self.Scenario.extra_attribute('@lktime').type != 'LINK':
+            #for some reason '@ltime' exists, but is not a link attribute
+            _m.logbook_write("Creating temporary link cost attribute '@ltim2'.")
+            timeAttribute = self.Scenario.create_extra_attribute('LINK', '@ltim2', default_value=0)
+            attributeCreated = True
+        
+        if not attributeCreated:
+            timeAttribute.initialize()
+            _m.logbook_write("Initialized link cost attribute to 0.")
+        
+        try:
+            yield timeAttribute
+            # Code here is executed upon clean exit
+        finally:
+            # Code here is executed in all cases.
+            if attributeCreated: 
+                _m.logbook_write("Deleting temporary link cost attribute.")
+                self.Scenario.delete_extra_attribute(timeAttribute.id)
                  # Delete the extra cost attribute only if it didn't exist before.    
     @contextmanager
     def _transitTrafficAttributeMANAGER(self):
@@ -801,16 +852,152 @@ class TollBasedRoadAssignment(_m.Tool()):
                                       }
                 }
     
-    #def _getSaveAutoTimesSpec(self, appliedTollFactor):
-    #    return {
-    #            "result": "ul2",
-    #            "expression": "timau + " + self.LinkTollAttributeId + " * %f" %appliedTollFactor,
-    #            "aggregation": None,
-    #            "selections": {
-    #                           "link": "all"
-    #                           },
-    #            "type": "NETWORK_CALCULATION"
-    #            }
+    def _getSecondarySOLASpec(self, peakHourMatrixId, timeAttribute, appliedTollFactor):
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 1, 1)
+        
+        modeId = _util.getScenarioModes(self.Scenario, ['AUTO'])[0][0]
+        #Returns a list of tuples. Emme guarantees that there is always
+        #one auto mode.
+        
+        return {
+                "type": "SOLA_TRAFFIC_ASSIGNMENT",
+                "classes": [
+                    {
+                        "mode": modeId,
+                        "demand": peakHourMatrixId,
+                        "generalized_cost": {
+                            "link_costs": self.LinkTollAttributeId,
+                            "perception_factor": appliedTollFactor
+                        },
+                        "results": {
+                            "link_volumes": None,
+                            "turn_volumes": None,
+                            "od_travel_times": {
+                                "shortest_paths": None
+                            }
+                        },
+                        "path_analysis": {
+                            "link_component": timeAttribute,
+                            "turn_component": None,
+                            "operator": "+",
+                            "selection_threshold": {
+                                "lower": None,
+                                "upper": None
+                            },
+                            "path_to_od_composition": {
+                                "considered_paths": "ALL",
+                                "multiply_path_proportions_by": {
+                                    "analyzed_demand": False,
+                                    "path_value": True
+                                }
+                            }
+                        },
+                        "cutoff_analysis": None,
+                        "traversal_analysis": None,
+                        "analysis": {
+                            "analyzed_demand": None,
+                            "results": {
+                                "od_values": self.TimesMatrixId,
+                                "selected_link_volumes": None,
+                                "selected_turn_volumes": None
+                            }
+                        }
+                    }
+                ],
+                "path_analysis": None,
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "performance_settings": {
+                    "number_of_processors": numberOfPocessors
+                },
+                "background_traffic": None,
+                "stopping_criteria": {
+                    "max_iterations": self.Iterations,
+                    "relative_gap": self.rGap,
+                    "best_relative_gap": self.brGap,
+                    "normalized_gap": self.normGap
+                }
+            }
+        
+          
+    def _getSecondaryRoadAssignmentSpec(self, peakHourMatrixId, timeAttribute, appliedTollFactor):
+        
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 2, 1)
+            
+        return {
+                "type": "STANDARD_TRAFFIC_ASSIGNMENT",
+                "classes": [
+                            {
+                             "mode": "c",
+                             "demand": peakHourMatrixId,
+                             "generalized_cost": {
+                                                  "link_costs": self.LinkTollAttributeId,
+                                                  "perception_factor": appliedTollFactor
+                                                  },
+                             "results": {
+                                         "link_volumes": None,
+                                         "turn_volumes": None,
+                                         "od_travel_times": {
+                                                             "shortest_paths": None
+                                                             }
+                                         },
+                             "analysis": {
+                                          "analyzed_demand": peakHourMatrixId,
+                                          "results": {
+                                                      "od_values": self.TimesMatrixId,
+                                                      "selected_link_volumes": None,
+                                                      "selected_turn_volumes": None
+                                                      }
+                                          }
+                             }
+                            ],
+                "performance_settings": {
+                                         "number_of_processors": numberOfPocessors
+                                         },
+                "background_traffic": None,
+                "path_analysis": {
+                                  "link_component": timeAttribute,
+                                  "turn_component": None,
+                                  "operator": "+",
+                                  "selection_threshold": {
+                                                          "lower": -999999,
+                                                          "upper": 999999
+                                                          },
+                                  "path_to_od_composition": {
+                                                             "considered_paths": "ALL",
+                                                             "multiply_path_proportions_by": {
+                                                                                              "analyzed_demand": False,
+                                                                                              "path_value": True
+                                                                                              }
+                                                             }
+                                  },
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "stopping_criteria": {
+                                      "max_iterations": self.Iterations,
+                                      "best_relative_gap": self.brGap,
+                                      "relative_gap": self.rGap,
+                                      "normalized_gap": self.normGap
+                                      }
+                }
+    
+
+    def _getSaveAutoTimesSpec(self, timeAttribute):
+        return {
+                "result": timeAttribute,
+                "expression": "timau",
+                "aggregation": None,
+                "selections": {
+                               "link": "all"
+                               },
+                "type": "NETWORK_CALCULATION"
+                }
     
     #def _modifyFunctionForAoNAssignment(self):
     #    allOrNothingFunc = _MODELLER.emmebank.function('fd98')
@@ -830,7 +1017,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     #            "type": "NETWORK_CALCULATION"
     #            }
     
-    def _getSecondarySOLASpec(self, peakHourMatrixId, costAttributeId, appliedTollFactor):
+    def _getTertiarySOLASpec(self, peakHourMatrixId, appliedTollFactor):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -901,7 +1088,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             }
     
       
-    def _getSecondaryAssignmentSpec(self, peakHourMatrixId, costAttributeId):
+    def _getTertiaryAssignmentSpec(self, peakHourMatrixId):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -939,7 +1126,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                                   },
                          "background_traffic": None,
                          "path_analysis": {
-                                           "link_component": costAttributeId,
+                                           "link_component": self.LinkTollAttributeId,
                                            "turn_component": None,
                                            "operator": "+",
                                            "selection_threshold": {
