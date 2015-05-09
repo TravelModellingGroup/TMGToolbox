@@ -371,7 +371,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         #---2. Pass in remaining args
         self.TimesMatrixId = TimesMatrixId
         self.CostMatrixId = CostMatrixId
-        if TollsMatrixId == mf0:
+        if TollsMatrixId == 'mf0':
             self.TollsMatrixId = None
         else:
             self.TollsMatrixId = TollsMatrixId
