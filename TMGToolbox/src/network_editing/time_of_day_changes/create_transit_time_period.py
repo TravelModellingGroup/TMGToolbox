@@ -36,6 +36,7 @@ Create Time Period Networks
     0.1.2 Created on 2015-02-17 by mattaustin222 Allows for non-service table data to be processed
     0.1.3 Zero values in the alt data file no longer restricts a line from being rightfully deleted
     0.1.4 Fixed error in formatting integer times from alt file header
+    0.1.5 Fixed an issue with line deletion from alt file causing headway error
     
 '''
 
@@ -76,7 +77,7 @@ def averageAggregation(departures, start, end):
 
 class CreateTimePeriodNetworks(_m.Tool()):
     
-    version = '0.1.4'
+    version = '0.1.5'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -439,6 +440,8 @@ class CreateTimePeriodNetworks(_m.Tool()):
             for k, v in altData.items(): #check if any headways or speeds are zero. Allow those lines to be deletable
                 if v[0] == 0 or v[1] == 0:
                     del altData[k]
+                #if v[0] == 9999: #prep an unused line for deletion
+                #    toDelete.add(k)
             doNotDelete = altData.keys()
         else:
             doNotDelete = None
@@ -460,7 +463,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 if doNotDelete:    
                     if line.id not in doNotDelete: #don't delete lines whose headways we wish to manually set
                         toDelete.add(line.id)
-                else:
+                elif line.id not in toDelete:
                     toDelete.add(line.id)
                 self.TRACKER.completeSubtask()
                 continue
@@ -495,6 +498,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             if line:
                 if data[0] == 9999: #a headway of 9999 indicates an unused line
                     network.delete_transit_line(line.id)
+                    continue
                 elif not data[0] in bounds: #a headway of 0 allows for a line to be in the alt data file without affecting anything
                     print "%s: %s" %(line.id, data[0])
                     _m.logbook_write("Headway out of bounds line %s: %s minutes" %(line.id, data[0]))
