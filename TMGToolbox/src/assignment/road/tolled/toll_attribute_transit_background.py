@@ -518,7 +518,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                             if self.SOLAFlag:
                                 spec = self._getTertiarySOLASpec(peakHourMatrix.id, appliedTollFactor)
                             else:
-                                spec = self._getTertiaryyAssignmentSpec(peakHourMatrix.id, appliedTollFactor)
+                                spec = self._getTertiaryAssignmentSpec(peakHourMatrix.id, appliedTollFactor)
                                 
                             self._tracker.runTool(trafficAssignmentTool,
                                                   spec, scenario=self.Scenario)                               
