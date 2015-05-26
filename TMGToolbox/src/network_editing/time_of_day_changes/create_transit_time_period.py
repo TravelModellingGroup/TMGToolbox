@@ -426,7 +426,10 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 id = cells[emmeIdCol]
                 hdw = cells[headwayCol]
                 spd = cells[speedCol]
-                altData[id] = (float(hdw),float(spd))
+                if id not in altData:
+                    altData[id] = (float(hdw),float(spd))
+                else:
+                    raise ValueError('Line %s has multiple entries. Please revise your alt file.' %id)
         
             
 
