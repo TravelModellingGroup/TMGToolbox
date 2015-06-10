@@ -681,7 +681,7 @@ class FBTNFromSchema(_m.Tool()):
             
             for i, stationGroupElement in enumerate(stationGroupsElement.findall('station_group')):
                 forGroup = stationGroupElement.attrib['for']
-                selector =  stationGroupElement.attrib['selection'] + " and ci=1"
+                selector =  stationGroupElement.attrib['selection']
                 
                 spec = {
                         "result": attr,
