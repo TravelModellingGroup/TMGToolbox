@@ -62,6 +62,8 @@ Fare-Based Transit Network (FBTN) From Schema
     1.3.0 Added new feature to associate a set of station zones with line group. Initial boarding rules
         will then be applied to all centroid connectors going from station zones to a stop of that
         operator.
+        
+    1.3.1 Minor change to accept two station groups being associated with a shared line group
     
 '''
 from copy import copy
@@ -139,7 +141,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.3.0'
+    version = '1.3.1'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -356,7 +358,6 @@ class FBTNFromSchema(_m.Tool()):
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
-
     
     ##########################################################################################################    
     
@@ -693,14 +694,14 @@ class FBTNFromSchema(_m.Tool()):
                         "type": "NETWORK_CALCULATION"
                     }
                 tool(spec, scenario= self.BaseScenario)
-                stationGroups[forGroup] = []
+                stationGroups[forGroup] = set()
                 ids.append(forGroup)
             
             indices, table = self.BaseScenario.get_attribute_values('NODE', [attr])
             for nodeNumber, index in indices.iteritems():
                 value = int(table[index])
                 if value == 0: continue
-                stationGroups[ids[value - 1]].append(nodeNumber)
+                stationGroups[ids[value - 1]].add(nodeNumber)
         
         return stationGroups            
         
@@ -1231,9 +1232,8 @@ class FBTNFromSchema(_m.Tool()):
             
             for nodeId in stationCentroids:
                 centroid = network.node(nodeId)
-                #Skip non zones
-                if not centroid.is_centroid: 
-                    continue 
+                if not centroid.is_centroid: continue #Skip non-zones
+                
                 for link in centroid.outgoing_links():
                     if idx in link.j_node.stopping_groups:
                         transferGrid[0, idx].add(link)
