@@ -356,6 +356,7 @@ class FBTNFromSchema(_m.Tool()):
         except Exception, e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
+
     
     ##########################################################################################################    
     
@@ -847,7 +848,7 @@ class FBTNFromSchema(_m.Tool()):
         if path.isabs(otherPath):
             return otherPath
         
-        return path.join(self.XMLSchemaFile, otherPath)
+        return path.join(path.dirname(self.XMLSchemaFile), otherPath)
     
     
     #---
