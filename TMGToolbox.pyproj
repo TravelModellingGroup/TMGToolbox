@@ -107,6 +107,7 @@
     <Compile Include="src\network_editing\transit_fare_hypernetworks\generate_hypernetwork_from_schema.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\Hypernetwork_Volume_Importer.py" />
     <Compile Include="src\tool_list.py" />
+    <Compile Include="src\XTMF_internal\apply_batch_line_edits.py" />
     <Compile Include="src\XTMF_internal\export_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_network_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_worksheet.py" />

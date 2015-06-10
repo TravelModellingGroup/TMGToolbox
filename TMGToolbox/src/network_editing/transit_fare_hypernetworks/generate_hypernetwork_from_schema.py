@@ -59,6 +59,10 @@ Fare-Based Transit Network (FBTN) From Schema
     1.2.0 Added new feature to accept relative paths for shapefiles. Absolute paths are still
         supported.
     
+    1.3.0 Added new feature to associate a set of station zones with line group. Initial boarding rules
+        will then be applied to all centroid connectors going from station zones to a stop of that
+        operator.
+    
 '''
 from copy import copy
 from contextlib import contextmanager
@@ -135,7 +139,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.2.0'
+    version = '1.3.0'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -365,7 +369,7 @@ class FBTNFromSchema(_m.Tool()):
             root = _ET.parse(self.XMLSchemaFile).getroot()            
             
             #Validate the XML Schema File
-            nGroups, nZones, nRules = self._ValidateSchemaFile(root)
+            nGroups, nZones, nRules, nStationGroups = self._ValidateSchemaFile(root)
             self.TRACKER.completeTask()
             
             #Load the line groups and zones
@@ -382,6 +386,12 @@ class FBTNFromSchema(_m.Tool()):
                     groupsElement = root.find('groups')
                     groupIds2Int, int2groupIds = self._LoadGroups(groupsElement, lineGroupAtt.id)
                     print "Loaded groups."
+                
+                stationGroupsElement = root.find('station_groups')
+                if stationGroupsElement != None:
+                    with _m.logbook_trace("Station Groups"):
+                        stationGroups = self._LoadStationGroups(stationGroupsElement)
+                        print "Loaded station groups"
                 
                 zonesElement = root.find('zones')
                 if zonesElement != None:
@@ -404,6 +414,8 @@ class FBTNFromSchema(_m.Tool()):
             #Transform the network
             with _m.logbook_trace("Transforming hyper network"):
                 transferGrid, zoneCrossingGrid = self._TransformNetwork(network, nGroups, nZones)
+                if nStationGroups > 0:
+                    self._IndexStationConnectors(network, transferGrid, stationGroups, groupIds2Int)
                 print "Hyper network generated."            
             
             #Apply fare rules to network.
@@ -543,6 +555,17 @@ class FBTNFromSchema(_m.Tool()):
         else:
             zoneElements = []
         
+        nStationGroups = 0
+        stationGroupsElement = root.find('station_groups')
+        if stationGroupsElement != None:
+            stationGroupElements = stationGroupsElement.findall('station_group')
+            
+            for element in stationGroupElements:
+                forGroup = element.attrib['for']
+                if not forGroup in validGroupIds:
+                    raise XmlValidationError("Could not find a group '%s' for to associate with a station group" %forGroup)
+                nStationGroups += 1
+
         fareElements = fareRulesElement.findall('fare')
         
         def checkGroupId(group, name):
@@ -605,7 +628,7 @@ class FBTNFromSchema(_m.Tool()):
                 text = child.text
                 checkFunc(text, name)
         
-        return len(groupElements), len(zoneElements), len(fareElements)
+        return len(groupElements), len(zoneElements), len(fareElements), nStationGroups
     
     def _LoadGroups(self, groupsElement, lineGroupAttId):
         groupIds2Int = {}
@@ -648,6 +671,38 @@ class FBTNFromSchema(_m.Tool()):
             self.TRACKER.completeSubtask()
         
         return groupIds2Int, int2groupIds
+    
+    def _LoadStationGroups(self, stationGroupsElement):
+        tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
+        
+        stationGroups, ids = {}, []
+        with _util.tempExtraAttributeMANAGER(self.BaseScenario, 'NODE', returnId=True) as attr:
+            
+            for i, stationGroupElement in enumerate(stationGroupsElement.findall('station_group')):
+                forGroup = stationGroupElement.attrib['for']
+                selector =  stationGroupElement.attrib['selection'] + " and ci=1"
+                
+                spec = {
+                        "result": attr,
+                        "expression": str(i + 1), #Plus one since the attribute is initialized to 0
+                        "aggregation": None,
+                        "selections": {
+                            "node": selector
+                        },
+                        "type": "NETWORK_CALCULATION"
+                    }
+                tool(spec, scenario= self.BaseScenario)
+                stationGroups[forGroup] = []
+                ids.append(forGroup)
+            
+            indices, table = self.BaseScenario.get_attribute_values('NODE', [attr])
+            for nodeNumber, index in indices.iteritems():
+                value = int(table[index])
+                if value == 0: continue
+                stationGroups[ids[value - 1]].append(nodeNumber)
+        
+        return stationGroups            
+        
     
     def _LoadZones(self, zonesElement, zoneAttributeId):
         '''
@@ -713,6 +768,8 @@ class FBTNFromSchema(_m.Tool()):
             raise
         
         return shapefiles
+    
+    
     
     def _IndexNodeGeometries(self):
         '''
@@ -1165,6 +1222,23 @@ class FBTNFromSchema(_m.Tool()):
         
         network.delete_transit_line(lineId)
         _editing.changeTransitLineId(newLine, lineId)
+    
+    def _IndexStationConnectors(self, network, transferGrid, stationGroups, groupIds2Int):
+        print "Indexing station connectors"        
+        for lineGroupId, stationCentroids in stationGroups.iteritems():
+            idx = groupIds2Int[lineGroupId]
+            
+            for nodeId in stationCentroids:
+                centroid = network.node(nodeId)
+                
+                for link in centroid.outgoing_links():
+                    if idx in link.j_node.stopping_groups:
+                        transferGrid[0, idx].add(link)
+                for link in centroid.incoming_links():
+                    if idx in link.i_node.stopping_groups:
+                        transferGrid[idx, 0].add(link)
+            print "Indexed connectors for group %s" %lineGroupId
+                
     
     #---              
     #---LOAD FARE RULES-----------------------------------------------------------------------------------
