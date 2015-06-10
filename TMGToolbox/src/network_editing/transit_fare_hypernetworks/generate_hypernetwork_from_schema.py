@@ -1231,7 +1231,9 @@ class FBTNFromSchema(_m.Tool()):
             
             for nodeId in stationCentroids:
                 centroid = network.node(nodeId)
-                
+                #Skip non zones
+                if not centroid.is_centroid: 
+                    continue 
                 for link in centroid.outgoing_links():
                     if idx in link.j_node.stopping_groups:
                         transferGrid[0, idx].add(link)
