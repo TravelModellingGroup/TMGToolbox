@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -23,7 +23,7 @@ Fare-Based Transit Network (FBTN) From Schema
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: mattaustin222
     
     
     [Description]
@@ -64,6 +64,11 @@ Fare-Based Transit Network (FBTN) From Schema
         operator.
         
     1.3.1 Minor change to accept two station groups being associated with a shared line group
+
+    1.4.0 Added option to allow station-to-centroid hypernetwork connections by default. This 
+        enables the proper connection of a centroid to a multi-operator station. The station group
+        method allows for finer control of centroids, but cannot handle multiple operators at 
+        a station. 
     
 '''
 from copy import copy
@@ -141,7 +146,7 @@ class NodeSpatialProxy():
 
 class FBTNFromSchema(_m.Tool()):
     
-    version = '1.3.1'
+    version = '1.4.0'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -162,6 +167,8 @@ class FBTNFromSchema(_m.Tool()):
     SegmentFareAttributeId = _m.Attribute(str)
     LinkFareAttributeId = _m.Attribute(str)
     SegmentINodeAttributeId = _m.Attribute(str)
+
+    StationConnectorFlag = _m.Attribute(bool)
     
     __ZONE_TYPES = ['node_selection', 'from_shapefile']
     __RULE_TYPES = ['initial_boarding', 
@@ -181,6 +188,8 @@ class FBTNFromSchema(_m.Tool()):
         
         self.LinkFareAttributeId = "@lfare"
         self.SegmentFareAttributeId = "@sfare"
+
+        self.StationConnectorFlag = True
         
     
     def page(self):
@@ -262,6 +271,9 @@ class FBTNFromSchema(_m.Tool()):
                       transit speed updating. Select 'None' to disable this \
                       feature.")
         
+        pb.add_checkbox(tool_attribute_name= 'StationConnectorFlag',
+                        label= "Allow station-to-centroid connections?")
+                        
         
         #---JAVASCRIPT
         pb.add_html("""
@@ -326,7 +338,7 @@ class FBTNFromSchema(_m.Tool()):
     
     def __call__(self, XMLSchemaFile, xtmf_BaseScenarioNumber, NewScenarioNumber,
                  TransferModeId, SegmentFareAttributeId, LinkFareAttributeId, 
-                 VirtualNodeDomain):
+                 VirtualNodeDomain, StationConnectorFlag):
         
         #---1 Set up scenario
         self.BaseScenario = _MODELLER.emmebank.scenario(xtmf_BaseScenarioNumber)
@@ -352,6 +364,7 @@ class FBTNFromSchema(_m.Tool()):
         self.SegmentFareAttributeId = SegmentFareAttributeId
         self.LinkFareAttributeId = LinkFareAttributeId
         self.VirtualNodeDomain = VirtualNodeDomain
+        self.StationConnectorFlag = StationConnectorFlag
         
         try:
             self._Execute()
@@ -1075,18 +1088,26 @@ class FBTNFromSchema(_m.Tool()):
         virtualNodes = []
         
         #Catalog and classify inbound and outbound links for copying
-        outgoingRole1Links = []
-        incomingRole1Links = []
+        outgoingLinks = []
+        incomingLinks = []
         outgoingConnectors = []
         incomingConnectors = []
         for link in baseNode.outgoing_links():
             if link.role == 1:
-                outgoingRole1Links.append(link)
-            elif link.j_node.is_centroid: outgoingConnectors.append(link)
+                outgoingLinks.append(link)
+            elif link.j_node.is_centroid: 
+                if self.StationConnectorFlag:
+                    outgoingLinks.append(link)
+                else:
+                    outgoingConnectors.append(link)
         for link in baseNode.incoming_links():
             if link.role == 1:
-                incomingRole1Links.append(link)
-            elif link.i_node.is_centroid: incomingConnectors.append(link)
+                incomingLinks.append(link)
+            elif link.i_node.is_centroid:
+                if self.StationConnectorFlag:
+                    incomingLinks.append(link)
+                else:
+                    incomingConnectors.append(link)
         
         first = True
         for groupNumber in baseNode.stopping_groups:
@@ -1096,8 +1117,8 @@ class FBTNFromSchema(_m.Tool()):
                 virtualNodes.append((baseNode, groupNumber))
                 
                 #Index the incoming and outgoing links to the Grid
-                for link in incomingRole1Links: transferGrid[0, groupNumber].add(link)
-                for link in outgoingRole1Links: transferGrid[groupNumber, 0].add(link)
+                for link in incomingLinks: transferGrid[0, groupNumber].add(link)
+                for link in outgoingLinks: transferGrid[groupNumber, 0].add(link)
                 
                 first = False
                 baseNode.label = "TS%s" %int(groupNumber)
@@ -1114,21 +1135,22 @@ class FBTNFromSchema(_m.Tool()):
                 virtualNodes.append((virtualNode, groupNumber))
                 
                 #Copy the base node's existing centroid connectors to the new virtual node
-                for connector in outgoingConnectors:
-                    newLink = network.create_link(virtualNode.number, connector.j_node.number, connector.modes)
-                    for att in network.attributes('LINK'): newLink[att] = connector[att]
-                for connector in incomingConnectors:
-                    newLink = network.create_link(connector.i_node.number, virtualNode.number, connector.modes)
-                    for att in network.attributes('LINK'): newLink[att] = connector[att]
+                if not self.StationConnectorFlag:
+                    for connector in outgoingConnectors:
+                        newLink = network.create_link(virtualNode.number, connector.j_node.number, connector.modes)
+                        for att in network.attributes('LINK'): newLink[att] = connector[att]
+                    for connector in incomingConnectors:
+                        newLink = network.create_link(connector.i_node.number, virtualNode.number, connector.modes)
+                        for att in network.attributes('LINK'): newLink[att] = connector[att]
                     
                 #Copy the base node's existing station connectors to the new virtual node
-                for connector in outgoingRole1Links:
+                for connector in outgoingLinks:
                     newLink = network.create_link(virtualNode.number, connector.j_node.number, connector.modes)
                     for att in network.attributes('LINK'): newLink[att] = connector[att]
                     
                     transferGrid[groupNumber, 0].add(newLink) #Index the new connector to the Grid
                     
-                for connector in incomingRole1Links:
+                for connector in incomingLinks:
                     newLink = network.create_link(connector.i_node.number, virtualNode.number, connector.modes)
                     for att in network.attributes('LINK'): newLink[att] = connector[att]
                     
