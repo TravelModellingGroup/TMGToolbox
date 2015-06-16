@@ -116,7 +116,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.RunTitle = ""
         self.LinkTollAttributeId = "@toll"
 
-        self.NumberOfProcessors = cpu_count()
+        self.NumberOfProcessors = multiprocessing.cpu_count()
         
              
     def page(self):

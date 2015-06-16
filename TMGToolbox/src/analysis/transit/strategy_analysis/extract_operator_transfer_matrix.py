@@ -53,6 +53,7 @@ from json import loads as _parsedict
 from os.path import dirname
 import tempfile as _tf
 import shutil as _shutil
+from multiprocessing import cpu_count
 
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')

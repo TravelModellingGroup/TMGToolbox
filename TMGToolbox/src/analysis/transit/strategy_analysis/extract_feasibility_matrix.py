@@ -25,6 +25,7 @@ Analysis Tool for Extracting Feasibility Matrix
 '''
 import inro.modeller as _m
 import traceback as _traceback
+from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 
