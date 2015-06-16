@@ -410,7 +410,7 @@ def fastLoadSummedSegmentAttributes(scenario, list_of_attributes):
     values = root_data[1:]
     
     major, minor, release, beta = getEmmeVersion(tuple)
-    if major >= 4 and minor >= 1 and release >= 2:
+    if (major,minor,release) >= (4,1,2):
         get_iter = lambda segmentIndices: segmentIndices.iteritems()
     else:
         get_iter = lambda segmentIndices: itersync(*segmentIndices)

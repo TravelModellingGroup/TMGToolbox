@@ -107,26 +107,29 @@ class LinkSpecificVolumes(_m.Tool()):
 
     def _Execute(self):
 
-        if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")      
+        with _m.logbook_trace(name="{classname}".format(classname=(self.__class__.__name__)),
+                                     attributes=self._GetAtts()):
 
-        parsed_filter_list = self._ParseFilterString(self.filtersToCompute)
+            if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")      
 
-        for scenario in self.Scenarios:
-            self.Scenario = _MODELLER.emmebank.scenario(scenario.id)
-            self.results[scenario.id] = {}
+            parsed_filter_list = self._ParseFilterString(self.filtersToCompute)
+
+            for scenario in self.Scenarios:
+                self.Scenario = _MODELLER.emmebank.scenario(scenario.id)
+                self.results[scenario.id] = {}
             
-            for filter in parsed_filter_list:                                
+                for filter in parsed_filter_list:                                
                 
-                spec = {
-                    "expression": "volau",                    
-                    "selections": {
-                        "link": filter[1]
-                        },
-                    "type": "NETWORK_CALCULATION"
-                }
-                report = networkCalculator(spec, scenario=self.Scenario)
+                    spec = {
+                        "expression": "volau",                    
+                        "selections": {
+                            "link": filter[1]
+                            },
+                        "type": "NETWORK_CALCULATION"
+                    }
+                    report = networkCalculator(spec, scenario=self.Scenario)
 
-                self.results[scenario.id][filter[0]] = report['sum']  
+                    self.results[scenario.id][filter[0]] = report['sum']  
 
     def _ParseFilterString(self, filterString):
         filterList = []
@@ -145,3 +148,9 @@ class LinkSpecificVolumes(_m.Tool()):
 
         return filterList
 
+    def _GetAtts(self):
+        atts = {
+                "Scenario" : str(self.Scenario.id),
+                "self": self.__MODELLER_NAMESPACE__}
+            
+        return atts
