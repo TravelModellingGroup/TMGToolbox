@@ -112,7 +112,6 @@ class SupplementalTransitMatrices(_m.Tool()):
         modes = [id for id, type, description in _util.getScenarioModes(scenario, ['TRANSIT', 'AUX_TRANSIT'])]
         strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
         matrixResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix_results')
-        matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
         partitionAggTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_partition_aggregation')
         partitionAverageTool = _MODELLER.tool('TMG2.Analysis.ExportPartitionAverage')
         

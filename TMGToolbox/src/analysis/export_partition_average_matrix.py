@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -36,6 +36,8 @@ Export Aggregate Average Matrix by Partition
     0.1.0 Added XTMF side, which returns the aggregated matrix in third-normalized form as
         a string. Also added the option to export the results in third-normalize form to
         the Modeller side.
+
+    0.1.1 Updated to allow for multi-threaded matrix calcs in 4.2.1+
     
 '''
 
@@ -47,11 +49,13 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
+EMME_VERSION = _util.getEmmeVersion(tuple) 
+
 ##########################################################################################################
 
 class ExportAggregateAverageMatrix(_m.Tool()):
     
-    version = '0.1.0'
+    version = '0.1.1'
     tool_run_msg = ""
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
@@ -67,6 +71,8 @@ class ExportAggregateAverageMatrix(_m.Tool()):
     xtmf_PartitionId = _m.Attribute(str)
     MatrixIdToAggregate = _m.Attribute(str)
     WeightingMatrixId = _m.Attribute(str)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
         #---Init internal variables
@@ -74,6 +80,8 @@ class ExportAggregateAverageMatrix(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
+        
+        self.NumberOfProcessors = cpu_count()
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Aggregate Average Matrix v%s" %self.version,
@@ -170,10 +178,14 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                 finalAggregateMatrix.description = matrixToAggregate.description 
                 
                 #Copy the weighting matrix into adjustedDemandMatrix
-                self.TRACKER.runTool(matrixCalcTool, 
+                if EMME_VERSION >= (4,2,1):
+                    self.TRACKER.runTool(matrixCalcTool, 
+                                     specification=self._GetMatrixCopySpec(adjustedDemandMatrix.id),
+                                     scenario = self.Scenario, num_processors=self.NumberOfProcessors)
+                else:
+                    self.TRACKER.runTool(matrixCalcTool, 
                                      specification=self._GetMatrixCopySpec(adjustedDemandMatrix.id),
                                      scenario = self.Scenario)
-                
                 #Aggregate weighting matrix into denominatorMatrix
                 weightingMatrix = _MODELLER.emmebank.matrix(self.WeightingMatrixId)
                 self.TRACKER.runTool(partitionAggTool,
@@ -185,7 +197,13 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                                      scenario=self.Scenario)
                 
                 #For partitions with no trips (e.g. '0'), weight every cell with '1'
-                self.TRACKER.runTool(matrixCalcTool,
+                if EMME_VERSION >= (4,2,1):
+                    self.TRACKER.runTool(matrixCalcTool,
+                                     specification=self._GetFixDemandSpec(adjustedDemandMatrix.id,
+                                                                          denominatorMatrix.id),
+                                     scenario=self.Scenario, num_processors=self.NumberOfProcessors)
+                else:
+                    self.TRACKER.runTool(matrixCalcTool,
                                      specification=self._GetFixDemandSpec(adjustedDemandMatrix.id,
                                                                           denominatorMatrix.id),
                                      scenario=self.Scenario)
@@ -199,11 +217,18 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                                      result_matrix=denominatorMatrix)
                 
                 #Calculate the average
-                self.TRACKER.runTool(matrixCalcTool,
-                    specification=self._GetAggregateAverageSpec(adjustedDemandMatrix.id,
-                                                                denominatorMatrix.id,
-                                                                finalAggregateMatrix.id),
-                    scenario=self.Scenario)
+                if EMME_VERSION >= (4,2,1):
+                    self.TRACKER.runTool(matrixCalcTool,
+                        specification=self._GetAggregateAverageSpec(adjustedDemandMatrix.id,
+                                                                    denominatorMatrix.id,
+                                                                    finalAggregateMatrix.id),
+                        scenario=self.Scenario, num_processors=self.NumberOfProcessors)
+                else:
+                    self.TRACKER.runTool(matrixCalcTool,
+                        specification=self._GetAggregateAverageSpec(adjustedDemandMatrix.id,
+                                                                    denominatorMatrix.id,
+                                                                    finalAggregateMatrix.id),
+                        scenario=self.Scenario)
                 
                 #Return the average matrix
                 retVal = partitionAggTool(finalAggregateMatrix, self.Partition, self.Partition)

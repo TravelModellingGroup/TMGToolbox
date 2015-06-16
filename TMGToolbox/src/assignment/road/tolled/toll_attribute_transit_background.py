@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -75,6 +75,8 @@ Toll-Based Road Assignment
         - Changed transit background calculation to include ttf>=3
 
     3.3.1 Added new assignment to calculate true travel time, not shortest path generalized cost.
+
+    3.3.2 Updated to allow for multi-threaded matrix calcs in 4.2.1+
         
     
 '''
@@ -100,7 +102,7 @@ def blankManager(obj):
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '3.3.1'
+    version = '3.3.2'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -132,6 +134,8 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     PerformanceFlag = _m.Attribute(bool)
     SOLAFlag = _m.Attribute(bool)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -157,6 +161,8 @@ class TollBasedRoadAssignment(_m.Tool()):
             self.SOLAFlag = True
         else:
             self.SOLAFlag = False
+
+        self.NumberOfProcessors = cpu_count()
 
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Toll Based Road Assignment v%s" %self.version,
@@ -442,7 +448,10 @@ class TollBasedRoadAssignment(_m.Tool()):
                     self._tracker.completeSubtask()
                     
                 with _m.logbook_trace("Calculating peak hour matrix"):
-                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))
+                    if EMME_VERSION >= (4,2,1):
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id), num_processors=self.NumberOfProcessors)
+                    else:
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))
                     self._tracker.completeSubtask()
                     
                 

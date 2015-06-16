@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -28,9 +28,11 @@ import traceback as _traceback
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 
+EMME_VERSION = _util.getEmmeVersion(tuple) 
+
 class ExtractFeasibilityMatrix(_m.Tool()):
     
-    version = '0.1.0'
+    version = '0.1.1'
     tool_run_msg = ""
     
     #---Variable definitions
@@ -41,6 +43,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
     MatrixResultNumber = _m.Attribute(int)
     ModeString = _m.Attribute(str)
     
+    NumberOfProcessors = _m.Attribute(int)
     #---Special instance types, used only from Modeller
     scenario = _m.Attribute(_m.InstanceType)
     matrixResult = _m.Attribute(_m.InstanceType)
@@ -51,6 +54,9 @@ class ExtractFeasibilityMatrix(_m.Tool()):
     
     def __init__(self):
         self.databank = _m.Modeller().emmebank
+
+        self.NumberOfProcessors = cpu_count()
+
         try:
             self.matrixResultTool = _m.Modeller().tool('inro.emme.standard.transit_assignment.extended.matrix_results')
             self.matrixCalcTool = _m.Modeller().tool('inro.emme.standard.matrix_calculation.matrix_calculator')
@@ -182,7 +188,11 @@ class ExtractFeasibilityMatrix(_m.Tool()):
                 
                 #---3 Compute the final results matrix
                 _m.logbook_write("Computing feasibility matrix")
-                self.matrixCalcTool(self._getMatrixCalcSpec(), self.scenario)            
+                if EMME_VERSION >= (4,2,1):
+                    self.matrixCalcTool(self._getMatrixCalcSpec(), self.scenario,
+                                             num_processors=self.NumberOfProcessors)  
+                else: 
+                    self.matrixCalcTool(self._getMatrixCalcSpec(), self.scenario)         
     
     def _assignmentCheck(self):
         if self.scenario.transit_assignment_type != 'EXTENDED_TRANSIT_ASSIGNMENT':

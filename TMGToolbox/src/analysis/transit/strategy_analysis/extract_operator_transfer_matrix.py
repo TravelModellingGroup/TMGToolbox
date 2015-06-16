@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -38,6 +38,8 @@ Extract Operator Transfer Matrix
     1.1.0 Added in feature to just extract the walk-all-way matrix
     
     1.1.1 Fixed some documentation.
+    
+    1.1.2 Updated to allow for multi-threaded matrix calcs in 4.2.1+
     
 '''
 
@@ -148,7 +150,7 @@ LINE_GROUPS_GTAMV4_PREM = [(1, "line=B_____", "Brampton"),
 
 class OperatorTransferMatrix(_m.Tool()):
     
-    version = '1.1.1'
+    version = '1.1.2'
     tool_run_msg = ""
     number_of_tasks = 8 # For progress reporting, enter the integer number of tasks here
     
@@ -164,6 +166,8 @@ class OperatorTransferMatrix(_m.Tool()):
     ExportWalkAllWayMatrixFlag = _m.Attribute(bool)
     AggregationPartition = _m.Attribute(_m.InstanceType)
     WalkAllWayExportFile = _m.Attribute(str)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
         #---Init internal variables
@@ -173,6 +177,8 @@ class OperatorTransferMatrix(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.ExportTransferMatrixFlag = True
         self.ExportWalkAllWayMatrixFlag = False
+
+        self.NumberOfProcessors = cpu_count()
     
     ##########################################################################################################
     #---
@@ -791,7 +797,11 @@ class OperatorTransferMatrix(_m.Tool()):
                 "type": "MATRIX_CALCULATION"
             }
         
-        return self.TRACKER.runTool(matrixCalculator, spec, scenario=self.Scenario)['result']
+        if EMME_VERSION >= (4,2,1):
+            return self.TRACKER.runTool(matrixCalculator, spec, scenario=self.Scenario,
+                                             num_processors=self.NumberOfProcessors)['result']
+        else:
+            return self.TRACKER.runTool(matrixCalculator, spec, scenario=self.Scenario)['result']
         
     def _WriteExportFile(self, transferMatrix):
         with open(self.TransferMatrixFile, 'w') as writer:

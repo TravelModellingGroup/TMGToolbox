@@ -30,6 +30,8 @@ Toll-Based Road Assignment
     V 1.0.0
 
     V 1.1.0 Added link volume attributes for increased resolution of analysis.
+
+    V 1.1.1 Updated to allow for multi-threaded matrix calcs in 4.2.1+
         
 '''
 
@@ -53,7 +55,7 @@ def blankManager(obj):
 
 class MultiClassRoadAssignment(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.1.1'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
@@ -90,6 +92,8 @@ class MultiClassRoadAssignment(_m.Tool()):
     
     PerformanceFlag = _m.Attribute(bool)
     SOLAFlag = _m.Attribute(bool)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -111,6 +115,8 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.PerformanceFlag = False
         self.RunTitle = ""
         self.LinkTollAttributeId = "@toll"
+
+        self.NumberOfProcessors = cpu_count()
         
              
     def page(self):
@@ -230,7 +236,11 @@ class MultiClassRoadAssignment(_m.Tool()):
                           
                         with _m.logbook_trace("Calculating peak hour matrix"):  #For each class
                             for i in range(len(self.Demand_List)):
-                                matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id))                        
+                                if EMME_VERSION >= (4,2,1):
+                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id), 
+                                                   num_processors=self.NumberOfProcessors)
+                                else:
+                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id))                        
                             self._tracker.completeSubtask()
                             
                         

@@ -97,6 +97,8 @@ V4 Transit Assignment
     4.0.1 Congestion function will now raise an Exception if a used ttf value is
         not assigned congestion parameters.
 
+    4.0.2 Updated to allow for multi-threaded matrix calcs in 4.2.1+
+
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -132,7 +134,7 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '4.0.1'
+    version = '4.0.2'
     tool_run_msg = ""
     number_of_tasks = 7 # For progress reporting, enter the integer number of tasks here
     
@@ -1220,8 +1222,10 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 },
                 "type": "MATRIX_CALCULATION"
             }
-        matrixCalcTool(matrixCalcSpec, scenario= self.Scenario)
-        
+        if EMME_VERSION >= (4,2,1):
+            matrixCalcTool(matrixCalcSpec, scenario= self.Scenario, num_num_processors=self.NumberOfProcessors)
+        else:
+            matrixCalcTool(matrixCalcSpec, scenario= self.Scenario)
     
     def _ExtractRawIvttMatrix(self):
         with _util.tempMatrixMANAGER("Congestion matrix") as congestionMatrix:
@@ -1271,7 +1275,10 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                             },
                             "type": "MATRIX_CALCULATION"
                         }
-            matrixCalcTool(matrixCalcSpec, scenario= self.Scenario)
+            if EMME_VERSION >= (4,2,1):
+                matrixCalcTool(matrixCalcSpec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
+            else:
+                matrixCalcTool(matrixCalcSpec, scenario= self.Scenario)
     
     #---MODELLER INTERFACE FUNCTIONS
     
