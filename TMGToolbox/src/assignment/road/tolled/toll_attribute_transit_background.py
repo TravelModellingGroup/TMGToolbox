@@ -162,7 +162,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         else:
             self.SOLAFlag = False
 
-        self.NumberOfProcessors = cpu_count()
+        self.NumberOfProcessors = multiprocessing.cpu_count()
 
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Toll Based Road Assignment v%s" %self.version,
