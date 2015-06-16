@@ -399,7 +399,7 @@ class Station2StationAssignment(_m.Tool()):
                 "od_results": None,
                 "type": "EXTENDED_TRANSIT_ASSIGNMENT"
                 }
-        if EMME_VERSION[0] + 0.1 * EMME_VERSION[1] >= 4.1:
+        if EMME_VERSION >= (4,1,0):
             spec["performance_settings"] = {
                     "number_of_processors": cpu_count()
                     }

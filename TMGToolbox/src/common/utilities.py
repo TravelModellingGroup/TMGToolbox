@@ -370,7 +370,7 @@ def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
     will be raised if tried. - pkucirek June 2014
     '''
     major, minor, release = getEmmeVersion(tuple)
-    if major >= 4 and minor >= 1 and release >= 2:
+    if (major, minor, release) >= (4,1,2):
         raise Exception("fastLoadTransitSegmentAttributes is deprecated in Emme 4.1.2 or newer versions!")
     
     retval = {}

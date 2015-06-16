@@ -671,7 +671,7 @@ class Shapely2ESRI():
                 raise IOError("File %s does not exist" %projectionFile)
         #For a non-specified projection path, copy the file from the Emme Project
         #This can only be done for versions 4.1 and newer.
-        elif major >= 4 and minor >= 1:
+        elif (major, minor) >= (4,1):
             if release < 2: #4.1.1 has a slightly difference name
                 projectionFile = _MODELLER.desktop.project.arcgis_spatial_reference_file
             else:

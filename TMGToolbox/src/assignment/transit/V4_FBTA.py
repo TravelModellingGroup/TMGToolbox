@@ -1024,8 +1024,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                                     },
                                                     "by_fixed_proportions": None}
         
-        emmeVersionFloat = EMME_VERSION[0] + 0.1 * EMME_VERSION[1]
-        if emmeVersionFloat >= 4.1:
+        if EMME_Version >= (4,1,0):
                     
             baseSpec["performance_settings"] = {
                     "number_of_processors": self.NumberOfProcessors
