@@ -334,7 +334,7 @@ class ExportScreenlineResults(_m.Tool()):
                     tup[1] += volad
             if post2:
                 if not post2 in counts:
-                    counts[post1] = [volau, volad]
+                    counts[post2] = [volau, volad]
                 else:
                     tup = counts[post2]
                     tup[0] += volau
