@@ -361,7 +361,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
                     counts[post1] += voltrLink
             if post2:
                 if not post2 in counts:
-                    counts[post1] = voltrLink
+                    counts[post2] = voltrLink
                 else:
                     counts[post2] += voltrLink
         return counts
