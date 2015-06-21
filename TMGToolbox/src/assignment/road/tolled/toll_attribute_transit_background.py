@@ -91,7 +91,7 @@ from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
-EMME_VERSION = _util.getEmmeVersion(float)
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
@@ -159,7 +159,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.RunTitle = ""
         self.LinkTollAttributeId = "@toll"
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             self.SOLAFlag = True
         else:
             self.SOLAFlag = False
@@ -309,7 +309,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         note="This mode will use more cores for assignment,<br>\
                             at the cost of slowing down other processes.")
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             pb.add_checkbox(tool_attribute_name= 'SOLAFlag',
                             label= "Use SOLA traffic assignment?")
         
@@ -394,7 +394,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.RunTitle = RunTitle[:25]
         self.LinkTollAttributeId = LinkTollAttributeId
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             self.SOLAFlag = SOLAFlag
         else:
             self.SOLAFlag = False

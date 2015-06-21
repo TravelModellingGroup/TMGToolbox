@@ -64,7 +64,7 @@ networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.netwo
 strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 matrixCalculator = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 matrixExportTool = _MODELLER.tool('inro.emme.data.matrix.export_matrices')
-EMME_VERSION = _util.getEmmeVersion(float)
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
@@ -209,7 +209,7 @@ class OperatorTransferMatrix(_m.Tool()):
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             pb.add_text_element("<em><b>Performance note for Emme 4.1 and newer:</b> \
                 When analyzing the results of a congested transit assignment, this \
                 tool will automatically blend the results over all iterations in \

@@ -42,7 +42,7 @@ from contextlib import contextmanager
 from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
-EMME_VERSION = _util.getEmmeVersion(float)
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
