@@ -238,27 +238,27 @@ class ExtractTransitODVectors(_m.Tool()):
                     self._ApplyODProbabilities(stationProbs, origProbMatrix, 'ORIGIN')
                     self._ApplyODProbabilities(stationProbs, destProbMatrix, 'DESTINATION')
                     #Multiply the probability matrices by the auto demand matrix to yield origin and destination DAT demands for the selected nodes
-                    if EMME_VERSION >= (4,2,1):
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(origProbMatrix.id, " * ", autoOrigMatrix.id, autoOrigMatrix.id), self.Scenario,
-                                             num_processors=self.NumberOfProcessors)
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(destProbMatrix.id, " * ", autoDestMatrix.id, autoDestMatrix.id), self.Scenario,
-                                             num_processors=self.NumberOfProcessors)
-                    else:                    
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(origProbMatrix.id, " * ", autoOrigMatrix.id, autoOrigMatrix.id), self.Scenario)
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(destProbMatrix.id, " * ", autoDestMatrix.id, autoDestMatrix.id), self.Scenario)
+                    #if EMME_VERSION >= (4,2,1):
+                    #    matrixCalc(self._BuildSimpleMatrixCalcSpec(origProbMatrix.id, " * ", autoOrigMatrix.id, autoOrigMatrix.id), self.Scenario,
+                    #                         num_processors=self.NumberOfProcessors)
+                    #    matrixCalc(self._BuildSimpleMatrixCalcSpec(destProbMatrix.id, " * ", autoDestMatrix.id, autoDestMatrix.id), self.Scenario,
+                    #                         num_processors=self.NumberOfProcessors)
+                    #else:                    
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(origProbMatrix.id, " * ", autoOrigMatrix.id, autoOrigMatrix.id), self.Scenario)
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(destProbMatrix.id, " * ", autoDestMatrix.id, autoDestMatrix.id), self.Scenario)
                 with _m.logbook_trace("Aggregating DAT demand and producing final O & D matrices"):
                     #Aggregate the adjusted DAT matrices
                     matrixAgg(autoOrigMatrix.id, tempDatOrig.id, agg_op="+")
                     matrixAgg(autoDestMatrix.id, tempDatDest.id, agg_op="+")
                     #Find the total O & D matrices
-                    if EMME_VERSION >= (4,2,1):
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(autoOrigMatrix.id, " + ", self.AggOriginMatrixId, self.AggOriginMatrixId), self.Scenario,
-                                             num_processors=self.NumberOfProcessors)
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(autoDestMatrix.id, " + ", self.AggDestinationMatrixId, self.AggDestinationMatrixId), self.Scenario,
-                                             num_processors=self.NumberOfProcessors)
-                    else:
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(tempDatOrig.id, " + ", self.AggOriginMatrixId, self.AggOriginMatrixId), self.Scenario)
-                        matrixCalc(self._BuildSimpleMatrixCalcSpec(tempDatDest.id, " + ", self.AggDestinationMatrixId, self.AggDestinationMatrixId), self.Scenario)
+                    #if EMME_VERSION >= (4,2,1):
+                    #    matrixCalc(self._BuildSimpleMatrixCalcSpec(autoOrigMatrix.id, " + ", self.AggOriginMatrixId, self.AggOriginMatrixId), self.Scenario,
+                    #                         num_processors=self.NumberOfProcessors)
+                    #    matrixCalc(self._BuildSimpleMatrixCalcSpec(autoDestMatrix.id, " + ", self.AggDestinationMatrixId, self.AggDestinationMatrixId), self.Scenario,
+                    #                         num_processors=self.NumberOfProcessors)
+                    #else:
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(tempDatOrig.id, " + ", self.AggOriginMatrixId, self.AggOriginMatrixId), self.Scenario)
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(tempDatDest.id, " + ", self.AggDestinationMatrixId, self.AggDestinationMatrixId), self.Scenario)
 
             _MODELLER.desktop.refresh_needed(True) #Tell the desktop app that a data refresh is required
                     
@@ -365,10 +365,10 @@ class ExtractTransitODVectors(_m.Tool()):
         else:
             raise Exception("Need to specify either ORIGIN or DESTINATION")
 
-        if EMME_VERSION >= (4,2):
-            print outputMatrix.id
-            outputMatrix.set_numpy_data(probMatrix, scenario_id=self.Scenario.id) # set the probability matrix data to the matrix we created earlier
-        elif EMME_VERSION >= (4,1,2):
+        #if EMME_VERSION >= (4,2):
+        #    print outputMatrix.id
+        #    outputMatrix.set_numpy_data(probMatrix, scenario_id=self.Scenario.id) # set the probability matrix data to the matrix we created earlier
+        if EMME_VERSION >= (4,1,2):
             zoneSystem = [self.Scenario.zone_numbers] * 2
             matrix_data = _matrix.MatrixData(zoneSystem, type='f') 
             matrix_data.from_numpy(probMatrix) #pull the data from the probability Matrix
