@@ -41,6 +41,9 @@
     <Compile Include="src\analysis\transit\strategy_analysis\extract_operator_transfer_matrix.py" />
     <Compile Include="src\analysis\transit\strategy_analysis\extract_rail_IVTT_matrix.py" />
     <Compile Include="src\analysis\link_specific_volumes.py" />
+    <Compile Include="src\analysis\transit\strategy_analysis\extract_transit_OD_vectors.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\analysis\transit\strategy_analysis\revenue_calculation.py" />
     <Compile Include="src\analysis\transit\strategy_analysis\select_line_analyses.py" />
     <Compile Include="src\analysis\transit\strategy_analysis\volume_per_operator.py" />
