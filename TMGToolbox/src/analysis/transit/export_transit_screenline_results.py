@@ -69,6 +69,8 @@ class ExportTransitScreenlineResults(_m.Tool()):
     ExportFile = _m.Attribute(str)
 
     LineFilterExpression = _m.Attribute(str)
+
+    PeakHourFactor = _m.Attribute(float)
     
     def __init__(self):
         #---Init internal variables
@@ -78,6 +80,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.CountpostFlagAttribute = "@stn1"
         self.AlternateFlagAttribute = "@stn2"
+        self.RepresentativeHourFactor = 2.04
     
     ##########################################################################################################
     #---
@@ -123,6 +126,10 @@ class ExportTransitScreenlineResults(_m.Tool()):
         pb.add_text_box(tool_attribute_name='LineFilterExpression',
                         title="Line Filter Expression",
                         size=100, multi_line=True)
+
+        pb.add_text_box(tool_attribute_name='RepresentativeHourFactor',
+                        title="Representative Hour Factor",
+                        size=40)
         
         pb.add_select_file(tool_attribute_name='ScreenlineFile',
                            window_type='file',
@@ -247,7 +254,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
     #---XTMF INTERFACE METHODS
     
     def __call__(self, xtmf_ScenarioNumber, CountpostFlagAttribute, AlternateFlagAttribute, ScreenlineFile, ExportFile, 
-                 LineFilterExpression):
+                 LineFilterExpression, RepresentativeHourFactor):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
@@ -267,6 +274,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
         self.ScreenlineFile = ScreenlineFile
         self.ExportFile = ExportFile
         self.LineFilterExpression = LineFilterExpression
+        self.RepresentativeHourFactor = RepresentativeHourFactor
         
         try:
             self._Execute()
@@ -384,6 +392,8 @@ class ExportTransitScreenlineResults(_m.Tool()):
                         continue
                     voltrLink = counts[station]
                     totalVoltr += voltrLink
+
+                totalVoltr /= self.RepresentativeHourFactor
                 
                 writer.write("\n" + ",".join([screenlineID, str(nStations), str(nMissing), \
                                               str(totalVoltr)]))
