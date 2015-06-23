@@ -70,7 +70,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
 
     LineFilterExpression = _m.Attribute(str)
 
-    PeakHourFactor = _m.Attribute(float)
+    RepresentativeHourFactor = _m.Attribute(float)
     
     def __init__(self):
         #---Init internal variables
