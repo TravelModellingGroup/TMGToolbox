@@ -80,12 +80,12 @@ class LinkSpecificVolumes(_m.Tool()):
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario   
         self.results = {};
-        self.TransitFlag = True
+        self.TransitFlag = False
 
     def run(self):
         self.tool_run_msg = ""        
         
-    def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath, TransitFlag=True):
+    def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath, TransitFlag=False):
         self.tool_run_msg = ""
         print "Starting Link volume calculations"
 
@@ -140,6 +140,10 @@ class LinkSpecificVolumes(_m.Tool()):
                     report1 = networkCalculator(spec1, scenario=self.Scenario)
 
                     if self.TransitFlag:
+                        # consider adding an option to search for links with the same coordinates 
+                        # (i.e. the hypernetwork equivalent). Otherwise, this won't work
+                        # for streetcars, rail, etc.
+
                         spec2 = {
                             "expression": "voltr",                    
                             "selections": {
@@ -149,7 +153,8 @@ class LinkSpecificVolumes(_m.Tool()):
                             "type": "NETWORK_CALCULATION"
                         }
 
-                        report2 = networkCalculator(spec2, scenario=self.Scenario)
+                        #transit scenario hard-coded as "the next" scenario
+                        report2 = networkCalculator(spec2, scenario=_MODELLER.emmebank.scenario(scenario.id + 1))
                         self.results[scenario.id][filter[0]] = [report1['sum'], report2['sum']]
 
                     else:
