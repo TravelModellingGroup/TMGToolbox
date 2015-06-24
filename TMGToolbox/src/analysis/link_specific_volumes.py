@@ -23,7 +23,7 @@ Export Specific Link Volumes
 
     Authors: tnikolov
 
-    Latest revision by: tnikolov
+    Latest revision by: mattaustin222
     
     
     Takes in a series of link filters and exports the
@@ -33,6 +33,7 @@ Export Specific Link Volumes
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2015-06-03 by tnikolov
+    0.1.0 Added the option to export total transit volumes on the link
     
 '''
 
@@ -66,6 +67,8 @@ class LinkSpecificVolumes(_m.Tool()):
     VolumeMatrix = _m.Attribute(str)
     filePath = _m.Attribute(str)
 
+    TransitFlag = _m.Attribute(bool)
+
     Scenarios = _m.Attribute(_m.ListType)
 
     #results = {"test": 1.0};
@@ -77,11 +80,12 @@ class LinkSpecificVolumes(_m.Tool()):
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario   
         self.results = {};
+        self.TransitFlag = True
 
     def run(self):
         self.tool_run_msg = ""        
         
-    def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath):
+    def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath, TransitFlag=True):
         self.tool_run_msg = ""
         print "Starting Link volume calculations"
 
@@ -93,15 +97,21 @@ class LinkSpecificVolumes(_m.Tool()):
             self.Scenarios.append(sc)
 
         self.filtersToCompute = FilterString
+        self.TransitFlag = TransitFlag
        
         self._Execute()
 
         with open(filePath, 'wb') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
-            writer.writerow(["Scenario", "Link Filter", "Volume"])
+            if self.TransitFlag:
+                writer.writerow(["Scenario", "Link Filter", "Auto Volume", "Transit Volume"])
+            else:
+                writer.writerow(["Scenario", "Link Filter", "Volume"])
             for scenario in sorted(self.results):
                 for linkFilter in sorted(self.results[scenario]):
-                    writer.writerow([scenario, linkFilter, self.results[scenario][linkFilter]])
+                    output = [scenario, linkFilter]
+                    output.extend(self.results[scenario][linkFilter])
+                    writer.writerow(output)
 
         print "Finished Link volume calculations"
 
@@ -120,16 +130,30 @@ class LinkSpecificVolumes(_m.Tool()):
             
                 for filter in parsed_filter_list:                                
                 
-                    spec = {
+                    spec1 = {
                         "expression": "volau",                    
                         "selections": {
                             "link": filter[1]
                             },
                         "type": "NETWORK_CALCULATION"
                     }
-                    report = networkCalculator(spec, scenario=self.Scenario)
+                    report1 = networkCalculator(spec1, scenario=self.Scenario)
 
-                    self.results[scenario.id][filter[0]] = report['sum']  
+                    if self.TransitFlag:
+                        spec2 = {
+                            "expression": "voltr",                    
+                            "selections": {
+                                "link": filter[1],
+                                "transit_line": "all"
+                                },
+                            "type": "NETWORK_CALCULATION"
+                        }
+
+                        report2 = networkCalculator(spec2, scenario=self.Scenario)
+                        self.results[scenario.id][filter[0]] = [report1['sum'], report2['sum']]
+
+                    else:
+                        self.results[scenario.id][filter[0]] = [report1['sum']]
 
     def _ParseFilterString(self, filterString):
         filterList = []
