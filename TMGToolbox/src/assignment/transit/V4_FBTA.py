@@ -1224,7 +1224,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 "type": "MATRIX_CALCULATION"
             }
         if EMME_VERSION >= (4,2,1):
-            matrixCalcTool(matrixCalcSpec, scenario= self.Scenario, num_num_processors=self.NumberOfProcessors)
+            matrixCalcTool(matrixCalcSpec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
         else:
             matrixCalcTool(matrixCalcSpec, scenario= self.Scenario)
     
