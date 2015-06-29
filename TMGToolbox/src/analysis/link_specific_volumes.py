@@ -66,9 +66,7 @@ class LinkSpecificVolumes(_m.Tool()):
     VolumeMatrix = _m.Attribute(str)
     filePath = _m.Attribute(str)
 
-    Scenarios = _m.Attribute(_m.ListType)
-
-    #results = {"test": 1.0};
+    Scenarios = _m.Attribute(_m.ListType)    
             
     def __init__(self):
         #---Init internal variables

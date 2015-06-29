@@ -377,8 +377,7 @@ class OperatorTransferMatrix(_m.Tool()):
                 if self.ExportTransferMatrixFlag and not self.TransferMatrixFile:
                     raise IOError("No transfer matrix file specified.")
                 
-                if self.ExportWalkAllWayMatrixFlag:
-                    if not self.AggregationPartition: raise TypeError("No aggregation partition specified")
+                if self.ExportWalkAllWayMatrixFlag:                    
                     if not self.WalkAllWayExportFile: raise TypeError("No walk-all-way matrix file specified")
                     
                 self._Execute()
@@ -389,6 +388,33 @@ class OperatorTransferMatrix(_m.Tool()):
                 e, _traceback.format_exc(e))
             raise
         
+        self.tool_run_msg = _m.PageBuilder.format_info("Done.")
+
+    def __call__(self, xtmf_ScenarioNumber, ExportTransferMatrixFlag, ExportWalkAllWayMatrixFlag, TransferMatrixFile, 
+                 xtmf_AggregationPartition, WalkAllWayExportFile):
+        self.tool_run_msg = ""
+        self.TRACKER.reset()                              
+
+        self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
+        if (self.Scenario == None):
+            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+
+        if(xtmf_AggregationPartition.lower() == "none"):
+            self.AggregationPartition == None;
+        else:
+            self.AggregationPartition = _MODELLER.emmebank.partition(xtmf_AggregationPartition)                    
+
+        try:
+            if self.ExportTransferMatrixFlag or self.ExportWalkAllWayMatrixFlag:
+                
+                if self.ExportTransferMatrixFlag and not self.TransferMatrixFile:
+                    raise IOError("No transfer matrix file specified.")
+                
+                if self.ExportWalkAllWayMatrixFlag:                    
+                    if not self.WalkAllWayExportFile: raise TypeError("No walk-all-way matrix file specified")
+                    
+                self._Execute()
+                                        
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
     @_m.method(return_type=_m.TupleType)

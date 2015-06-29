@@ -148,8 +148,8 @@ class ExportWorksheet(_m.Tool()):
             for param_config in config['parameters']:
                 par_name = param_config['par_name']
                 
-                layer_name = None
-                layer_type = None
+                layer_name = ''
+                layer_type = ''
                 if 'layer_name' in param_config: layer_name = param_config['layer_name']
                 if 'layer_type' in param_config: layer_type = param_config['layer_type']
                 
@@ -271,7 +271,7 @@ class ExportWorksheet(_m.Tool()):
         except TypeError:            
             raise RuntimeError("Cannot load layer from worksheet. Either a layer name or layer type must be specified.")
         
-        if type(layer) == type(None):
+        if layer is None:
             print type(worksheet)
             print type(layer)
             print layer_type, type(layer_type)
