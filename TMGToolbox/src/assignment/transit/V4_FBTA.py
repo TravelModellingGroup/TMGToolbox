@@ -1105,7 +1105,8 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         #using a context manager
         if not self.CongestionMatrixId and self.InVehicleTimeMatrixId and \
                 not self.CalculateCongestedIvttFlag:
-            congestionMatrixManager = _util.tempMatrixMANAGER()
+            def congestionMatrixManager():
+                return _util.tempMatrixMANAGER()
         else:
             @contextmanager
             def congestionMatrixManager():
