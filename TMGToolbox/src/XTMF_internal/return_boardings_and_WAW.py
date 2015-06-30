@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -36,6 +36,8 @@ Return Boardings and WAW
     0.0.1 Created on 2014-02-05 by pkucirek
     
     0.1.0 Upgraded to work with get_attribute_values (partial read)
+
+    0.1.1 Updated to allow for multi-threaded matrix calcs in 4.2.1+
 '''
 
 import inro.modeller as _m
@@ -43,17 +45,20 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 from json import loads
+from multiprocessing import cpu_count
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 matrixCalculator = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 
+EMME_VERSION = _util.getEmmeVersion(tuple) 
+
 ##########################################################################################################
 
 class ReturnBoardingsAndWAW(_m.Tool()):
     
-    version = '0.1.0'
+    version = '0.1.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -65,11 +70,14 @@ class ReturnBoardingsAndWAW(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     xtmf_LineAggregationFile = _m.Attribute(str)
     xtmf_ExportWAW = _m.Attribute(bool)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
 
+        self.NumberOfProcessors = cpu_count()
         
     def page(self):
         pb = _m.ToolPageBuilder(self, title="Return Boardings",
@@ -227,7 +235,10 @@ class ReturnBoardingsAndWAW(_m.Tool()):
                 "type": "MATRIX_CALCULATION"
             }
         
-        return matrixCalculator(spec, scenario= scenario)['result']
+        if EMME_VERSION >= (4,2,1):
+            return matrixCalculator(spec, scenario= scenario, num_processors=self.NumberOfProcessors)['result']
+        else:
+            return matrixCalculator(spec, scenario= scenario)['result']
     
     ##########################################################################################################
 

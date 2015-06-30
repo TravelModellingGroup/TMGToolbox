@@ -79,15 +79,13 @@ def getTemporaryFolder():
         _shutil.rmtree(folder)
 
 
-class VolumePerOperator(_m.Tool()):
+class RevenueCalculation(_m.Tool()):
     
     #---PARAMETERS
     xtmf_ScenarioNumbers = _m.Attribute(str)
-    FilterString = _m.Attribute(str)
-    DemandMatrixId = _m.Attribute(str)                
-    VolumeMatrix = _m.Attribute(str)
+    FilterString = _m.Attribute(str)        
     filePath = _m.Attribute(str)
-
+    
     Scenarios = _m.Attribute(_m.ListType)
 
     #results = {"test": 1.0};
@@ -160,7 +158,7 @@ class VolumePerOperator(_m.Tool()):
 
     def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath):
         self.tool_run_msg = ""
-        print "Starting Ridership Calculations"
+        print "Starting Revenue Calculations"
 
         self.Scenarios = []
         for number in xtmf_ScenarioNumbers.split(','):
@@ -175,12 +173,12 @@ class VolumePerOperator(_m.Tool()):
 
         with open(filePath, 'wb') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
-            writer.writerow(["Scenario", "Line Filter", "Ridership"])
+            writer.writerow(["Scenario", "Line Filter", "Revenue"])
             for scenario in sorted(self.results):
                 for lineFilter in sorted(self.results[scenario]):
                     writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
         
-        print "Finished Ridership calculations"
+        print "Finished Revenue calculations"
 
     def _Execute(self):
 
@@ -194,53 +192,18 @@ class VolumePerOperator(_m.Tool()):
             
             for filter in parsed_filter_list:
                 
-                managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
-                        _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
-                        _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]        
-
-                with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
-                    networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
-                    pathAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix), scenario=self.Scenario)            
-                    matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+")
-
-                    self.results[scenario.id][filter[1]] =  tempResultMatrix.data                     
-    
-    def assign_line_filter(self, lineFilter, marker):
-        return {"result": marker.id,
-                    "expression": "1",
-                    "aggregation": None,
+                spec = {
+                    "expression": "voltr*@sfare",                    
                     "selections": {
-                        "transit_line": lineFilter
+                        "link": "all",
+                        "transit_line": filter[1]
                         },
                     "type": "NETWORK_CALCULATION"
                 }
+                report = networkCalculator(spec, scenario=self.Scenario)                               
 
-    def count_ridership(self, operator, tempIntermediateMatrix):
-        return { "portion_of_path": "COMPLETE",
-                    "trip_components": {
-                        "in_vehicle": None,
-                        "aux_transit": None,
-                        "initial_boarding": operator.id,
-                        "transfer_boarding": operator.id,
-                        "transfer_alighting": None,
-                        "final_alighting": None
-                    },
-                    "path_operator": ".max.",
-                    "path_selection_threshold": {
-                        "lower": 1,
-                        "upper": 1
-                    },
-                    "path_to_od_aggregation": None,
-                    "constraint": None,
-                    "analyzed_demand": None,
-                    "results_from_retained_paths": {
-                        "paths_to_retain": "SELECTED",
-                        "demand": tempIntermediateMatrix.id  
-                    },
-                    "path_to_od_statistics": None,
-                    "path_details": None,
-                    "type": "EXTENDED_TRANSIT_PATH_ANALYSIS"                
-                    }
+                self.results[scenario.id][filter[1]] =  report['sum']                     
+      
 
     def _ParseFilterString(self, filterString):
         filterList = []

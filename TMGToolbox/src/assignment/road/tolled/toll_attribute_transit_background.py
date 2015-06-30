@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -75,6 +75,10 @@ Toll-Based Road Assignment
         - Changed transit background calculation to include ttf>=3
 
     3.3.1 Added new assignment to calculate true travel time, not shortest path generalized cost.
+
+    3.3.2 Updated to allow for multi-threaded matrix calcs in 4.2.1+
+
+    3.3.3 Assignment now includes on-link operating costs in generalized costs (instead of only tolls)
         
     
 '''
@@ -87,7 +91,7 @@ from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
-EMME_VERSION = _util.getEmmeVersion(float)
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
@@ -100,7 +104,7 @@ def blankManager(obj):
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '3.3.1'
+    version = '3.3.3'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -132,6 +136,8 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     PerformanceFlag = _m.Attribute(bool)
     SOLAFlag = _m.Attribute(bool)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -153,10 +159,12 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.RunTitle = ""
         self.LinkTollAttributeId = "@toll"
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             self.SOLAFlag = True
         else:
             self.SOLAFlag = False
+
+        self.NumberOfProcessors = multiprocessing.cpu_count()
 
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Toll Based Road Assignment v%s" %self.version,
@@ -301,7 +309,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         note="This mode will use more cores for assignment,<br>\
                             at the cost of slowing down other processes.")
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             pb.add_checkbox(tool_attribute_name= 'SOLAFlag',
                             label= "Use SOLA traffic assignment?")
         
@@ -386,7 +394,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.RunTitle = RunTitle[:25]
         self.LinkTollAttributeId = LinkTollAttributeId
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             self.SOLAFlag = SOLAFlag
         else:
             self.SOLAFlag = False
@@ -442,7 +450,10 @@ class TollBasedRoadAssignment(_m.Tool()):
                     self._tracker.completeSubtask()
                     
                 with _m.logbook_trace("Calculating peak hour matrix"):
-                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))
+                    if EMME_VERSION >= (4,2,1):
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id), num_processors=self.NumberOfProcessors)
+                    else:
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))
                     self._tracker.completeSubtask()
                     
                 
@@ -490,9 +501,9 @@ class TollBasedRoadAssignment(_m.Tool()):
                         
                     with _m.logbook_trace("Running secondary assignment"):
                         if self.SOLAFlag:
-                            spec = self._getSecondarySOLASpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor)
+                            spec = self._getSecondarySOLASpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor, costAttribute.id)
                         else:
-                            spec = self._getSecondaryAssignmentSpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor)
+                            spec = self._getSecondaryAssignmentSpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor, costAttribute.id)
                                 
                         self._tracker.runTool(trafficAssignmentTool,
                                                 spec, scenario=self.Scenario)                  
@@ -516,9 +527,9 @@ class TollBasedRoadAssignment(_m.Tool()):
                         
                         with _m.logbook_trace("Running secondary assignment"):
                             if self.SOLAFlag:
-                                spec = self._getTertiarySOLASpec(peakHourMatrix.id, appliedTollFactor)
+                                spec = self._getTertiarySOLASpec(peakHourMatrix.id, appliedTollFactor, costAttribute.id)
                             else:
-                                spec = self._getTertiaryAssignmentSpec(peakHourMatrix.id, appliedTollFactor)
+                                spec = self._getTertiaryAssignmentSpec(peakHourMatrix.id, appliedTollFactor, costAttribute.id)
                                 
                             self._tracker.runTool(trafficAssignmentTool,
                                                   spec, scenario=self.Scenario)                               
@@ -734,7 +745,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         "mode": modeId,
                         "demand": peakHourMatrixId,
                         "generalized_cost": {
-                            "link_costs": self.LinkTollAttributeId,
+                            "link_costs": costAttributeId,
                             "perception_factor": appliedTollFactor
                         },
                         "results": {
@@ -802,7 +813,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                              "mode": "c",
                              "demand": peakHourMatrixId,
                              "generalized_cost": {
-                                                  "link_costs": self.LinkTollAttributeId,
+                                                  "link_costs": costAttributeId,
                                                   "perception_factor": appliedTollFactor
                                                   },
                              "results": {
@@ -852,7 +863,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                       }
                 }
     
-    def _getSecondarySOLASpec(self, peakHourMatrixId, timeAttribute, appliedTollFactor):
+    def _getSecondarySOLASpec(self, peakHourMatrixId, timeAttribute, appliedTollFactor, costAttributeId):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -869,7 +880,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         "mode": modeId,
                         "demand": peakHourMatrixId,
                         "generalized_cost": {
-                            "link_costs": self.LinkTollAttributeId,
+                            "link_costs": costAttributeId,
                             "perception_factor": appliedTollFactor
                         },
                         "results": {
@@ -937,7 +948,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                              "mode": "c",
                              "demand": peakHourMatrixId,
                              "generalized_cost": {
-                                                  "link_costs": self.LinkTollAttributeId,
+                                                  "link_costs": costAttributeId,
                                                   "perception_factor": appliedTollFactor
                                                   },
                              "results": {
@@ -1017,7 +1028,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     #            "type": "NETWORK_CALCULATION"
     #            }
     
-    def _getTertiarySOLASpec(self, peakHourMatrixId, appliedTollFactor):
+    def _getTertiarySOLASpec(self, peakHourMatrixId, appliedTollFactor, costAttributeId):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -1034,7 +1045,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         "mode": modeId,
                         "demand": peakHourMatrixId,
                         "generalized_cost": {
-                            "link_costs": self.LinkTollAttributeId,
+                            "link_costs": costAttributeId,
                             "perception_factor": appliedTollFactor
                             },
                         "results": {
@@ -1101,7 +1112,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                       "mode": "c",
                                       "demand": peakHourMatrixId,
                                       "generalized_cost": {
-                                                    "link_costs": self.LinkTollAttributeId,
+                                                    "link_costs": costAttributeId,
                                                     "perception_factor": appliedTollFactor
                                                     },
                                       "results": {

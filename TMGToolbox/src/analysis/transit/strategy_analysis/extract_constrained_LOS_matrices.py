@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -30,6 +30,8 @@ Analysis Tool for Extracting Travel Time Matrices, constrained by transit feasib
     0.1.2 Modified to use new Modeller page objects
     
     0.2.0 Modified to optionally only constrain the walk matrix
+
+    0.2.1 Updated to allow for multi-threaded matrix calcs in 4.2.1+
     
 '''
 import inro.modeller as _m
@@ -37,13 +39,16 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 from datetime import datetime as _dt
+from multiprocessing import cpu_count
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
+EMME_VERSION = _util.getEmmeVersion(tuple) 
+
 class ExtractConstrainedLOSMatrices(_m.Tool()):
     
-    version = '0.1.3'
+    version = '0.2.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -69,6 +74,8 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
     FarePerception = _m.Attribute(float)
     
     RunTitle = _m.Attribute(str)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     #========================================
         
@@ -83,6 +90,8 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
         self.WaitTimeCutoff = 40
         self.TotalTimeCutoff = 150
         self.RunTitle = ""
+
+        self.NumberOfProcessors = cpu_count()
             
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Extract Constrained LOS Matrices",
@@ -269,22 +278,38 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                         self.TRACKER.runTool(strategyAnalysisTool, self._getBoardingFaresAnalysisSpec(accessFaresMatrix.id), scenario=self.Scenario)
                         _m.logbook_write("Access fares matrix extracted.")
                         
-                        self.TRACKER.runTool(matrixCalcTool, self._getCostSumSpec(lineFaresMatrix.id, accessFaresMatrix.id), scenario=self.Scenario)
+                        if EMME_VERSION >= (4,2,1):
+                            self.TRACKER.runTool(matrixCalcTool, self._getCostSumSpec(lineFaresMatrix.id, accessFaresMatrix.id), scenario=self.Scenario,
+                                             num_processors=self.NumberOfProcessors)
+                        else:
+                            self.TRACKER.runTool(matrixCalcTool, self._getCostSumSpec(lineFaresMatrix.id, accessFaresMatrix.id), scenario=self.Scenario)
                         _m.logbook_write("Cost components added.")
                 
                     with _m.logbook_trace("Subtracting fares from impedances to get times."):
                         fareFactor = self._calculateFareFactor()
-                        self.TRACKER.runTool(matrixCalcTool, self._getFixIVTTSpec(lineFaresMatrix.id, fareFactor), scenario=self.Scenario)
+                        if EMME_VERSION >= (4,2,1):
+                            self.TRACKER.runTool(matrixCalcTool, self._getFixIVTTSpec(lineFaresMatrix.id, fareFactor), scenario=self.Scenario,
+                                             num_processors=self.NumberOfProcessors)
+                        else:
+                            self.TRACKER.runTool(matrixCalcTool, self._getFixIVTTSpec(lineFaresMatrix.id, fareFactor), scenario=self.Scenario)
                         _m.logbook_write("IVTT matrix fixed.")
                         
-                        self.TRACKER.runTool(matrixCalcTool, self._getFixWalkSpec(accessFaresMatrix.id, fareFactor), scenario=self.Scenario)
+                        if EMME_VERSION >= (4,2,1):
+                            self.TRACKER.runTool(matrixCalcTool, self._getFixWalkSpec(accessFaresMatrix.id, fareFactor), scenario=self.Scenario,
+                                             num_processors=self.NumberOfProcessors)
+                        else:
+                            self.TRACKER.runTool(matrixCalcTool, self._getFixWalkSpec(accessFaresMatrix.id, fareFactor), scenario=self.Scenario)
                         _m.logbook_write("Walk matrix fixed.")
                 else:
                     for i in range(5):
                         self.TRACKER.completeTask() #Skip these 5 tasks
                 
                 with _m.logbook_trace("Extracting temporary feasibility matrix."):
-                    self.TRACKER.runTool(matrixCalcTool, self._getFeasibilityMatrixSpec(feasibilityMatrix.id), self.Scenario)
+                    if EMME_VERSION >= (4,2,1):
+                        self.TRACKER.runTool(matrixCalcTool, self._getFeasibilityMatrixSpec(feasibilityMatrix.id), self.Scenario,
+                                             num_processors=self.NumberOfProcessors)
+                    else:
+                        self.TRACKER.runTool(matrixCalcTool, self._getFeasibilityMatrixSpec(feasibilityMatrix.id), self.Scenario)
                 
                 with _m.logbook_trace("Applying feasibility constraint matrix."):
                     matrixIdsToConstrain = {'boarding times': self.BoardingTimeMatrixId,
@@ -298,7 +323,11 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                     for (name, id) in matrixIdsToConstrain.iteritems():
                         if id == 'null': #Cannot return None from combobox, so need to check for string nullity
                             self.TRACKER.completeSubtask()
-                        matrixCalcTool(self._getMatrixMultiplicationSpec(feasibilityMatrix.id, id), self.Scenario)
+                        if EMME_VERSION >= (4,2,1):
+                            matrixCalcTool(self._getMatrixMultiplicationSpec(feasibilityMatrix.id, id), self.Scenario,
+                                             num_processors=self.NumberOfProcessors)
+                        else:
+                            matrixCalcTool(self._getMatrixMultiplicationSpec(feasibilityMatrix.id, id), self.Scenario)
                         _m.logbook_write("Constrained %s matrix." %name)
                         self.TRACKER.completeSubtask()
     

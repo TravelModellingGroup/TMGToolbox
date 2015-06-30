@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -21,9 +21,9 @@
 '''
 [TITLE]
 
-    Authors: pkucirek
+    Authors: pkucirek, mattaustin222
 
-    Latest revision by: David King
+    Latest revision by: mattaustin222
     
     
     [Description]
@@ -36,6 +36,8 @@
     1.0.0 Published on 2014-11-19
     
     1.1.0 Added functionality for XTMF
+
+    2.0.0 Forked from base Export Screenline Results tool
 '''
 
 import inro.modeller as _m
@@ -45,12 +47,13 @@ from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+netCalc = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 
 ##########################################################################################################
 
-class ExportScreenlineResults(_m.Tool()):
+class ExportTransitScreenlineResults(_m.Tool()):
     
-    version = '1.1.0'
+    version = '2.0.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -64,6 +67,10 @@ class ExportScreenlineResults(_m.Tool()):
     
     ScreenlineFile = _m.Attribute(str)
     ExportFile = _m.Attribute(str)
+
+    LineFilterExpression = _m.Attribute(str)
+
+    RepresentativeHourFactor = _m.Attribute(float)
     
     def __init__(self):
         #---Init internal variables
@@ -73,14 +80,15 @@ class ExportScreenlineResults(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.CountpostFlagAttribute = "@stn1"
         self.AlternateFlagAttribute = "@stn2"
+        self.RepresentativeHourFactor = 2.04
     
     ##########################################################################################################
     #---
     #---MODELLER INTERACE METHODS
     
     def page(self):
-        pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Screenline Results v%s" %self.version,
-                     description="Aggregates link auto volumes (both volau and volad) based on a \
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="Export Transit Screenline Results v%s" %self.version,
+                     description="Aggregates transit volumes for a specified line filter based on a \
                          given screenline aggregation file. A screenline is defined as a collection \
                          of count stations, where a count station is encoded in a link extra \
                          attribute. Count stations can belong to multiple screenlines. \
@@ -114,6 +122,14 @@ class ExportScreenlineResults(_m.Tool()):
                       title="Alternate Countpost Attribute",
                       note="<font color='green'><b>Optional:</b></font> Alternate countpost attribute \
                       for multiple post per link")
+
+        pb.add_text_box(tool_attribute_name='LineFilterExpression',
+                        title="Line Filter Expression",
+                        size=100, multi_line=True)
+
+        pb.add_text_box(tool_attribute_name='RepresentativeHourFactor',
+                        title="Representative Hour Factor",
+                        size=40)
         
         pb.add_select_file(tool_attribute_name='ScreenlineFile',
                            window_type='file',
@@ -184,7 +200,7 @@ class ExportScreenlineResults(_m.Tool()):
         return self.tool_run_msg
     
     def short_description(self):
-        return "<em>Exports traffic results for screenlines defined by multiple count posts.</em>"
+        return "<em>Exports transit results for screenlines defined by multiple count posts.</em>"
     
     @_m.method(return_type=unicode)
     def preload_screenline_definitions(self):
@@ -237,7 +253,8 @@ class ExportScreenlineResults(_m.Tool()):
     #---
     #---XTMF INTERFACE METHODS
     
-    def __call__(self, xtmf_ScenarioNumber, CountpostFlagAttribute, AlternateFlagAttribute, ScreenlineFile, ExportFile):
+    def __call__(self, xtmf_ScenarioNumber, CountpostFlagAttribute, AlternateFlagAttribute, ScreenlineFile, ExportFile, 
+                 LineFilterExpression, RepresentativeHourFactor):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
@@ -256,6 +273,8 @@ class ExportScreenlineResults(_m.Tool()):
         self.AlternateFlagAttribute = AlternateFlagAttribute
         self.ScreenlineFile = ScreenlineFile
         self.ExportFile = ExportFile
+        self.LineFilterExpression = LineFilterExpression
+        self.RepresentativeHourFactor = RepresentativeHourFactor
         
         try:
             self._Execute()
@@ -275,9 +294,14 @@ class ExportScreenlineResults(_m.Tool()):
             
             screenlines = self._LoadScreenlinesFile()
             
-            counts = self._LoadResults()
+            with _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= "Summed Volumes") \
+                as linkSumAtt:
+
+                self._SumSegments(linkSumAtt.id)
+
+                counts = self._LoadResults(linkSumAtt.id)
             
-            self._ExportResults(screenlines, counts)
+                self._ExportResults(screenlines, counts)
             
 
     ##########################################################################################################
@@ -310,47 +334,55 @@ class ExportScreenlineResults(_m.Tool()):
                     continue
         return screenlines
     
-    def _LoadResults(self):
-        atts = [self.CountpostFlagAttribute, 'auto_volume', 'additional_volume']
-        if self.AlternateFlagAttribute: atts.append(self.AlternateFlagAttribute)
+    def _SumSegments(self, linkSumAttId):
+        spec = {
+            "result": linkSumAttId,
+            "expression": "voltr",
+            "aggregation": "+",
+            "selections": {
+                "transit_line": self.LineFilterExpression,
+                "link": "all"
+            },
+            "type": "NETWORK_CALCULATION"
+        }
         
-        linkAttributes = _util.fastLoadLinkAttributes(self.Scenario, atts)
+        netCalc(spec, scenario=self.Scenario)
+    
+    def _LoadResults(self, linkSumAttId):
+        linkAtts = [self.CountpostFlagAttribute, linkSumAttId]
+        if self.AlternateFlagAttribute: linkAtts.append(self.AlternateFlagAttribute)
+        
+        linkAttributes = _util.fastLoadLinkAttributes(self.Scenario, linkAtts)
         
         counts = {}
         for attributes in linkAttributes.itervalues():
-            volau = attributes['auto_volume']
-            volad = attributes['additional_volume']
-            
+            voltrLink = attributes[linkSumAttId]
+                        
             post1 = int(attributes[self.CountpostFlagAttribute])
             post2 = 0
             if self.AlternateFlagAttribute: post2 = int(attributes[self.AlternateFlagAttribute])
             
             if post1:
                 if not post1 in counts:
-                    counts[post1] = [volau, volad]
+                    counts[post1] = voltrLink
                 else:
-                    tup = counts[post1]
-                    tup[0] += volau
-                    tup[1] += volad
+                    counts[post1] += voltrLink
             if post2:
                 if not post2 in counts:
-                    counts[post2] = [volau, volad]
+                    counts[post2] = voltrLink
                 else:
-                    tup = counts[post2]
-                    tup[0] += volau
-                    tup[1] += volad
+                    counts[post2] += voltrLink
         return counts
     
     def _ExportResults(self, screenlines, counts):
         with open(self.ExportFile, 'w') as writer:
-            writer.write("Screenline,nStations,nMissing,AutoVolume,AdditionalVolume")
+            writer.write("Screenline,nStations,nMissing,TransitVolume")
             
             orderedLines = [item for item in screenlines.iteritems()]
             orderedLines.sort()
             
             for screenlineID, stations in orderedLines:
-                totalVolau = 0
-                totalVolad = 0
+                totalVoltr = 0
                 nStations = len(stations)
                 nMissing = 0
                 
@@ -358,12 +390,13 @@ class ExportScreenlineResults(_m.Tool()):
                     if not station in counts:
                         nMissing += 1
                         continue
-                    volau, volad = counts[station]
-                    totalVolau += volau
-                    totalVolad += volad
+                    voltrLink = counts[station]
+                    totalVoltr += voltrLink
+
+                totalVoltr /= self.RepresentativeHourFactor
                 
                 writer.write("\n" + ",".join([screenlineID, str(nStations), str(nMissing), \
-                                              str(totalVolau), str(totalVolad)]))
+                                              str(totalVoltr)]))
                     
                 
         

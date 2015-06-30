@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -39,6 +39,8 @@ Extract Operator Transfer Matrix
     
     1.1.1 Fixed some documentation.
     
+    1.1.2 Updated to allow for multi-threaded matrix calcs in 4.2.1+
+    
 '''
 
 import inro.modeller as _m
@@ -51,6 +53,7 @@ from json import loads as _parsedict
 from os.path import dirname
 import tempfile as _tf
 import shutil as _shutil
+from multiprocessing import cpu_count
 
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
@@ -61,7 +64,7 @@ networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.netwo
 strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 matrixCalculator = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 matrixExportTool = _MODELLER.tool('inro.emme.data.matrix.export_matrices')
-EMME_VERSION = _util.getEmmeVersion(float)
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
@@ -148,12 +151,13 @@ LINE_GROUPS_GTAMV4_PREM = [(1, "line=B_____", "Brampton"),
 
 class OperatorTransferMatrix(_m.Tool()):
     
-    version = '1.1.1'
+    version = '1.1.2'
     tool_run_msg = ""
     number_of_tasks = 8 # For progress reporting, enter the integer number of tasks here
     
     #---PARAMETERS
     Scenario = _m.Attribute(_m.InstanceType)
+    xtmf_ScenarioNumber = _m.Attribute(int)
     DemandMatrixId = _m.Attribute(str)
     ClassName = _m.Attribute(str)
     
@@ -163,7 +167,10 @@ class OperatorTransferMatrix(_m.Tool()):
     
     ExportWalkAllWayMatrixFlag = _m.Attribute(bool)
     AggregationPartition = _m.Attribute(_m.InstanceType)
+    xtmf_AggregationPartition = _m.Attribute(str)
     WalkAllWayExportFile = _m.Attribute(str)
+
+    NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
         #---Init internal variables
@@ -173,6 +180,8 @@ class OperatorTransferMatrix(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.ExportTransferMatrixFlag = True
         self.ExportWalkAllWayMatrixFlag = False
+
+        self.NumberOfProcessors = cpu_count()
     
     ##########################################################################################################
     #---
@@ -202,7 +211,7 @@ class OperatorTransferMatrix(_m.Tool()):
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
         
-        if EMME_VERSION >= 4.1:
+        if EMME_VERSION >= (4,1):
             pb.add_text_element("<em><b>Performance note for Emme 4.1 and newer:</b> \
                 When analyzing the results of a congested transit assignment, this \
                 tool will automatically blend the results over all iterations in \
@@ -370,8 +379,7 @@ class OperatorTransferMatrix(_m.Tool()):
                 if self.ExportTransferMatrixFlag and not self.TransferMatrixFile:
                     raise IOError("No transfer matrix file specified.")
                 
-                if self.ExportWalkAllWayMatrixFlag:
-                    if not self.AggregationPartition: raise TypeError("No aggregation partition specified")
+                if self.ExportWalkAllWayMatrixFlag:                    
                     if not self.WalkAllWayExportFile: raise TypeError("No walk-all-way matrix file specified")
                     
                 self._Execute()
@@ -383,6 +391,34 @@ class OperatorTransferMatrix(_m.Tool()):
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
+
+    def __call__(self, xtmf_ScenarioNumber, ExportTransferMatrixFlag, ExportWalkAllWayMatrixFlag, TransferMatrixFile, 
+                 xtmf_AggregationPartition, WalkAllWayExportFile):
+        self.tool_run_msg = ""
+        self.TRACKER.reset()                              
+
+        self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
+        if (self.Scenario == None):
+            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+
+        if(xtmf_AggregationPartition.lower() == "none"):
+            self.AggregationPartition == None;
+        else:
+            self.AggregationPartition = _MODELLER.emmebank.partition(xtmf_AggregationPartition)                    
+
+        try:
+            if self.ExportTransferMatrixFlag or self.ExportWalkAllWayMatrixFlag:
+                
+                if self.ExportTransferMatrixFlag and not self.TransferMatrixFile:
+                    raise IOError("No transfer matrix file specified.")
+                
+                if self.ExportWalkAllWayMatrixFlag:                    
+                    if not self.WalkAllWayExportFile: raise TypeError("No walk-all-way matrix file specified")
+                    
+                self._Execute()     
+                                                           
+        except Exception, e:                        
+            raise
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
@@ -791,7 +827,11 @@ class OperatorTransferMatrix(_m.Tool()):
                 "type": "MATRIX_CALCULATION"
             }
         
-        return self.TRACKER.runTool(matrixCalculator, spec, scenario=self.Scenario)['result']
+        if EMME_VERSION >= (4,2,1):
+            return self.TRACKER.runTool(matrixCalculator, spec, scenario=self.Scenario,
+                                             num_processors=self.NumberOfProcessors)['result']
+        else:
+            return self.TRACKER.runTool(matrixCalculator, spec, scenario=self.Scenario)['result']
         
     def _WriteExportFile(self, transferMatrix):
         with open(self.TransferMatrixFile, 'w') as writer:

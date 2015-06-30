@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -38,20 +38,25 @@ EXTRACT SELECT LINE COMPONENT MATRICES
     0.3.0 Updated to recover fares from a LegacyFBTA
     
     0.3.1 Fixed a bug in which unselected optional matrices caused a null reference exception.
+
+    0.3.2 Updated to allow multi-threaded matrix calcs in 4.2.1+
 '''
 
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
+
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################
 
 class ExtractSelectLineTimesAndCosts(_m.Tool()):
     
-    version = '0.3.4'
+    version = '0.3.2'
     tool_run_msg = ""
     
     # Variables marked with a '#' are used in the main block, and are assigned by both run and call
@@ -68,7 +73,8 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
     WaitTimeCutoff = _m.Attribute(float)
     TotalTimeCutoff = _m.Attribute(float)
     FarePerception = _m.Attribute(float)
-    
+
+    NumberOfProcessors = _m.Attribute(int)
     #---Special Modeller types
     scenario = _m.Attribute(_m.InstanceType) #
     modes = _m.Attribute(_m.ListType) 
@@ -83,6 +89,8 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
     
     def __init__(self):
         self.databank = _m.Modeller().emmebank
+                
+        self.NumberOfProcessors = cpu_count()
 
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Extract Select Line Matrices",
@@ -258,15 +266,23 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                 
                 with _m.logbook_trace("Extracting select-line matrix:"):
                     strategyAnalysisTool(self._getSelectLineAnalysisSpec(), self.scenario)
-                    matrixCalcTool(self._getMatrixCleanupSpec(), self.scenario)
+                    if EMME_VERSION >= (4,2,1):
+                        matrixCalcTool(self._getMatrixCleanupSpec(), self.scenario,
+                                             num_processors=self.NumberOfProcessors)
+                    else:
+                        matrixCalcTool(self._getMatrixCleanupSpec(), self.scenario)
                 
                 with _m.logbook_trace("Extracting travel component matrices:"):
                     matrixAnalysisTool(self._getTimeComponentAnalysisSpec(), self.scenario)
                     strategyAnalysisTool(self._getCostAnalysisSpec(), self.scenario)
                 
                 with _m.logbook_trace("Extracting temporary feasibility matrix:"):
-                    matrixCalcTool(self._getFeasibilityMatrixSpec(), self.scenario)
-                
+                    if EMME_VERSION >= (4,2,1):
+                        matrixCalcTool(self._getFeasibilityMatrixSpec(), self.scenario,
+                                             num_processors=self.NumberOfProcessors)
+                    else:
+                        matrixCalcTool(self._getFeasibilityMatrixSpec(), self.scenario)
+
                 #---Recover walk and in-vehicle times if a fare-based assignment has been run.
                 if self.FarePerception != 0:
                     with _m.logbook_trace("Extracting line-fares matrix:"):
@@ -277,17 +293,37 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                         
                     with _m.logbook_trace("Recovering in-vehicle times:"):
                         self._calculateFareFactor()
-                        matrixCalcTool(self._getFixIVTTSpec(), self.scenario)
-                        _m.logbook_write("IVTT matrix fixed.")
-                        matrixCalcTool(self._getFixWalkSpec(), self.scenario)
-                        _m.logbook_write("Walk matrix fixed.")
+                        if EMME_VERSION >= (4,2,1):
+                            matrixCalcTool(self._getFixIVTTSpec(), self.scenario,
+                                                 num_processors=self.NumberOfProcessors)
+                            _m.logbook_write("IVTT matrix fixed.")
+                            matrixCalcTool(self._getFixWalkSpec(), self.scenario,
+                                                 num_processors=self.NumberOfProcessors)
+                            _m.logbook_write("Walk matrix fixed.")
+                        else:
+                            matrixCalcTool(self._getFixIVTTSpec(), self.scenario)
+                            _m.logbook_write("IVTT matrix fixed.")
+                            matrixCalcTool(self._getFixWalkSpec(), self.scenario)
+                            _m.logbook_write("Walk matrix fixed.")
                         
                 with _m.logbook_trace("Applying the constraint matrices to component matrices:"):
-                    matrixCalcTool(self._getApplyConstraintSpec(self.boardingMatrix), self.scenario)
-                    matrixCalcTool(self._getApplyConstraintSpec(self.costMatrix), self.scenario)
-                    matrixCalcTool(self._getApplyConstraintSpec(self.ivttMatrix), self.scenario)
-                    matrixCalcTool(self._getApplyConstraintSpec(self.walkMatrix), self.scenario)
-                    matrixCalcTool(self._getApplyConstraintSpec(self.waitMatrix), self.scenario)
+                    if EMME_VERSION >= (4,2,1):
+                        matrixCalcTool(self._getApplyConstraintSpec(self.boardingMatrix), self.scenario,
+                                                 num_processors=self.NumberOfProcessors)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.costMatrix), self.scenario,
+                                                 num_processors=self.NumberOfProcessors)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.ivttMatrix), self.scenario,
+                                                 num_processors=self.NumberOfProcessors)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.walkMatrix), self.scenario,
+                                                 num_processors=self.NumberOfProcessors)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.waitMatrix), self.scenario,
+                                                 num_processors=self.NumberOfProcessors)
+                    else:
+                        matrixCalcTool(self._getApplyConstraintSpec(self.boardingMatrix), self.scenario)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.costMatrix), self.scenario)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.ivttMatrix), self.scenario)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.walkMatrix), self.scenario)
+                        matrixCalcTool(self._getApplyConstraintSpec(self.waitMatrix), self.scenario)
 
     ##########################################################################################################
     
