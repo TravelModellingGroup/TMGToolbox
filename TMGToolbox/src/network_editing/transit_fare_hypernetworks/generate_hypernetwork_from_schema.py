@@ -1040,7 +1040,8 @@ class FBTNFromSchema(_m.Tool()):
             #Copy the node attributes, including x, y coordinates
             for att in network.attributes('NODE'):
                 newNode[att] = baseNode[att]
-            newNode.label = "RS%s" %int(groupNumber)
+            #newNode.label = "RS%s" %int(groupNumber)
+            newNode.label = baseNode.label
             
             
             #Attach the new node to the base node for later
@@ -1074,7 +1075,8 @@ class FBTNFromSchema(_m.Tool()):
             #Copy the node attributes, including x, y coordinates
             for att in network.attributes('NODE'):
                 newNode[att] = baseNode[att]
-            newNode.label = "RP%s" %int(groupNumber)
+            #newNode.label = "RP%s" %int(groupNumber)
+            newNode.label = baseNode.label
             
                 
             #Attach the new node to the base node for later
@@ -1121,14 +1123,15 @@ class FBTNFromSchema(_m.Tool()):
                 for link in outgoingLinks: transferGrid[groupNumber, 0].add(link)
                 
                 first = False
-                baseNode.label = "TS%s" %int(groupNumber)
+                #baseNode.label = "TS%s" %int(groupNumber)
                 
             else:
                 virtualNode = network.create_regular_node(self._GetNewNodeNumber(network, baseNode.number))
             
                 #Copy the node attributes, including x, y coordinates
                 for att in network.attributes('NODE'): virtualNode[att] = baseNode[att]
-                virtualNode.label = "TS%s" %int(groupNumber)
+                #virtualNode.label = "TS%s" %int(groupNumber)
+                virtualNode.label = baseNode.label
                 
                 #Assign the new node to its group number
                 baseNode.to_hyper_node[groupNumber] = virtualNode    
@@ -1170,7 +1173,8 @@ class FBTNFromSchema(_m.Tool()):
             newNode = network.create_regular_node(self._GetNewNodeNumber(network, baseNode.number))
             
             for att in network.attributes('NODE'): newNode[att] = baseNode[att]
-            newNode.label = "TP%s" %int(group)
+            #newNode.label = "TP%s" %int(group)
+            newNode.label = baseNode.label
             
             baseNode.to_hyper_node[group] = newNode
     
