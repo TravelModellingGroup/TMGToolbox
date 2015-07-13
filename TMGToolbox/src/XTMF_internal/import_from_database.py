@@ -46,6 +46,7 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 InroImport = _MODELLER.tool('inro.emme.data.database.import_from_database')
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
@@ -87,6 +88,9 @@ class ImportFromDatabase(_m.Tool()):
     ##########################################################################################################
             
     def __call__(self, xtmf_ScenarioNumbers, Increment, DatabasePath):
+
+        if EMME_VERSION < (4,0,8):
+            raise Exception("Tool not compatible. Please upgrade to version 4.0.8+")
         
         #---1 Parse scenario list
         self.Scenarios = xtmf_ScenarioNumbers.split(',')
