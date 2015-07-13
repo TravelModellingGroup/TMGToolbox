@@ -135,6 +135,9 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
 
     def __call__(self, xtmf_ScenarioNumber, ReportFile, StationNodeFile):
         
+        if EMME_VERSION < (4,1,5):
+            raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
+
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -232,13 +235,16 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
                 voltrLast = segment.line.segment(index).transit_volume
                 totalAlight += (voltrLast + board - voltr)
             nodeIds[id].append(round(totalBoard))
+            nodeIds[id].append(round(totalBoard - node.initial_boardings))
+            nodeIds[id].append(round(totalAlight - node.final_alightings))
             nodeIds[id].append(round(totalAlight))
+            
         return nodeIds
 
     def _OutputResults(self, valueDict):
         with open(self.ReportFile, 'wb') as csvfile:
             nodeWrite = csv.writer(csvfile, delimiter = ',')
-            nodeWrite.writerow(['node_id', 'label', 'boardings', 'alightings'])
+            nodeWrite.writerow(['node_id', 'label', 'boardings', 'transfer_boardings', 'transfer_alightings', 'alightings'])
             for key, values in sorted(valueDict.iteritems()):
                 nodeWrite.writerow(values)
 
