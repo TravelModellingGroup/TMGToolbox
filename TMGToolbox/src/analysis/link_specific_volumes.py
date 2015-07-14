@@ -64,7 +64,7 @@ class LinkSpecificVolumes(_m.Tool()):
      #---PARAMETERS
     xtmf_ScenarioNumbers = _m.Attribute(str)
     FilterString = _m.Attribute(str)   
-    FilePath = _m.Attribute(str)
+    filePath = _m.Attribute(str)
 
     TransitFlag = _m.Attribute(bool)
 
