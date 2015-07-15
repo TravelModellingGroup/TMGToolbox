@@ -126,6 +126,9 @@
     <Compile Include="src\XTMF_internal\import_from_database.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\XTMF_internal\export_worksheet_table.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\XTMF_internal\multi_class_road_assignment.py" />
     <Compile Include="src\XTMF_internal\return_boardings.py" />
     <Compile Include="src\XTMF_internal\return_boardings_and_WAW.py" />
