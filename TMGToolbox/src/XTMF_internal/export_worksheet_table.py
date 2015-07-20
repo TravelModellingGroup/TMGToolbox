@@ -103,14 +103,14 @@ class ExportWorksheetTable(_m.Tool()):
                     newItems.append(item)
             for item in newItems:
                 try:
-                    copytree(os.path.abspath(os.path.join(logbookLocation, item)), self.FilePath) # copy folder to chosen path
+                    self._CopyTree(os.path.abspath(os.path.join(logbookLocation, item)), self.FilePath) # copy folder to chosen path
                     shutil.rmtree(os.path.abspath(os.path.join(logbookLocation, item))) # clean up
                 except:
                     raise Exception("Copying failed")
 
             
 
-    def copytree(src, dst, symlinks=False, ignore=None): # standard shutil.copytree will not work if dst path already exists
+    def _CopyTree(src, dst, symlinks=False, ignore=None): # standard shutil.copytree will not work if dst path already exists
         for item in os.listdir(src):
             s = os.path.join(src, item)
             d = os.path.join(dst, item)
