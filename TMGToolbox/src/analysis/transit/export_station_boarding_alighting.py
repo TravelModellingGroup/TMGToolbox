@@ -171,7 +171,7 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
             stations, badNodes = self._LoadStationNodeFile(network)
 
             if len(badNodes) > 0:
-                print "%s node IDs were not found in the network and were skipped." %len(badIdSet)
+                print "%s node IDs were not found in the network and were skipped." %len(badNodes)
                 pb = _m.PageBuilder("NodeIDs not in network")
                 
                 pb.add_text_element("<b>The following node IDs were not found in the network:</b>")
