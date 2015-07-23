@@ -84,6 +84,7 @@ class LinkSpecificVolumes(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""        
         
+        
     def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath, TransitFlag=False):
         self.tool_run_msg = ""
         print "Starting Link volume calculations"
@@ -142,7 +143,11 @@ class LinkSpecificVolumes(_m.Tool()):
                             },
                         "type": "NETWORK_CALCULATION"
                     }
-                    report1 = networkCalculator(spec1, scenario=self.Scenario)
+                    try:
+                        report1 = networkCalculator(spec1, scenario=self.Scenario)
+                        outputAuto = report1['sum']
+                    except:
+                        outputAuto = "N/A"
 
                     if self.TransitFlag:
                         # consider adding an option to search for links with the same coordinates 
@@ -167,11 +172,15 @@ class LinkSpecificVolumes(_m.Tool()):
                         }
 
                         #transit scenario hard-coded as "the next" scenario
-                        report2 = networkCalculator(spec2, scenario=_MODELLER.emmebank.scenario(str(int(scenario.id) + 1)))
-                        self.results[scenario.id][filter[0]] = [report1['sum'], report2['sum']]
+                        try:
+                            report2 = networkCalculator(spec2, scenario=_MODELLER.emmebank.scenario(str(int(scenario.id) + 1)))
+                            outputTransit = report2['sum']
+                        except:
+                            outputTransit = "N/A"
+                        self.results[scenario.id][filter[0]] = [outputAuto, outputTransit]
 
                     else:
-                        self.results[scenario.id][filter[0]] = [report1['sum']]
+                        self.results[scenario.id][filter[0]] = [outputAuto]
 
     def _ParseFilterString(self, filterString):
         filterList = []
