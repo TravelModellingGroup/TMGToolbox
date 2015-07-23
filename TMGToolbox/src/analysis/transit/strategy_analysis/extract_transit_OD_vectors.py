@@ -159,12 +159,12 @@ class ExtractTransitODVectors(_m.Tool()):
         if _MODELLER.emmebank.matrix(self.AutoODMatrixId) == None:
             raise Exception("Matrix %s was not found!" %self.AutoODMatrixId)
 
-        self.LineODMatrixId = xtmf_LineODMatrixNumber
+        self.LineODMatrixId = "mf"+str(xtmf_LineODMatrixNumber)
         _util.initializeMatrix(self.LineODMatrixId, name='lineOD', description= 'Demand for selected lines')
-        self.AggOriginMatrixId = xtmf_AggOriginMatrixNumber
+        self.AggOriginMatrixId = "mo"+str(xtmf_AggOriginMatrixNumber)
         _util.initializeMatrix(self.AggOriginMatrixId, name='aggO', 
                                description= 'Origins for selected lines', matrix_type= 'ORIGIN')
-        self.AggDestinationMatrixId = xtmf_AggDestinationMatrixNumber
+        self.AggDestinationMatrixId = "md"+str(xtmf_AggDestinationMatrixNumber)
         _util.initializeMatrix(self.AggDestinationMatrixId, name='aggD', 
                                description= 'Destinations for selected lines', matrix_type= 'DESTINATION')
 
