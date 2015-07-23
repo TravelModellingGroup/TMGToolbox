@@ -346,9 +346,6 @@ class ExtractTransitODVectors(_m.Tool()):
                     origProb = 0 #if no volume, set to 0
                 
                 probDict[node.number] = (origProb, destProb)
-        for key, prob in probDict.iteritems():
-            if prob[0] >0:
-                print (key, prob[0])
         return probDict
 
     def _ApplyODProbabilities(self, inputProbs, outputMatrix, probType):
