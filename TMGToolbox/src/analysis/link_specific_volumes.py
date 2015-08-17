@@ -154,25 +154,26 @@ class LinkSpecificVolumes(_m.Tool()):
                         # (i.e. the hypernetwork equivalent). Otherwise, this won't work
                         # for streetcars, rail, etc.
 
-                        linkSelection = filter[1]
-                        baseLink = filter[1].strip('link=').split(",")
-                        baseLinkI = baseLink[0]
-                        baseLinkJ = baseLink[1]
-                        for link in network.links():
-                            if link.shape == network.link(baseLinkI, baseLinkJ).shape:
-                                linkSelection += " or link=" + link.id.replace("-",",")
-
-                        spec2 = {
-                            "expression": "voltr",                    
-                            "selections": {
-                                "link": linkSelection,
-                                "transit_line": "all"
-                                },
-                            "type": "NETWORK_CALCULATION"
-                        }
-
-                        #transit scenario hard-coded as "the next" scenario
                         try:
+                            linkSelection = filter[1]
+                            baseLink = filter[1].strip('link=').split(",")
+                            baseLinkI = baseLink[0]
+                            baseLinkJ = baseLink[1]
+                            for link in network.links():
+                                if link.shape == network.link(baseLinkI, baseLinkJ).shape:
+                                    linkSelection += " or link=" + link.id.replace("-",",")
+
+                            spec2 = {
+                                "expression": "voltr",                    
+                                "selections": {
+                                    "link": linkSelection,
+                                    "transit_line": "all"
+                                    },
+                                "type": "NETWORK_CALCULATION"
+                            }
+
+                            #transit scenario hard-coded as "the next" scenario
+                        
                             report2 = networkCalculator(spec2, scenario=_MODELLER.emmebank.scenario(str(int(scenario.id) + 1)))
                             outputTransit = report2['sum']
                         except:
