@@ -211,8 +211,11 @@ class ExtractTransitODVectors(_m.Tool()):
                         _util.tempMatrixMANAGER(description="Origin Probabilities", matrix_type='FULL'),              
                         _util.tempMatrixMANAGER(description="Destinations Probabilities", matrix_type='FULL'),
                         _util.tempMatrixMANAGER(description="DAT Origin Aggregation", matrix_type='ORIGIN'),
-                        _util.tempMatrixMANAGER(description="DAT Destination Aggregation", matrix_type='DESTINATION')) \
-                    as (lineFlag, auxTransitVolumes, transitVolumes, origProbMatrix, destProbMatrix, tempDatOrig, tempDatDest): 
+                        _util.tempMatrixMANAGER(description="DAT Destination Aggregation", matrix_type='DESTINATION'),
+                        _util.tempMatrixMANAGER(description="Full Auto Origin Matrix", matrix_type='FULL'),
+                        _util.tempMatrixMANAGER(description="Full Auto Destination Matrix", matrix_type='FULL')) \
+                    as (lineFlag, auxTransitVolumes, transitVolumes, origProbMatrix, destProbMatrix, tempDatOrig, tempDatDest, 
+                        autoOrigMatrix, autoDestMatrix): 
 
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
@@ -223,11 +226,9 @@ class ExtractTransitODVectors(_m.Tool()):
                     matrixAgg(self.LineODMatrixId, self.AggOriginMatrixId, agg_op="+")
                     matrixAgg(self.LineODMatrixId, self.AggDestinationMatrixId, agg_op="+")
                 with _m.logbook_trace("Copying auto matrices"):
-                    #This part may be able to be condensed. Can likely just carry forward the normal auto matrix and save calculations over top of
-                    #the probability matrices
-                    autoOrigMatrix = matrixCopy(self.AutoODMatrixId, None, matrix_name="autoOrigFull", matrix_description="", 
+                    matrixCopy(self.AutoODMatrixId, autoOrigMatrix.id, matrix_name="autoOrigFull", matrix_description="", 
                                                 scenario=self.Scenario)
-                    autoDestMatrix = matrixCopy(self.AutoODMatrixId, None, matrix_name="autoDestFull", matrix_description="", 
+                    matrixCopy(self.AutoODMatrixId, autoDestMatrix.id, matrix_name="autoDestFull", matrix_description="", 
                                                 scenario=self.Scenario)
                 with _m.logbook_trace("Building probability matrices"):
                     network = self.Scenario.get_network()
