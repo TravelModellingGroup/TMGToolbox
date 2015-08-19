@@ -64,6 +64,8 @@ class ExportTransitScreenlineResults(_m.Tool()):
     
     CountpostFlagAttribute = _m.Attribute(str)
     AlternateFlagAttribute = _m.Attribute(str)
+
+    PedestrianFlag = _m.Attribute(bool)
     
     ScreenlineFile = _m.Attribute(str)
     ExportFile = _m.Attribute(str)
@@ -80,7 +82,9 @@ class ExportTransitScreenlineResults(_m.Tool()):
         self.Scenario = _MODELLER.scenario #Default is primary scenario
         self.CountpostFlagAttribute = "@stn1"
         self.AlternateFlagAttribute = "@stn2"
+        self.LineFilterExpression = "all"
         self.RepresentativeHourFactor = 2.04
+        self.PedestrianFlag = False
     
     ##########################################################################################################
     #---
@@ -122,6 +126,9 @@ class ExportTransitScreenlineResults(_m.Tool()):
                       title="Alternate Countpost Attribute",
                       note="<font color='green'><b>Optional:</b></font> Alternate countpost attribute \
                       for multiple post per link")
+
+        pb.add_checkbox(tool_attribute_name= 'PedestrianFlag',
+                        label= "Count pedestrians instead of transit?")
 
         pb.add_text_box(tool_attribute_name='LineFilterExpression',
                         title="Line Filter Expression",
@@ -165,6 +172,21 @@ class ExportTransitScreenlineResults(_m.Tool()):
             $("#AlternateFlagAttribute").trigger('change');
         });
         
+        if (tool.check_ped_flag())
+        {
+            $("#LineFilterExpression").prop('disabled', true);
+        } else {
+            $("#LineFilterExpression").prop('disabled', false);
+        }
+
+        $("#PedestrianFlag").bind('change', function()
+        {
+            $(this).commit();
+            var flag = tool.check_ped_flag();
+            
+            $("#LineFilterExpression").prop('disabled', flag);
+        });
+
         /*
         $("#ScreenlineFile").bind('change', function()
         {
@@ -173,6 +195,8 @@ class ExportTransitScreenlineResults(_m.Tool()):
             alert(infoString);
         });
         */
+
+        
     });
 </script>""" % pb.tool_proxy_tag)
         
@@ -198,6 +222,10 @@ class ExportTransitScreenlineResults(_m.Tool()):
     @_m.method(return_type=unicode)
     def tool_run_msg_status(self):
         return self.tool_run_msg
+
+    @_m.method(return_type= bool)
+    def check_ped_flag(self):
+        return self.PedestrianFlag
     
     def short_description(self):
         return "<em>Exports transit results for screenlines defined by multiple count posts.</em>"
@@ -254,7 +282,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
     #---XTMF INTERFACE METHODS
     
     def __call__(self, xtmf_ScenarioNumber, CountpostFlagAttribute, AlternateFlagAttribute, ScreenlineFile, ExportFile, 
-                 LineFilterExpression, RepresentativeHourFactor):
+                 LineFilterExpression, RepresentativeHourFactor, PedestrianFlag):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
@@ -275,6 +303,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
         self.ExportFile = ExportFile
         self.LineFilterExpression = LineFilterExpression
         self.RepresentativeHourFactor = RepresentativeHourFactor
+        self.PedestrianFlag = PedestrianFlag
         
         try:
             self._Execute()
@@ -294,10 +323,10 @@ class ExportTransitScreenlineResults(_m.Tool()):
             
             screenlines = self._LoadScreenlinesFile()
             
-            with _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= "Summed Volumes") \
+            with _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= "Link Volumes") \
                 as linkSumAtt:
 
-                self._SumSegments(linkSumAtt.id)
+                self._ProcessLinkAtt(linkSumAtt.id)
 
                 counts = self._LoadResults(linkSumAtt.id)
             
@@ -334,17 +363,27 @@ class ExportTransitScreenlineResults(_m.Tool()):
                     continue
         return screenlines
     
-    def _SumSegments(self, linkSumAttId):
-        spec = {
-            "result": linkSumAttId,
-            "expression": "voltr",
-            "aggregation": "+",
-            "selections": {
-                "transit_line": self.LineFilterExpression,
-                "link": "all"
-            },
-            "type": "NETWORK_CALCULATION"
-        }
+    def _ProcessLinkAtt(self, linkSumAttId):
+        if self.PedestrianFlag:
+            spec = {
+                "result": linkSumAttId,
+                "expression": "volax",
+                "selections": {
+                    "link": "all"
+                },
+                "type": "NETWORK_CALCULATION"
+            }
+        else:
+            spec = {
+                "result": linkSumAttId,
+                "expression": "voltr",
+                "aggregation": "+",
+                "selections": {
+                    "transit_line": self.LineFilterExpression,
+                    "link": "all"
+                    },
+                "type": "NETWORK_CALCULATION"
+            }
         
         netCalc(spec, scenario=self.Scenario)
     
@@ -376,7 +415,10 @@ class ExportTransitScreenlineResults(_m.Tool()):
     
     def _ExportResults(self, screenlines, counts):
         with open(self.ExportFile, 'w') as writer:
-            writer.write("Screenline,nStations,nMissing,TransitVolume")
+            if self.PedestrianFlag:
+                writer.write("Screenline,nStations,nMissing,PedVolume")
+            else:
+                writer.write("Screenline,nStations,nMissing,TransitVolume")
             
             orderedLines = [item for item in screenlines.iteritems()]
             orderedLines.sort()
