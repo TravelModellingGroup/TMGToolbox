@@ -1,4 +1,4 @@
-'''
+﻿'''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
@@ -391,7 +391,7 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                                                                                 "upper": 999999
                                                         }
                 },
-                "analyzed_demand": None, #---No analyzed demand is required
+                "analyzed_demand": self.InVehicleTimeMatrixId, #---No analyzed demand is required
                 "constraint": None,
                 "results": {
                     "strategy_values": lineFaresMatrixId, #---RESULT MATRIX
@@ -422,7 +422,7 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                                                                                 "upper": 999999
                                                         }
                 },
-                "analyzed_demand": None, #---No analyzed demand is required
+                "analyzed_demand": self.InVehicleTimeMatrixId, #---No analyzed demand is required
                 "constraint": None,
                 "results": {
                     "strategy_values": accessFaresMatrixId, #---RESULT MATRIX
