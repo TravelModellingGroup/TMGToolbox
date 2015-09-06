@@ -1,4 +1,4 @@
-#---LICENSE----------------------
+﻿#---LICENSE----------------------
 '''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -34,6 +34,7 @@ Export Worksheet Table
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2015-07-15 by mattaustin222
+    0.0.2 Updated to set Primary Scenario properly by JamesVaughan
     
 '''
 
@@ -160,6 +161,8 @@ class ExportWorksheetTable(_m.Tool()):
             
             logbookLocation = os.path.abspath(os.path.join(os.path.dirname(emmebankLocation), os.pardir, 'Logbook'))
             initialDir = os.listdir(logbookLocation)
+            #we need to do this in since the active scenario is executed in the call method.
+            _MODELLER.desktop.data_explorer().replace_primary_scenario(self.Scenario)
             LogTable(worksheet_items_or_folders=self.WorksheetPaths, field_separator=",")
             finalDir = os.listdir(logbookLocation)
             newItems = []
