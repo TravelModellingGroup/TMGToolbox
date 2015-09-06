@@ -59,6 +59,7 @@ class ExportWorksheetTable(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(str)
     xtmf_WorksheetPaths = _m.Attribute(str)
     FilePath = _m.Attribute(str) 
+    FileName = _m.Attribute(str) 
     WorksheetPaths = _m.Attribute(list)
 
     Scenario = _m.Attribute(_m.InstanceType)
@@ -73,9 +74,10 @@ class ExportWorksheetTable(_m.Tool()):
         self.WorksheetPaths = []
 
     def run(self):
-        self.tool_run_msg = ""
+        #self.tool_run_msg = ""
         #testPath = "C:\Users\matta_000\Documents\EMME Projects\SmartTrack\Worksheets\TestModes.emt|C:\Users\matta_000\Documents\EMME Projects\SmartTrack\Worksheets\TestModes2.emt"
         #self.FilePath = "C:\Users\matta_000\Documents\XTMF\Projects\Test"
+        #self.FileName = "TestFile.csv"
 
         #for paths in testPath.split("|"):
         #    if os.path.isfile(paths): # optionally provide full path to worksheet file
@@ -109,7 +111,7 @@ class ExportWorksheetTable(_m.Tool()):
         #    raise Exception(msg)
 
         
-    def __call__(self, xtmf_ScenarioNumber, xtmf_WorksheetPaths, FilePath):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_WorksheetPaths, FilePath, FileName=""):
         self.tool_run_msg = ""
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
@@ -141,6 +143,8 @@ class ExportWorksheetTable(_m.Tool()):
             else:        
                 self.WorksheetPaths.append(paths.split(",")) # currently can only handle one path
 
+        self.FileName = FileName
+
         try:
             self._Execute()
         except Exception, e:
@@ -159,9 +163,29 @@ class ExportWorksheetTable(_m.Tool()):
             LogTable(worksheet_items_or_folders=self.WorksheetPaths, field_separator=",")
             finalDir = os.listdir(logbookLocation)
             newItems = []
-            for item in finalDir:
-                if item not in initialDir:
-                    newItems.append(item)
+            count = 0
+            if self.FileName:
+                fileNameSplit = self.FileName.split(".")
+                fileNameHead = fileNameSplit[0]
+                fileNameExt = fileNameSplit[1]
+                for item in finalDir:
+                    if item not in initialDir:                        
+                        oldOutputFiles = os.listdir(os.path.join(logbookLocation, item))
+                        
+                        for file in oldOutputFiles:
+                            if count == 0:
+                                fileNameInsert = ""
+                            else:
+                                fileNameInsert = str(count)
+                            os.renames(os.path.join(logbookLocation, item, file), 
+                                        os.path.join(logbookLocation, item, fileNameHead + fileNameInsert + "." + fileNameExt))
+                            count += 1
+                        newItems.append(item)
+                            
+            else:
+                for item in finalDir:
+                    if item not in initialDir:
+                        newItems.append(item)
             for item in newItems:
                 try:
                     copy_tree(os.path.abspath(os.path.join(logbookLocation, item)), self.FilePath) # copy folder to chosen path
