@@ -75,7 +75,7 @@ class ExportWorksheetTable(_m.Tool()):
         self.WorksheetPaths = []
 
     def run(self):
-        #self.tool_run_msg = ""
+        self.tool_run_msg = ""
         #testPath = "C:\Users\matta_000\Documents\EMME Projects\SmartTrack\Worksheets\TestModes.emt|C:\Users\matta_000\Documents\EMME Projects\SmartTrack\Worksheets\TestModes2.emt"
         #self.FilePath = "C:\Users\matta_000\Documents\XTMF\Projects\Test"
         #self.FileName = "TestFile.csv"
