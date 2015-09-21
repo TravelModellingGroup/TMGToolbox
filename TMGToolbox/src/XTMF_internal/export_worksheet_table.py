@@ -112,7 +112,7 @@ class ExportWorksheetTable(_m.Tool()):
         #    raise Exception(msg)
 
         
-    def __call__(self, xtmf_ScenarioNumber, xtmf_WorksheetPaths, FilePath, FileName=""):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_WorksheetPaths, FilePath, FileName):
         self.tool_run_msg = ""
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
