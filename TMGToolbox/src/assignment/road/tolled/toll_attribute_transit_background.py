@@ -581,7 +581,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             
         elif self.Scenario.extra_attribute('@lkcst').type != 'LINK':
             #for some reason '@lkcst' exists, but is not a link attribute
-            _m.logbook_write("Creating temporary link cost attribute '@lcost'.")
+            _m.logbook_write("Creating temporary link cost attribute '@lcst2'.")
             costAttribute = self.Scenario.create_extra_attribute('LINK', '@lcst2', default_value=0)
             attributeCreated = True
         
@@ -611,7 +611,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             timeAttribute = self.Scenario.create_extra_attribute('LINK', '@ltime', default_value=0)
             attributeCreated = True
             
-        elif self.Scenario.extra_attribute('@lktime').type != 'LINK':
+        elif self.Scenario.extra_attribute('@ltime').type != 'LINK':
             #for some reason '@ltime' exists, but is not a link attribute
             _m.logbook_write("Creating temporary link cost attribute '@ltim2'.")
             timeAttribute = self.Scenario.create_extra_attribute('LINK', '@ltim2', default_value=0)
