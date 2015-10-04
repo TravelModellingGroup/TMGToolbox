@@ -70,11 +70,14 @@ class ImportFromDatabase(_m.Tool()):
 
     DatabasePath = _m.Attribute(str)
 
+    OverwriteFlag = _m.Attribute(bool)
+
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker   
         self.Scenarios = []    
         self.FunctionList = []
+        self.OverwriteFlag = False
     
     def page(self):
                 
@@ -86,8 +89,8 @@ class ImportFromDatabase(_m.Tool()):
         return pb.render()
     
     ##########################################################################################################
-            
-    def __call__(self, xtmf_ScenarioNumbers, Increment, DatabasePath):
+    
+    def __call__(self, xtmf_ScenarioNumbers, Increment, DatabasePath, OverwriteFlag):
 
         if EMME_VERSION < (4,0,8):
             raise Exception("Tool not compatible. Please upgrade to version 4.0.8+")
@@ -98,6 +101,7 @@ class ImportFromDatabase(_m.Tool()):
         #---2 Set up other parameters
         self.Increment = Increment
         self.DatabasePath = DatabasePath
+        self.OverwriteFlag = OverwriteFlag
 
         try:
             self._Execute()
@@ -111,6 +115,9 @@ class ImportFromDatabase(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
 
+            if self.OverwriteFlag:
+                self._DeleteScenarios()
+            
             InroImport(src_database=self.DatabasePath, 
                        src_scenario_ids=self.Scenarios,
                        increment_scenario_ids=self.Increment,
@@ -131,6 +138,13 @@ class ImportFromDatabase(_m.Tool()):
             
         return atts 
 
+    def _DeleteScenarios(self):
+        for sc in self.Scenarios:
+            toDelete = sc + self.Increment
+            if _m.Modeller().emmebank.scenario(toDelete): 
+                _m.Modeller().emmebank.delete_scenario(toDelete)
+                _m.logbook_write("Scenario %s deleted" %toDelete)
+            
     def _RetrieveFunctionIds(self):
         functionList = []
         with _emmebank.Emmebank(self.DatabasePath) as emmebank:
@@ -138,7 +152,6 @@ class ImportFromDatabase(_m.Tool()):
                 functionList.append(funcs.id)
 
         return functionList         
-
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
