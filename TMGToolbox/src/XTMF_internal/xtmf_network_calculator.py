@@ -49,7 +49,9 @@ networkCalculation = _m.Modeller().tool("inro.emme.network_calculation.network_c
 class XTMFNetworkCalculator(_m.Tool()):
 
     #---Parameters---
+    Scenario = _m.Attribute(_m.InstanceType)
     xtmf_ScenarioNumber = _m.Attribute(str)
+    domain = _m.Attribute(str)
     expression = _m.Attribute(str)
     node_selection = _m.Attribute(str)
     link_selection = _m.Attribute(str)
@@ -58,26 +60,47 @@ class XTMFNetworkCalculator(_m.Tool()):
     def __init__(self):
         self.Scenario = _MODELLER.scenario
 
-    def __call__(self, xtmf_ScenarioNumber, expression, node_selection, link_selection, transit_line_selection):
+    def __call__(self, xtmf_ScenarioNumber, domain, expression, node_selection, link_selection, transit_line_selection):
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
-        spec = network_calculator_spec()
+        self.expression = expression
+        self.domain = domain
 
-        report = networkCalculation(spec)
-        return report.sum()        
+        if self.domain == "0": #link
+            self.node_selection = None
+            self.link_selection = link_selection
+            self.transit_line_selection = None
+        elif self.domain == "1": #node
+            self.node_selection = node_selection
+            self.link_selection = None
+            self.transit_line_selection = None
+        elif self.domain == "2": #transit line
+            self.node_selection = None
+            self.link_selection = None
+            self.transit_line_selection = transit_line_selection
+        elif self.domain == "3": #transit segment
+            self.node_selection = None
+            self.link_selection = link_selection
+            self.transit_line_selection = transit_line_selection
 
-    def network_calculator_spec(expression, ):
+
+        spec = self.network_calculator_spec()
+
+        report = networkCalculation(spec, self.Scenario)
+        return report["sum"]      
+
+    def network_calculator_spec(self):
         spec = {
-            "result": null,
-            "expression": expression,
-            "aggregation": null,
+            "result": None,
+            "expression": self.expression,
+            "aggregation": None,
             "selections": {
-                "node": node_selection,
-                "link": link_selection,
-                "transit_line": transit_line_selection
+                "node": self.node_selection,
+                "link": self.link_selection,
+                "transit_line": self.transit_line_selection
                 },
             "type": "NETWORK_CALCULATION"            
             }
