@@ -129,7 +129,7 @@
     <Compile Include="src\XTMF_internal\export_worksheet_table.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\XTMF_internal\XTMFNetworkCalculator.py">
+    <Compile Include="src\XTMF_internal\xtmf_network_calculator.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\XTMF_internal\multi_class_road_assignment.py" />
