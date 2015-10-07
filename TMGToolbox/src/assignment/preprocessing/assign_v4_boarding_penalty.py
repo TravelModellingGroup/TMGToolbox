@@ -109,7 +109,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
                         title = "Line Group Boarding Penalties",
                         note= "List of filters and boarding penalties for line groups. \
                         <br><br><b>Syntax:</b> [<em>label (line group name)</em>] : [<em>network selector expression</em>] \
-                        : [<em>boarding penalty</em>] ... \
+                        : [<em>boarding penalty</em>] : [<em>IVTT Perception Factor</em>] ... \
                         <br><br>Separate (label-filter-penalty) groups with a comma or new line.\
                         <br><br>Note that order matters, since penalties are applied sequentially.")
 
@@ -208,8 +208,8 @@ class AssignV4BoardingPenalties(_m.Tool()):
             if component.isspace(): continue #Skip if totally empty
             
             parts = component.split(':')
-            if len(parts) != 3:
-                msg = "Error parsing penalty and filter string: Separate label, filter and penalty with colons label:filter:penalty"
+            if len(parts) != 4:
+                msg = "Error parsing penalty and filter string: Separate label, filter and penalty with colons label:filter:penalty:ivttPerception"
                 msg += ". [%s]" %component 
                 raise SyntaxError(msg)
             strippedParts = [item.strip() for item in parts]
@@ -224,17 +224,26 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.TRACKER.startProcess(len(penaltyFilterList) + 1)
         
         with _m.logbook_trace("Resetting UT3 to 0"):
-            tool(specification=self._GetClearAllSpec(), scenario=scenario)
+            tool(specification=self._GetClearAllSpec("ut3"), scenario=scenario)
             self.TRACKER.completeSubtask()
 
         for group in penaltyFilterList:
             with _m.logbook_trace("Applying " + group[0] + " BP"):
                 tool(specification=self._GetGroupSpec(group), scenario=scenario)
                 self.TRACKER.completeSubtask()
+
+        with _m.logbook_trace("Resetting US2 to 0"):
+            tool(specification=self._GetClearAllSpec("us2"), scenario=scenario)
+            self.TRACKER.completeSubtask()     
+
+        for group in penaltyFilterList:
+            with _m.logbook_trace("Applying " + group[0] + " IVTT Perception"):
+                tool(specification=self._IVTTPerceptionSpec(group), scenario=scenario)
+                self.TRACKER.completeSubtask()
     
-    def _GetClearAllSpec(self):
+    def _GetClearAllSpec(self, variable):
         return {
-                    "result": "ut3",
+                    "result": variable,
                     "expression": "0",
                     "aggregation": None,
                     "selections": {
@@ -253,6 +262,19 @@ class AssignV4BoardingPenalties(_m.Tool()):
                     },
                     "type": "NETWORK_CALCULATION"
                 }
+
+    def __IVTTPerceptionSpec(self,group):
+        return {
+                    "result": "us2",
+                    "expression": group[3],
+                    "aggregation": None,
+                    "selections": {
+                        "transit_line": group[1]
+                    },
+                    "type": "NETWORK_CALCULATION"
+
+            }
+
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
