@@ -23,7 +23,7 @@ Assign V4 Boarding Penalties
 
     Authors: pkucirek
 
-    Latest revision by: mattaustin222
+    Latest revision by: Trajce Nikolov
     
     
     Assigns line-specific boarding penalties (stored in UT3) based on specified
@@ -32,7 +32,7 @@ Assign V4 Boarding Penalties
 '''
 #---VERSION HISTORY
 '''
-    0.0.1 Created on 2014-02-14 by pkucirek
+    0.0.1 Created on 2014-02-14 by TrajceNikolov
     
     1.0.0 Cleaned and published. Now accepts a list of scenarios, for easy use (Modeller only).
             Also changed the order of parameters to better match the order of groups used in
@@ -42,6 +42,9 @@ Assign V4 Boarding Penalties
 
     1.1.0 Line groups are no longer hard-coded. Instead, user-inputted selector expressions are used
             and the number of line groups is open-ended.
+
+    1.2.0 Added ability to set IVTT perception factor.
+
 '''
 
 import inro.modeller as _m
@@ -58,7 +61,7 @@ NullPointerException = _util.NullPointerException
 
 class AssignV4BoardingPenalties(_m.Tool()):
     
-    version = '1.1.0'
+    version = '1.2.0'
     tool_run_msg = ""
     number_of_tasks = 15 # For progress reporting, enter the integer number of tasks here
     
@@ -224,7 +227,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.TRACKER.startProcess(len(penaltyFilterList) + 1)
         
         with _m.logbook_trace("Resetting UT3 to 0"):
-            tool(specification=self._GetClearAllSpec("ut3"), scenario=scenario)
+            tool(specification=self._GetClearAllSpec("ut3", "0"), scenario=scenario)
             self.TRACKER.completeSubtask()
 
         for group in penaltyFilterList:
@@ -232,8 +235,8 @@ class AssignV4BoardingPenalties(_m.Tool()):
                 tool(specification=self._GetGroupSpec(group), scenario=scenario)
                 self.TRACKER.completeSubtask()
 
-        with _m.logbook_trace("Resetting US2 to 0"):
-            tool(specification=self._GetClearAllSpec("us2"), scenario=scenario)
+        with _m.logbook_trace("Resetting US2 to 1"):
+            tool(specification=self._GetClearAllSpec("us2", "1"), scenario=scenario)
             self.TRACKER.completeSubtask()     
 
         for group in penaltyFilterList:
@@ -241,10 +244,10 @@ class AssignV4BoardingPenalties(_m.Tool()):
                 tool(specification=self._IVTTPerceptionSpec(group), scenario=scenario)
                 self.TRACKER.completeSubtask()
     
-    def _GetClearAllSpec(self, variable):
+    def _GetClearAllSpec(self, variable, expression):
         return {
                     "result": variable,
-                    "expression": "0",
+                    "expression": expression,
                     "aggregation": None,
                     "selections": {
                         "transit_line": "all"
