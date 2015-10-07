@@ -80,18 +80,18 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
         
         #---Set the defaults of parameters used by Modeller
-        lines = ["GO Train: mode=r: 1.0",
-                 "GO Bus: mode=g: 1.0",
-                 "Subway: mode=m: 1.0",
-                 "Streetcar: mode=s: 1.0",
-                 "TTC Bus: line=T_____ and mode=bp: 1.0",
-                 "YRT: line=Y_____: 1.0",
-                 "VIVA: line=YV____: 1.0",
-                 "Brampton: line=B_____: 1.0",
-                 "MiWay: line=M_____: 1.0",
-                 "Durham: line=D_____: 1.0",
-                 "Halton: line=H_____: 1.0",
-                 "Hamilton: line=W_____: 1.0"]
+        lines = ["GO Train: mode=r: 1.0: 1.0",
+                 "GO Bus: mode=g: 1.0: 1.0",
+                 "Subway: mode=m: 1.0: 1.0",
+                 "Streetcar: mode=s: 1.0: 1.0",
+                 "TTC Bus: line=T_____ and mode=bp: 1.0: 1.0",
+                 "YRT: line=Y_____: 1.0: 1.0",
+                 "VIVA: line=YV____: 1.0: 1.0",
+                 "Brampton: line=B_____: 1.0: 1.0",
+                 "MiWay: line=M_____: 1.0: 1.0",
+                 "Durham: line=D_____: 1.0: 1.0",
+                 "Halton: line=H_____: 1.0: 1.0",
+                 "Hamilton: line=W_____: 1.0: 1.0"]
 
         self.PenaltyFilterString = "\n".join(lines)
     
@@ -224,10 +224,10 @@ class AssignV4BoardingPenalties(_m.Tool()):
     def _ProcessScenario(self, scenario, penaltyFilterList):
         tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
         
-        self.TRACKER.startProcess(len(penaltyFilterList) + 1)
+        self.TRACKER.startProcess(2 * len(penaltyFilterList) + 2)
         
         with _m.logbook_trace("Resetting UT3 to 0"):
-            tool(specification=self._GetClearAllSpec("ut3", "0"), scenario=scenario)
+            tool(specification=self._GetClearLineSpec("ut3", "0"), scenario=scenario)
             self.TRACKER.completeSubtask()
 
         for group in penaltyFilterList:
@@ -236,7 +236,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
                 self.TRACKER.completeSubtask()
 
         with _m.logbook_trace("Resetting US2 to 1"):
-            tool(specification=self._GetClearAllSpec("us2", "1"), scenario=scenario)
+            tool(specification=self._GetClearSegmentSpec("us2", "1"), scenario=scenario)
             self.TRACKER.completeSubtask()     
 
         for group in penaltyFilterList:
@@ -244,13 +244,25 @@ class AssignV4BoardingPenalties(_m.Tool()):
                 tool(specification=self._IVTTPerceptionSpec(group), scenario=scenario)
                 self.TRACKER.completeSubtask()
     
-    def _GetClearAllSpec(self, variable, expression):
+    def _GetClearLineSpec(self, variable, expression):
         return {
                     "result": variable,
                     "expression": expression,
                     "aggregation": None,
                     "selections": {
                         "transit_line": "all"
+                    },
+                    "type": "NETWORK_CALCULATION"
+                }
+
+    def _GetClearSegmentSpec(self, variable, expression):
+        return {
+                    "result": variable,
+                    "expression": expression,
+                    "aggregation": None,
+                    "selections": {
+                        "transit_line": "all",
+                        "link": "all"
                     },
                     "type": "NETWORK_CALCULATION"
                 }
@@ -272,7 +284,8 @@ class AssignV4BoardingPenalties(_m.Tool()):
                     "expression": group[3],
                     "aggregation": None,
                     "selections": {
-                        "transit_line": group[1]
+                        "transit_line": group[1],
+                        "link": "all"
                     },
                     "type": "NETWORK_CALCULATION"
 
