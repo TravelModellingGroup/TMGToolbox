@@ -266,7 +266,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
                     "type": "NETWORK_CALCULATION"
                 }
 
-    def __IVTTPerceptionSpec(self,group):
+    def _IVTTPerceptionSpec(self,group):
         return {
                     "result": "us2",
                     "expression": group[3],
