@@ -26,6 +26,9 @@
     <Compile Include="src\analysis\create_zone_adjacency_matrix.py" />
     <Compile Include="src\analysis\export_partition_average_matrix.py" />
     <Compile Include="src\analysis\matrix_statistics.py" />
+    <Compile Include="src\analysis\xtmf_network_calculator.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\analysis\traffic\export_countpost_results.py" />
     <Compile Include="src\analysis\traffic\export_screenline_results.py" />
     <Compile Include="src\analysis\traffic\Export_Count_Station_Location.py" />
