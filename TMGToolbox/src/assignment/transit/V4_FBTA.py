@@ -99,6 +99,8 @@ V4 Transit Assignment
 
     4.0.2 Updated to allow for multi-threaded matrix calcs in 4.2.1+
 
+    5.0.0 Forked
+
 '''
 import traceback as _traceback
 from contextlib import contextmanager
@@ -134,7 +136,7 @@ def blankManager(obj):
 
 class V4_FareBaseTransitAssignment(_m.Tool()):
     
-    version = '4.0.2'
+    version = '5.0.0'
     tool_run_msg = ""
     number_of_tasks = 7 # For progress reporting, enter the integer number of tasks here
     
@@ -161,6 +163,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     FareMatrixId = _m.Attribute(str)
     CongestionMatrixId = _m.Attribute(str)
     PenaltyMatrixId = _m.Attribute(str)
+    ImpedanceMatrixId = _m.Attribute(str)
     
     xtmf_InVehicleTimeMatrixNumber = _m.Attribute(int)
     xtmf_WaitTimeMatrixNumber = _m.Attribute(int)
@@ -168,8 +171,10 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     xtmf_FareMatrixNumber = _m.Attribute(int)
     xtmf_CongestionMatrixNumber = _m.Attribute(int)
     xtmf_PenaltyMatrixNumber = _m.Attribute(int)
+    xtmf_ImpedanceMatrixNumber = _m.Attribute(int)
     
     CalculateCongestedIvttFlag = _m.Attribute(bool)
+    UseBoardingLevelFlag = _m.Attribute(bool) 
     
     WalkSpeed = _m.Attribute(float)
     WalkPerceptionToronto = _m.Attribute(float)
@@ -212,6 +217,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WalkAttributeId = "@walkp"
         
         self.CalculateCongestedIvttFlag = True
+        self.UseBoardingLevelFlag = True
         
         self.WalkSpeed = 4
         self.WaitPerception = 2.65
@@ -377,6 +383,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                     title= "Boarding Penalties Matrix",
                                     note= "<font color='green'><b>Optional.</b></font> Select \
                                         a matrix in which to save accrued boarding penalties.")
+
+        pb.add_select_output_matrix(tool_attribute_name= 'ImpedanceMatrixId',
+                                    include_existing= True,
+                                    title= "Impendance Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to save impedance values.")
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
@@ -642,7 +654,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
                  xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_PenaltyMatrixNumber, xtmf_OriginDistributionLogitScale, 
-                 CalculateCongestedIvttFlag, CongestionExponentString):                 
+                 CalculateCongestedIvttFlag, CongestionExponentString, xtmf_ImpedanceMatrixNumber, UseBoardingLevelFlag):                 
         
         if EMME_VERSION < (4,1,5):
             raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
@@ -663,6 +675,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.BoardPerception = BoardPerception
         self.WalkPerceptionPD1 = WalkPerceptionPD1
         self.CalculateCongestedIvttFlag = CalculateCongestedIvttFlag
+        self.UseBoardingLevelFlag = UseBoardingLevelFlag
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         
         self.FarePerception = FarePerception
@@ -719,6 +732,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             self.CongestionMatrixId = "mf%s" %xtmf_CongestionMatrixNumber
         if xtmf_PenaltyMatrixNumber:
             self.PenaltyMatrixId = "mf%s" %xtmf_PenaltyMatrixNumber
+        if xtmf_ImpedanceMatrixNumber:
+            self.ImpedanceMatrixId = "mf%s" %xtmf_ImpedanceMatrixNumber
        
         
         print "Running V4 Transit Assignment"
@@ -766,7 +781,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.PenaltyMatrixId:
                 _util.initializeMatrix(id= self.PenaltyMatrixId,
                                        description= "Transit total boarding penalties")
-                            
+
+            if self.ImpedanceMatrixId:
+                _util.initializeMatrix(id= self.ImpedanceMatrixId,
+                                       description= "Transit impedances")
+            
             with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
                                 
                 self.TRACKER.startProcess(3)
@@ -783,11 +802,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 spec = self._GetBaseAssignmentSpec()
                 
                 self.TRACKER.runTool(congestedAssignmentTool,
-                                     transit_assignment_spec= spec,
-                                     congestion_function= self._GetFuncSpec(),
-                                     stopping_criteria= self._GetStopSpec(),
-                                     impedances= impedanceMatrix,
-                                     scenario= self.Scenario)                
+                                        transit_assignment_spec= spec,
+                                        congestion_function= self._GetFuncSpec(),
+                                        stopping_criteria= self._GetStopSpec(),
+                                        impedances= impedanceMatrix,
+                                        scenario= self.Scenario)                
                 
                 self._ExtractOutputMatrices()
 
@@ -1008,7 +1027,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 },
                 "connector_to_connector_path_prohibition": None,
                 "od_results": {
-                    "total_impedance": None
+                    "total_impedance": self.ImpedanceMatrixId
                 },
                 "flow_distribution_between_lines": {
                                         "consider_travel_time": self._considerTotalImpedance
@@ -1045,6 +1064,101 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                             }
                         }
                     }
+
+        if EMME_VERSION >= (4,2,1):
+            if self.UseBoardingLevelFlag:
+                baseSpec["journey_levels"] = [
+                {
+                    "description": "Walking",
+                    "destinations_reachable": False,
+                    "transition_rules": [
+                        {
+                            "mode": "b",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "g",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "l",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "m",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "p",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "q",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "r",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "s",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "x",
+                            "next_journey_level": 1
+                        }
+                    ],
+                    "boarding_time": None,
+                    "boarding_cost": None,
+                    "waiting_time": None
+                },
+                {
+                    "description": "Transit",
+                    "destinations_reachable": True,
+                    "transition_rules": [
+                        {
+                            "mode": "b",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "g",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "l",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "m",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "p",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "q",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "r",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "s",
+                            "next_journey_level": 1
+                        },
+                        {
+                            "mode": "x",
+                            "next_journey_level": 1
+                        }
+                    ],
+                    "boarding_time": None,
+                    "boarding_cost": None,
+                    "waiting_time": None
+                }
+            ]
         
         return baseSpec
     
@@ -1127,7 +1241,8 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         
         #If the fares matrix is required, extract that.
         if self.FareMatrixId:
-            self._ExtractCostMatrix()          
+            self._ExtractCostMatrix()    
+            
 
     def _ExtractTimesMatrices(self):
         spec = {
