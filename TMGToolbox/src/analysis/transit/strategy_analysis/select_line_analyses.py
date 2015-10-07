@@ -1,4 +1,4 @@
-'''
+﻿'''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
@@ -375,7 +375,7 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                                                                                 "upper": 1
                                                                                 }
                                                         },
-                "analyzed_demand": None, #---Analyzed demand (this may need to be changed)
+                "analyzed_demand": self.ivttMatrix.id, #---Analyzed demand (this may need to be changed)  I've changed this to by a matrix that will exist
                 "constraint": None,
                 "results": {
                     "strategy_values": self._selectLineMatrix.id, #---Strategy results
@@ -431,7 +431,7 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                                                                                 "upper": 999999
                                                         }
                 },
-                "analyzed_demand": None, #---No analyzed demand is required
+                "analyzed_demand": self.ivttMatrix.id, #---Some Analyzed demand matrix is now requires
                 "constraint": None,
                 "results": {
                     "strategy_values": self.lineFaresMatrix.id, #---RESULT MATRIX
@@ -462,7 +462,7 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                                                                                 "upper": 999999
                                                         }
                 },
-                "analyzed_demand": None, #---No analyzed demand is required
+                "analyzed_demand": self.ivttMatrix.id, #---Some Analyzed demand matrix is now requires
                 "constraint": None,
                 "results": {
                     "strategy_values": self.accessFaresMatrix.id, #---RESULT MATRIX
@@ -560,7 +560,7 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                                                                                 "upper": 999999
                                                         }
                 },
-                "analyzed_demand": None, #---No analyzed demand is required
+                "analyzed_demand": self.ivttMatrix.id, #---Some Analyzed demand matrix is now requires
                 "constraint": None,
                 "results": {
                     "strategy_values": self.costMatrix.id, #---RESULT MATRIX

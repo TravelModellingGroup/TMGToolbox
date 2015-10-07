@@ -159,12 +159,12 @@ class ExtractTransitODVectors(_m.Tool()):
         if _MODELLER.emmebank.matrix(self.AutoODMatrixId) == None:
             raise Exception("Matrix %s was not found!" %self.AutoODMatrixId)
 
-        self.LineODMatrixId = xtmf_LineODMatrixNumber
+        self.LineODMatrixId = "mf"+str(xtmf_LineODMatrixNumber)
         _util.initializeMatrix(self.LineODMatrixId, name='lineOD', description= 'Demand for selected lines')
-        self.AggOriginMatrixId = xtmf_AggOriginMatrixNumber
+        self.AggOriginMatrixId = "mo"+str(xtmf_AggOriginMatrixNumber)
         _util.initializeMatrix(self.AggOriginMatrixId, name='aggO', 
                                description= 'Origins for selected lines', matrix_type= 'ORIGIN')
-        self.AggDestinationMatrixId = xtmf_AggDestinationMatrixNumber
+        self.AggDestinationMatrixId = "md"+str(xtmf_AggDestinationMatrixNumber)
         _util.initializeMatrix(self.AggDestinationMatrixId, name='aggD', 
                                description= 'Destinations for selected lines', matrix_type= 'DESTINATION')
 
@@ -211,8 +211,11 @@ class ExtractTransitODVectors(_m.Tool()):
                         _util.tempMatrixMANAGER(description="Origin Probabilities", matrix_type='FULL'),              
                         _util.tempMatrixMANAGER(description="Destinations Probabilities", matrix_type='FULL'),
                         _util.tempMatrixMANAGER(description="DAT Origin Aggregation", matrix_type='ORIGIN'),
-                        _util.tempMatrixMANAGER(description="DAT Destination Aggregation", matrix_type='DESTINATION')) \
-                    as (lineFlag, auxTransitVolumes, transitVolumes, origProbMatrix, destProbMatrix, tempDatOrig, tempDatDest): 
+                        _util.tempMatrixMANAGER(description="DAT Destination Aggregation", matrix_type='DESTINATION'),
+                        _util.tempMatrixMANAGER(description="Full Auto Origin Matrix", matrix_type='FULL'),
+                        _util.tempMatrixMANAGER(description="Full Auto Destination Matrix", matrix_type='FULL')) \
+                    as (lineFlag, auxTransitVolumes, transitVolumes, origProbMatrix, destProbMatrix, tempDatOrig, tempDatDest, 
+                        autoOrigMatrix, autoDestMatrix): 
 
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
@@ -223,11 +226,9 @@ class ExtractTransitODVectors(_m.Tool()):
                     matrixAgg(self.LineODMatrixId, self.AggOriginMatrixId, agg_op="+")
                     matrixAgg(self.LineODMatrixId, self.AggDestinationMatrixId, agg_op="+")
                 with _m.logbook_trace("Copying auto matrices"):
-                    #This part may be able to be condensed. Can likely just carry forward the normal auto matrix and save calculations over top of
-                    #the probability matrices
-                    autoOrigMatrix = matrixCopy(self.AutoODMatrixId, None, matrix_name="autoOrigFull", matrix_description="", 
+                    matrixCopy(self.AutoODMatrixId, autoOrigMatrix.id, matrix_name="autoOrigFull", matrix_description="", 
                                                 scenario=self.Scenario)
-                    autoDestMatrix = matrixCopy(self.AutoODMatrixId, None, matrix_name="autoDestFull", matrix_description="", 
+                    matrixCopy(self.AutoODMatrixId, autoDestMatrix.id, matrix_name="autoDestFull", matrix_description="", 
                                                 scenario=self.Scenario)
                 with _m.logbook_trace("Building probability matrices"):
                     network = self.Scenario.get_network()
@@ -346,9 +347,6 @@ class ExtractTransitODVectors(_m.Tool()):
                     origProb = 0 #if no volume, set to 0
                 
                 probDict[node.number] = (origProb, destProb)
-        for key, prob in probDict.iteritems():
-            if prob[0] >0:
-                print (key, prob[0])
         return probDict
 
     def _ApplyODProbabilities(self, inputProbs, outputMatrix, probType):

@@ -55,6 +55,7 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 networkCalculator = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################
 
@@ -62,9 +63,7 @@ class LinkSpecificVolumes(_m.Tool()):
 
      #---PARAMETERS
     xtmf_ScenarioNumbers = _m.Attribute(str)
-    FilterString = _m.Attribute(str)
-    DemandMatrixId = _m.Attribute(str)                
-    VolumeMatrix = _m.Attribute(str)
+    FilterString = _m.Attribute(str)   
     filePath = _m.Attribute(str)
 
     TransitFlag = _m.Attribute(bool)
@@ -85,6 +84,7 @@ class LinkSpecificVolumes(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""        
         
+        
     def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath, TransitFlag=False):
         self.tool_run_msg = ""
         print "Starting Link volume calculations"
@@ -96,8 +96,12 @@ class LinkSpecificVolumes(_m.Tool()):
                 raise Exception("Scenarios %s was not found!" %number)
             self.Scenarios.append(sc)
 
-        self.filtersToCompute = FilterString
+        self.FilterString = FilterString
         self.TransitFlag = TransitFlag
+
+        if self.TransitFlag:
+            if EMME_VERSION < (4,1,5):
+                raise ValueError("Please upgrade to version 4.1.5+ to calculate transit volumes")
        
         self._Execute()
 
@@ -122,11 +126,13 @@ class LinkSpecificVolumes(_m.Tool()):
 
             if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")      
 
-            parsed_filter_list = self._ParseFilterString(self.filtersToCompute)
+            parsed_filter_list = self._ParseFilterString(self.FilterString)
 
             for scenario in self.Scenarios:
                 self.Scenario = _MODELLER.emmebank.scenario(scenario.id)
                 self.results[scenario.id] = {}
+                if self.TransitFlag:
+                    network = _MODELLER.emmebank.scenario(str(int(scenario.id) + 1)).get_network()
             
                 for filter in parsed_filter_list:                                
                 
@@ -137,28 +143,45 @@ class LinkSpecificVolumes(_m.Tool()):
                             },
                         "type": "NETWORK_CALCULATION"
                     }
-                    report1 = networkCalculator(spec1, scenario=self.Scenario)
+                    try:
+                        report1 = networkCalculator(spec1, scenario=self.Scenario)
+                        outputAuto = report1['sum']
+                    except:
+                        outputAuto = "N/A"
 
                     if self.TransitFlag:
                         # consider adding an option to search for links with the same coordinates 
                         # (i.e. the hypernetwork equivalent). Otherwise, this won't work
                         # for streetcars, rail, etc.
 
-                        spec2 = {
-                            "expression": "voltr",                    
-                            "selections": {
-                                "link": filter[1],
-                                "transit_line": "all"
-                                },
-                            "type": "NETWORK_CALCULATION"
-                        }
+                        try:
+                            linkSelection = filter[1]
+                            baseLink = filter[1].strip('link=').split(",")
+                            baseLinkI = baseLink[0]
+                            baseLinkJ = baseLink[1]
+                            for link in network.links():
+                                if link.shape == network.link(baseLinkI, baseLinkJ).shape:
+                                    linkSelection += " or link=" + link.id.replace("-",",")
 
-                        #transit scenario hard-coded as "the next" scenario
-                        report2 = networkCalculator(spec2, scenario=_MODELLER.emmebank.scenario(scenario.id + 1))
-                        self.results[scenario.id][filter[0]] = [report1['sum'], report2['sum']]
+                            spec2 = {
+                                "expression": "voltr",                    
+                                "selections": {
+                                    "link": linkSelection,
+                                    "transit_line": "all"
+                                    },
+                                "type": "NETWORK_CALCULATION"
+                            }
+
+                            #transit scenario hard-coded as "the next" scenario
+                        
+                            report2 = networkCalculator(spec2, scenario=_MODELLER.emmebank.scenario(str(int(scenario.id) + 1)))
+                            outputTransit = report2['sum']
+                        except:
+                            outputTransit = "N/A"
+                        self.results[scenario.id][filter[0]] = [outputAuto, outputTransit]
 
                     else:
-                        self.results[scenario.id][filter[0]] = [report1['sum']]
+                        self.results[scenario.id][filter[0]] = [outputAuto]
 
     def _ParseFilterString(self, filterString):
         filterList = []

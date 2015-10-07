@@ -214,24 +214,25 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.CalculateCongestedIvttFlag = True
         
         self.WalkSpeed = 4
-        self.WaitPerception = 3.534
-        self.WalkPerceptionToronto = 1.8
-        self.WalkPerceptionNonToronto =3.845
-        self.WalkPerceptionTorontoConnectors = 2.26
-        self.WalkPerceptionNonTorontoConnectors = 1.12
-        self.WalkPerceptionPD1 = 1.14
+        self.WaitPerception = 2.65
+        self.WalkPerceptionToronto = 1.356
+        self.WalkPerceptionNonToronto = 1.16
+        self.WalkPerceptionTorontoConnectors = 1.825
+        self.WalkPerceptionNonTorontoConnectors = 1.8092
+        self.WalkPerceptionPD1 = 1.12
         self.BoardPerception = 1
         
-        lines = ["1: 0.41: 1.62",                 
-                 "2: 0.41: 1.62",
-                 "3: 0.41: 1.62",
-                 "4: 0.41: 1.62"]
+        lines = ["1: 1: 6.56",                 
+                 "2: 1: 6.69",
+                 "3: 1: 6.69",
+                 "4: 1: 3.33",
+                 "5: 1: 6.17"]
 
         self.CongestionExponentString = "\n".join(lines)
 
-        self.EffectiveHeadwaySlope = 0.20
+        self.EffectiveHeadwaySlope = 0.165
         
-        self.FarePerception = 10.694
+        self.FarePerception = 15.14
         
         self.AssignmentPeriod = 2.04 
         self.NormGap = 0

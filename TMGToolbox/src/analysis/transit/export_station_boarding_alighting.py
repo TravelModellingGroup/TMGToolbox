@@ -135,6 +135,9 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
 
     def __call__(self, xtmf_ScenarioNumber, ReportFile, StationNodeFile):
         
+        if EMME_VERSION < (4,1,5):
+            raise ValueError("Tool not compatible. Please upgrade to version 4.1.5+")
+
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -168,7 +171,7 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
             stations, badNodes = self._LoadStationNodeFile(network)
 
             if len(badNodes) > 0:
-                print "%s node IDs were not found in the network and were skipped." %len(badIdSet)
+                print "%s node IDs were not found in the network and were skipped." %len(badNodes)
                 pb = _m.PageBuilder("NodeIDs not in network")
                 
                 pb.add_text_element("<b>The following node IDs were not found in the network:</b>")
@@ -221,24 +224,38 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
 
     def _CalcBoardingAlighting(self, network, nodeIds):
         for id in nodeIds:
-            node = network.node(id)
+            baseNode = network.node(id)
+            checkNodes = []
+            for node in network.nodes():
+                if node.x == baseNode.x:
+                    if node.y == baseNode.y:
+                        checkNodes.append(node)
             totalBoard = 0
             totalAlight = 0
-            for segment in node.outgoing_segments(include_hidden=True):
-                board = segment.transit_boardings
-                totalBoard += board
-                voltr = segment.transit_volume
-                index = segment.number - 1
-                voltrLast = segment.line.segment(index).transit_volume
-                totalAlight += (voltrLast + board - voltr)
+            initialBoards = 0
+            finalAlights = 0
+            for node in checkNodes:
+                for segment in node.outgoing_segments(include_hidden=True):
+                    board = segment.transit_boardings
+                    totalBoard += board
+                    
+                    voltr = segment.transit_volume
+                    index = segment.number - 1
+                    voltrLast = segment.line.segment(index).transit_volume
+                    totalAlight += (voltrLast + board - voltr)
+                initialBoards += node.initial_boardings
+                finalAlights += node.final_alightings
             nodeIds[id].append(round(totalBoard))
+            nodeIds[id].append(round(totalBoard - initialBoards))
+            nodeIds[id].append(round(totalAlight - finalAlights))
             nodeIds[id].append(round(totalAlight))
+            
         return nodeIds
 
     def _OutputResults(self, valueDict):
         with open(self.ReportFile, 'wb') as csvfile:
             nodeWrite = csv.writer(csvfile, delimiter = ',')
-            nodeWrite.writerow(['node_id', 'label', 'boardings', 'alightings'])
+            nodeWrite.writerow(['node_id', 'label', 'boardings', 'transfer_boardings', 'transfer_alightings', 'alightings'])
             for key, values in sorted(valueDict.iteritems()):
                 nodeWrite.writerow(values)
 
