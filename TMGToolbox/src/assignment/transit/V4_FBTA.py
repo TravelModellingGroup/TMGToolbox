@@ -1012,7 +1012,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                     "on_lines": None
                 },
                 "in_vehicle_time": {
-                    "perception_factor": 1
+                    "perception_factor": "us2"
                 },
                 "in_vehicle_cost": {
                                     "penalty": self.SegmentFareAttributeId,
