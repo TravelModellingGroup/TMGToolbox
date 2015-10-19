@@ -109,6 +109,7 @@ from multiprocessing import cpu_count
 from re import split as _regex_split
 
 import inro.modeller as _m
+
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 
 _util = _MODELLER.module('tmg.common.utilities')
@@ -520,6 +521,11 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             pb.add_select(tool_attribute_name='NumberOfProcessors',
                           keyvalues= keyval3,
                           title= "Number of Processors")
+
+        pb.add_checkbox(tool_attribute_name="UseBoardingLevelFlag",
+                        label="Use boarding levels?",
+                        note="This will force all trips to board at least <br>\
+                            one transit vehicle (no walk-all-ways).")
         
         #---JAVASCRIPT
         pb.add_html("""
@@ -785,9 +791,6 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.ImpedanceMatrixId:
                 _util.initializeMatrix(id= self.ImpedanceMatrixId,
                                        description= "Transit impedances")
-            
-            with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
-                                
                 self.TRACKER.startProcess(3)
                 
                 self._AssignHeadwayFraction()
@@ -805,10 +808,35 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                         transit_assignment_spec= spec,
                                         congestion_function= self._GetFuncSpec(),
                                         stopping_criteria= self._GetStopSpec(),
-                                        impedances= impedanceMatrix,
+                                        impedances= _MODELLER.emmebank.matrix(self.ImpedanceMatrixId),
                                         scenario= self.Scenario)                
                 
                 self._ExtractOutputMatrices()
+
+            else: 
+                with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
+                                
+                    self.TRACKER.startProcess(3)
+                
+                    self._AssignHeadwayFraction()
+                    self.TRACKER.completeSubtask()
+
+                    self._AssignEffectiveHeadway()
+                    self.TRACKER.completeSubtask()
+                
+                    self._AssignWalkPerception()
+                    self.TRACKER.completeSubtask()
+                
+                    spec = self._GetBaseAssignmentSpec()
+                
+                    self.TRACKER.runTool(congestedAssignmentTool,
+                                            transit_assignment_spec= spec,
+                                            congestion_function= self._GetFuncSpec(),
+                                            stopping_criteria= self._GetStopSpec(),
+                                            impedances= impedanceMatrix,
+                                            scenario= self.Scenario)                
+                
+                    self._ExtractOutputMatrices()
 
     ##########################################################################################################
         
@@ -1067,48 +1095,18 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
 
         if EMME_VERSION >= (4,2,1):
             if self.UseBoardingLevelFlag:
+                modeList = []
+                partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
+        
+                for mode in partialNetwork.modes():
+                    if mode.type != 'TRANSIT': continue
+                    modeList.append({"mode": mode.id, "next_journey_level": 1})
+                
                 baseSpec["journey_levels"] = [
                 {
                     "description": "Walking",
                     "destinations_reachable": False,
-                    "transition_rules": [
-                        {
-                            "mode": "b",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "g",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "l",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "m",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "p",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "q",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "r",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "s",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "x",
-                            "next_journey_level": 1
-                        }
-                    ],
+                    "transition_rules": modeList,
                     "boarding_time": None,
                     "boarding_cost": None,
                     "waiting_time": None
@@ -1116,44 +1114,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 {
                     "description": "Transit",
                     "destinations_reachable": True,
-                    "transition_rules": [
-                        {
-                            "mode": "b",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "g",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "l",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "m",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "p",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "q",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "r",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "s",
-                            "next_journey_level": 1
-                        },
-                        {
-                            "mode": "x",
-                            "next_journey_level": 1
-                        }
-                    ],
+                    "transition_rules": modeList,
                     "boarding_time": None,
                     "boarding_cost": None,
                     "waiting_time": None
@@ -1242,6 +1203,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         #If the fares matrix is required, extract that.
         if self.FareMatrixId:
             self._ExtractCostMatrix()    
+            
             
 
     def _ExtractTimesMatrices(self):
