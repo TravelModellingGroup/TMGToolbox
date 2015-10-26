@@ -38,6 +38,10 @@ Full Network Set Generator
     0.0.1 Created on 2015-02-09 by mattaustin222
     0.1.0 Created on 2015-02-18 by mattaustin222 Made callable by XTMF
     0.1.1 Added ability to apply .nup files to uncleaned time period networks
+    0.2.0 Added an optional custom scenario definition list. This removes the restriction
+        of using exactly five time periods. Note that the call function no longer supports
+        the old system. However, the original form is still available through the modeller
+        interface.
     
 '''
 
@@ -46,6 +50,7 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 from html import HTML
+from re import split as _regex_split
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -60,7 +65,7 @@ lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_batch_line_edits')
 
 class FullNetworkSetGenerator(_m.Tool()):
     
-    version = '0.1.1'
+    version = '0.2.0'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -129,6 +134,9 @@ class FullNetworkSetGenerator(_m.Tool()):
     ConnectorFilterAttributeId = _m.Attribute(str)
     
     AttributeAggregatorString = _m.Attribute(str)
+
+    CustomScenarioSetString = _m.Attribute(str)
+    CustomScenarioSetFlag = _m.Attribute(bool)
 
     LineFilterExpression = _m.Attribute(str)     
     
@@ -215,6 +223,8 @@ class FullNetworkSetGenerator(_m.Tool()):
         # by default, prorate all transit speeds except TTC rail and GO rail
         self.LineFilterExpression = "line=______ xor line=TS____ xor line=GT____" 
 
+        self.CustomScenarioSetFlag = False
+
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Full Network Set Generator v%s" %self.version,
                      description="Builds a full set of cleaned time period network \
@@ -281,11 +291,28 @@ class FullNetworkSetGenerator(_m.Tool()):
                            note="Used if line not in\
                                agg selection file")
 
-        pb.add_header("SCENARIOS")
-        pb.add_text_element("Note that network update files (*.nup) are applied to the uncleaned scenarios only.")
+        pb.add_header("SCENARIOS")         
+        
+        pb.add_checkbox(tool_attribute_name='OverwriteScenarioFlag',
+                           label="Overwrite Full Scenarios?")
+        
+        pb.add_checkbox(tool_attribute_name= 'PublishFlag',
+                        label= "Publish network?")
+        
+        pb.add_checkbox(tool_attribute_name='CustomScenarioSetFlag',
+                           label="Use custom scenario list?")
+
+        pb.add_text_box(tool_attribute_name='CustomScenarioSetString',
+                        size= 500, multi_line=True,
+                        title= "Custom Scenario List",
+                        note= "Definitions for a custom set of scenarios.\
+                        Use the following syntax. The .nup file is optional.\
+                        <br><br><b>Syntax:</b> [<em>Uncleaned scenario number</em>] : [<em>Cleaned scenario number</em>] : [<em>Uncleaned scenario description</em>] : [<em>Cleaned scenario description</em>] : [<em>Scenario start</em>] : [<em>Scenario End</em>] : [<em>.nup file</em>]\
+                        <br><br>Use integer hours for start and end times e.g. 2:30 PM = 1430")              
         
         with pb.add_table(False) as t:
         
+            pb.add_text_element("Note that network update files (*.nup) are applied to the uncleaned scenarios.")
             t.add_table_header(['Scenario', 'Number', 'Description'])
 
             with t.table_cell():
@@ -451,12 +478,6 @@ class FullNetworkSetGenerator(_m.Tool()):
             with t.table_cell():
                 pb.add_select_file(tool_attribute_name='Scen5NetworkUpdateFile',
                            window_type='file', file_filter='*.nup')
-        
-        pb.add_checkbox(tool_attribute_name='OverwriteScenarioFlag',
-                           label="Overwrite Full Scenarios?")
-        
-        pb.add_checkbox(tool_attribute_name= 'PublishFlag',
-                        label= "Publish network?")
 
         pb.add_header("TIME PERIODS")
         
@@ -587,6 +608,83 @@ class FullNetworkSetGenerator(_m.Tool()):
         //to something a little more visible.
         $("#AttributeAggregatorString").css({height: '90px'});
         
+        if (tool.check_scen_set_flag())
+        {
+            $("#CustomScenarioSetString").prop('disabled', false);
+            $("#Scen1UnNumber").prop('disabled', true);
+            $("#Scen1UnDescription").prop('disabled', true);
+            $("#Scen1Number").prop('disabled', true);
+            $("#Scen1Description").prop('disabled', true);
+            $("#Scen1Start").prop('disabled', true);
+            $("#Scen1End").prop('disabled', true);
+            $("#Scen1NetworkUpdateFile").prop('disabled', true);
+            $("#Scen2UnNumber").prop('disabled', true);
+            $("#Scen2UnDescription").prop('disabled', true);
+            $("#Scen2Number").prop('disabled', true);
+            $("#Scen2Description").prop('disabled', true);
+            $("#Scen2Start").prop('disabled', true);
+            $("#Scen2End").prop('disabled', true);
+            $("#Scen2NetworkUpdateFile").prop('disabled', true);
+            $("#Scen3UnNumber").prop('disabled', true);
+            $("#Scen3UnDescription").prop('disabled', true);
+            $("#Scen3Number").prop('disabled', true);
+            $("#Scen3Description").prop('disabled', true);
+            $("#Scen3Start").prop('disabled', true);
+            $("#Scen3End").prop('disabled', true);
+            $("#Scen3NetworkUpdateFile").prop('disabled', true);
+            $("#Scen4UnNumber").prop('disabled', true);
+            $("#Scen4UnDescription").prop('disabled', true);
+            $("#Scen4Number").prop('disabled', true);
+            $("#Scen4Description").prop('disabled', true);
+            $("#Scen4Start").prop('disabled', true);
+            $("#Scen4End").prop('disabled', true);
+            $("#Scen4NetworkUpdateFile").prop('disabled', true);
+            $("#Scen5UnNumber").prop('disabled', true);
+            $("#Scen5UnDescription").prop('disabled', true);
+            $("#Scen5Number").prop('disabled', true);
+            $("#Scen5Description").prop('disabled', true);
+            $("#Scen5Start").prop('disabled', true);
+            $("#Scen5End").prop('disabled', true);
+            $("#Scen5NetworkUpdateFile").prop('disabled', true);
+        } else {
+            $("#CustomScenarioSetString").prop('disabled', true);
+            $("#Scen1UnNumber").prop('disabled', false);
+            $("#Scen1UnDescription").prop('disabled', false);
+            $("#Scen1Number").prop('disabled', false);
+            $("#Scen1Description").prop('disabled', false);
+            $("#Scen1Start").prop('disabled', false);
+            $("#Scen1End").prop('disabled', false);
+            $("#Scen1NetworkUpdateFile").prop('disabled', false);
+            $("#Scen2UnNumber").prop('disabled', false);
+            $("#Scen2UnDescription").prop('disabled', false);
+            $("#Scen2Number").prop('disabled', false);
+            $("#Scen2Description").prop('disabled', false);
+            $("#Scen2Start").prop('disabled', false);
+            $("#Scen2End").prop('disabled', false);
+            $("#Scen2NetworkUpdateFile").prop('disabled', false);
+            $("#Scen3UnNumber").prop('disabled', false);
+            $("#Scen3UnDescription").prop('disabled', false);
+            $("#Scen3Number").prop('disabled', false);
+            $("#Scen3Description").prop('disabled', false);
+            $("#Scen3Start").prop('disabled', false);
+            $("#Scen3End").prop('disabled', false);
+            $("#Scen3NetworkUpdateFile").prop('disabled', false);
+            $("#Scen4UnNumber").prop('disabled', false);
+            $("#Scen4UnDescription").prop('disabled', false);
+            $("#Scen4Number").prop('disabled', false);
+            $("#Scen4Description").prop('disabled', false);
+            $("#Scen4Start").prop('disabled', false);
+            $("#Scen4End").prop('disabled', false);
+            $("#Scen4NetworkUpdateFile").prop('disabled', false);
+            $("#Scen5UnNumber").prop('disabled', false);
+            $("#Scen5UnDescription").prop('disabled', false);
+            $("#Scen5Number").prop('disabled', false);
+            $("#Scen5Description").prop('disabled', false);
+            $("#Scen5Start").prop('disabled', false);
+            $("#Scen5End").prop('disabled', false);
+            $("#Scen5NetworkUpdateFile").prop('disabled', false);
+        }
+
         $("#BaseScenario").bind('change', function()
         {
             $(this).commit();
@@ -608,6 +706,51 @@ class FullNetworkSetGenerator(_m.Tool()):
             inro.modeller.page.preload("#ConnectorFilterAttributeId");
             $("#ConnectorFilterAttributeId").trigger('change')
         });
+
+        $("#CustomScenarioSetFlag").bind('change', function()
+        {
+            $(this).commit();
+            var not_flag = ! tool.check_scen_set_flag();
+            var flag = tool.check_scen_set_flag();
+            
+            $("#CustomScenarioSetString").prop('disabled', not_flag);
+            $("#Scen1UnNumber").prop('disabled', flag);
+            $("#Scen1UnDescription").prop('disabled', flag);
+            $("#Scen1Number").prop('disabled', flag);
+            $("#Scen1Description").prop('disabled', flag);
+            $("#Scen1Start").prop('disabled', flag);
+            $("#Scen1End").prop('disabled', flag);
+            $("#Scen1NetworkUpdateFile").prop('disabled', flag);
+            $("#Scen2UnNumber").prop('disabled', flag);
+            $("#Scen2UnDescription").prop('disabled', flag);
+            $("#Scen2Number").prop('disabled', flag);
+            $("#Scen2Description").prop('disabled', flag);
+            $("#Scen2Start").prop('disabled', flag);
+            $("#Scen2End").prop('disabled', flag);
+            $("#Scen2NetworkUpdateFile").prop('disabled', flag);
+            $("#Scen3UnNumber").prop('disabled', flag);
+            $("#Scen3UnDescription").prop('disabled', flag);
+            $("#Scen3Number").prop('disabled', flag);
+            $("#Scen3Description").prop('disabled', flag);
+            $("#Scen3Start").prop('disabled', flag);
+            $("#Scen3End").prop('disabled', flag);
+            $("#Scen3NetworkUpdateFile").prop('disabled', flag);
+            $("#Scen4UnNumber").prop('disabled', flag);
+            $("#Scen4UnDescription").prop('disabled', flag);
+            $("#Scen4Number").prop('disabled', flag);
+            $("#Scen4Description").prop('disabled', flag);
+            $("#Scen4Start").prop('disabled', flag);
+            $("#Scen4End").prop('disabled', flag);
+            $("#Scen4NetworkUpdateFile").prop('disabled', flag);
+            $("#Scen5UnNumber").prop('disabled', flag);
+            $("#Scen5UnDescription").prop('disabled', flag);
+            $("#Scen5Number").prop('disabled', flag);
+            $("#Scen5Description").prop('disabled', flag);
+            $("#Scen5Start").prop('disabled', flag);
+            $("#Scen5End").prop('disabled', flag);
+            $("#Scen5NetworkUpdateFile").prop('disabled', flag);
+        });
+
         
     });
 </script>""" % pb.tool_proxy_tag)
@@ -615,16 +758,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         return pb.render()
 
     ##########################################################################################################
-    def __call__(self, xtmf_ScenarioNumber, Scen1UnNumber, Scen1UnDescription, Scen1Number,
-                 Scen1Description, Scen1Start, Scen1End, Scen1NetworkUpdateFile,
-                 Scen2UnNumber, Scen2UnDescription, Scen2Number, 
-                 Scen2Description, Scen2Start, Scen2End, Scen2NetworkUpdateFile,
-                 Scen3UnNumber, Scen3UnDescription, Scen3Number, 
-                 Scen3Description, Scen3Start, Scen3End, Scen3NetworkUpdateFile,
-                 Scen4UnNumber, Scen4UnDescription, Scen4Number, 
-                 Scen4Description, Scen4Start, Scen4End, Scen4NetworkUpdateFile,
-                 Scen5UnNumber, Scen5UnDescription, Scen5Number, 
-                 Scen5Description, Scen5Start, Scen5End, Scen5NetworkUpdateFile,
+    def __call__(self, xtmf_ScenarioNumber, CustomScenarioSetString,
                  TransitServiceTableFile, AggTypeSelectionFile, AlternativeDataFile, BatchEditFile,
                  DefaultAgg, PublishFlag, OverwriteScenarioFlag, NodeFilterAttributeId,
                  StopFilterAttributeId, ConnectorFilterAttributeId, AttributeAggregatorString,
@@ -675,45 +809,8 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.AttributeAggregatorString = AttributeAggregatorString
         self.LineFilterExpression = LineFilterExpression
         
-        self.Scen1UnNumber = Scen1UnNumber
-        self.Scen1UnDescription = Scen1UnDescription
-        self.Scen1Number = Scen1Number
-        self.Scen1Description = Scen1Description
-        self.Scen1Start = Scen1Start
-        self.Scen1End = Scen1End
-        self.Scen1NetworkUpdateFile = Scen1NetworkUpdateFile
-
-        self.Scen2UnNumber = Scen2UnNumber
-        self.Scen2UnDescription = Scen2UnDescription
-        self.Scen2Number = Scen2Number
-        self.Scen2Description = Scen2Description
-        self.Scen2Start = Scen2Start
-        self.Scen2End = Scen2End
-        self.Scen2NetworkUpdateFile = Scen2NetworkUpdateFile
-
-        self.Scen3UnNumber = Scen3UnNumber
-        self.Scen3UnDescription = Scen3UnDescription
-        self.Scen3Number = Scen3Number
-        self.Scen3Description = Scen3Description
-        self.Scen3Start = Scen3Start
-        self.Scen3End = Scen3End
-        self.Scen3NetworkUpdateFile = Scen3NetworkUpdateFile
-
-        self.Scen4UnNumber = Scen4UnNumber
-        self.Scen4UnDescription = Scen4UnDescription
-        self.Scen4Number = Scen4Number
-        self.Scen4Description = Scen4Description
-        self.Scen4Start = Scen4Start
-        self.Scen4End = Scen4End
-        self.Scen4NetworkUpdateFile = Scen4NetworkUpdateFile
-
-        self.Scen5UnNumber = Scen5UnNumber
-        self.Scen5UnDescription = Scen5UnDescription
-        self.Scen5Number = Scen5Number
-        self.Scen5Description = Scen5Description
-        self.Scen5Start = Scen5Start
-        self.Scen5End = Scen5End
-        self.Scen5NetworkUpdateFile = Scen5NetworkUpdateFile
+        self.CustomScenarioSetFlag = True
+        self.CustomScenarioSetString = CustomScenarioSetString
 
 
         print "Running full network set generation"
@@ -741,6 +838,30 @@ class FullNetworkSetGenerator(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
 
+    @_m.method(return_type= bool)
+    def check_scen_set_flag(self):
+        return self.CustomScenarioSetFlag
+
+    @_m.method(return_type=unicode)
+    def get_scenario_node_attributes(self):
+        options = ['<option value="-1">No attribute</option>']
+        for exatt in self.BaseScenario.extra_attributes():
+            if exatt.type != 'NODE': continue
+            text = "%s - %s" %(exatt.name, exatt.description)
+            options.append('<option value="%s">%s</option>' %(exatt.name, text)) 
+        
+        return "\n".join(options)
+    
+    @_m.method(return_type=unicode)
+    def get_scenario_link_attributes(self):
+        options = ['<option value="-1">No attribute</option>']
+        for exatt in self.BaseScenario.extra_attributes():
+            if exatt.type != 'LINK': continue
+            text = "%s - %s" %(exatt.name, exatt.description)
+            options.append('<option value="%s">%s</option>' %(exatt.name, text)) 
+        
+        return "\n".join(options)
+
     ##########################################################################################################    
         
     def _Execute(self):
@@ -749,17 +870,21 @@ class FullNetworkSetGenerator(_m.Tool()):
                         
             network = self.BaseScenario.get_network()
             
-            firstScenario = (self.Scen1UnNumber, self.Scen1Number, self.Scen1UnDescription, self.Scen1Description,
-                             self.Scen1Start, self.Scen1End, self.Scen1NetworkUpdateFile)
-            secondScenario = (self.Scen2UnNumber, self.Scen2Number, self.Scen2UnDescription, self.Scen2Description,
-                             self.Scen2Start, self.Scen2End, self.Scen2NetworkUpdateFile)
-            thirdScenario = (self.Scen3UnNumber, self.Scen3Number, self.Scen3UnDescription, self.Scen3Description,
-                             self.Scen3Start, self.Scen3End, self.Scen3NetworkUpdateFile)
-            fourthScenario = (self.Scen4UnNumber, self.Scen4Number, self.Scen4UnDescription, self.Scen4Description,
-                             self.Scen4Start, self.Scen4End, self.Scen4NetworkUpdateFile)
-            fifthScenario = (self.Scen5UnNumber, self.Scen5Number, self.Scen5UnDescription, self.Scen5Description,
-                             self.Scen5Start, self.Scen5End, self.Scen5NetworkUpdateFile)
-            scenarioSet = [firstScenario, secondScenario, thirdScenario, fourthScenario, fifthScenario]
+            if not self.CustomScenarioSetFlag:
+                firstScenario = [self.Scen1UnNumber, self.Scen1Number, self.Scen1UnDescription, self.Scen1Description,
+                                 self.Scen1Start, self.Scen1End, self.Scen1NetworkUpdateFile]
+                secondScenario = [self.Scen2UnNumber, self.Scen2Number, self.Scen2UnDescription, self.Scen2Description,
+                                 self.Scen2Start, self.Scen2End, self.Scen2NetworkUpdateFile]
+                thirdScenario = [self.Scen3UnNumber, self.Scen3Number, self.Scen3UnDescription, self.Scen3Description,
+                                 self.Scen3Start, self.Scen3End, self.Scen3NetworkUpdateFile]
+                fourthScenario = [self.Scen4UnNumber, self.Scen4Number, self.Scen4UnDescription, self.Scen4Description,
+                                 self.Scen4Start, self.Scen4End, self.Scen4NetworkUpdateFile]
+                fifthScenario = [self.Scen5UnNumber, self.Scen5Number, self.Scen5UnDescription, self.Scen5Description,
+                                 self.Scen5Start, self.Scen5End, self.Scen5NetworkUpdateFile]
+                scenarioSet = [firstScenario, secondScenario, thirdScenario, fourthScenario, fifthScenario]
+
+            else:
+                scenarioSet = self._ParseCustomScenarioSet()
             
             if self.OverwriteScenarioFlag:
                 self._DeleteOldScenarios(scenarioSet)
@@ -816,6 +941,35 @@ class FullNetworkSetGenerator(_m.Tool()):
                 bank.delete_scenario(items[0])
             if bank.scenario(items[1]):
                 bank.delete_scenario(items[1])
+
+    def _ParseCustomScenarioSet(self):
+        scenarioDataList = []
+        components = _regex_split('\n|,', self.CustomScenarioSetString) #Supports newline and/or commas
+        for component in components:
+            if component.isspace(): continue #Skip if totally empty
+            
+            parts = component.split(':')
+            if len(parts) not in [6,7]:
+                msg = "Error parsing scenario set: Separate components with colons \
+                    Uncleaned scenario number:Cleaned scenario number:Uncleaned scenario description:Cleaned scenario description:Scenario start:Scenario End:.nup file"
+                msg += ". [%s]" %component 
+                raise SyntaxError(msg)
+            partsList = [int(parts[0]), int(parts[1]), parts[2], parts[3], int(parts[4]), int(parts[5])]
+            if len(parts) == 7:
+                if parts[6].lower() == 'none':
+                    partsList.append(None)                    
+                    scenarioDataList.append(partsList)
+                    continue
+                if not parts[6].strip()[-4:] == ".nup":
+                    msg = "Network update file must be in the .nup format"
+                    msg += ". [%s]" %component 
+                    raise SyntaxError(msg)
+                partsList.append(parts[6])
+            else:
+                partsList.append(None)
+            scenarioDataList.append(partsList)
+
+        return scenarioDataList
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
