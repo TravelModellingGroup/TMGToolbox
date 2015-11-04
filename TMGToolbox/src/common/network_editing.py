@@ -17,6 +17,7 @@
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+from inro.emme.network import Network
 import inro.modeller as _m
 import math as _math
 from warnings import warn as _warn
@@ -450,7 +451,65 @@ def lineConcatenator(network, lineSet, newId):
     for attName, value in lineAttributes.iteritems():
         newLine[attName] = value
 
+#===========================================================================================
 
+def copyNetwork(network_to_copy):
+    '''
+    Makes a deep copy of a Network object
+    '''
+
+    new_network = Network()
+
+    #1. Copy all the attributes across
+    element_types = ['MODE', 'TRANSIT_VEHICLE', 'NODE', 'LINK', 'TURN', 'TRANSIT_LINE', 'TRANSIT_SEGMENT']
+    for etype in element_types:
+        standard_atts = set(new_network.attributes(etype))
+        new_atts = set(network_to_copy.attributes(etype))
+
+        for attname in (new_atts - standard_atts): new_network.create_attribute(etype, attname)
+
+    #2. Copy the modes
+    for mode_to_copy in network_to_copy.modes():
+        new_mode = new_network.create_mode(mode_to_copy.type, mode_to_copy.id)
+        for attname in new_network.attributes('MODE'): new_mode[attname] = mode_to_copy[attname]
+
+    #3. Copy the transit vehicles
+    for vehicle_to_copy in network_to_copy.transit_vehicles():
+        new_vehicle = new_network.create_transit_vehicle(vehicle_to_copy.id, vehicle_to_copy.mode.id)
+        for attname in new_network.attributes('TRANSIT_VEHICLE'): new_vehicle[attname] = vehicle_to_copy[attname]
+
+    #4. Copy the nodes
+    for node_to_copy in network_to_copy.nodes():
+        new_node = new_network.create_node(node_to_copy.id, node_to_copy.is_centroid)
+        for attname in new_network.attributes('NODE'): new_node[attname] = node_to_copy[attname]
+
+    #5. Copy the links
+    for link_to_copy in network_to_copy.links():
+        modes = [mode.id for mode in link_to_copy.modes]
+        new_link = new_network.create_link(link_to_copy.i_node.id, link_to_copy.j_node.id, modes)
+        for attname in new_network.attributes('LINK'): new_link[attname] = link_to_copy[attname]
+        new_link.vertices = [vtx for vtx in link_to_copy.vertices] #Copy the link vertices properly
+
+    #6. Copy the turns
+    for intersection_to_copy in network_to_copy.intersections(): new_network.create_intersection(intersection_to_copy.id)
+    for turn_to_copy in network_to_copy.turns():
+        new_turn = new_network.turn(turn_to_copy.i_node.id, turn_to_copy.j_node.id, turn_to_copy.k_node.id)
+        for attname in new_network.attributes('TURN'): new_turn[attname] = turn_to_copy[attname]
+
+    #7. Copy the transit lines and segments
+    for transit_line_to_copy in network_to_copy.transit_lines():
+        itinerary = [node.number for node in transit_line_to_copy.itinerary()]
+        new_transit_line = new_network.create_transit_line(transit_line_to_copy.id,
+                                                           transit_line_to_copy.vehicle.id,
+                                                           itinerary)
+        for attname in new_network.attributes('TRANSIT_LINE'): new_transit_line[attname] = transit_line_to_copy[attname]
+
+        for segment_to_copy, new_segment in _util.itersync(transit_line_to_copy.segments(True), new_transit_line.segments(True)):
+            for attname in new_network.attributes('TRANSIT_SEGMENT'): new_segment[attname] = segment_to_copy[attname]
+
+    return new_network
+
+#===========================================================================================
 
 #===========================================================================================
 
