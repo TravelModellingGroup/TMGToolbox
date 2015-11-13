@@ -245,7 +245,27 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
     
     def add_file_example(self, file_type="Sample file", header_text="", body_text=""):
         pass
-    
+
+    #-------------------------------------------------------------------------------------------
+
+    def add_multi_widget(self, func_name='add_text_box', list_of_kwargs=None, width=None):
+        widget_creator_func = getattr(self, func_name)
+        if list_of_kwargs == None: list_of_kwargs = []
+
+        with self.add_table(width=width) as t:
+            for row in list_of_kwargs:
+                if type(row) == dict:
+                    #1D array of args
+                    widget_creator_func(**row)
+                elif type(row) == list:
+                    #2D array of args
+                    for kwargs in row:
+                        with t.table_cell(): widget_creator_func(**kwargs)
+                else:
+                    raise RuntimeError("list_of_kwargs contained unsupported type %s" %type(row))
+
+                t.new_row()
+
     #-------------------------------------------------------------------------------------------
     
     def add_table(self, visible_border=False, title="", width= None):

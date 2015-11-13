@@ -167,19 +167,19 @@ _mtxNames = {'FULL' : 'mf',
              'SCALAR' : 'ms'}
 
 def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL', \
-                     preserve_description= False):
+                     preserve_description= False, preserve_data= False):
     '''
     Utility function for creation and initialization of matrices. Only works
     for the current Emmebank.
-    
+
     Args:
-        - id (=None): Optional. Accepted value is a string or integer ID  (must 
-            also specify a matrix_type to be able to use integer ID). If specified, 
+        - id (=None): Optional. Accepted value is a string or integer ID  (must
+            also specify a matrix_type to be able to use integer ID). If specified,
             this function will initialize the matrix with the given ID to a new
-            default value; changing its name and description if they are given. 
+            default value; changing its name and description if they are given.
             If unspecified, this function will create an available matrix - however
             the 'matrix_type' argument MUST also be specified.
-        - default (=0): Optional The numerical value to initialize the matrix to 
+        - default (=0): Optional The numerical value to initialize the matrix to
             (i.e., its default value).
         - name (=""): Optional. If specified, the newly-initialized matrix will
             have this as its 6-character name.
@@ -189,18 +189,18 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
             or 'FULL'. If an ID is specified, the matrix type will be
             inferred from the ID's prefix. This argument is NOT optional
             if passing in an integer ID, or if requesting a new matrix.
-        - preserve_description (=False): Set to True to preserve the description of an 
-            existing matrix. This is useful if you don't know whether the matrix being 
-            initialized exists or is new, and you want to specify a 'default' 
+        - preserve_description (=False): Set to True to preserve the description of an
+            existing matrix. This is useful if you don't know whether the matrix being
+            initialized exists or is new, and you want to specify a 'default'
             description.
-    
+
     Returns: The Emme Matrix object created or initialized.
     '''
-    
-    if id == None:
+
+    if id is None:
         #Get an available matrix
         id = _DATABANK.available_matrix_identifier(matrix_type)
-    elif type(id) == int:
+    elif isinstance(id, int):
         #If the matrix id is given as an integer
         try:
             id = "%s%s" %(_mtxNames[matrix_type],id)
@@ -212,23 +212,23 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
         if not t in _mtxNames:
             raise TypeError("Assumed id was a matrix, but its type value was not recognized %s" %type(id))
         id = id.id #Set the 'id' variable to the matrix's 'id' property.
-    elif type(id) != str:
+    elif not isinstance(id, basestring):
         raise TypeError("Id is not a supported type: %s" %type(id))
-    
+
     mtx = _DATABANK.matrix(id)
-    
+
     if mtx == None:
         #Matrix does not exist, so create it.
         mtx = _DATABANK.create_matrix(id, default_value=default)
-        if name: mtx.name = name[:6]
-        if description:  mtx.description = description[:40]
+        if name: mtx.name = name[:40]
+        if description:  mtx.description = description[:80]
         _m.logbook_write("Created new matrix %s: '%s' (%s)." %(id, mtx.name, mtx.description))
     else:
         if mtx.read_only: raise _excep.ProtectionError("Cannot modify matrix '%s' as it is protected against modifications." %id)
-        
-        mtx.initialize(value=default)
+
+        if not preserve_data: mtx.initialize(value=default)
         if name: mtx.name = name[:6]
-        if description and not preserve_description:  mtx.description = description[:40]
+        if description and not preserve_description:  mtx.description = description[:80]
         _m.logbook_write("Initialized existing matrix %s: '%s' (%s)." %(id, mtx.name, mtx.description))
         
     return mtx
