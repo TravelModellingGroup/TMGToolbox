@@ -23,7 +23,7 @@ Volume per Operator
 
     Authors: tnikolov
 
-    Latest revision by: tnikolov
+    Latest revision by: mattaustin222
     
     
     Tool used to calculate the amount of riders on each operator within the system.
@@ -32,6 +32,7 @@ Volume per Operator
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2015-05-04 by tnikolov
+    0.0.2 Created on 2015-11-13 by mattaustin222
 '''
 
 import inro.modeller as _m
@@ -53,12 +54,11 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 networkCalculator = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 traversalAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.traversal_analysis')
 networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.network_results')
-strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 matrixCalculator = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 matrixAggregation = _MODELLER.tool('inro.emme.matrix_calculation.matrix_aggregation')
 #matrixExportTool = _MODELLER.tool('inro.emme.data.matrix.export_matrices')
 matrixExport = _MODELLER.tool('inro.emme.data.matrix.export_matrix_to_csv')
-pathAnalysis = _MODELLER.tool('inro.emme.transit_assignment.extended.path_based_analysis')
+stratAnalysis = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 EMME_VERSION = _util.getEmmeVersion(float)
 
 ##########################################################################################################
@@ -83,8 +83,7 @@ class VolumePerOperator(_m.Tool()):
     
     #---PARAMETERS
     xtmf_ScenarioNumbers = _m.Attribute(str)
-    FilterString = _m.Attribute(str)
-    DemandMatrixId = _m.Attribute(str)                
+    FilterString = _m.Attribute(str)             
     VolumeMatrix = _m.Attribute(str)
     filePath = _m.Attribute(str)
 
@@ -200,7 +199,9 @@ class VolumePerOperator(_m.Tool()):
 
                 with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
                     networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
-                    pathAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix), scenario=self.Scenario)            
+                    report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix), scenario=self.Scenario)            
+                    demandMatrixId = self._DetermineAnalyzedDemandId(report)
+                    matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
                     matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+")
 
                     self.results[scenario.id][filter[1]] =  tempResultMatrix.data                     
@@ -216,31 +217,58 @@ class VolumePerOperator(_m.Tool()):
                 }
 
     def count_ridership(self, operator, tempIntermediateMatrix):
-        return { "portion_of_path": "COMPLETE",
-                    "trip_components": {
-                        "in_vehicle": None,
-                        "aux_transit": None,
-                        "initial_boarding": operator.id,
-                        "transfer_boarding": operator.id,
-                        "transfer_alighting": None,
-                        "final_alighting": None
-                    },
-                    "path_operator": ".max.",
-                    "path_selection_threshold": {
-                        "lower": 1,
-                        "upper": 1
-                    },
-                    "path_to_od_aggregation": None,
-                    "constraint": None,
-                    "analyzed_demand": None,
-                    "results_from_retained_paths": {
-                        "paths_to_retain": "SELECTED",
-                        "demand": tempIntermediateMatrix.id  
-                    },
-                    "path_to_od_statistics": None,
-                    "path_details": None,
-                    "type": "EXTENDED_TRANSIT_PATH_ANALYSIS"                
+        return {
+                "trip_components": {
+                    "boarding": operator.id,
+                    "in_vehicle": None,
+                    "aux_transit": None,
+                    "alighting": None
+                },
+                "sub_path_combination_operator": ".max.",
+                "sub_strategy_combination_operator": "average",
+                "selected_demand_and_transit_volumes": {
+                    "sub_strategies_to_retain": "ALL",
+                    "selection_threshold": {
+                        "lower": -999999,
+                        "upper": 999999
                     }
+                },
+                "analyzed_demand": None,
+                "constraint": None,
+                "results": {
+                    "strategy_values": tempIntermediateMatrix.id,
+                    "selected_demand": None,
+                    "transit_volumes": None,
+                    "aux_transit_volumes": None,
+                    "total_boardings": None,
+                    "total_alightings": None
+                },
+                "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
+            }
+
+    def _DetermineAnalyzedDemandId(self, reportString):
+        #search the tool report for the demand matrix used in the assignment and path analysis
+        searchString = "Analyzed demand:"
+        foundIndex = reportString[0].find(searchString)
+        truncString = reportString[0][foundIndex + len(searchString):]
+        matrixId = truncString.partition(":")[0].strip()
+        return matrixId
+
+    def _CalcRidership(self, fractionMatrixId, demandMatrixId):
+
+        return {
+                "expression": fractionMatrixId + " * " + demandMatrixId,
+                "result": fractionMatrixId,
+                "constraint": {
+                    "by_value": None,
+                    "by_zone": None
+                },
+                "aggregation": {
+                    "origins": None,
+                    "destinations": None
+                },
+                "type": "MATRIX_CALCULATION"
+            }
 
     def _ParseFilterString(self, filterString):
         filterList = []
