@@ -34,6 +34,8 @@ Extract Transit Origin and Destination Vectors
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2015-06-19 by mattaustin222
+    0.0.2 Upgraded to use two smaller path-based analyses and one strategy-based. Provides
+        significant speed-up.
     
 '''
 
@@ -49,6 +51,7 @@ _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 networkCalculation = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
 pathAnalysis = _m.Modeller().tool("inro.emme.transit_assignment.extended.path_based_analysis")
+stratAnalysis = _m.Modeller().tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 matrixAgg = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_aggregation")
 matrixCopy = _m.Modeller().tool("inro.emme.data.matrix.copy_matrix")
 matrixCalc = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
@@ -58,7 +61,7 @@ EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class ExtractTransitODVectors(_m.Tool()):
     
-    version = '0.0.1'
+    version = '0.0.2'
     tool_run_msg = ""
     number_of_tasks = 2 # For progress reporting, enter the integer number of tasks here
     
@@ -208,21 +211,35 @@ class ExtractTransitODVectors(_m.Tool()):
             with nested(_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= 'Line Flag'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes'),
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes'),
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes'),
                         _util.tempMatrixMANAGER(description="Origin Probabilities", matrix_type='FULL'),              
                         _util.tempMatrixMANAGER(description="Destinations Probabilities", matrix_type='FULL'),
                         _util.tempMatrixMANAGER(description="DAT Origin Aggregation", matrix_type='ORIGIN'),
                         _util.tempMatrixMANAGER(description="DAT Destination Aggregation", matrix_type='DESTINATION'),
                         _util.tempMatrixMANAGER(description="Full Auto Origin Matrix", matrix_type='FULL'),
-                        _util.tempMatrixMANAGER(description="Full Auto Destination Matrix", matrix_type='FULL')) \
-                    as (lineFlag, auxTransitVolumes, transitVolumes, origProbMatrix, destProbMatrix, tempDatOrig, tempDatDest, 
-                        autoOrigMatrix, autoDestMatrix): 
+                        _util.tempMatrixMANAGER(description="Full Auto Destination Matrix", matrix_type='FULL'),
+                        _util.tempMatrixMANAGER(description="Temp DAT Demand", matrix_type='FULL'),              
+                        _util.tempMatrixMANAGER(description="Temp DAT Demand Secondary", matrix_type='FULL')) \
+                    as (lineFlag, auxTransitVolumes, transitVolumes, auxTransitVolumesSecondary, transitVolumesSecondary, origProbMatrix,  
+                        destProbMatrix, tempDatOrig, tempDatDest,autoOrigMatrix, autoDestMatrix, tempDatDemand, tempDatDemandSecondary): 
 
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
-                with _m.logbook_trace("Running path analysis"):    
-                    pathAnalysis(self._BuildPathSpec(lineFlag.id, transitVolumes.id, auxTransitVolumes.id), scenario=self.Scenario)
-
-                with _m.logbook_trace("Aggregating WAT matrices"):
+                with _m.logbook_trace("Running strategy analysis"):    
+                    report = stratAnalysis(self._BuildStratSpec(lineFlag.id), scenario=self.Scenario)
+                with _m.logbook_trace("Calculating WAT demand"):  
+                    demandMatrixId = self._DetermineAnalyzedDemandId(report)                    
+                    matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
+                with _m.logbook_trace("Calculating DAT demand"):
+                    pathAnalysis(self._BuildPathSpec(lineFlag.id, "1-8999", "9000-9999", transitVolumes.id, 
+                                                     auxTransitVolumes.id, tempDatDemand.id), scenario=self.Scenario)
+                    pathAnalysis(self._BuildPathSpec(lineFlag.id, "9000-9999", "1-8999", transitVolumesSecondary.id, 
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id), scenario=self.Scenario)
+                with _m.logbook_trace("Sum transit demands"):
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId))
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemandSecondary.id, self.LineODMatrixId))
+                with _m.logbook_trace("Aggregating transit matrices"):
                     matrixAgg(self.LineODMatrixId, self.AggOriginMatrixId, agg_op="+")
                     matrixAgg(self.LineODMatrixId, self.AggDestinationMatrixId, agg_op="+")
                 with _m.logbook_trace("Copying auto matrices"):
@@ -234,7 +251,7 @@ class ExtractTransitODVectors(_m.Tool()):
                     network = self.Scenario.get_network()
                     nodes = range(9700,9999) #consider allowing user inputted range later on
                     #Create a dictionary of origin/destination probabilities for the line group for all selected nodes 
-                    stationProbs = self._CalcODProbabilities(network, nodes, auxTransitVolumes.id)
+                    stationProbs = self._CalcODProbabilities(network, nodes, auxTransitVolumes.id, auxTransitVolumesSecondary.id)
                     #Convert the dictionary in an origin and a destination probability matrix
                     self._ApplyODProbabilities(stationProbs, origProbMatrix, 'ORIGIN')
                     self._ApplyODProbabilities(stationProbs, destProbMatrix, 'DESTINATION')
@@ -291,7 +308,80 @@ class ExtractTransitODVectors(_m.Tool()):
 
         return spec
 
-    def _BuildPathSpec(self, tripComponentId, voltrId, volaxId):
+    def _SumVolumes(self, resultAttId, addAttId):
+        spec = {
+                "result": resultAttId,
+                "expression": resultAttId + " + " + addAttId,
+                "aggregation": None,
+                "selections": {
+                    "transit_line": self.LineFilterExpression
+                },
+                "type": "NETWORK_CALCULATION"
+            }
+
+        return spec
+
+    def _BuildStratSpec(self, tripComponentId):
+        return {
+                "trip_components": {
+                    "boarding": tripComponentId,
+                    "in_vehicle": None,
+                    "aux_transit": None,
+                    "alighting": None
+                },
+                "sub_path_combination_operator": ".max.",
+                "sub_strategy_combination_operator": "average",
+                "selected_demand_and_transit_volumes": {
+                    "sub_strategies_to_retain": "ALL",
+                    "selection_threshold": {
+                        "lower": -999999,
+                        "upper": 999999
+                    }
+                },
+                "analyzed_demand": None,
+                "constraint": {
+                        "by_value": None,
+                        "by_zone": {
+                            "origins": "1-8999",
+                            "destinations": "1-8999"
+                        }
+                    },
+                "results": {
+                    "strategy_values": self.LineODMatrixId,
+                    "selected_demand": None,
+                    "transit_volumes": None,
+                    "aux_transit_volumes": None,
+                    "total_boardings": None,
+                    "total_alightings": None
+                },
+                "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
+            }
+    
+    def _DetermineAnalyzedDemandId(self, reportString):
+        #search the tool report for the demand matrix used in the assignment and path analysis
+        searchString = "Analyzed demand:"
+        foundIndex = reportString[0].find(searchString)
+        truncString = reportString[0][foundIndex + len(searchString):]
+        matrixId = truncString.partition(":")[0].strip()
+        return matrixId
+        
+    def _ExpandStratFractions(self, demandMatrixId):
+
+        return {
+                "expression": self.LineODMatrixId + " * " + demandMatrixId,
+                "result": self.LineODMatrixId,
+                "constraint": {
+                    "by_value": None,
+                    "by_zone": None
+                },
+                "aggregation": {
+                    "origins": None,
+                    "destinations": None
+                },
+                "type": "MATRIX_CALCULATION"
+            }
+
+    def _BuildPathSpec(self, tripComponentId, originRange, destinationRange, voltrId, volaxId, demandMatrixId):
         spec = {
                 "type": "EXTENDED_TRANSIT_PATH_ANALYSIS",
                 "portion_of_path": "COMPLETE",
@@ -304,9 +394,16 @@ class ExtractTransitODVectors(_m.Tool()):
                     "lower": 1,
                     "upper": 1
                 },
+                "constraint": {
+                    "by_value": None,
+                    "by_zone": {
+                        "origins": originRange,
+                        "destinations": destinationRange
+                    }
+                },
                 "results_from_retained_paths": {
                     "paths_to_retain": "SELECTED",
-                    "demand": self.LineODMatrixId,
+                    "demand": demandMatrixId,
                     "transit_volumes": voltrId,
                     "aux_transit_volumes": volaxId
                 }
@@ -323,19 +420,19 @@ class ExtractTransitODVectors(_m.Tool()):
 
         return spec
 
-    def _CalcODProbabilities(self, network, nodeSet, flaggedVolaxId):
+    def _CalcODProbabilities(self, network, nodeSet, flaggedVolaxId, flaggedSecondaryVolaxId):
         probDict = {}
         for node in network.centroids():
             if node.number in nodeSet:
                 flaggedInTotal = 0
                 inTotal = 0
                 for link in node.incoming_links():
-                    flaggedInTotal += link[flaggedVolaxId]
+                    flaggedInTotal += link[flaggedVolaxId] + link[flaggedSecondaryVolaxId]
                     inTotal += link.aux_transit_volume
                 flaggedOutTotal = 0
                 outTotal = 0
                 for link in node.outgoing_links():
-                    flaggedOutTotal += link[flaggedVolaxId]
+                    flaggedOutTotal += link[flaggedVolaxId] + link[flaggedSecondaryVolaxId]
                     outTotal += link.aux_transit_volume
                 try:
                     destProb = flaggedInTotal / inTotal
