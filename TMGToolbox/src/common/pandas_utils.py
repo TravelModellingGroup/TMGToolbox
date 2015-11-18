@@ -1,6 +1,20 @@
 import warnings as warn
-import inro.modeller as m
-mm = m.Modeller()
+import inro.modeller as _m
+mm = _m.Modeller()
+
+class Face(_m.Tool()):
+    def page(self):
+        pb = _m.ToolPageBuilder(self, runnable=False, title="Utilities",
+                                description="Collection of tools working with <a href='http://pandas.pydata.org/'>pandas</a>",
+                                branding_text="- TMG Toolbox")
+
+        pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
+
+        try: import pandas
+        except ImportError:
+            pb.add_text_element("<font color='red'><b>ImportWarning:</b> Pandas library is not installed.")
+
+        return pb.render()
 
 try:
     import pandas as pd
@@ -33,6 +47,8 @@ try:
             data_array = np.array(table)
             reindexed = data_array.take(node_indexer.values)
             df[attr_name] = reindexed
+
+        df['is_centroid'] = df.index.isin(scenario.zone_numbers)
 
         return df
 
