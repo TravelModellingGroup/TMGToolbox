@@ -139,7 +139,7 @@ class ReverseTransitLines(_m.Tool()):
                 
                 self._ReverseLines(linesToReverse)
             
-            self.Scenario.publish_network(network)
+                self.Scenario.publish_network(network)
 
     ##########################################################################################################
     
