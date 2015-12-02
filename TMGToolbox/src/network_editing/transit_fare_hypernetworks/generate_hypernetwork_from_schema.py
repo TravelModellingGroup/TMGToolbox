@@ -1639,7 +1639,6 @@ class FBTNFromSchema(_m.Tool()):
             _m.logbook_write("INAPPROPRIATE ZERO FARE LINKS", value=pb.render())
 
     def _ReplaceModes(self, transferLink, transferMode, linkList):
-        print "Replacing modes"
         #don't remove hypernetwork connectors  
         if int(transferLink.i_node.id) < self.VirtualNodeDomain and int(transferLink.j_node.id) < self.VirtualNodeDomain: 
             if self.ReplacementMode not in transferLink.modes:
