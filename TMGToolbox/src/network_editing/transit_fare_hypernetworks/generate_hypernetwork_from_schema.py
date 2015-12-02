@@ -93,6 +93,7 @@ Shapely2ESRI = _geolib.Shapely2ESRI
 GridIndex = _spindex.GridIndex
 TransitLineProxy = _editing.TransitLineProxy
 NullPointerException = _util.NullPointerException
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################    
 
@@ -169,6 +170,12 @@ class FBTNFromSchema(_m.Tool()):
     SegmentINodeAttributeId = _m.Attribute(str)
 
     StationConnectorFlag = _m.Attribute(bool)
+    RemoveZeroFareFlag = _m.Attribute(bool)
+
+    ZeroFareModes = _m.Attribute(_m.ListType)
+    xtmf_ZeroFareModes = _m.Attribute(str)
+    ReplacementMode = _m.Attribute(_m.InstanceType)    
+    xtmf_ReplacementMode = _m.Attribute(str)
     
     __ZONE_TYPES = ['node_selection', 'from_shapefile']
     __RULE_TYPES = ['initial_boarding', 
@@ -190,7 +197,13 @@ class FBTNFromSchema(_m.Tool()):
         self.SegmentFareAttributeId = "@sfare"
 
         self.StationConnectorFlag = True
-        
+
+        if EMME_VERSION >= (4,1,5):
+            self.RemoveZeroFareFlag = True
+        else:
+            self.RemoveZeroFareFlag = False
+        self.ZeroFareModes = []
+
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="FBTN From Schema v%s" %self.version,
@@ -273,6 +286,19 @@ class FBTNFromSchema(_m.Tool()):
         
         pb.add_checkbox(tool_attribute_name= 'StationConnectorFlag',
                         label= "Allow station-to-centroid connections?")
+
+        pb.add_checkbox(tool_attribute_name= 'RemoveZeroFareFlag',
+                        label= "Remove inappropriate zero fare links from transfer grid?")
+
+        pb.add_select_mode(tool_attribute_name= 'ZeroFareModes',
+                           filter= ['AUX_TRANSIT'],
+                           title= "Zero Fare Modes",
+                           note= "Select transfer modes to check for inappropriate zero fare links")
+
+        pb.add_select_mode(tool_attribute_name= 'ReplacementMode',
+                           filter= ['TRANSIT'],
+                           title= "Replacement Mode",
+                           note= "Choose a mode to replace the transfer mode on inappropriate zero fare links")
                         
         
         #---JAVASCRIPT
@@ -281,6 +307,21 @@ class FBTNFromSchema(_m.Tool()):
     $(document).ready( function ()
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
+        if (tool.check_415())
+        {
+            $("#RemoveZeroFareFlag").prop('disabled', false);
+        } else {
+            $("#RemoveZeroFareFlag").prop('disabled', true);
+        }
+        
+        if (tool.check_zero_flag())
+        {
+            $("#ZeroFareModes").prop('disabled', false);            
+            $("#ReplacementMode").prop('disabled', false);
+        } else {
+            $("#ZeroFareModes").prop('disabled', true);            
+            $("#ReplacementMode").prop('disabled', true);
+        }
 
         $("#BaseScenario").bind('change', function()
         {
@@ -311,6 +352,15 @@ class FBTNFromSchema(_m.Tool()):
             inro.modeller.page.preload("#SegmentINodeAttributeId");
             $("#SegmentINodeAttributeId").trigger('change')
         });
+        $("#RemoveZeroFareFlag").bind('change', function()
+        {
+            $(this).commit();
+            var not_flag = ! tool.check_zero_flag();
+            var flag = tool.check_zero_flag();
+            
+            $("#ZeroFareModes").prop('disabled', not_flag);            
+            $("#ReplacementMode").prop('disabled', not_flag);
+        });
     });
 </script>""" % pb.tool_proxy_tag)
         
@@ -336,9 +386,20 @@ class FBTNFromSchema(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
     
+    
+    @_m.method(return_type= bool)
+    def check_zero_flag(self):
+        return self.RemoveZeroFareFlag
+    @_m.method(return_type= bool)
+    def check_415(self):
+        if EMME_VERSION >= (4,1,5):
+            return True
+        return False
+        
     def __call__(self, XMLSchemaFile, xtmf_BaseScenarioNumber, NewScenarioNumber,
                  TransferModeId, SegmentFareAttributeId, LinkFareAttributeId, 
-                 VirtualNodeDomain, StationConnectorFlag):
+                 VirtualNodeDomain, StationConnectorFlag, 
+                 xtmf_ZeroFareModes, xtmf_ReplacementMode):
         
         #---1 Set up scenario
         self.BaseScenario = _MODELLER.emmebank.scenario(xtmf_BaseScenarioNumber)
@@ -365,6 +426,20 @@ class FBTNFromSchema(_m.Tool()):
         self.LinkFareAttributeId = LinkFareAttributeId
         self.VirtualNodeDomain = VirtualNodeDomain
         self.StationConnectorFlag = StationConnectorFlag
+        self.RemoveZeroFareFlag = True #choice to not remove is only available through modeller
+
+        if not xtmf_ZeroFareModes:
+            raise Exception("Zero Fare Modes not provided")
+        if not xtmf_ReplacementMode:
+            raise Exception("Replacement Mode not provided")
+        network = self.BaseScenario.get_network()
+        for m in xtmf_ZeroFareModes:
+            if not network.mode(m):
+                raise Exception("Mode %s does not exist in network" %m)
+            self.ZeroFareModes.append(network.mode(m))
+        if not network.mode(xtmf_ReplacementMode):
+            raise Exception("Mode %s does not exist in network" %xtmf_ReplacementMode)
+        self.ReplacementMode = network.mode(xtmf_ReplacementMode)
         
         try:
             self._Execute()
@@ -440,6 +515,8 @@ class FBTNFromSchema(_m.Tool()):
                 self._ApplyFareRules(network, fareRulesElement, transferGrid, zoneCrossingGrid,
                                      groupIds2Int, zoneId2Int)
                 self._CheckForNegativeFares(network)
+                if self.RemoveZeroFareFlag:
+                    self._CheckForInappropriateZeroFares(network)
                 self.TRACKER.completeTask()
                 print "Applied fare rules to network."
             
@@ -1465,6 +1542,121 @@ class FBTNFromSchema(_m.Tool()):
             pb.wrap_html(body=str(h))
             
             _m.logbook_write("LINKS AND SEGMENTS WITH NEGATIVE FARES", value=pb.render())
+
+    def _CheckForInappropriateZeroFares(self, network):
+        '''
+        This function checks for links with zero fares that should not be zero.
+        This occurs when there are connections to transit links without attached transit segments;
+        passengers are able to bypass the fare via the zero-fare links.
+        This function replaces the transfer mode with a defined placeholder mode
+        and forces passengers onto more appropriate links.
+        '''
+        print "Looking for inappropriate zero fares"
+        zeroLinks = []
+        transitLinks = []
+        hyperNodes = []
+
+        for n in network.regular_nodes():
+            if int(n.id) > self.VirtualNodeDomain:
+                hyperNodes.append(n)
+
+        for link in network.links(): #cycle through all links
+            pureTransit = True
+            for m in link.modes:
+                if m.type != 'TRANSIT':
+                    pureTransit = False
+                    break
+            if pureTransit:
+                transitLinks.append(link)
+        for tLink in transitLinks:
+            #check that, for a given transit node, there are no segments going in or out
+            iIn = [x for x in tLink.i_node.incoming_segments()]
+            iOut = [x for x in tLink.i_node.outgoing_segments(include_hidden=True)]
+            #Nodes overlapping hypernetwork-connected nodes should not be used
+            if len(iIn) == 0 and len(iOut) == 0 and not self._CheckForHyperNode(hyperNodes, tLink.i_node.x, tLink.i_node.y):
+                for link in tLink.i_node.incoming_links():
+                    for m in self.ZeroFareModes:
+                        for m2 in link.modes:
+                            if m.id == m2.id: 
+                                zeroLinks = self._ReplaceModes(link, m2, zeroLinks)                
+                for link in tLink.i_node.outgoing_links():
+                    for m in self.ZeroFareModes:
+                        for m2 in link.modes:
+                            if m.id == m2.id:
+                                zeroLinks = self._ReplaceModes(link, m2, zeroLinks)
+                
+            jIn = [x for x in tLink.j_node.incoming_segments()]
+            jOut = [x for x in tLink.j_node.outgoing_segments(include_hidden=True)]
+            if len(jIn) == 0 and len(jOut) == 0 and not self._CheckForHyperNode(hyperNodes, tLink.j_node.x, tLink.j_node.y):
+                for link in tLink.j_node.incoming_links():
+                    for m in self.ZeroFareModes:
+                        for m2 in link.modes:
+                            if m.id == m2.id:
+                                zeroLinks = self._ReplaceModes(link, m2, zeroLinks)                
+                for link in tLink.j_node.outgoing_links():
+                    for m in self.ZeroFareModes:
+                        for m2 in link.modes:
+                            if m.id == m2.id:
+                                zeroLinks = self._ReplaceModes(link, m2, zeroLinks)
+
+
+
+            #for m in self.ZeroFareModes: 
+            #    for m2 in link.modes: #check only those with the modes we are interested in
+            #        if m.id == m2.id:
+            #            iNodeSeg = False
+            #            jNodeSeg = False
+            #            iIn = [x for x in link.i_node.incoming_segments()]
+            #            iOut = [x for x in link.i_node.outgoing_segments(include_hidden=True)]
+            #            jIn = [x for x in link.j_node.incoming_segments()]
+            #            jOut = [x for x in link.j_node.outgoing_segments(include_hidden=True)]
+            #            if len(iIn) > 0 or len(iOut) > 0: 
+            #                iNodeSeg = True
+            #            if len(jIn) > 0 or len(jOut) > 0: 
+            #                jNodeSeg = True
+            #            if iNodeSeg == False and jNodeSeg == False:
+            #                zeroLinks = self._ReplaceModes(link, m, zeroLinks)
+            #            elif iNodeSeg == False or jNodeSeg == False:
+            #                if link[self.LinkFareAttributeId] == 0:
+            #                    zeroLinks = self._ReplaceModes(link, m, zeroLinks)
+
+
+        if len(zeroLinks) > 0:
+            print "WARNING: Found %s links with inappropriate zero fares" %len(zeroLinks)
+            
+            pb = _m.PageBuilder(title="Inappropriate Zero Report")
+            h = HTML()
+            h.h2("Links with inappropriate zero fares")
+            t = h.table()
+            r = t.tr()
+            r.th("link")
+            for linkId in zeroLinks:
+                r = t.tr()
+                r.td(linkId) 
+            
+            pb.wrap_html(body=str(h))
+            
+            _m.logbook_write("INAPPROPRIATE ZERO FARE LINKS", value=pb.render())
+
+    def _ReplaceModes(self, transferLink, transferMode, linkList):
+        print "Replacing modes"
+        #don't remove hypernetwork connectors  
+        if int(transferLink.i_node.id) < self.VirtualNodeDomain and int(transferLink.j_node.id) < self.VirtualNodeDomain: 
+            if self.ReplacementMode not in transferLink.modes:
+                transferLink.modes |= set([self.ReplacementMode])
+            transferLink.modes -= set([transferMode])
+
+            if transferLink.id not in linkList: linkList.append(transferLink.id)
+
+        return linkList
+
+    def _CheckForHyperNode(self, hyperNodes, xCoor, yCoor):
+        for n in hyperNodes:
+            if n.x == xCoor and n.y == yCoor:
+                return True
+        return False
+
+
 
     #---              
     #---MODELLER INTERFACE FUNCTIONS----------------------------------------------------------------------      
