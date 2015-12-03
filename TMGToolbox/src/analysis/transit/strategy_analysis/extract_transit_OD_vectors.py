@@ -1,4 +1,4 @@
-#---LICENSE----------------------
+﻿#---LICENSE----------------------
 '''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -223,19 +223,19 @@ class ExtractTransitODVectors(_m.Tool()):
                         _util.tempMatrixMANAGER(description="Temp DAT Demand Secondary", matrix_type='FULL')) \
                     as (lineFlag, auxTransitVolumes, transitVolumes, auxTransitVolumesSecondary, transitVolumesSecondary, origProbMatrix,  
                         destProbMatrix, tempDatOrig, tempDatDest,autoOrigMatrix, autoDestMatrix, tempDatDemand, tempDatDemandSecondary): 
-
+                demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
                 with _m.logbook_trace("Running strategy analysis"):    
-                    report = stratAnalysis(self._BuildStratSpec(lineFlag.id), scenario=self.Scenario)
+                    report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating WAT demand"):  
-                    demandMatrixId = self._DetermineAnalyzedDemandId(report)                    
+                
                     matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
                     pathAnalysis(self._BuildPathSpec(lineFlag.id, "1-8999", "9000-9999", transitVolumes.id, 
-                                                     auxTransitVolumes.id, tempDatDemand.id), scenario=self.Scenario)
+                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)
                     pathAnalysis(self._BuildPathSpec(lineFlag.id, "9000-9999", "1-8999", transitVolumesSecondary.id, 
-                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id), scenario=self.Scenario)
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Sum transit demands"):
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId))
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemandSecondary.id, self.LineODMatrixId))
@@ -321,7 +321,7 @@ class ExtractTransitODVectors(_m.Tool()):
 
         return spec
 
-    def _BuildStratSpec(self, tripComponentId):
+    def _BuildStratSpec(self, tripComponentId, demandMatrixId):
         return {
                 "trip_components": {
                     "boarding": tripComponentId,
@@ -338,7 +338,7 @@ class ExtractTransitODVectors(_m.Tool()):
                         "upper": 999999
                     }
                 },
-                "analyzed_demand": None,
+                "analyzed_demand": demandMatrixId,
                 "constraint": {
                         "by_value": None,
                         "by_zone": {
@@ -381,7 +381,7 @@ class ExtractTransitODVectors(_m.Tool()):
                 "type": "MATRIX_CALCULATION"
             }
 
-    def _BuildPathSpec(self, tripComponentId, originRange, destinationRange, voltrId, volaxId, demandMatrixId):
+    def _BuildPathSpec(self, tripComponentId, originRange, destinationRange, voltrId, volaxId, demandMatrixId, assignedDemand):
         spec = {
                 "type": "EXTENDED_TRANSIT_PATH_ANALYSIS",
                 "portion_of_path": "COMPLETE",
@@ -394,6 +394,7 @@ class ExtractTransitODVectors(_m.Tool()):
                     "lower": 1,
                     "upper": 1
                 },
+                "analyzed_demand" : assignedDemand,
                 "constraint": {
                     "by_value": None,
                     "by_zone": {
