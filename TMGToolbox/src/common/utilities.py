@@ -1,4 +1,4 @@
-'''
+﻿'''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
@@ -876,4 +876,14 @@ class Record():
 class NullPointerException(Exception):
     pass
 
-    
+'''
+Gets the demand matrix name (mfxx) that was used during the
+previous transit assignment for the given scenario.
+
+EMME_VERSION is a tupple, scenario is the scenario object.
+'''
+def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario): 
+    if EMME_VERSION < (4,2,3):
+        return None    
+    strats = scenario._transit_strats
+    return strats.data["demand"]

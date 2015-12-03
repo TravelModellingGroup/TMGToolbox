@@ -1,4 +1,4 @@
-#---LICENSE----------------------
+﻿#---LICENSE----------------------
 '''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -59,7 +59,7 @@ matrixAggregation = _MODELLER.tool('inro.emme.matrix_calculation.matrix_aggregat
 #matrixExportTool = _MODELLER.tool('inro.emme.data.matrix.export_matrices')
 matrixExport = _MODELLER.tool('inro.emme.data.matrix.export_matrix_to_csv')
 stratAnalysis = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
-EMME_VERSION = _util.getEmmeVersion(float)
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 ##########################################################################################################
 
@@ -199,8 +199,8 @@ class VolumePerOperator(_m.Tool()):
 
                 with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
                     networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
-                    report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix), scenario=self.Scenario)            
-                    demandMatrixId = self._DetermineAnalyzedDemandId(report)
+                    demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
+                    report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)            
                     matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
                     matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+")
 
@@ -216,8 +216,8 @@ class VolumePerOperator(_m.Tool()):
                     "type": "NETWORK_CALCULATION"
                 }
 
-    def count_ridership(self, operator, tempIntermediateMatrix):
-        return {
+    def count_ridership(self, operator, tempIntermediateMatrix, demandMatrixId):
+        ret = {
                 "trip_components": {
                     "boarding": operator.id,
                     "in_vehicle": None,
@@ -233,7 +233,7 @@ class VolumePerOperator(_m.Tool()):
                         "upper": 999999
                     }
                 },
-                "analyzed_demand": None,
+                "analyzed_demand": demandMatrixId,
                 "constraint": None,
                 "results": {
                     "strategy_values": tempIntermediateMatrix.id,
@@ -245,14 +245,7 @@ class VolumePerOperator(_m.Tool()):
                 },
                 "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
             }
-
-    def _DetermineAnalyzedDemandId(self, reportString):
-        #search the tool report for the demand matrix used in the assignment and path analysis
-        searchString = "Analyzed demand:"
-        foundIndex = reportString[0].find(searchString)
-        truncString = reportString[0][foundIndex + len(searchString):]
-        matrixId = truncString.partition(":")[0].strip()
-        return matrixId
+        return ret
 
     def _CalcRidership(self, fractionMatrixId, demandMatrixId):
 
