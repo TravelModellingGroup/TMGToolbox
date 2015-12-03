@@ -439,6 +439,8 @@ class FBTNFromSchema(_m.Tool()):
             self.ZeroFareModes.append(network.mode(m))
         if not network.mode(xtmf_ReplacementMode):
             raise Exception("Mode %s does not exist in network" %xtmf_ReplacementMode)
+        if network.mode(xtmf_ReplacementMode).type != 'TRANSIT':
+            raise Exception("Replacement mode %s needs to be a TRANSIT mode" %xtmf_ReplacementMode)
         self.ReplacementMode = network.mode(xtmf_ReplacementMode)
         
         try:
