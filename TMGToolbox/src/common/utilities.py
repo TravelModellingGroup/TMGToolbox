@@ -31,6 +31,7 @@ import warnings as _warn
 import sys as _sys
 import traceback as _tb
 import subprocess as _sp
+from itertools import izip
 _MODELLER = _m.Modeller()
 _DATABANK = _MODELLER.emmebank
 class Face(_m.Tool()):
@@ -97,12 +98,8 @@ def itersync(list1, list2):
         >>>4 9
         >>>5 10
     '''
-    
-    if len(list1) != len(list2):
-        raise IndexError("Lists must be of the same length")
-    
-    for i in xrange(len(list1)):
-        yield list1[i], list2[i]
+
+    return izip(list1, list2)
 
 #-------------------------------------------------------------------------------------------
 
