@@ -1,4 +1,5 @@
 import warnings as warn
+from inro.emme.matrix import MatrixData
 import inro.modeller as _m
 mm = _m.Modeller()
 
@@ -154,6 +155,63 @@ try:
             df[attr_name] = reindexed
 
         return df
+
+    def matrix_to_pandas(mtx, scenario_id=None):
+        '''
+        Converts Emme Matrix objects to Pandas Series or DataFrames. Origin and Destination matrices will be
+        converted to Series, while Full matrices will be converted to DataFrames. Scalar matrices are unsupported.
+
+        Args:
+            mtx: Either a Matrix object or a MatrixData object
+            scenario_id: Int, optional. Must be provided if a `mtx` is a Matrix object.
+
+        Returns: Series or DataFrame, depending on the type of matrix.
+
+        '''
+        if hasattr(mtx, 'prefix'): # Duck typing check for Matrix object rather than Matrix Data
+            assert mtx.type != 'SCALAR', "Scalar matrices cannot be converted to DataFrames"
+            md = mtx.get_data(scenario_id)
+        else: md = mtx
+
+        zones_tupl = md.indices
+        if len(zones_tupl) == 1:
+            # Origin or Destination matrix
+            idx = pd.Index(zones_tupl[0])
+            idx.name = 'zone'
+            vector = md.to_numpy()
+            return pd.Series(vector, index=idx)
+        elif len(zones_tupl) == 2:
+            # Full matrix
+            idx = pd.Index(zones_tupl[0])
+            idx.name = 'p'
+            cols = pd.Index(zones_tupl[1])
+            cols.name = 'q'
+            matrix = md.to_numpy()
+            return pd.DataFrame(matrix, index=idx, columns=cols)
+        else:
+            raise ValueError("Could not infer matrix from object type %s", repr(mtx))
+
+    def pandas_to_matrix(series_or_dataframe):
+        '''
+        Converts a Series or DataFrame back to a MatrixData object
+
+        Args:
+            series_or_dataframe: Series or DataFrame
+
+        Returns: MatrixData object.
+
+        '''
+        if isinstance(series_or_dataframe, pd.Series):
+            indices = list(series_or_dataframe.index.values)
+            md = MatrixData(indices)
+            md.from_numpy(series_or_dataframe.values)
+            return md
+        elif isinstance(series_or_dataframe, pd.DataFrame):
+            indices = list(series_or_dataframe.index.values), list(series_or_dataframe.columns.values)
+            md = MatrixData(indices)
+            md.from_numpy(series_or_dataframe.values)
+            return md
+        else: raise TypeError("Expected a Series or DataFrame, got %s" %type(series_or_dataframe))
 
     def load_transit_segment_dataframe(scenario, pythonize_exatts = False):
         '''
