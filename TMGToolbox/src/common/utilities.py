@@ -883,7 +883,5 @@ previous transit assignment for the given scenario.
 EMME_VERSION is a tupple, scenario is the scenario object.
 '''
 def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario): 
-    if EMME_VERSION < (4,2,3):
-        return None    
-    strats = scenario._transit_strats
+    strats = scenario.transit_strategies
     return strats.data["demand"]
