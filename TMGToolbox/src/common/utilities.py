@@ -880,7 +880,7 @@ class NullPointerException(Exception):
 Gets the demand matrix name (mfxx) that was used during the
 previous transit assignment for the given scenario.
 
-EMME_VERSION is a tupple, scenario is the scenario object.
+EMME_VERSION is a tuple, scenario is the scenario object.
 '''
 def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario): 
     strats = scenario.transit_strategies
