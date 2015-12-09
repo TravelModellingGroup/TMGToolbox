@@ -93,6 +93,7 @@ class ExportNetworkPackage(_m.Tool()):
     
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     ExportFile = _m.Attribute(str)
+    ExportAllFlag = _m.Attribute(bool)
     AttributeIdsToExport = _m.Attribute(_m.ListType)
     ExportMetadata = _m.Attribute(str)
     
@@ -125,6 +126,9 @@ class ExportNetworkPackage(_m.Tool()):
                            title="File name",
                            window_type='save_file',
                            file_filter="*.nwp")
+
+        pb.add_checkbox(tool_attribute_name='ExportAllFlag',
+                        label= "Export all extra attributes?")
         
         keyval = self._GetSelectAttributeOptionsJSON()
         pb.add_select(tool_attribute_name="AttributeIdsToExport", keyvalues=keyval,
@@ -140,7 +144,12 @@ class ExportNetworkPackage(_m.Tool()):
     $(document).ready( function ()
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
-
+        if (tool.check_all_flag())
+        {
+            $("#AttributeIdsToExport").prop('disabled', true);  
+        } else {
+            $("#AttributeIdsToExport").prop('disabled', false);  
+        }
         $("#Scenario").bind('change', function()
         {
             $(this).commit();
@@ -149,6 +158,14 @@ class ExportNetworkPackage(_m.Tool()):
                 .append(tool._GetSelectAttributeOptionsHTML())
             inro.modeller.page.preload("#AttributeIdsToExport");
             $("#AttributeIdsToExport").trigger('change');
+        });
+        $("#ExportAllFlag").bind('change', function()
+        {
+            $(this).commit();
+            var not_flag = ! tool.check_all_flag();
+            var flag = tool.check_all_flag();
+            
+            $("#AttributeIdsToExport").prop('disabled', flag);  
         });
     });
 </script>""" % pb.tool_proxy_tag)
@@ -176,7 +193,10 @@ class ExportNetworkPackage(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario exported to %s" %self.ExportFile)
     
     
-    
+    @_m.method(return_type= bool)
+    def check_all_flag(self):
+        return self.ExportAllFlag
+
     def __call__(self, xtmf_ScenarioNumber, ExportFile, xtmf_AttributeIdString):
         
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -184,8 +204,11 @@ class ExportNetworkPackage(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         self.ExportFile = ExportFile
-        cells = xtmf_AttributeIdString.split(',')
-        self.AttributeIdsToExport = [str(c.strip()) for c in cells if c.strip()] #Clean out null values
+        if xtmf_AttributeIdString.lower() == 'all':
+            self.ExportAllFlag = True #if true, self.AttributeIdsToExport gets set in execute
+        else:
+            cells = xtmf_AttributeIdString.split(',')
+            self.AttributeIdsToExport = [str(c.strip()) for c in cells if c.strip()] #Clean out null values
         
         try:
             self._Execute()
@@ -213,6 +236,9 @@ class ExportNetworkPackage(_m.Tool()):
             turnExportTool = _MODELLER.tool('inro.emme.data.network.turn.export_turns')
             attributeExportTool = _MODELLER.tool('inro.emme.data.extra_attribute.export_extra_attributes')
             functionExportTool = _MODELLER.tool('inro.emme.data.function.export_functions')
+
+            if self.ExportAllFlag:
+                self.AttributeIdsToExport = [att.name for att in self.Scenario.extra_attributes()]
             
             with nested(self._zipFileMANAGER(), self._TempDirectoryMANAGER()) as (zf, tempFolder):
                 verionFile = tempFolder + "/version.txt"
