@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015-2016 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -21,9 +21,9 @@
 '''
 Apply Batch Line Edits
 
-    Authors: mattaustin222
+    Authors: mattaustin222, JamesVaughan
 
-    Latest revision by: mattaustin222
+    Latest revision by: JamesVaughan
     
     
     This tool brings in a list of changes to be applied to transit lines
@@ -35,6 +35,7 @@ Apply Batch Line Edits
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2015-02-24 by mattaustin222
+    0.0.2 Added the ability to process multiple alt files in sequence by JamesVaughan
     
 '''
 
@@ -60,9 +61,9 @@ class ApplyBatchLineEdits(_m.Tool()):
     COMMA = ','
     
     # Tool Input Parameters
-    #    Only those parameters neccessary for Modeller and/or XTMF to dock with
+    #    Only those parameters necessary for Modeller and/or XTMF to dock with
     #    need to be placed here. Internal parameters (such as lists and dicts)
-    #    get intitialized during construction (__init__)
+    #    get initialized during construction (__init__)
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
 
@@ -75,6 +76,7 @@ class ApplyBatchLineEdits(_m.Tool()):
                                         # hdwchange and spdchange are factors by which
                                         # to change headways and speeds for the filtered
                                         # lines
+    additionalInputFiles = _m.Attribute(str) #Either a string containing 'None' or a list of additional alt files ; separated.
 
     def __init__(self):
         #---Init internal variables
@@ -94,7 +96,7 @@ class ApplyBatchLineEdits(_m.Tool()):
     
     ##########################################################################################################
         
-    def __call__(self, xtmf_ScenarioNumber, inputFile):
+    def __call__(self, xtmf_ScenarioNumber, inputFile, additionalInputFiles = None):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -105,7 +107,13 @@ class ApplyBatchLineEdits(_m.Tool()):
         self.InstructionFile = inputFile
         if (self.InstructionFile == None):
             raise Exception("Need to provide an input file.")
-
+        # Process the additional files, if it is the string None then there are no additional files otherwise they are ; separated
+        if additionalInputFiles  == None or additionalInputFiles == "None":
+            self.InputFiles = []
+        else:
+            self.InputFiles = additionalInputFiles.split(';')
+        # Add the base transaction file to the beginning
+        self.InputFiles.insert(0, self.InstructionFile)
         try:
             self._Execute()
         except Exception, e:
@@ -117,16 +125,17 @@ class ApplyBatchLineEdits(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-
-            changesToApply = self._LoadFile()
-            print "Instruction file loaded"
-            if changesToApply: 
-                self._ApplyLineChanges(changesToApply)
-                print "Headway and speed changes applied"
-            else:
-                print "No changes available in this scenario"
-
-            self.TRACKER.completeTask()
+            #init the ProgressTracker now that we know how many files we need to load
+            self.TRACKER = _util.ProgressTracker(len(self.InputFiles))
+            for altFile in self.InputFiles:
+                changesToApply = self._LoadFile(altFile)
+                print "Instruction file loaded"
+                if changesToApply: 
+                    self._ApplyLineChanges(changesToApply)
+                    print "Headway and speed changes applied"
+                else:
+                    print "No changes available in this scenario"
+                self.TRACKER.completeTask()
 
 
     ##########################################################################################################    
@@ -141,8 +150,8 @@ class ApplyBatchLineEdits(_m.Tool()):
             
         return atts 
 
-    def _LoadFile(self):
-        with open(self.InstructionFile) as reader:
+    def _LoadFile(self, fileName):
+        with open(fileName) as reader:
             header = reader.readline()
             cells = header.strip().split(self.COMMA)
             

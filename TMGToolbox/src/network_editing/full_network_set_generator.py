@@ -1,5 +1,5 @@
 '''
-    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015-2016 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -21,9 +21,9 @@
 '''
 Full Network Set Generator
 
-    Authors: mattaustin222
+    Authors: mattaustin222, JamesVaughan
 
-    Latest revision by: mattaustin222
+    Latest revision by: JamesVaughan
     
     
     This tool takes in a base network with zones and
@@ -42,6 +42,9 @@ Full Network Set Generator
         of using exactly five time periods. Note that the call function no longer supports
         the old system. However, the original form is still available through the modeller
         interface.
+    0.3.0 Added the ability to load in multiple alt files, this helps enhance work flow by not
+        requiring all edits to be in the same document.  Typically this will get used by having
+        a master alt file, and then an additional one containing scenario specific changes.
     
 '''
 
@@ -123,6 +126,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     TransitServiceTableFile = _m.Attribute(str)
     AggTypeSelectionFile = _m.Attribute(str)
     AlternativeDataFile = _m.Attribute(str)
+    AdditionalAlternativeDataFiles = _m.Attribute(str)
     BatchEditFile = _m.Attribute(str)
     DefaultAgg = _m.Attribute(str)  
     
@@ -762,7 +766,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                  TransitServiceTableFile, AggTypeSelectionFile, AlternativeDataFile, BatchEditFile,
                  DefaultAgg, PublishFlag, OverwriteScenarioFlag, NodeFilterAttributeId,
                  StopFilterAttributeId, ConnectorFilterAttributeId, AttributeAggregatorString,
-                 LineFilterExpression):
+                 LineFilterExpression, AdditionalAlternativeDataFiles):
         
         #---1 Set up scenario
         self.BaseScenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -811,6 +815,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         
         self.CustomScenarioSetFlag = True
         self.CustomScenarioSetString = CustomScenarioSetString
+        self.AdditionalAlternativeDataFiles = AdditionalAlternativeDataFiles
 
 
         print "Running full network set generation"
@@ -828,7 +833,7 @@ class FullNetworkSetGenerator(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
-        
+        self.AdditionalAlternativeDataFiles = None
         try:
             self._Execute()           
         except Exception, e:
@@ -894,7 +899,7 @@ class FullNetworkSetGenerator(_m.Tool()):
             for scenarios in scenarioSet:
                 createTimePeriod(self.BaseScenario, scenarios[0], scenarios[2], self.TransitServiceTableFile,
                                  self.AggTypeSelectionFile, self.AlternativeDataFile,
-                                 self.DefaultAgg, scenarios[4], scenarios[5])
+                                 self.DefaultAgg, scenarios[4], scenarios[5], self.AdditionalAlternativeDataFiles)
                 if not (scenarios[6] == None or scenarios[6].lower() == "none"):
                     applyNetUpdate(str(scenarios[0]),scenarios[6])                
 

@@ -196,7 +196,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
     
     ##########################################################################################################
     # allows for the tool to be called from another tool    
-    def __call__(self, baseScen, newScenNum, newScenDescrip, serviceFile, aggFile, altFile, defAgg, start, end):
+    def __call__(self, baseScen, newScenNum, newScenDescrip, serviceFile, aggFile, altFile, defAgg, start, end, additionalAltFiles):
         self.tool_run_msg = ""
         self.TRACKER.reset()
 
@@ -206,6 +206,14 @@ class CreateTimePeriodNetworks(_m.Tool()):
         self.TransitServiceTableFile = serviceFile
         self.AggTypeSelectionFile = aggFile
         self.AlternativeDataFile = altFile
+        # Process the additional files, if it is the string None then there are no additional files otherwise they are ; separated
+        if additionalAltFiles == None or additionalAltFiles == "None":
+            self.InputFiles = []
+        else:
+            self.InputFiles = additionalAltFiles.split(';', 1)
+        # Add the base transaction file to the beginning
+        if altFile:
+            self.InputFiles.insert(0, altFile)
         self.DefaultAgg = defAgg
         self.TimePeriodStart = start
         self.TimePeriodEnd = end
@@ -224,7 +232,10 @@ class CreateTimePeriodNetworks(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
-        
+        if self.AlternativeDataFile == None:
+            self.InputFiles = []
+        else:
+            self.InputFiles = [self.AlternativeDataFile]
         try:
             self._Execute()
         except Exception, e:
@@ -249,10 +260,6 @@ class CreateTimePeriodNetworks(_m.Tool()):
             end = self._ParseIntTime(self.TimePeriodEnd)
             
             badIdSet = self._LoadServiceTable(network, start, end).union(self._LoadAggTypeSelect(network))
-            if self.AlternativeDataFile:
-                altData = self._LoadAltFile()
-            else:
-                altData = None
             self.TRACKER.completeTask()
             print "Loaded service table"
             if len(badIdSet) > 0:
@@ -267,11 +274,16 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 _m.logbook_write("Some IDs were not found in the network. Click for details.",
                                  value=pb.render())
             
-            
-                
-            self._ProcessTransitLines(network, start, end, altData)
-            if altData:
-                self._ProcessAltLines(network, altData)
+            if len(self.InputFiles) <= 0:
+                    self._ProcessTransitLines(network, start, end, None)
+            else:
+                if self.AlternativeDataFile:
+                    altData = self._LoadAltFile(self.InputFiles)
+                else:
+                    altData = None
+                self._ProcessTransitLines(network, start, end, altData)
+                if altData:
+                    self._ProcessAltLines(network, altData)
             print "Done processing transit lines"
             
             newScenario = _MODELLER.emmebank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
@@ -397,42 +409,44 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
         return badIds
 
-    def _LoadAltFile(self):
-        with open(self.AlternativeDataFile) as reader:
-            header = reader.readline()
-            cells = header.strip().split(self.COMMA)
+    def _LoadAltFile(self, fileNames):
+        altData = {}
+        for fileName in fileNames:
+            with open(fileName) as reader:
+                header = reader.readline()
+                cells = header.strip().split(self.COMMA)
             
-            emmeIdCol = cells.index('emme_id')
-            headwayTitle = "{:0>4.0f}".format(self.TimePeriodStart) + '_hdw'
-            speedTitle = "{:0>4.0f}".format(self.TimePeriodStart) + '_spd'
-            try:
-                headwayCol = cells.index(headwayTitle)
-            except Exception, e:
-                msg = "Error. No headway match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
-                _m.logbook_write(msg)
-                print msg
-            try:
-                speedCol = cells.index(speedTitle)
-            except Exception, e:
-                msg = "Error. No speed match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
-                _m.logbook_write(msg)
-                print msg
+                emmeIdCol = cells.index('emme_id')
+                headwayTitle = "{:0>4.0f}".format(self.TimePeriodStart) + '_hdw'
+                speedTitle = "{:0>4.0f}".format(self.TimePeriodStart) + '_spd'
+                try:
+                    headwayCol = cells.index(headwayTitle)
+                except Exception, e:
+                    msg = "Error. No headway match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
+                    _m.logbook_write(msg)
+                    print msg
+                try:
+                    speedCol = cells.index(speedTitle)
+                except Exception, e:
+                    msg = "Error. No speed match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
+                    _m.logbook_write(msg)
+                    print msg
 
-            altData = {}
+                localAltData = {}
             
-            for num, line in enumerate(reader):
-                cells = line.strip().split(self.COMMA)
+                for num, line in enumerate(reader):
+                    cells = line.strip().split(self.COMMA)
                 
-                id = cells[emmeIdCol]
-                hdw = cells[headwayCol]
-                spd = cells[speedCol]
-                if id not in altData:
-                    altData[id] = (float(hdw),float(spd))
-                else:
-                    raise ValueError('Line %s has multiple entries. Please revise your alt file.' %id)
-        
-            
-
+                    id = cells[emmeIdCol]
+                    hdw = cells[headwayCol]
+                    spd = cells[speedCol]
+                    if id not in localAltData:
+                        localAltData[id] = (float(hdw),float(spd))
+                    else:
+                        raise ValueError('Line %s has multiple entries. Please revise your alt file.' %id)
+                #now that the file has been loaded in move it into the combined altFile dictionary
+            for id,data in localAltData.iteritems():
+                altData[id] = data
         return altData
         
     def _ProcessTransitLines(self, network, start, end, altData):              
