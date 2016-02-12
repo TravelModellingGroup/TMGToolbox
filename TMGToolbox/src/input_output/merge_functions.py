@@ -217,16 +217,15 @@ class MergeFunctions(_m.Tool()):
                     expressionBuffer = record[(index + 1):].replace(' ', '')
                     if currentId != None:
                         functions[currentId] = expressionBuffer
-                        expressionBuffer = ""
                 elif linecode == ' ':
                     if currentId != None and trecord:
                         s = record.strip().replace(' ', '')
                         expressionBuffer += s
+                        functions[currentId] = expressionBuffer
                 elif linecode == 'd' or linecode == 'm':
                     currentId = None
                     expressionBuffer = ""
                 else: raise KeyError(linecode)
-            print len(functions)
                     
         return functions
     
