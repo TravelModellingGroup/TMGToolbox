@@ -212,24 +212,21 @@ class MergeFunctions(_m.Tool()):
                     trecord = True
                 elif linecode == 'a':
                     if not trecord: raise IOError("A before T")
-                    if currentId != None:
-                        functions[currentId] = expressionBuffer
-                        currentId = None
-                        expressionBuffer = ""
                     index = record.index('=')
                     currentId = record[:index].strip()
                     expressionBuffer = record[(index + 1):].replace(' ', '')
+                    if currentId != None:
+                        functions[currentId] = expressionBuffer
+                        expressionBuffer = ""
                 elif linecode == ' ':
                     if currentId != None and trecord:
                         s = record.strip().replace(' ', '')
                         expressionBuffer += s
-                    else: raise IOError("Blank line not in function definition")
                 elif linecode == 'd' or linecode == 'm':
-                    if currentId != None:
-                        functions[currentId] = expressionBuffer
-                        currentId = None
-                        expressionBuffer = ""
+                    currentId = None
+                    expressionBuffer = ""
                 else: raise KeyError(linecode)
+            print len(functions)
                     
         return functions
     
