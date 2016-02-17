@@ -360,6 +360,7 @@ class FBTNFromSchema(_m.Tool()):
             
             $("#ZeroFareModes").prop('disabled', not_flag);            
             $("#ReplacementMode").prop('disabled', not_flag);
+            $("#RemoveZeroFareFlag").trigger('change')
         });
     });
 </script>""" % pb.tool_proxy_tag)
