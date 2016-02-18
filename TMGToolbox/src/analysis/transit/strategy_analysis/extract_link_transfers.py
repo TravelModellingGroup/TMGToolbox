@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2015 Matt Austin, Transportation Planning, City Planning Division, City of Toronto
+    Copyright 2016 Matt Austin, Transportation Planning, City Planning Division, City of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -149,7 +149,9 @@ class ExtractLinkTransfers(_m.Tool()):
 </script>""" % pb.tool_proxy_tag)
         
         return pb.render()
-    
+
+##########################################################################################################
+
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
@@ -164,18 +166,50 @@ class ExtractLinkTransfers(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
 
+##########################################################################################################
+
+    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, LinkSetString, 
+                 ExportFile, PeakHourFactor, HypernetworkFlag):
+
+        print "Beginning to extract link transfer data" 
+
+        self.BaseScenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
+        if (self.BaseScenario == None):
+            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+        
+        if xtmf_DemandMatrixNumber == 0:
+            self.DemandMatrix = None
+        else:
+            self.DemandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
+            if self.DemandMatrix == None:
+                raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
+        
+        self.LinkSetString = LinkSetString
+        self.ExportFile = ExportFile
+        self.PeakHourFactor = PeakHourFactor
+        self.HypernetworkFlag = HypernetworkFlag           
+           
+        try:
+            self._Execute()
+        except Exception, e:
+            msg = str(e) + "\n" + _traceback.format_exc(e)
+            raise Exception(msg)
+
+        print "Finished extracting link transfer data"
+
+##########################################################################################################        
+
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
 
             linkLists = self._ParseLinkString(self.LinkSetString)
             results = []
+
             if self.DemandMatrix is None:
                 demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.BaseScenario)
             else:
-                demandMatrixId = self.DemandMatrix.id
-
-            
+                demandMatrixId = self.DemandMatrix.id            
             
             for linkPair in linkLists:
                 fullLinkSet = linkPair
