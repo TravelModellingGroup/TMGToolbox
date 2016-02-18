@@ -26,6 +26,7 @@
     <Compile Include="src\analysis\create_zone_adjacency_matrix.py" />
     <Compile Include="src\analysis\export_partition_average_matrix.py" />
     <Compile Include="src\analysis\matrix_statistics.py" />
+    <Compile Include="src\analysis\transit\strategy_analysis\extract_link_transfers.py" />
     <Compile Include="src\analysis\xtmf_network_calculator.py">
       <SubType>Code</SubType>
     </Compile>
