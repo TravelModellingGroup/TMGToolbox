@@ -518,6 +518,14 @@ class CCGEN(_m.Tool()):
             
             boundaries = []
             for boundary in reader.readThrough():
+
+                boundary_geometry = boundary.geom_type
+
+                #if shape is polygon, must be converted to a linear ring
+                if boundary_geometry == 'Polygon':
+                    boundary = boundary.exterior
+
+
                 bminx, bminy, bmaxx, bmaxy = boundary.bounds
                 if bminx < minx: minx = bminx
                 if bminy < miny: miny = bminy
@@ -941,8 +949,9 @@ class CCGEN(_m.Tool()):
         try:
             for node in feasibleNodes.nearestToPoint(zone.x, zone.y):
                 dist = self._measureDistance(node, zone)
-                if dist < minDistance: minDistance = dist
-                closestNode = node
+                if dist < minDistance: 
+                    minDistance = dist
+                    closestNode = node
         except IndexError: #Expected if the zone is outside the bounds of the feasible node set
             pass 
         
