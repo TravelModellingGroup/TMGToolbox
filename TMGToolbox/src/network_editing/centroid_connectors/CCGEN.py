@@ -944,7 +944,7 @@ class CCGEN(_m.Tool()):
         
         for node in feasibleNodes.queryCircle(zone.x, zone.y, self.SearchRadius):
             dist = self._measureDistance(node, zone)
-            if dist < self.SearchRadius:
+            if dist < self.SearchRadius/1000: # compare distance (in km) to SearchRadius (in m)
                 candidateNodes[node] = dist
         try:
             for node in feasibleNodes.nearestToPoint(zone.x, zone.y):
@@ -955,6 +955,7 @@ class CCGEN(_m.Tool()):
         except IndexError: #Expected if the zone is outside the bounds of the feasible node set
             pass 
         
+        #if no nodes are found within the search radius, select closest node
         if len(candidateNodes) == 0 and closestNode != None:
             candidateNodes[closestNode] = minDistance
         
