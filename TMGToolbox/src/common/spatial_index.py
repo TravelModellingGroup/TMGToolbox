@@ -30,6 +30,7 @@ TODO LIST:
 from numpy import array
 from numpy import min as nmin
 from numpy import max as nmax
+import math
 
 import inro.modeller as _m
 from copy import copy
@@ -179,7 +180,10 @@ class grid():
         col = int(col) - 1
         row = int(row) - 1
         
-        return self._contents[col][row]        
+        return self._contents[col][row]
+
+    def __len__(self):
+        return len(self._contents)
 
 class GridIndex():
     '''
@@ -773,41 +777,71 @@ class GridIndex():
         Args:
             -x, y: the coordinates of interest. This point MUST overlap
                 the grid.
+            -the grid must only contain point objects
         
         Returns:
-            A set of objects which may be the nearest to the point of
-            interest. Another operation is required to determine
-            which objects are actually nearest.
+            A set of the nearest point object in the grid. 
         '''
         self._check_x(x)
         self._check_y(y)
         
         centerCol, centerRow = self._index_point(x, y)
-        if len(self._grid[centerCol, centerRow]) > 0:
-            return copy(self._grid[centerCol, centerRow])
-        
+
+        # if the first grid cell returns points, find the nearest one.
+        candidates = self._grid[centerCol,centerRow]
+        if len(candidates) > 0: 
+            nearest, minDistance = find_nearest(candidates, x, y)
+            candidates = self.queryCircle(x,y,minDistance)
+            nearest, minDistance = find_nearest(candidates, x, y)
         col0 = max(1, centerCol - 1)
         col1 = min(self.maxCol, centerCol + 1)
         row0 = max(1, centerRow - 1)
         row1 = min(self.maxRow, centerRow + 1)
         
         retval = set()
-        while col0 > 1 and col1 < self.maxCol and row0 > 1 and row1 < self.maxRow:
+        while col0 > 1 or col1 < self.maxCol or row0 > 1 or row1 < self.maxRow:
             
-            for col in nrange(col0, col1): retval |= self._grid[col, row1]
-            for row in nrange(row1, row0): retval |= self._grid[col1, row]
-            for col in nrange(col1, col0): retval |= self._grid[col, row0]
-            for row in nrange(row0, row1): retval |= self._grid[col0, row]
+            for col in nrange(col0 + 1, col1): retval |= self._grid[col, row1]
+            for row in nrange(row1 - 1 , row0): retval |= self._grid[col1, row]
+            for col in nrange(col1 - 1 , col0): retval |= self._grid[col, row0]
+            for row in nrange(row0 + 1, row1): retval |= self._grid[col0, row]
             
-            if len(retval) > 0: return retval
+            if len(retval) > 0: 
+                nearest, minDistance = find_nearest(retval, x, y)
+                candidates = self.queryCircle(x,y,minDistance)
+                nearest, minDistance = find_nearest(candidates, x, y)
+                return [nearest]
+
+            #expand the search box
             col0 = max(1, col0 -1)
             col1 = min(self.maxCol, col1 + 1)
             row0 = max(1, row0 -1)
             row1 = min(self.maxRow, row1 + 1)
         
-        for col in nrange(1, self.maxCol): retval |= self._grid[col, self.maxRow]
-        for row in nrange(self.maxRow, 1): retval |= self._grid[self.maxCol, row]
-        for col in nrange(self.maxCol, 1): retval |= self._grid[col, 1]
-        for row in nrange(1, self.maxRow): retval |= self._grid[1, row]
+        for col in nrange(2, self.maxCol): retval |= self._grid[col, self.maxRow]
+        for row in nrange(self.maxRow - 1, 1): retval |= self._grid[self.maxCol, row]
+        for col in nrange(self.maxCol - 1, 1): retval |= self._grid[col, 1]
+        for row in nrange(2, self.maxRow): retval |= self._grid[1, row]
         
-        return retval
+
+        nearest, minDistance = find_nearest(retval, x, y)
+        candidates = self.queryCircle(x,y,minDistance)
+        nearest, minDistance = find_nearest(candidates, x, y)
+        return [nearest]
+
+def find_nearest( points, x, y ):
+    nearest = None
+    minDistance = float('inf')
+    for point in points:
+        try: 
+            distance = _straightLineDist(x,y, point.x, point.y)
+        except:
+            raise TypeError("Non-node object found in grid. Grid must contain only nodes.")
+        if distance < minDistance:
+            minDistance = distance
+            nearest = point
+    return nearest, minDistance
+
+
+def _straightLineDist(x1, y1, x2, y2):
+    return math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2))
