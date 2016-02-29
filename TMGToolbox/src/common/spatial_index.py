@@ -30,12 +30,14 @@ TODO LIST:
 from numpy import array
 from numpy import min as nmin
 from numpy import max as nmax
+from shapely import geometry as _geo
 import math
 
 import inro.modeller as _m
 from copy import copy
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
+
 
 class Face(_m.Tool()):
     def page(self):
@@ -777,10 +779,9 @@ class GridIndex():
         Args:
             -x, y: the coordinates of interest. This point MUST overlap
                 the grid.
-            -the grid must only contain point objects
         
         Returns:
-            A set of the nearest point object in the grid. 
+            A set of the nearest object in the grid. 
         '''
         self._check_x(x)
         self._check_y(y)
@@ -829,19 +830,37 @@ class GridIndex():
         nearest, minDistance = find_nearest(candidates, x, y)
         return [nearest]
 
-def find_nearest( points, x, y ):
+def find_nearest( candidates, x, y ):
     nearest = None
     minDistance = float('inf')
-    for point in points:
-        try: 
-            distance = _straightLineDist(x,y, point.x, point.y)
-        except:
-            raise TypeError("Non-node object found in grid. Grid must contain only nodes.")
+    for candidate in candidates:
+        #check what type of objects are in candidates
+        #check if object is node or point
+        if hasattr(candidate,'x'):
+            shape = _geo.Point(candidate.x,candidate.y)
+        #check if object is link:
+        elif hasattr(candidate, 'shape'):
+            shape = _geo.LineString(candidate.shape)
+        #if transit line:
+        elif hasattr(candidate, 'headway'):
+            for segment in candidate.segments():
+                shape = _geo.LineString([(segment.i_node.x, segment.i_node.y),(segment.j_node.x,segment.j_node.y)])
+                distance = shape.distance(_geo.Point(x,y))
+                if distance < minDistance:
+                    minDistance = distance
+                    nearest = candidate
+        #if transit segment:
+        elif hasattr(candidate, 'line'):
+            shape = _geo.LineString([(candidate.i_node.x, candidate.i_node.y),(candidate.j_node.x,candidate.j_node.y)])
+        #if shapely shape:
+        else:
+            shape = candidate
+
+        distance = shape.distance(_geo.Point(x,y))
         if distance < minDistance:
             minDistance = distance
-            nearest = point
+            nearest = candidate
+            
     return nearest, minDistance
 
 
-def _straightLineDist(x1, y1, x2, y2):
-    return math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2))
