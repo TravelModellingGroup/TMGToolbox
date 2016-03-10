@@ -161,7 +161,7 @@ class CCGEN(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name="ZonesFile",
                             window_type="file",
-                            file_filter="*.txt; *.csv; *.211",
+                            file_filter="*.txt *.csv *.211",
                             title="File with zones to be added",
                             note="Accepts CSV, tab-delimited text, and Emme network batchout (*.211) formats.\
                                 <br>If left blank, the tool will look for unconnected zones.")
