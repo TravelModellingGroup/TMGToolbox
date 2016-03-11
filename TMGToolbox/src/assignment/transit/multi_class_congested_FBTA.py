@@ -47,15 +47,21 @@ class MultiClassTransitAssignment(_m.Tool()):
     LinkFareAttributeId = _m.Attribute(str)
     SegmentFareAttributeId = _m.Attribute(str)
     WalkSpeed = _m.Attribute(float)
-    WaitPerception = _m.Attribute(float)
-    BoardPerception = _m.Attribute(float)
-    FarePerception = _m.Attribute(float)
+
+    # class-specific inputs
+    ClassWaitPerceptionList = _m.Attribute(list)
+    ClassBoardPerceptionList = _m.Attribute(list)
+    ClassFarePerceptionList = _m.Attribute(list)
+    ClassWalkPerceptionList = _m.Attribute(list)
+
+    #LOS outputs
     InVehicleTimeMatrixList = _m.Attribute(list)
     WaitTimeMatrixList = _m.Attribute(list)
     WalkTimeMatrixList = _m.Attribute(list)
     FareMatrixList = _m.Attribute(list)
     CongestionMatrixList = _m.Attribute(list)
     PenaltyMatrixList = _m.Attribute(list)
+
     CalculateCongestedIvttFlag = _m.Attribute(bool)
     CongestionExponentString = _m.Attribute(str)
     EffectiveHeadwaySlope = _m.Attribute(float)
@@ -77,23 +83,33 @@ class MultiClassTransitAssignment(_m.Tool()):
     xtmf_WalkDistributionLogitScale = _m.Attribute(float)
     WalkPerceptionList = _m.Attribute(list)
     WalkAttributeIdList = _m.Attribute(list)
+
     if EMME_VERSION >= (4, 1):
         NumberOfProcessors = _m.Attribute(int)
 
     def __init__(self):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)
+        print "inital"
         self.Scenario = _MODELLER.scenario
         self.DemandMatrixList = [_MODELLER.emmebank.matrix('mf91')]
+
+        #attribute IDs
         self.LinkFareAttributeId = '@lfare'
         self.SegmentFareAttributeId = '@sfare'
         self.HeadwayFractionAttributeId = '@frac'
         self.EffectiveHeadwayAttributeId = '@ehdw'
         self.WalkAttributeIdList = ['@walkp']
+
         self.CalculateCongestedIvttFlag = True
         self.WalkPerception = '1.8:i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000 \n3.534:i=20000,90000 or j=20000,90000 \n1.14:type=101\n2.26:i=0,1000 or j=0,1000\n1.12:i=1000,7000 or j=1000,7000\n1:mode=t and i=97000,98000 and j=97000,98000\n0:i=9700,10000 or j=9700,10000'
         self.WalkSpeed = 4
-        self.WaitPerception = 3.534
-        self.BoardPerception = 1
+
+        #class-specific inputs
+        self.ClassWalkPerceptionList = [1.0]
+        self.ClassWaitPerceptionList = [3.534]
+        self.ClassBoardPerceptionList = [1.0]
+        self.ClassFarePerceptionList = [10.694]
+
         lines = ['1: 0.41: 1.62',
          '2: 0.41: 1.62',
          '3: 0.41: 1.62',
@@ -101,7 +117,6 @@ class MultiClassTransitAssignment(_m.Tool()):
          '5: 0.41: 1.62']
         self.CongestionExponentString = '\n'.join(lines)
         self.EffectiveHeadwaySlope = 0.2
-        self.FarePerception = 10.694
         self.AssignmentPeriod = 2.04
         self.NormGap = 0
         self.RelGap = 0
@@ -124,7 +139,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         pb = _tmgTPB.TmgToolPageBuilder(self, title='Multi-Class Transit Assignment v%s' % self.version, description="Executes a congested transit assignment procedure                         for GTAModel V4.0.                         <br><br>Hard-coded assumptions:                         <ul><li> Boarding penalties are assumed stored in <b>UT3</b></li>                        <li> The congestion term is stored in <b>US3</b></li>                        <li> In-vehicle time perception is 1.0</li>                        <li> All available transit modes will be used.</li>                        </ul>                        <font color='red'>This tool is only compatible with Emme 4.1.5 and later versions</font>", branding_text='- TMG Toolbox')
         if self.tool_run_msg != '':
             pb.tool_run_status(self.tool_run_msg_status)
-    #    pb.add_header('SCENARIO INPUTS')
+        pb.add_header('SCENARIO INPUTS')
     #    pb.add_select_scenario(tool_attribute_name='Scenario', title='Scenario:', allow_none=False)
     #    pb.add_select_matrix(tool_attribute_name='DemandMatrixList', filter=['FULL'], title='Demand Matrices', note='A full matrix of OD demand for each class')
     #    keyval1 = [(-1, 'None')]
@@ -228,12 +243,8 @@ class MultiClassTransitAssignment(_m.Tool()):
         try:
             if self.AssignmentPeriod == None:
                 raise NullPointerException('Assignment period not specified')
-            if self.WaitPerception == None:
-                raise NullPointerException('Waiting perception not specified')
             if self.WalkPerception == None:
                 raise NullPointerException('Walk perception not specified')
-            if self.BoardPerception == None:
-                raise NullPointerException('Boarding perception not specified')
             if self.CongestionExponentString == None:
                 raise NullPointerException('Congestion parameters not specified')
             if self.Iterations == None:
@@ -283,24 +294,35 @@ class MultiClassTransitAssignment(_m.Tool()):
 
         self.tool_run_msg = _m.PageBuilder.format_info('Done.')
 
-    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, WaitPerception, WalkSpeed, WalkPerceptionAttributeIdString, HeadwayFractionAttributeId, LinkFareAttributeId, SegmentFareAttributeId, EffectiveHeadwayAttributeId, EffectiveHeadwaySlope, BoardPerception, FarePerception, AssignmentPeriod, Iterations, NormGap, RelGap, xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, WalkPerceptionString):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, \
+        ClassWalkPerceptionString, ClassWaitPerceptionString, ClassBoardPerceptionString, ClassFarePerceptionString, \
+        WalkSpeed, WalkPerceptionAttributeIdString, HeadwayFractionAttributeId, LinkFareAttributeId, SegmentFareAttributeId, \
+        EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
+        Iterations, NormGap, RelGap, \
+        xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, \
+        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, WalkPerceptionString):
         if EMME_VERSION < (4, 1, 5):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
         self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
         self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
         self.LinkFareAttributeId = LinkFareAttributeId
         self.SegmentFareAttributeId = SegmentFareAttributeId
-        self.WaitPerception = WaitPerception
-        self.BoardPerception = BoardPerception
         self.CalculateCongestedIvttFlag = CalculateCongestedIvttFlag
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
-        self.FarePerception = FarePerception
         self.CongestionExponentString = CongestionExponentString
         self.xtmf_OriginDistributionLogitScale = xtmf_OriginDistributionLogitScale
         self.AssignmentPeriod = AssignmentPeriod
         self.Iterations = Iterations
         self.NormGap = NormGap
         self.RelGap = RelGap
+
+        #class-specific inputs
+        self.ClassWalkPerceptionList = ClassWalkPerceptionString.split(',')
+        self.ClassWaitPerceptionList = ClassWaitPerceptionString.split(',')
+        self.ClassBoardPerceptionList = ClassBoardPerceptionString.split(',')
+        self.ClassFarePerceptionList = ClassFarePerceptionString.split(',')
+
+
         if WalkPerceptionString:
             WalkPerceptionString = WalkPerceptionString.replace('::', '\n')
             self.WalkPerceptionList = WalkPerceptionString.split(';')
@@ -397,10 +419,10 @@ class MultiClassTransitAssignment(_m.Tool()):
     def _GetAtts(self):
         atts = {'Scenario': '%s - %s' % (self.Scenario, self.Scenario.title),
          'Version': self.version,
-         'Wait Perception': self.WaitPerception,
-         'Fare Perception': self.FarePerception,
+         'Wait Perception': self.ClassWaitPerceptionList,
+         'Fare Perception': self.ClassFarePerceptionList,
          'Assignment Period': self.AssignmentPeriod,
-         'Boarding Perception': self.BoardPerception,
+         'Boarding Perception': self.ClassBoardPerceptionList,
          'Iterations': self.Iterations,
          'Normalized Gap': self.NormGap,
          'Relative Gap': self.RelGap,
@@ -560,28 +582,31 @@ class MultiClassTransitAssignment(_m.Tool()):
                 applySelection(perceptionArray[i][0], perceptionArray[i][1])
 
     def _GetBaseAssignmentSpec(self):
-        if self.FarePerception == 0:
-            farePerception = 0.0
-        else:
-            farePerception = 60.0 / self.FarePerception
+
+        for i in range(0, len(self.DemandMatrixList)):
+
+            if self.ClassFarePerceptionList[i] == 0:
+                farePerception[i] = 0.0
+            else:
+                farePerception[i] = 60.0 / self.ClassFarePerceptionList[i]
         baseSpec = [ {'modes': ['*'],
          'demand': self.DemandMatrixList[i].id,
          'waiting_time': {'headway_fraction': self.HeadwayFractionAttributeId,
                           'effective_headways': self.EffectiveHeadwayAttributeId,
                           'spread_factor': 1,
-                          'perception_factor': self.WaitPerception},
+                          'perception_factor': self.ClassWaitPerceptionList[i]},
          'boarding_time': {'at_nodes': None,
                            'on_lines': {'penalty': 'ut3',
-                                        'perception_factor': self.BoardPerception}},
+                                        'perception_factor': self.ClassBoardPerceptionList[i]}},
          'boarding_cost': {'at_nodes': {'penalty': 0,
                                         'perception_factor': 1},
                            'on_lines': None},
          'in_vehicle_time': {'perception_factor': 1},
          'in_vehicle_cost': {'penalty': self.SegmentFareAttributeId,
-                             'perception_factor': farePerception},
+                             'perception_factor': farePerception[i]},
          'aux_transit_time': {'perception_factor': self.WalkAttributeIdList[i]},
          'aux_transit_cost': {'penalty': self.LinkFareAttributeId,
-                              'perception_factor': farePerception},
+                              'perception_factor': farePerception[i]},
          'connector_to_connector_path_prohibition': None,
          'od_results': {'total_impedance': None},
          'flow_distribution_between_lines': {'consider_travel_time': self._considerTotalImpedance},
