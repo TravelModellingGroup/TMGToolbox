@@ -293,12 +293,13 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info('Done.')
 
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, \
+        WalkSpeed, WalkPerceptionString, WalkPerceptionAttributeIdString,
         ClassWaitPerceptionString, ClassBoardPerceptionString, ClassFarePerceptionString, \
-        WalkSpeed, WalkPerceptionAttributeIdString, HeadwayFractionAttributeId, LinkFareAttributeId, SegmentFareAttributeId, \
+        HeadwayFractionAttributeId, LinkFareAttributeId, SegmentFareAttributeId, \
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
         xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, \
-        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, WalkPerceptionString):
+        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString):
         if EMME_VERSION < (4, 1, 5):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
         self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
