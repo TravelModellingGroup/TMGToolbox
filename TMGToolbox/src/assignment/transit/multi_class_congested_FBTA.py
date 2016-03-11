@@ -53,6 +53,10 @@ class MultiClassTransitAssignment(_m.Tool()):
     ClassBoardPerceptionList = _m.Attribute(list)
     ClassFarePerceptionList = _m.Attribute(list)
 
+    xtmf_ClassWaitPerceptionString = _m.Attribute(str)
+    xtmf_ClassBoardPerceptionString = _m.Attribute(str)
+    xtmf_ClassFarePerceptionString = _m.Attribute(str)
+
     #LOS outputs
     InVehicleTimeMatrixList = _m.Attribute(list)
     WaitTimeMatrixList = _m.Attribute(list)
@@ -294,7 +298,7 @@ class MultiClassTransitAssignment(_m.Tool()):
 
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, \
         WalkSpeed, WalkPerceptionString, WalkPerceptionAttributeIdString, \
-        ClassWaitPerceptionString, ClassBoardPerceptionString, ClassFarePerceptionString, \
+        xtmf_ClassWaitPerceptionString, xtmf_ClassBoardPerceptionString, xtmf_ClassFarePerceptionString, \
         HeadwayFractionAttributeId, LinkFareAttributeId, SegmentFareAttributeId, \
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
@@ -316,9 +320,9 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.RelGap = RelGap
 
         #class-specific inputs
-        self.ClassWaitPerceptionList = ClassWaitPerceptionString.split(',')
-        self.ClassBoardPerceptionList = ClassBoardPerceptionString.split(',')
-        self.ClassFarePerceptionList = ClassFarePerceptionString.split(',')
+        self.ClassWaitPerceptionList = xtmf_ClassWaitPerceptionString.split(',')
+        self.ClassBoardPerceptionList = xtmf_ClassBoardPerceptionString.split(',')
+        self.ClassFarePerceptionList = xtmf_ClassFarePerceptionString.split(',')
 
 
         if WalkPerceptionString:
