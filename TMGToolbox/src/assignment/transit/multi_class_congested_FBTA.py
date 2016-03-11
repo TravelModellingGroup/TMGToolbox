@@ -44,8 +44,8 @@ class MultiClassTransitAssignment(_m.Tool()):
     ClassNames = _m.Attribute(list)
     HeadwayFractionAttributeId = _m.Attribute(str)
     EffectiveHeadwayAttributeId = _m.Attribute(str)
-    LinkFareAttributeId = _m.Attribute(str)
-    SegmentFareAttributeId = _m.Attribute(str)
+    LinkFareAttributeId = _m.Attribute(list)
+    SegmentFareAttributeId = _m.Attribute(list)
     WalkSpeed = _m.Attribute(float)
 
     # class-specific inputs
@@ -97,8 +97,8 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.DemandMatrixList = [_MODELLER.emmebank.matrix('mf91')]
 
         #attribute IDs
-        self.LinkFareAttributeId = '@lfare'
-        self.SegmentFareAttributeId = '@sfare'
+        self.LinkFareAttributeId = ['@lfare']
+        self.SegmentFareAttributeId = ['@sfare']
         self.HeadwayFractionAttributeId = '@frac'
         self.EffectiveHeadwayAttributeId = '@ehdw'
         self.WalkAttributeIdList = ['@walkp']
@@ -308,8 +308,10 @@ class MultiClassTransitAssignment(_m.Tool()):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
         self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
         self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
-        self.LinkFareAttributeId = LinkFareAttributeId
-        self.SegmentFareAttributeId = SegmentFareAttributeId
+        
+        
+        self.LinkFareAttributeId = LinkFareAttributeId.split(',')
+        self.SegmentFareAttributeId = SegmentFareAttributeId.split(',')
         self.CalculateCongestedIvttFlag = CalculateCongestedIvttFlag
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         self.CongestionExponentString = CongestionExponentString
@@ -604,10 +606,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                                         'perception_factor': 1},
                            'on_lines': None},
          'in_vehicle_time': {'perception_factor': 1},
-         'in_vehicle_cost': {'penalty': self.SegmentFareAttributeId,
+         'in_vehicle_cost': {'penalty': self.SegmentFareAttributeId[i],
                              'perception_factor': farePerception[i]},
          'aux_transit_time': {'perception_factor': self.WalkAttributeIdList[i]},
-         'aux_transit_cost': {'penalty': self.LinkFareAttributeId,
+         'aux_transit_cost': {'penalty': self.LinkFareAttributeId[i],
                               'perception_factor': farePerception[i]},
          'connector_to_connector_path_prohibition': None,
          'od_results': {'total_impedance': None},
