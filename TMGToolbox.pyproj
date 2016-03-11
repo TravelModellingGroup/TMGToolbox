@@ -65,7 +65,7 @@
     <Compile Include="src\assignment\road\tolled\toll_attribute.py" />
     <Compile Include="src\assignment\road\tolled\toll_attribute_transit_background.py" />
     <Compile Include="src\assignment\road\tolled\Toll_Based_Road_Assignment.py" />
-    <Compile Include="src\assignment\transit\multi_class_FBTA.py" />
+    <Compile Include="src\assignment\transit\multi_class_congested_FBTA.py" />
     <Compile Include="src\assignment\transit\V2_line_haul.py" />
     <Compile Include="src\assignment\transit\V2_transit_assignment.py" />
     <Compile Include="src\assignment\transit\V3_FBTA.py" />
