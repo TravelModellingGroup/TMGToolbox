@@ -293,7 +293,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info('Done.')
 
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, \
-        WalkSpeed, WalkPerceptionString, WalkPerceptionAttributeIdString,
+        WalkSpeed, WalkPerceptionString, WalkPerceptionAttributeIdString, \
         ClassWaitPerceptionString, ClassBoardPerceptionString, ClassFarePerceptionString, \
         HeadwayFractionAttributeId, LinkFareAttributeId, SegmentFareAttributeId, \
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
