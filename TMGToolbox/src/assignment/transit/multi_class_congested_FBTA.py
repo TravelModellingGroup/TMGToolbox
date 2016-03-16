@@ -38,32 +38,56 @@ class MultiClassTransitAssignment(_m.Tool()):
     version = '1.0.0'
     tool_run_msg = ''
     number_of_tasks = 7
+
     WalkPerception = _m.Attribute(str)
     Scenario = _m.Attribute(_m.InstanceType)
     DemandMatrixList = _m.Attribute(_m.ListType)
     ClassNames = _m.Attribute(list)
     HeadwayFractionAttributeId = _m.Attribute(str)
     EffectiveHeadwayAttributeId = _m.Attribute(str)
-    LinkFareAttributeId = _m.Attribute(list)
-    SegmentFareAttributeId = _m.Attribute(list)
     WalkSpeed = _m.Attribute(float)
 
-    # class-specific inputs
+    #---- class-specific inputs
+        # perception values
     ClassWaitPerceptionList = _m.Attribute(list)
     ClassBoardPerceptionList = _m.Attribute(list)
     ClassFarePerceptionList = _m.Attribute(list)
+    WalkPerceptionList = _m.Attribute(list)
 
     xtmf_ClassWaitPerceptionString = _m.Attribute(str)
     xtmf_ClassBoardPerceptionString = _m.Attribute(str)
     xtmf_ClassFarePerceptionString = _m.Attribute(str)
+    xtmf_WalkPerceptionString = _m.Attribute(str)
 
-    #LOS outputs
+        # attributes
+    LinkFareAttributeIdList = _m.Attribute(list)
+    SegmentFareAttributeIdList = _m.Attribute(list)
+    WalkAttributeIdList = _m.Attribute(list)
+    
+    xtmf_LinkFareAttributeIdString = _m.Attribute(str)
+    xtmf_SegmentFareAttributeIdString = _m.Attribute(str)
+    xtmf_WalkPerceptionAttributeIdString = _m.Attribute(str)
+    #-----
+
+
+    #----LOS outputs (by class)
     InVehicleTimeMatrixList = _m.Attribute(list)
     WaitTimeMatrixList = _m.Attribute(list)
     WalkTimeMatrixList = _m.Attribute(list)
     FareMatrixList = _m.Attribute(list)
     CongestionMatrixList = _m.Attribute(list)
     PenaltyMatrixList = _m.Attribute(list)
+    
+
+
+    xtmf_InVehicleTimeMatrixString = _m.Attribute(str)
+    xtmf_WaitTimeMatrixString = _m.Attribute(str)
+    xtmf_WalkTimeMatrixString = _m.Attribute(str)
+    xtmf_FareMatrixString = _m.Attribute(str)
+    xtmf_CongestionMatrixString = _m.Attribute(str)
+    xtmf_PenaltyMatrixString = _m.Attribute(str)
+    
+    #-----
 
     CalculateCongestedIvttFlag = _m.Attribute(bool)
     CongestionExponentString = _m.Attribute(str)
@@ -74,31 +98,23 @@ class MultiClassTransitAssignment(_m.Tool()):
     RelGap = _m.Attribute(float)
     xtmf_ScenarioNumber = _m.Attribute(int)
     xtmf_DemandMatrixString = _m.Attribute(str)
-    xtmf_InVehicleTimeMatrixString = _m.Attribute(str)
-    xtmf_WaitTimeMatrixString = _m.Attribute(str)
-    xtmf_WalkTimeMatrixString = _m.Attribute(str)
-    xtmf_FareMatrixString = _m.Attribute(str)
-    xtmf_CongestionMatrixString = _m.Attribute(str)
-    xtmf_PenaltyMatrixString = _m.Attribute(str)
-    WalkPerceptionString = _m.Attribute(str)
-    WalkPerceptionAttributeIdString = _m.Attribute(str)
+    
+
     xtmf_OriginDistributionLogitScale = _m.Attribute(float)
     xtmf_WalkDistributionLogitScale = _m.Attribute(float)
-    WalkPerceptionList = _m.Attribute(list)
-    WalkAttributeIdList = _m.Attribute(list)
+
 
     if EMME_VERSION >= (4, 1):
         NumberOfProcessors = _m.Attribute(int)
 
     def __init__(self):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)
-        print "inital"
         self.Scenario = _MODELLER.scenario
         self.DemandMatrixList = [_MODELLER.emmebank.matrix('mf91')]
 
         #attribute IDs
-        self.LinkFareAttributeId = ['@lfare']
-        self.SegmentFareAttributeId = ['@sfare']
+        self.LinkFareAttributeIdList = ['@lfare']
+        self.SegmentFareAttributeIdList = ['@sfare']
         self.HeadwayFractionAttributeId = '@frac'
         self.EffectiveHeadwayAttributeId = '@ehdw'
         self.WalkAttributeIdList = ['@walkp']
@@ -257,9 +273,9 @@ class MultiClassTransitAssignment(_m.Tool()):
                 raise NullPointerException('Relative gap not specified')
             if self.EffectiveHeadwaySlope == None:
                 raise NullPointerException('Effective headway slope not specified')
-            if self.LinkFareAttributeId == None:
+            if self.LinkFareAttributeIdList == None:
                 raise NullPointerException('Link fare attribute not specified')
-            if self.SegmentFareAttributeId == None:
+            if self.SegmentFareAttributeIdList == None:
                 raise NullPointerException('Segment fare attribute not specified')
 
             @contextmanager
@@ -297,21 +313,19 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info('Done.')
 
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, \
-        WalkSpeed, WalkPerceptionString, WalkPerceptionAttributeIdString, \
+        WalkSpeed, xtmf_WalkPerceptionString, xtmf_WalkPerceptionAttributeIdString, \
         xtmf_ClassWaitPerceptionString, xtmf_ClassBoardPerceptionString, xtmf_ClassFarePerceptionString, \
-        HeadwayFractionAttributeId, LinkFareAttributeId, SegmentFareAttributeId, \
+        HeadwayFractionAttributeId, xtmf_LinkFareAttributeIdString, xtmf_SegmentFareAttributeIdString, \
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
         xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, \
         xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString):
+        
         if EMME_VERSION < (4, 1, 5):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
+        
         self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
         self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
-        
-        
-        self.LinkFareAttributeId = LinkFareAttributeId.split(',')
-        self.SegmentFareAttributeId = SegmentFareAttributeId.split(',')
         self.CalculateCongestedIvttFlag = CalculateCongestedIvttFlag
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
         self.CongestionExponentString = CongestionExponentString
@@ -322,19 +336,25 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.RelGap = RelGap
 
         #class-specific inputs
-        self.ClassWaitPerceptionList = xtmf_ClassWaitPerceptionString.split(',')
-        self.ClassBoardPerceptionList = xtmf_ClassBoardPerceptionString.split(',')
-        self.ClassFarePerceptionList = xtmf_ClassFarePerceptionString.split(',')
+        self.ClassWaitPerceptionList = [float (x) for x in xtmf_ClassWaitPerceptionString.split(',')]
+        self.ClassBoardPerceptionList = [float (x) for x  in xtmf_ClassBoardPerceptionString.split(',')]
+        self.ClassFarePerceptionList = [float(x) for x in xtmf_ClassFarePerceptionString.split(',')]
 
 
-        if WalkPerceptionString:
-            WalkPerceptionString = WalkPerceptionString.replace('::', '\n')
-            self.WalkPerceptionList = WalkPerceptionString.split(';')
-        if WalkPerceptionAttributeIdString:
-            self.WalkAttributeIdList = WalkPerceptionAttributeIdString.split(',')
+        self.LinkFareAttributeIdList = xtmf_LinkFareAttributeIdString.split(',')
+        self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
+
+
+        if xtmf_WalkPerceptionString:
+            xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.replace('::', '\n')
+            self.WalkPerceptionList = xtmf_WalkPerceptionString.split(';')
+        if xtmf_WalkPerceptionAttributeIdString:
+            self.WalkAttributeIdList = xtmf_WalkPerceptionAttributeIdString.split(',')
+
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if self.Scenario == None:
             raise Exception('Scenario %s was not found!' % xtmf_ScenarioNumber)
+
         self.DemandMatrixList = []
         for demandMatrix in xtmf_DemandMatrixString.split(','):
             if _MODELLER.emmebank.matrix(demandMatrix) == None:
@@ -345,15 +365,16 @@ class MultiClassTransitAssignment(_m.Tool()):
         for walk in self.WalkAttributeIdList:
             if self.Scenario.extra_attribute(walk) == None:
                 raise Exception('Walk perception attribute %s does not exist' % walk)
-
         if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) == None:
             raise Exception('Headway fraction attribute %s does not exist' % self.HeadwayFractionAttributeId)
         if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) == None:
             raise Exception('Effective headway attribute %s does not exist' % self.EffectiveHeadwayAttributeId)
-        if self.Scenario.extra_attribute(self.LinkFareAttributeId) == None:
-            raise Exception('Link fare attribute %s does not exist' % self.LinkFareAttributeId)
-        if self.Scenario.extra_attribute(self.SegmentFareAttributeId) == None:
-            raise Exception('Segment fare attribute %s does not exist' % self.SegmentFareAttributeId)
+        for id in self.LinkFareAttributeIdList:
+            if  self.Scenario.extra_attribute(id) == None:
+                raise Exception('Link fare attribute %s does not exist' % id)
+        for id in self.SegmentFareAttributeIdList:
+           if self.Scenario.extra_attribute(id) == None:
+                raise Exception('Segment fare attribute %s does not exist' % id)
         if xtmf_InVehicleTimeMatrixString:
             self.InVehicleTimeMatrixList = xtmf_InVehicleTimeMatrixString.split(',')
         if xtmf_WaitTimeMatrixString:
@@ -509,7 +530,6 @@ class MultiClassTransitAssignment(_m.Tool()):
                 raise SyntaxError(msg)
 
             perceptionList.append(strippedParts[0:2])
-
         return perceptionList
 
     def _ParseExponentString(self):
@@ -587,12 +607,14 @@ class MultiClassTransitAssignment(_m.Tool()):
 
     def _GetBaseAssignmentSpec(self):
 
+        farePerception = []
+        print range(0, len(self.DemandMatrixList))
         for i in range(0, len(self.DemandMatrixList)):
-
-            if self.ClassFarePerceptionList[i] == 0:
-                farePerception[i] = 0.0
+            
+            if self.ClassFarePerceptionList[i] == 0.0:
+                farePerception.append(0.0)
             else:
-                farePerception[i] = 60.0 / self.ClassFarePerceptionList[i]
+                farePerception.append( 60.0 / self.ClassFarePerceptionList[i])
         baseSpec = [ {'modes': ['*'],
          'demand': self.DemandMatrixList[i].id,
          'waiting_time': {'headway_fraction': self.HeadwayFractionAttributeId,
@@ -606,10 +628,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                                         'perception_factor': 1},
                            'on_lines': None},
          'in_vehicle_time': {'perception_factor': 1},
-         'in_vehicle_cost': {'penalty': self.SegmentFareAttributeId[i],
+         'in_vehicle_cost': {'penalty': self.SegmentFareAttributeIdList[i],
                              'perception_factor': farePerception[i]},
          'aux_transit_time': {'perception_factor': self.WalkAttributeIdList[i]},
-         'aux_transit_cost': {'penalty': self.LinkFareAttributeId[i],
+         'aux_transit_cost': {'penalty': self.LinkFareAttributeIdList[i],
                               'perception_factor': farePerception[i]},
          'connector_to_connector_path_prohibition': None,
          'od_results': {'total_impedance': None},
@@ -651,6 +673,7 @@ class MultiClassTransitAssignment(_m.Tool()):
          'orig_func': False,
          'congestion_attribute': 'us3',
          'python_function': partialSpec}
+        print funcSpec
         return funcSpec
 
     def _GetStopSpec(self):
@@ -696,8 +719,8 @@ class MultiClassTransitAssignment(_m.Tool()):
 
     def _ExtractCostMatrix(self, i):
         spec = {'trip_components': {'boarding': None,
-                             'in_vehicle': self.SegmentFareAttributeId,
-                             'aux_transit': self.LinkFareAttributeId,
+                             'in_vehicle': self.SegmentFareAttributeIdList[i],
+                             'aux_transit': self.LinkFareAttributeIdList[i],
                              'alighting': None},
          'sub_path_combination_operator': '+',
          'sub_strategy_combination_operator': 'average',
