@@ -23,7 +23,7 @@ Temp Extra Attribute Manager
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: JamesVaughan
     
     
     Low-level tool to create an extra attribute context-manager equivalent for
@@ -33,6 +33,7 @@ Temp Extra Attribute Manager
 #---VERSION HISTORY
 '''
     0.0.1 Created on 2014-03-25 by pkucirek
+    0.0.2 Upgraded to only optionally reset the values to their default
      
 '''
 
@@ -57,6 +58,7 @@ class TempAttributeManager(_m.Tool()):
     xtmf_AttributeDomain = _m.Attribute(str)
     xtmf_AttributeDefault = _m.Attribute(float)
     xtmf_DeleteFlag = _m.Attribute(bool)
+    xtmf_ResetToDefault = _m.Attribute(bool)
     
     def __init__(self):
         #---Init internal variables
@@ -71,7 +73,7 @@ class TempAttributeManager(_m.Tool()):
         return pb.render()
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_AttributeId, xtmf_AttributeDomain, 
-                 xtmf_AttributeDefault, xtmf_DeleteFlag):
+                 xtmf_AttributeDefault, xtmf_DeleteFlag, xtmf_ResetToDefault):
         scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
@@ -80,8 +82,12 @@ class TempAttributeManager(_m.Tool()):
         if xtmf_DeleteFlag and exatt != None:
             scenario.delete_extra_attribute(xtmf_AttributeId)
         else:
-            if exatt != None:
-                scenario.delete_extra_attribute(xtmf_AttributeId)
-            scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
+            if xtmf_ResetToDefault:
+                if exatt != None:
+                    scenario.delete_extra_attribute(xtmf_AttributeId)
+                scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
+            else:
+                if exatt == None:
+                    scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
     
     
