@@ -37,6 +37,7 @@ Attach Centroids To Nodes
     
 '''
 import inro.modeller as _m
+import traceback as _traceback
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 
 class AttachCentriodsToNodes(_m.Tool()):
