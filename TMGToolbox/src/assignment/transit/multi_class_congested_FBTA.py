@@ -608,36 +608,48 @@ class MultiClassTransitAssignment(_m.Tool()):
     def _GetBaseAssignmentSpec(self):
 
         farePerception = []
-        print range(0, len(self.DemandMatrixList))
         for i in range(0, len(self.DemandMatrixList)):
             
             if self.ClassFarePerceptionList[i] == 0.0:
                 farePerception.append(0.0)
             else:
                 farePerception.append( 60.0 / self.ClassFarePerceptionList[i])
-        baseSpec = [ {'modes': ['*'],
-         'demand': self.DemandMatrixList[i].id,
-         'waiting_time': {'headway_fraction': self.HeadwayFractionAttributeId,
-                          'effective_headways': self.EffectiveHeadwayAttributeId,
-                          'spread_factor': 1,
-                          'perception_factor': self.ClassWaitPerceptionList[i]},
-         'boarding_time': {'at_nodes': None,
-                           'on_lines': {'penalty': 'ut3',
-                                        'perception_factor': self.ClassBoardPerceptionList[i]}},
-         'boarding_cost': {'at_nodes': {'penalty': 0,
-                                        'perception_factor': 1},
-                           'on_lines': None},
-         'in_vehicle_time': {'perception_factor': 1},
-         'in_vehicle_cost': {'penalty': self.SegmentFareAttributeIdList[i],
-                             'perception_factor': farePerception[i]},
-         'aux_transit_time': {'perception_factor': self.WalkAttributeIdList[i]},
-         'aux_transit_cost': {'penalty': self.LinkFareAttributeIdList[i],
-                              'perception_factor': farePerception[i]},
-         'connector_to_connector_path_prohibition': None,
-         'od_results': {'total_impedance': None},
-         'flow_distribution_between_lines': {'consider_travel_time': self._considerTotalImpedance},
-         'save_strategies': True,
-         'type': 'EXTENDED_TRANSIT_ASSIGNMENT'} for i in range(0, len(self.DemandMatrixList)) ]
+        baseSpec = [ {
+            'modes': ['*'],
+            'demand': self.DemandMatrixList[i].id,
+            'waiting_time': {
+                'headway_fraction': self.HeadwayFractionAttributeId,
+                'effective_headways': self.EffectiveHeadwayAttributeId,
+                'spread_factor': 1,
+                'perception_factor': self.ClassWaitPerceptionList[i]},
+                'boarding_time': {
+                    'at_nodes': None,
+                    'on_lines': {
+                        'penalty': 'ut3',
+                        'perception_factor': self.ClassBoardPerceptionList[i]}},
+                'boarding_cost': {
+                    'at_nodes': {
+                        'penalty': 0,
+                        'perception_factor': 1},
+                    'on_lines': None},
+            'in_vehicle_time': {
+                'perception_factor': 1},
+            'in_vehicle_cost': {
+                'penalty': self.SegmentFareAttributeIdList[i],
+                'perception_factor': farePerception[i]},
+            'aux_transit_time': {
+                'perception_factor': self.WalkAttributeIdList[i]},
+            'aux_transit_cost': {
+                'penalty': self.LinkFareAttributeIdList[i],
+                'perception_factor': farePerception[i]},
+            'connector_to_connector_path_prohibition': None,
+            'od_results': {
+                'total_impedance': None},
+            'flow_distribution_between_lines': {
+                'consider_travel_time': self._considerTotalImpedance},
+            'save_strategies': True,
+            'type': 'EXTENDED_TRANSIT_ASSIGNMENT'} for i in range(0, len(self.DemandMatrixList)) ]
+        
         for i in range(0, len(baseSpec)):
             if self._useLogitConnectorChoice:
                 baseSpec[i]['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
@@ -651,7 +663,32 @@ class MultiClassTransitAssignment(_m.Tool()):
                                                   'aux_transit_choice_set': 'BEST_LINK',
                                                   'logit_parameters': {'scale': self.xtmf_WalkDistributionLogitScale,
                                                                        'truncation': 0.05}}}
-
+            if EMME_VERSION >= (4,2,1):
+                modeList = []
+                partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
+        
+                for mode in partialNetwork.modes():
+                    if mode.type != 'TRANSIT': continue
+                    modeList.append({"mode": mode.id, "next_journey_level": 1})
+                
+                baseSpec[i]["journey_levels"] = [
+                {
+                    "description": "Walking",
+                    "destinations_reachable": False,
+                    "transition_rules": modeList,
+                    "boarding_time": None,
+                    "boarding_cost": None,
+                    "waiting_time": None
+                },
+                {
+                    "description": "Transit",
+                    "destinations_reachable": True,
+                    "transition_rules": modeList,
+                    "boarding_time": None,
+                    "boarding_cost": None,
+                    "waiting_time": None
+                }
+            ]
         return baseSpec
 
     def _GetFuncSpec(self):
@@ -673,7 +710,6 @@ class MultiClassTransitAssignment(_m.Tool()):
          'orig_func': False,
          'congestion_attribute': 'us3',
          'python_function': partialSpec}
-        print funcSpec
         return funcSpec
 
     def _GetStopSpec(self):
@@ -718,24 +754,28 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.TRACKER.runTool(matrixResultsTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i])
 
     def _ExtractCostMatrix(self, i):
-        spec = {'trip_components': {'boarding': None,
-                             'in_vehicle': self.SegmentFareAttributeIdList[i],
-                             'aux_transit': self.LinkFareAttributeIdList[i],
-                             'alighting': None},
-         'sub_path_combination_operator': '+',
-         'sub_strategy_combination_operator': 'average',
-         'selected_demand_and_transit_volumes': {'sub_strategies_to_retain': 'ALL',
-                                                 'selection_threshold': {'lower': -999999,
-                                                                         'upper': 999999}},
-         'analyzed_demand': self.DemandMatrixList[i].id,
-         'constraint': None,
-         'results': {'strategy_values': self.FareMatrixList[i],
-                     'selected_demand': None,
-                     'transit_volumes': None,
-                     'aux_transit_volumes': None,
-                     'total_boardings': None,
-                     'total_alightings': None},
-         'type': 'EXTENDED_TRANSIT_STRATEGY_ANALYSIS'}
+        spec = {'trip_components': {
+                    'boarding': None,
+                    'in_vehicle': self.SegmentFareAttributeIdList[i],
+                    'aux_transit': self.LinkFareAttributeIdList[i],
+                    'alighting': None},
+                'sub_path_combination_operator': '+',
+                'sub_strategy_combination_operator': 'average',
+                'selected_demand_and_transit_volumes': {
+                    'sub_strategies_to_retain': 'ALL',
+                    'selection_threshold': {
+                        'lower': -999999,
+                        'upper': 999999}},
+                'analyzed_demand': self.DemandMatrixList[i].id,
+                'constraint': None,
+                'results': {
+                    'strategy_values': self.FareMatrixList[i],
+                    'selected_demand': None,
+                    'transit_volumes': None,
+                    'aux_transit_volumes': None,
+                    'total_boardings': None,
+                    'total_alightings': None},
+                'type': 'EXTENDED_TRANSIT_STRATEGY_ANALYSIS'}
         self.TRACKER.runTool(strategyAnalysisTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i])
 
     def _ExtractCongestionMatrix(self, congestionMatrixId, i):
