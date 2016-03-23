@@ -124,6 +124,9 @@
     <Compile Include="src\network_editing\transit_fare_hypernetworks\Hypernetwork_Volume_Importer.py" />
     <Compile Include="src\tool_list.py" />
     <Compile Include="src\XTMF_internal\apply_batch_line_edits.py" />
+    <Compile Include="src\XTMF_internal\attach_centroids_to_nodes.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\XTMF_internal\export_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_network_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_worksheet.py" />
