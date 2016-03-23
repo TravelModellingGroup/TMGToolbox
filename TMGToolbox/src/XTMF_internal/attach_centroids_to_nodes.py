@@ -46,7 +46,7 @@ class AttachCentriodsToNodes(_m.Tool()):
     Nodes = _m.Attribute(str)
     
     def page(self):
-        pb = _m.ToolPageBuilder(self, title="Run a macro",
+        pb = _m.ToolPageBuilder(self, title="Attach Centroids To Nodes",
                      runnable=False,
                      description="Cannot be called from Modeller.",
                      branding_text="XTMF")
@@ -61,8 +61,6 @@ class AttachCentriodsToNodes(_m.Tool()):
             self._execute(ScenarioNumber, Nodes, Centroids)
         except Exception, e:
             raise Exception(_traceback.format_exc(e))
-        
-        self.XTMFBridge.ReportProgress(1.0)
 
     def _execute(self, ScenarioNumber, Nodes, Centriods):
         nodesToAttachTo = Nodes.split(";")
@@ -83,10 +81,13 @@ class AttachCentriodsToNodes(_m.Tool()):
                                  network.mode('v')])
         for i in range(len(nodesToAttachTo)):
             nodeToAttachTo = self._get_node(network, nodesToAttachTo[i])
+            if nodeToAttachTo == None:
+                raise Exception("Unable to find a node with the ID " + nodesToAttachTo[i])
             #check to see if the centroid already exists
             centroidNode = self._get_node(network, centroidNumbers[i])
             if centroidNode != None:
-                centroidNode  = network.create_centroid(centroidNumbers[i])
+                network.delete_node(centroidNode.id, True)
+            centroidNode = network.create_centroid(centroidNumbers[i])
             centroidNode.x = nodeToAttachTo.x
             centroidNode.y = nodeToAttachTo.y
             linkTo = network.create_link(centroidNumbers[i], nodesToAttachTo[i])
