@@ -64,13 +64,14 @@ class CopyScenario(_m.Tool()):
 
     def _execute(self, FromScenario, ToScenario, CopyStrategy):
         if FromScenario == ToScenario:
-            print "A copy was requested to from scenario " + FromScenario + " to " + ToScenario \
+            print "A copy was requested to from scenario " + str(FromScenario) + " to " + str(ToScenario) \
                 + ".  This was not executed."
             return
         project = _MODELLER.emmebank
         original = project.scenario(str(FromScenario))
         if original == None:
-            raise Exception("The base scenario '"+FromScenario+"' does not exist in order to copy to scenario '"+ToScenario+"'!")
+            raise Exception("The base scenario '"+str(FromScenario)+"' does not exist in order to copy to scenario '" \
+                            + str(ToScenario)+"'!")
         dest = project.scenario(str(ToScenario))
         if dest != None:
             project.delete_scenario(dest.id)
