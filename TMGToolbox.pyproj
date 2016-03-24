@@ -130,6 +130,9 @@
     <Compile Include="src\XTMF_internal\copy_scenario.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\XTMF_internal\delete_scenario.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\XTMF_internal\export_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_network_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_worksheet.py" />

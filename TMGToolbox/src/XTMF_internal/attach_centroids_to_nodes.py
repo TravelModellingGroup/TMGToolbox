@@ -66,7 +66,8 @@ class AttachCentriodsToNodes(_m.Tool()):
     def _execute(self, ScenarioNumber, Nodes, Centriods):
         nodesToAttachTo = Nodes.split(";")
         centroidNumbers = Centroids.split(";")
-        scenario = _MODELLER.emmebank.scenario(ScenarioNumber)
+        project = _MODELLER.emmebank
+        scenario = project.scenario(str(ScenarioNumber))
         network = scenario.get_network()
         #TODO: Un-hardcode this to read in the modes from XTMF
         linkType = 1
