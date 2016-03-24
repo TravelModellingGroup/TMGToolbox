@@ -63,7 +63,7 @@ class AttachCentriodsToNodes(_m.Tool()):
         except Exception, e:
             raise Exception(_traceback.format_exc(e))
 
-    def _execute(self, ScenarioNumber, Nodes, Centriods):
+    def _execute(self, ScenarioNumber, Nodes, Centroids):
         nodesToAttachTo = Nodes.split(";")
         centroidNumbers = Centroids.split(";")
         project = _MODELLER.emmebank
