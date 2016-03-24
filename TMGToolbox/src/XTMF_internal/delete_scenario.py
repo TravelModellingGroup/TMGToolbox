@@ -62,7 +62,7 @@ class DeleteScenario(_m.Tool()):
 
     def _execute(self, Scenario):
         project = _MODELLER.emmebank
-        scenario = project.scenario(str(FromScenario))
+        scenario = project.scenario(str(Scenario))
         if scenario == None:
             print "A delete was requested for scenario " + Scenario + " but the scenario does not exist."
             return
