@@ -92,10 +92,8 @@ class AttachCentriodsToNodes(_m.Tool()):
             centroidNode = network.create_centroid(centroidNumbers[i])
             centroidNode.x = nodeToAttachTo.x
             centroidNode.y = nodeToAttachTo.y
-            linkTo = network.create_link(centroidNumbers[i], nodesToAttachTo[i])
-            linkFrom = network.create_link(nodesToAttachTo[i], centroidNumbers[i])
-            linkTo.modes |= centroidSet
-            linkFrom.modes |= centroidSet
+            linkTo = network.create_link(centroidNumbers[i], nodesToAttachTo[i], centroidSet)
+            linkFrom = network.create_link(nodesToAttachTo[i], centroidNumbers[i], centroidSet)
             linkTo.length = 0.0
             linkFrom.length = 0.0
             linkTo.type = linkType
