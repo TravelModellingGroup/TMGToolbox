@@ -104,7 +104,7 @@ class AttachCentriodsToNodes(_m.Tool()):
             linkFrom.Lanes = lanes
             linkFrom.data2 = linkSpeed
             linkFrom.data3 = 9999
-        network.publish_network()
+        scenario.publish_network(network)
 
     def _get_node(self, network, nodeString):
         return network.node(nodeString)
