@@ -1270,7 +1270,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                         "upper": 999999
                     }
                 },
-                "analyzed_demand": None,
+                "analyzed_demand": self.DemandMatrix.id,
                 "constraint": None,
                 "results": {
                     "strategy_values":congestionMatrixId,
