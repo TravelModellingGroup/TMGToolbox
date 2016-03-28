@@ -18,20 +18,20 @@
 '''
 #---METADATA---------------------
 '''
-Copy Scenario
+Delete Scenario
 
     Authors: JamesVaughan
 
     Latest revision by: JamesVaughan
     
     
-    This tool will allow XTMF to be able to copy scenarios within 
+    This tool will allow XTMF to be able to delete a matrix within 
     an EMME Databank.
         
 '''
 #---VERSION HISTORY
 '''
-    0.0.1 Created on 2016-03-23 by JamesVaughan
+    0.0.1 Created on 2016-03-24 by JamesVaughan
     
     
 '''
@@ -39,14 +39,12 @@ import inro.modeller as _m
 import traceback as _traceback
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 
-class CopyScenario(_m.Tool()):
+class DeleteMatrix(_m.Tool()):
     version = '0.0.1'
-    FromScenario = _m.Attribute(int)
-    ToScenario = _m.Attribute(int)
-    CopyStrategy = _m.Attribute(bool)
+    Scenario = _m.Attribute(int)
     
     def page(self):
-        pb = _m.ToolPageBuilder(self, title="Copy Scenario",
+        pb = _m.ToolPageBuilder(self, title="Delete Matrix",
                      runnable=False,
                      description="Cannot be called from Modeller.",
                      branding_text="XTMF")
@@ -56,26 +54,18 @@ class CopyScenario(_m.Tool()):
     def run(self):
         pass
 
-    def __call__(self, FromScenario, ToScenario, CopyStrategy):  
+    def __call__(self, Scenario):  
         try:
-            self._execute(FromScenario, ToScenario, CopyStrategy)
+            self._execute(Scenario)
         except Exception, e:
             raise Exception(_traceback.format_exc(e))
 
-    def _execute(self, FromScenario, ToScenario, CopyStrategy):
-        if FromScenario == ToScenario:
-            print "A copy was requested to from scenario " + str(FromScenario) + " to " + str(ToScenario) \
-                + ".  This was not executed."
-            return
+    def _execute(self, Scenario):
         project = _MODELLER.emmebank
-        original = project.scenario(str(FromScenario))
-        if original == None:
-            raise Exception("The base scenario '"+str(FromScenario)+"' does not exist in order to copy to scenario '" \
-                            + str(ToScenario)+"'!")
-        dest = project.scenario(str(ToScenario))
-        if dest != None:
-            project.delete_scenario(dest.id)
-        if CopyStrategy == True:
-            project.copy_scenario(original.id, str(ToScenario), True, True, True)
-        else:
-            project.copy_scenario(original.id, str(ToScenario), True, False, True)
+        scenario = project.scenario(str(Scenario))
+        if scenario == None:
+            print "A delete was requested for scenario " + str(Scenario) + " but the scenario does not exist."
+            return
+        if scenario.delete_protected == True:
+            scenario.delete_protected = False
+        project.delete_scenario(scenario.id)

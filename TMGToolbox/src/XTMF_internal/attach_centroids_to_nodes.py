@@ -97,11 +97,11 @@ class AttachCentriodsToNodes(_m.Tool()):
             linkTo.length = 0.0
             linkFrom.length = 0.0
             linkTo.type = linkType
-            linkTo.Lanes = lanes
+            linkTo.num_lanes = lanes
             linkTo.data2 = linkSpeed
             linkTo.data3 = 9999
             linkFrom.type = linkType
-            linkFrom.Lanes = lanes
+            linkFrom.num_lanes = lanes
             linkFrom.data2 = linkSpeed
             linkFrom.data3 = 9999
         scenario.publish_network(network)
