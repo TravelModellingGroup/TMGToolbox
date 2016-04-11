@@ -403,7 +403,8 @@ class CCGEN(_m.Tool()):
                 network.create_attribute('NODE', '_geometry', None) # For zones, stores the boundaries. For nodes, stores the point geometry.
                 network.create_attribute('NODE', '_candidateNodes', None) # Stores a mapping of candidateNode -> distance from centroid 
                 
-                #---2. Load the optional boundaries files
+                #---2. Load the optional boundaries files 
+                '''TODO: make zones file mandatory'''
                 self._tracker.startProcess(2)
                 if self.BoundaryFile != None and self.BoundaryFile != "":
                     self._loadBoundaryFile(self.BoundaryFile)
@@ -415,6 +416,9 @@ class CCGEN(_m.Tool()):
                     self._loadZoneShape(self.ZoneShapeFile, network)
                 self._tracker.completeSubtask()
                 
+                #---3. Assign node weights
+                self._create_weights(network)
+
                 #---3. Get feasible nodes
                 feasibleNodes = None
                 with _m.logbook_trace("Getting set of feasible nodes"):
@@ -486,6 +490,47 @@ class CCGEN(_m.Tool()):
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
+    def _create_weights(self,network):
+        
+        weight_att_name = '@cgenw'
+        if not weight_att_name in network.attributes('NODE'):
+            att = self.Scenario.create_extra_attribute('NODE', weight_att_name , 1.0)
+            att.description = "CCGEN weight value"
+        network.create_attribute('NODE', 'is_stop', False)
+        for segment in network.transit_segments():
+            if segment.allow_boardings or segment.allow_alightings:
+                segment.i_node.is_stop = True
+        print 'flagged all transit stops'
+
+        network.create_attribute('NODE', 'degree', 0)
+        for node in network.regular_nodes():
+            neighbours = set()
+            for link in node.outgoing_links():
+                j_node = link.j_node
+                if j_node.is_centroid: continue #Skip connected centroids
+                neighbours.add(j_node.number)
+            for link in node.incoming_links():
+                i_node = link.i_node
+                if i_node.is_centroid: continue #Skip connected centroids
+                neighbours.add(i_node.number)
+            node.degree = len(neighbours)
+        print "calculated degrees"
+
+        for node in network.regular_nodes():
+            weight = 1
+            degree = node.degree
+            if degree == 1:
+                weight = 5
+            elif degree == 2:
+                weight = 3
+    
+            if node.is_stop: weight += 1
+            node[weight_att_name] = weight
+        print "processed node weight"
+
+        self.Scenario.publish_network(network, resolve_attributes= True)
+        print "published network"
+
     def _getAtts(self):
         atts = {
                 "Scenario" : str(self.Scenario.id),
