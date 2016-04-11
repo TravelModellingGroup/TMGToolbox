@@ -124,7 +124,7 @@ class CCGEN(_m.Tool()):
     
     Scenario = _m.Attribute(_m.InstanceType) #
     ConnectorModeIds = _m.Attribute(_m.ListType)
-    MassAttribute = _m.Attribute(_m.InstanceType)
+    MassAttribute = _m.Attribute(str)
     
     def __init__(self):
         
@@ -180,13 +180,6 @@ class CCGEN(_m.Tool()):
                       title= "Zone ID Attribute",
                       note= "Shapefile field containing zone ID attribute (corresponds to network zone ID).")
         
-        keyval = []
-        for mode in self.Scenario.modes():
-            text = " ".join([mode.id, mode.description, mode.type])
-            keyval.append((mode.id, text))
-        pb.add_select(tool_attribute_name="ConnectorModeIds",
-                           title="Modes on new connectors",
-                           keyvalues= keyval)
         
         pb.add_header("EXCLUSIONS")
         
@@ -226,13 +219,6 @@ class CCGEN(_m.Tool()):
                         <br>If a zone shapefile is used, this will be the buffer distance around zone polygons.")
         
         pb.add_header("UTILITY FUNCTION")
-        
-        pb.add_select_attribute(tool_attribute_name="MassAttribute",
-                                filter='NODE',
-                                allow_none=True,
-                                title="Node weight attribute",
-                                note="Optional. If no attribute is specified, all nodes will have a weight of 1.\
-                                <br>If an attribute is specified, ensure that the default value is 1.")
         
         with pb.add_table(visible_border=False, title="Parameters") as t:
             with t.table_cell():
@@ -300,15 +286,6 @@ class CCGEN(_m.Tool()):
             $("#ShapefileZoneAttributeId").prop('disabled', true);
         }
         
-        $("#Scenario").bind('change', function()
-        {
-            $(this).commit();
-            $("#ConnectorModeIds")
-                .empty()
-                .append(tool.preload_scenario_modes())
-            //inro.modeller.page.preload("#ConnectorModeIds");
-            $("#ConnectorModeIds").trigger('change');
-        });
         
         $("#ZoneShapeFile").bind('change', function()
         {
@@ -364,7 +341,6 @@ class CCGEN(_m.Tool()):
         if self.FullReportFile != "":
             self.DoFullReport = True
         
-        print self.MassAttribute
         
         try:
             self._execute()
@@ -416,6 +392,8 @@ class CCGEN(_m.Tool()):
                     self._loadZoneShape(self.ZoneShapeFile, network)
                 self._tracker.completeSubtask()
                 
+                self.ConnectorModeIds = [u'v',u'c', u'e', u'f', u'h', u'i', u'j']
+                print self.ConnectorModeIds
                 #---3. Assign node weights
                 self._create_weights(network)
 
@@ -492,11 +470,12 @@ class CCGEN(_m.Tool()):
     
     def _create_weights(self,network):
         
-        weight_att_name = '@cgenw'
-        if not weight_att_name in network.attributes('NODE'):
-            att = self.Scenario.create_extra_attribute('NODE', weight_att_name , 1.0)
+        self.MassAttribute = '@cgenw'
+        if not self.MassAttribute in network.attributes('NODE'):
+            att = self.Scenario.create_extra_attribute('NODE', self.MassAttribute , 1.0)
             att.description = "CCGEN weight value"
         network.create_attribute('NODE', 'is_stop', False)
+
         for segment in network.transit_segments():
             if segment.allow_boardings or segment.allow_alightings:
                 segment.i_node.is_stop = True
@@ -525,7 +504,7 @@ class CCGEN(_m.Tool()):
                 weight = 3
     
             if node.is_stop: weight += 1
-            node[weight_att_name] = weight
+            node[self.MassAttribute] = weight
         print "processed node weight"
 
         self.Scenario.publish_network(network, resolve_attributes= True)
@@ -546,7 +525,7 @@ class CCGEN(_m.Tool()):
                 "Boundary File" : self.BoundaryFile,
                 "Beta Gravity" : self.BetaGravity,
                 "Zones File" : self.ZonesFile,
-                "Mass Attribute" : str(self.MassAttribute),
+                "Mass Attribute" : self.MassAttribute,
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts
@@ -835,17 +814,7 @@ class CCGEN(_m.Tool()):
             '''
             TODO:
             - Generalize default attributes for link connectors (for other jurisdictions)
-            - Get the link type dynamically based on the nodes it connects to.
             '''
-
-            #'get centroid connector type (based on outgoing links of node)'
-            #old_type = None
-            #for outgoing_link in node.outgoing_links():
-            #    new_type = outgoing_link.type
-            #    if old_type <> None:
-            #        if old_type <> new_type:
-            #            raise IOError("Node '%s' has inconsistent link types! Cannot generate centroid connectors for this node." %node.id)
-            #    old_type = new_type
 
             outConnector = network.create_link(zone.id, node.id, self.ConnectorModeIds)
             outConnector.length = self._measureDistance(zone, node)
@@ -1201,7 +1170,7 @@ class CCGEN(_m.Tool()):
     
     def _getNodeMass(self, node):
         if self.MassAttribute:# != None:
-            return node[self.MassAttribute.name]
+            return node[self.MassAttribute]
         else:
             return 1
     
