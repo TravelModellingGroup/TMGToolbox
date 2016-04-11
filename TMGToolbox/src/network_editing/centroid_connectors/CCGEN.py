@@ -327,7 +327,6 @@ class CCGEN(_m.Tool()):
     
     @_m.method(return_type= unicode)
     def preload_scenario_modes(self):
-        print "bob"
         options = []
         for mode in self.Scenario.modes():
             text = "%s %s %s" %(mode.id, mode.description, mode.type)
@@ -765,25 +764,59 @@ class CCGEN(_m.Tool()):
                     maxUtil = util
                     maxComponents = dict([(key, tuple[1]) for (key, tuple) in utilComponents.iteritems()])
         
+        #determine centroid connector type
+        type_list = []
+
         for node in bestConfig:
+            for link in node.outgoing_links():
+                type = link.type
+                index = 0 
+                while index <len(type_list) and type_list[index][0] <>type:
+                    index += 1
+                if index >= len(type_list):
+                    type_list.append([type,1])
+                else:
+                    type_list[index][1] += 1
+                    while index > 0 and type_list[index-1][1] < type_list[index][1]:
+                        temp = type_list[index-1]
+                        type_list[index-1] = type_list[index]
+                        type_list[index] = temp
+                        index = index -1
+       
+        most_common_type = type_list[0][0]
+
+        for node in bestConfig:
+
             '''
             TODO:
             - Generalize default attributes for link connectors (for other jurisdictions)
             - Get the link type dynamically based on the nodes it connects to.
             '''
+
+            #'get centroid connector type (based on outgoing links of node)'
+            #old_type = None
+            #for outgoing_link in node.outgoing_links():
+            #    new_type = outgoing_link.type
+            #    if old_type <> None:
+            #        if old_type <> new_type:
+            #            raise IOError("Node '%s' has inconsistent link types! Cannot generate centroid connectors for this node." %node.id)
+            #    old_type = new_type
+
             outConnector = network.create_link(zone.id, node.id, self.ConnectorModeIds)
             outConnector.length = self._measureDistance(zone, node)
             outConnector.num_lanes = 2.0
             outConnector.volume_delay_func = 90
             outConnector.data2 = 40.0
             outConnector.data3 = 9999
-            
+            outConnector.type = most_common_type
+             
             inConnector = network.create_link(node.id, zone.id, self.ConnectorModeIds)
             inConnector.length = outConnector.length
             inConnector.num_lanes = 2.0
             inConnector.volume_delay_func = 90
             inConnector.data2 = 40.0
             inConnector.data3 = 9999
+            inConnector.type = most_common_type
         
         if len(utils) == 0:
             utils = [- float('inf')]
