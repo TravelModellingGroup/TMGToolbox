@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2016 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -122,9 +122,9 @@ class CCGEN(_m.Tool()):
     DoSummaryReport = _m.Attribute(bool)
     FullReportFile = _m.Attribute(str)
     
-    Scenario = _m.Attribute(_m.InstanceType) #
+    Scenario = _m.Attribute(_m.InstanceType) 
     ConnectorModeIds = _m.Attribute(_m.ListType)
-    MassAttribute = _m.Attribute(str)
+    MassAttribute = _m.Attribute(_m.InstanceType)
     
     def __init__(self):
         
@@ -171,9 +171,9 @@ class CCGEN(_m.Tool()):
                             window_type="file",
                             file_filter="*.shp",
                             title="Zone Shapefile",
-                            note="<font color='green'><b>Optional:</b></font> \
-                                Shapefile defining zone shapes. If selected, the \
-                                algorithm will apply the search <br>radius as a buffer around each \
+                            note="<font color='red'><b>Required:</b></font> \
+                                Shapefile defining zone shapes. The algorithm \
+                                will apply the search radius <br>as a buffer around each \
                                 zone polygon and use only those nodes which fall inside.")
         
         pb.add_select(tool_attribute_name= 'ShapefileZoneAttributeId',
@@ -230,9 +230,16 @@ class CCGEN(_m.Tool()):
                         size=10,
                         title='Search radius',
                         note="In coordinate units.\
-                        <br>If a zone shapefile is used, this will be the buffer distance around zone polygons.")
+                        <br>This will be the buffer distance around zone polygons.")
         
         pb.add_header("UTILITY FUNCTION")
+
+        pb.add_select_attribute(tool_attribute_name="MassAttribute",
+            filter='NODE',
+            allow_none=True,
+            title="Node weight attribute",
+            note="Optional. If no attribute is specified, all nodes will have a weight of 1.\
+            <br>If an attribute is specified, ensure that the default value is 1.")
         
         with pb.add_table(visible_border=False, title="Parameters") as t:
             with t.table_cell():
@@ -300,16 +307,6 @@ class CCGEN(_m.Tool()):
             $("#ShapefileZoneAttributeId").prop('disabled', true);
         }
         
-        $("#Scenario").bind('change', function()
-        {
-            $(this).commit();
-            $("#ConnectorModeIds")
-                .empty()
-                .append(tool.preload_scenario_modes())
-            //inro.modeller.page.preload("#ConnectorModeIds");
-            $("#ConnectorModeIds").trigger('change');
-        });
-        
         $("#ZoneShapeFile").bind('change', function()
         {
             $(this).commit();
@@ -324,15 +321,7 @@ class CCGEN(_m.Tool()):
 </script>""" % pb.tool_proxy_tag)
         
         return pb.render()
-    
-    @_m.method(return_type= unicode)
-    def preload_scenario_modes(self):
-        options = []
-        for mode in self.Scenario.modes():
-            text = "%s %s %s" %(mode.id, mode.description, mode.type)
-            options.append("<option value='%s'>%s</option>" %(mode.id, text))
-        return "\n".join(options)
-    
+        
     @_m.method(return_type= bool)
     def has_shapefile_loaded(self):
         return self.ZoneShapeFile != None
@@ -377,7 +366,6 @@ class CCGEN(_m.Tool()):
     def _execute(self):
         self._tracker.reset()
         
-        print self.ConnectorModeIds
         with _m.logbook_trace(name="{0} v{1}".format(self.__class__.__name__,self.version), attributes=self._getAtts()):          
             with _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK') as flagAttr:
                 with _m.logbook_trace("Flagging infeasible links"):
@@ -393,7 +381,7 @@ class CCGEN(_m.Tool()):
                 else:
                     zonesToProcess = self._loadZonesToBeAdded(self.ZonesFile, network)
                     _m.logbook_write("Loaded new zones from file '%s'" %self.ZonesFile)
-                self._tracker.completeTask() # TASK 2
+                self._tracker.completeTask() # TASK 1
                 
                 if len(zonesToProcess) == 0:
                     self.tool_run_msg = _m.PageBuilder.format_info("No zones were selected for processing.")
@@ -403,33 +391,30 @@ class CCGEN(_m.Tool()):
                 network.create_attribute('NODE', '_geometry', None) # For zones, stores the boundaries. For nodes, stores the point geometry.
                 network.create_attribute('NODE', '_candidateNodes', None) # Stores a mapping of candidateNode -> distance from centroid 
                 
-                #---2. Load the optional boundaries files 
+                #---3. Load the optional boundaries files 
                 '''TODO: make zones file mandatory'''
                 self._tracker.startProcess(2)
                 if self.BoundaryFile != None and self.BoundaryFile != "":
                     self._loadBoundaryFile(self.BoundaryFile)
                 else:
                     self._Boundaries = None
-                self._tracker.completeSubtask()
+                self._tracker.completeSubtask() 
                 
-                if self.ZoneShapeFile != None and self.ZoneShapeFile != "":
+                try:
                     self._loadZoneShape(self.ZoneShapeFile, network)
-                self._tracker.completeSubtask()
-                
-
-                #---3. Assign node weights
-                self._create_weights(network)
-
-                #---3. Get feasible nodes
+                except:
+                   raise AttributeError("Zones shape file not found!")
+              
+                #---4. Get feasible nodes
                 feasibleNodes = None
                 with _m.logbook_trace("Getting set of feasible nodes"):
                     feasibleNodes, nFeasibleNodes = {2 : self._getFeasibleNodesGreedy,
                                      1 : self._getFeasibleNodesReluctant}[self.NodeExcluderOption](network, flagAttr.id)
                     _m.logbook_write("%s nodes were selected as feasible in the network." %nFeasibleNodes)
                     print "Filtered and indexed feasible nodes"
-                self._tracker.completeTask() # TASK 4
+                self._tracker.completeTask() # TASK 3
                 
-                #---4. Process new zones
+                #---5. Process new zones
                 '''
                 TODO:
                 - Generate full data for report (optional)
@@ -446,7 +431,7 @@ class CCGEN(_m.Tool()):
                     
                 zonesHandled = 0
                 errors = 0
-                self._tracker.startProcess(len(zonesToProcess)) # TASK 5
+                self._tracker.startProcess(len(zonesToProcess)) # TASK 4
                 print "Processing zones"
                 for zone in zonesToProcess: #{1
                     try:
@@ -491,48 +476,6 @@ class CCGEN(_m.Tool()):
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
     
-    def _create_weights(self,network):
-        
-        self.MassAttribute = '@cgenw'
-        if not self.MassAttribute in network.attributes('NODE'):
-            att = self.Scenario.create_extra_attribute('NODE', self.MassAttribute , 1.0)
-            att.description = "CCGEN weight value"
-        network.create_attribute('NODE', 'is_stop', False)
-
-        for segment in network.transit_segments():
-            if segment.allow_boardings or segment.allow_alightings:
-                segment.i_node.is_stop = True
-        print 'flagged all transit stops'
-
-        network.create_attribute('NODE', 'degree', 0)
-        for node in network.regular_nodes():
-            neighbours = set()
-            for link in node.outgoing_links():
-                j_node = link.j_node
-                if j_node.is_centroid: continue #Skip connected centroids
-                neighbours.add(j_node.number)
-            for link in node.incoming_links():
-                i_node = link.i_node
-                if i_node.is_centroid: continue #Skip connected centroids
-                neighbours.add(i_node.number)
-            node.degree = len(neighbours)
-        print "calculated degrees"
-
-        for node in network.regular_nodes():
-            weight = 1
-            degree = node.degree
-            if degree == 1:
-                weight = 5
-            elif degree == 2:
-                weight = 3
-    
-            if node.is_stop: weight += 1
-            node[self.MassAttribute] = weight
-        print "processed node weight"
-
-        self.Scenario.publish_network(network, resolve_attributes= True)
-        print "published network"
-
     def _getAtts(self):
         atts = {
                 "Scenario" : str(self.Scenario.id),
@@ -548,7 +491,7 @@ class CCGEN(_m.Tool()):
                 "Boundary File" : self.BoundaryFile,
                 "Beta Gravity" : self.BetaGravity,
                 "Zones File" : self.ZonesFile,
-                "Mass Attribute" : self.MassAttribute,
+                "Mass Attribute" : str(self.MassAttribute),
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts
@@ -781,7 +724,7 @@ class CCGEN(_m.Tool()):
             raise ObjectProcessingError("No candidate nodes were selected for zone %s. \
                         This probably means that it is completely enclosed by the boundaries \
                         shapefile. Another possible problem is that no nodes were found \
-                        within the specified distance of the zone shape (if being used)." %zone.id, object=zone)
+                        within the specified distance of the zone shape." %zone.id, object=zone)
         
         distanceMatrix = self._calculateDistanceMatrix(zone)
         
@@ -1193,7 +1136,7 @@ class CCGEN(_m.Tool()):
     
     def _getNodeMass(self, node):
         if self.MassAttribute:# != None:
-            return node[self.MassAttribute]
+            return node[self.MassAttribute.id]
         else:
             return 1
     
