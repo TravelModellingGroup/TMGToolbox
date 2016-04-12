@@ -131,18 +131,19 @@ class CCGEN(_m.Tool()):
         self.Scenario = _MODELLER.scenario
         self._tracker = _util.ProgressTracker(5)
         
-        self.BetaMassSum = 0.0
-        self.BetaRadialDist = 0.0
+        self.BetaMassSum = 1.0
+        self.BetaRadialDist = -4.0
         self.BetaLengthStdDev = 0.0
-        self.BetaGravity = 0.0
-        self.InfeasibleLinkSelector = ""
+        self.BetaGravity = 0.0002
+        self.InfeasibleLinkSelector = "vdf=0,20 or vdf=41"
         self.MaxCandidates = 10
         self.MaxConnectors = 4
-        self.SearchRadius = 2.0
+        self.SearchRadius = 200
         self.DoFullReport = False
         self.DoSummaryReport = False
         self.FullReportFile = ""
-        
+        self.NodeExcluderOption = 2
+       
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="CCGEN v%s" %self.version,
@@ -180,9 +181,22 @@ class CCGEN(_m.Tool()):
                       title= "Zone ID Attribute",
                       note= "Shapefile field containing zone ID attribute (corresponds to network zone ID).")
         
-        
+        self.ConnectorModeIds = [self.Scenario.mode('c'),
+                                 self.Scenario.mode('v'),
+                                 self.Scenario.mode('h'),
+                                 self.Scenario.mode('i'),
+                                 self.Scenario.mode('j'),
+                                 self.Scenario.mode('f'),
+                                 self.Scenario.mode('e'),
+                                 self.Scenario.mode('d')]
+        pb.add_select_mode("ConnectorModeIds",
+                           title = "Modes on new connectors")
+
+
         pb.add_header("EXCLUSIONS")
         
+        
+
         pb.add_select_file(tool_attribute_name="BoundaryFile",
                             window_type="file",
                             file_filter="*.shp",
@@ -286,6 +300,15 @@ class CCGEN(_m.Tool()):
             $("#ShapefileZoneAttributeId").prop('disabled', true);
         }
         
+        $("#Scenario").bind('change', function()
+        {
+            $(this).commit();
+            $("#ConnectorModeIds")
+                .empty()
+                .append(tool.preload_scenario_modes())
+            //inro.modeller.page.preload("#ConnectorModeIds");
+            $("#ConnectorModeIds").trigger('change');
+        });
         
         $("#ZoneShapeFile").bind('change', function()
         {
@@ -354,6 +377,7 @@ class CCGEN(_m.Tool()):
     def _execute(self):
         self._tracker.reset()
         
+        print self.ConnectorModeIds
         with _m.logbook_trace(name="{0} v{1}".format(self.__class__.__name__,self.version), attributes=self._getAtts()):          
             with _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK') as flagAttr:
                 with _m.logbook_trace("Flagging infeasible links"):
@@ -392,8 +416,7 @@ class CCGEN(_m.Tool()):
                     self._loadZoneShape(self.ZoneShapeFile, network)
                 self._tracker.completeSubtask()
                 
-                self.ConnectorModeIds = [u'v',u'c', u'e', u'f', u'h', u'i', u'j']
-                print self.ConnectorModeIds
+
                 #---3. Assign node weights
                 self._create_weights(network)
 
