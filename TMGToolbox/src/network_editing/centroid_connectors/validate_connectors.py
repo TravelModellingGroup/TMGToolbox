@@ -69,6 +69,9 @@ class ValidateConnectors(_m.Tool()):
                                 ",
                                 branding_text="- TMG Toolbox")
 
+        if self.tool_run_msg != "": # to display messages in the page
+            pb.tool_run_status(self.tool_run_msg_status)
+
         pb.add_select_scenario(tool_attribute_name="Scenario",
                         title="Select Scenario",
                         allow_none=False)
@@ -95,6 +98,10 @@ class ValidateConnectors(_m.Tool()):
 
         return pb.render()
 
+    @_m.method(return_type=unicode)
+    def tool_run_msg_status(self):
+        return self.tool_run_msg
+
     def run(self):
         self.tool_run_msg = ""
         
@@ -109,6 +116,8 @@ class ValidateConnectors(_m.Tool()):
 
     def _execute(self):
         network = self.Scenario.get_network()
+
+        flagged_count = 0
 
         if not self.criteria or not self.intCutoff or not self.FlagAttribute:
             raise Exception ("Criteria, cutoff value and/or flag attribute not specified")
@@ -151,20 +160,26 @@ class ValidateConnectors(_m.Tool()):
             if self.criteria == 1:
                 if connectors < self.intCutoff:
                     node[self.FlagAttribute.id] = True
+                    flagged_count += 1
             #criteria = number of connectors at intersections
             elif self.criteria == 2:
                 if intersections > self.intCutoff:
                     node[self.FlagAttribute.id] = True
+                    flagged_count += 1
             #criteria = number of connectors to other connectors
             elif self.criteria == 3:
                 if conn_centroids > self.intCutoff:
                     node[self.FlagAttribute.id] = True
+                    flagged_count += 1
             #criteria = minimum distance
             elif self.criteria == 4:
                 if min_distance > self.intCutoff:
                     node[self.FlagAttribute.id] = True
+                    flagged_count += 1
 
                
 
         self.Scenario.publish_network(network, resolve_attributes= True)
         print "published network"
+
+        self.tool_run_msg = _m.PageBuilder.format_info(" {0} zones were flagged.".format(flagged_count))
