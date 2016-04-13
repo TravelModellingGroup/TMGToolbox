@@ -91,6 +91,9 @@
     <Compile Include="src\network_editing\centroid_connectors\add_node_weights.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\network_editing\centroid_connectors\validate_connectors.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\network_editing\full_network_set_generator.py" />
     <Compile Include="src\network_editing\GTFS_utilities\clean_GTFS.py" />
     <Compile Include="src\network_editing\GTFS_utilities\export_GTFS_stops_as_shapefile.py" />

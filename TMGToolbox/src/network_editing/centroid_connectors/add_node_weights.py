@@ -21,7 +21,7 @@
 '''
 Automatic Node Weight Generator
 
-    Authors:  Monika Nasterska Peter Kucirek
+    Authors:  Monika Nasterska, Peter Kucirek
 
     Intended for use with CCGEN
 '''
@@ -91,8 +91,6 @@ class AddNodeWeights(_m.Tool()):
             raise
 
     def _execute(self):
-        #att = self.Scenario.create_extra_attribute('NODE', '@cgenw', 1.0)
-        #att.description = "CCGEN weight value"
         network = self.Scenario.get_network()
         print 'loaded network'
 
