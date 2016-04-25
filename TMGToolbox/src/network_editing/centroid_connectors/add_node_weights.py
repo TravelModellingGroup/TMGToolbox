@@ -65,6 +65,9 @@ class AddNodeWeights(_m.Tool()):
                                 <li><b>6</b>: dead-end nodes with transit stop(s)</ul>\
                                 ",
                                 branding_text="- TMG Toolbox")
+        
+        if self.tool_run_msg != "": # to display messages in the page
+            pb.tool_run_status(self.tool_run_msg_status)
 
         pb.add_select_scenario(tool_attribute_name="Scenario",
                         title="Select Scenario",
@@ -77,6 +80,10 @@ class AddNodeWeights(_m.Tool()):
             note="Attribute which node weights will be stored in.")
 
         return pb.render()
+
+    @_m.method(return_type=unicode)
+    def tool_run_msg_status(self):
+        return self.tool_run_msg
 
     def run(self):
         self.tool_run_msg = ""
@@ -128,3 +135,5 @@ class AddNodeWeights(_m.Tool()):
 
         self.Scenario.publish_network(network, resolve_attributes= True)
         print "published network"
+
+        self.tool_run_msg = _m.PageBuilder.format_info("Node weights have successfully been added to %s." %(self.MassAttribute.id))
