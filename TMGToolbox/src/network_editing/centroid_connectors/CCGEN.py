@@ -125,6 +125,9 @@ class CCGEN(_m.Tool()):
     Scenario = _m.Attribute(_m.InstanceType) 
     ConnectorModeIds = _m.Attribute(_m.ListType)
     MassAttribute = _m.Attribute(_m.InstanceType)
+    virtual_mass = _m.Attribute(float)
+    SplitLinks = _m.Attribute(bool)
+
     
     def __init__(self):
         
@@ -135,7 +138,7 @@ class CCGEN(_m.Tool()):
         self.BetaRadialDist = -4.0
         self.BetaLengthStdDev = 0.0
         self.BetaGravity = 0.0002
-        self.InfeasibleLinkSelector = "vdf=0,20 or vdf=41"
+        self.InfeasibleLinkSelector = "vdf=0,19 or vdf=41"
         self.MaxCandidates = 10
         self.MaxConnectors = 4
         self.SearchRadius = 200
@@ -143,7 +146,10 @@ class CCGEN(_m.Tool()):
         self.DoSummaryReport = False
         self.FullReportFile = ""
         self.NodeExcluderOption = 2
-       
+        self.virtual_mass = 3.0
+        self.SplitLinks = False
+        self.NewNodeCount = 0
+
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="CCGEN v%s" %self.version,
@@ -270,6 +276,17 @@ class CCGEN(_m.Tool()):
             with t.table_cell():
                 pb.add_html("<b>x Gravity</b>")
 
+        pb.add_checkbox(tool_attribute_name="SplitLinks",
+                                title="Allow option of splitting links.",
+                                note="If selected, centroids have the option of connecting to mid-block nodes that do not exist \
+                                in the current network. These mid-block nodes will be added by splitting existing links, but only \
+                                if they increase utility.")
+
+        pb.add_text_box(tool_attribute_name='virtual_mass',
+                        size=5,
+                        title='Weight attribute for new nodes',
+                        note="Assigend to nodes created from the splitting of links.")
+
         pb.add_header("TOOL OPTIONS")
         
         pb.add_select(tool_attribute_name="ErrorHandlingOption",
@@ -328,6 +345,7 @@ class CCGEN(_m.Tool()):
     
     @_m.method(return_type= unicode)
     def preload_shapefile_fields(self):
+
         with _g.Shapely2ESRI(self.ZoneShapeFile) as reader:
             options = []
             for fieldName in reader.getFieldNames():
@@ -374,7 +392,7 @@ class CCGEN(_m.Tool()):
                 network = self.Scenario.get_network() # Get the network once.
                 
                 #---1. Load the zones file
-                zonesToProcess = None
+                zonesToProcess = None #nodes
                 if self.ZonesFile == None or self.ZonesFile == "":
                     zonesToProcess = self._getUnconnectedZones(network)
                     _m.logbook_write("Selected %s unconnected zones already in the network" %len(zonesToProcess))
@@ -391,8 +409,7 @@ class CCGEN(_m.Tool()):
                 network.create_attribute('NODE', '_geometry', None) # For zones, stores the boundaries. For nodes, stores the point geometry.
                 network.create_attribute('NODE', '_candidateNodes', None) # Stores a mapping of candidateNode -> distance from centroid 
                 
-                #---3. Load the optional boundaries files 
-                '''TODO: make zones file mandatory'''
+                #---3. Load the boundary and zones files 
                 self._tracker.startProcess(2)
                 if self.BoundaryFile != None and self.BoundaryFile != "":
                     self._loadBoundaryFile(self.BoundaryFile)
@@ -456,7 +473,7 @@ class CCGEN(_m.Tool()):
                         else:
                             raise
                     self._tracker.completeSubtask()
-                print "Done connecting zones."
+                print "Done connecting zones. %s new nodes were created." %(self.NewNodeCount)
                 #}1
                 
                 #---6. Report results
@@ -469,7 +486,7 @@ class CCGEN(_m.Tool()):
                 self.Scenario.publish_network(network, resolve_attributes=True) #Resolve the temporary attributes by ignoring them
                 self.report_html = self.FullReportFile
                 _m.Modeller().desktop.refresh_needed(True)
-                self.tool_run_msg = _m.PageBuilder.format_info("Connector generation complete. {0} zones were connected, with {1} errors.".format(zonesHandled, errors))
+                self.tool_run_msg = _m.PageBuilder.format_info("Connector generation complete. {0} zones were connected, with {1} errors. {2} new nodes were created.".format(zonesHandled, errors,self.NewNodeCount))
 
 
     ##########################################################################################################
@@ -698,7 +715,6 @@ class CCGEN(_m.Tool()):
             
             if il == 0 and ol == 0:
                 unconnectedZones.append(z)
-        
         return unconnectedZones
     
     #####################################################################################################################
@@ -710,8 +726,20 @@ class CCGEN(_m.Tool()):
         Then, remove all those nodes which create connectors that cross boundaries.
         Finally, truncate the size of the set of candidate nodes.
         '''
-        
         self._getCandidateNodes(zone, feasibleNodes)
+
+        #get node number for adding virtual nodes
+        next_node = float('inf')
+        for node in zone._candidateNodes:
+            #only get numbers from non-virtual nodes
+            try:
+                if node.number < next_node:
+                    next_node = node.number
+            except:
+                pass
+            #TODO: fix?
+        if next_node == float('inf'):
+            next_node = 20000
         searchSetSize = len(zone._candidateNodes)
         
         self._removeCrossBoundaryConnectors(zone)
@@ -719,6 +747,7 @@ class CCGEN(_m.Tool()):
         
         self._truncateCandidateSet(zone)
         finalSetSize = len(zone._candidateNodes)
+
         
         if len(zone._candidateNodes) < 1:
             raise ObjectProcessingError("No candidate nodes were selected for zone %s. \
@@ -726,6 +755,34 @@ class CCGEN(_m.Tool()):
                         shapefile. Another possible problem is that no nodes were found \
                         within the specified distance of the zone shape." %zone.id, object=zone)
         
+        #determine centroid connector type
+        type_list = []
+
+        for node in zone._candidateNodes:
+            try:
+                for link in node.outgoing_links():
+                    type = link.type
+                    index = 0 
+                    while index <len(type_list) and type_list[index][0] <>type:
+                        index += 1
+                    if index >= len(type_list):
+                        type_list.append([type,1])
+                    else:
+                        type_list[index][1] += 1
+                        while index > 0 and type_list[index-1][1] < type_list[index][1]:
+                            temp = type_list[index-1]
+                            type_list[index-1] = type_list[index]
+                            type_list[index] = temp
+                            index = index -1
+            except:
+                pass
+        
+        try:
+            most_common_type = type_list[0][0]
+        except:
+            most_common_type = 1
+
+
         distanceMatrix = self._calculateDistanceMatrix(zone)
         
         maxUtil = - float('inf') #Negative infinity
@@ -735,11 +792,13 @@ class CCGEN(_m.Tool()):
         
         #Special handling for the case of one connector
         for node in zone._candidateNodes:
+
+                
             util = self.BetaMassSum * self._getNodeMass(node)
             if util > maxUtil:
                 bestConfig = [node]
                 maxUtil = util
-            
+           
         
         # The number of connectors goes from 2 to the lesser of the size of the set of
         #    candidates and the maximum number of connectors.
@@ -751,36 +810,33 @@ class CCGEN(_m.Tool()):
                 
                 if util > maxUtil: #Pick the configuration with the highest utility
                     bestConfig = configuration
+
                     maxUtil = util
                     maxComponents = dict([(key, tuple[1]) for (key, tuple) in utilComponents.iteritems()])
         
-        #determine centroid connector type
-        type_list = []
 
         for node in bestConfig:
-            for link in node.outgoing_links():
-                type = link.type
-                index = 0 
-                while index <len(type_list) and type_list[index][0] <>type:
-                    index += 1
-                if index >= len(type_list):
-                    type_list.append([type,1])
-                else:
-                    type_list[index][1] += 1
-                    while index > 0 and type_list[index-1][1] < type_list[index][1]:
-                        temp = type_list[index-1]
-                        type_list[index-1] = type_list[index]
-                        type_list[index] = temp
-                        index = index -1
-       
-        most_common_type = type_list[0][0]
-
-        for node in bestConfig:
-
             '''
             TODO:
             - Generalize default attributes for link connectors (for other jurisdictions)
             '''
+            if zone.number == 6000:
+                fail = going_to_fail
+            #if node is a virtual node, add it to the network
+            if node.id =="":
+                #get node number
+                testNode = network.node(next_node)
+                while testNode != None:
+                    next_node += 1
+                    testNode = network.node(next_node)
+                node.id = str(next_node)
+                node = network.split_link(node.begin,node.end, next_node)
+                #remove any transit stops created at that node
+                for segment in node.outgoing_segments():
+                    segment.allow_boardings = False
+                    segment.allow_alightings = False
+                    segment.dwell_time = 0
+                self.NewNodeCount += 1
 
             outConnector = network.create_link(zone.id, node.id, self.ConnectorModeIds)
             outConnector.length = self._measureDistance(zone, node)
@@ -871,6 +927,9 @@ class CCGEN(_m.Tool()):
                 if y < miny: miny = y
                 if y > maxy: maxy = y
         
+        #add virtual nodes
+        if self.SplitLinks:
+            minx, miny, maxx, maxy, feasibleNodes = self.add_virtual_nodes(network,attributeId, feasibleNodes,minx,miny,maxx,maxy)
         extents = minx - 1.0, miny - 1.0, maxx + 1.0, maxy + 1.0
         index = _spindex.GridIndex(extents)
         
@@ -879,7 +938,7 @@ class CCGEN(_m.Tool()):
             node._geometry = p
             
             index.insertPoint(node)
-        
+
         return index, len(feasibleNodes)
         
     def _getFeasibleNodesReluctant(self, network, attributeId):
@@ -909,7 +968,11 @@ class CCGEN(_m.Tool()):
                 if x > maxx: maxx = x
                 if y < miny: miny = y
                 if y > maxy: maxy = y
-        
+
+        #add virtual nodes
+        if self.SplitLinks:
+            minx, miny, maxx, maxy, feasibleNodes = self.add_virtual_nodes(network,attributeId, feasibleNodes,minx,miny,maxx,maxy)
+
         extents = minx - 1.0, miny - 1.0, maxx + 1.0, maxy + 1.0
         index = _spindex.GridIndex(extents)
         
@@ -920,29 +983,62 @@ class CCGEN(_m.Tool()):
             index.insertPoint(node)
         
         return index, len(feasibleNodes)
-    
+
+    #add mid-block nodes on links that don't have them (add to grid index, not to network)
+    def add_virtual_nodes(self,network,attributeId, NodesList,minx,miny,maxx,maxy):
+        tracker = {}
+        for link in network.links():
+            #check if link is feasible
+            if link[attributeId] == 0:
+                i = link.i_node
+                j = link.j_node
+                #check if link is a centroid connector
+                if not i.is_centroid and not j.is_centroid:
+                    degree_i = 0
+                    degree_j = 0
+                    #determine if link already contains mid-block nodes
+                    for out in i.outgoing_links():
+                        degree_i += 1
+                    for out in j.outgoing_links():
+                        degree_j += 1
+                    if degree_i > 2 and degree_j > 2:
+                        #create virtual node at mid-point
+                        x = (i.x + j.x)/2
+                        y = (i.y + j.y)/2
+                        p = virtualNode(x,y)
+                        p.begin = i.id
+                        p.end = j.id
+                        if not tracker.has_key(str(x) + ":" +str(y)):
+                            NodesList.append(p)
+                            tracker[str(x) + ":" +str(y)] = 1
+                            if x < minx: minx = x
+                            if x > maxx: maxx = x
+                            if y < miny: miny = y
+                            if y > maxy: maxy = y
+        return minx, miny, maxx, maxy, NodesList
+        
     #----Candidate Node Functions--------------------------------------------------------------------
     
     def _getCandidateNodes(self, zone, feasibleNodes):
         if zone._geometry != None:
             self._searchByPoly(zone, feasibleNodes)
         else:
-            self._searchByPoint(zone, feasibleNodes)
+            _m.logbook_write("No zone shape found for zone %s." %zone.id)
+            zone._candidateNodes = {}
+            #self._searchByPoint(zone, feasibleNodes)
     
     def _searchByPoly(self, zone, feasibleNodes):
         '''
         Gets a list of all network nodes within the specified distance from the edge of
         the zone's boundary.
         '''
+
         buffer = zone._geometry.buffer(self.SearchRadius, resolution=2)
-        
         candidateNodes = {}
-        
         for node in feasibleNodes.queryPolygon(buffer):
             if not buffer.contains(node._geometry):
                 continue #Skip over nodes indexed nearby but not contained within the polygon
             candidateNodes[node] = self._measureDistance(node, zone)
-        
         zone._candidateNodes = candidateNodes #Attach candidate nodes to the zone
         
     def _searchByPoint(self, zone, feasibleNodes):
@@ -967,7 +1063,6 @@ class CCGEN(_m.Tool()):
                     closestNode = node
         except IndexError: #Expected if the zone is outside the bounds of the feasible node set
             pass 
-        
         #if no nodes are found within the search radius, select closest node
         if len(candidateNodes) == 0 and closestNode != None:
             candidateNodes[closestNode] = minDistance
@@ -1136,7 +1231,11 @@ class CCGEN(_m.Tool()):
     
     def _getNodeMass(self, node):
         if self.MassAttribute:# != None:
-            return node[self.MassAttribute.id]
+            try:
+                return node[self.MassAttribute.id]
+            #if node doesn't have a mass attribute, it is a virtual node
+            except:
+                return self.virtual_mass
         else:
             return 1
     
@@ -1217,6 +1316,15 @@ class SummaryReport():
         for tuple in dataMap.iteritems():
             dataSeries.append(tuple)
         return dataSeries
+
+class virtualNode():
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
+        self._geometry = None
+        self.begin = None
+        self.end = None
+        self.id = ""
 
 class FullReport():
     
