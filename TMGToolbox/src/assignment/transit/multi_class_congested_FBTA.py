@@ -135,7 +135,7 @@ class MultiClassTransitAssignment(_m.Tool()):
          '5: 0.41: 1.62']
         self.CongestionExponentString = '\n'.join(lines)
         self.EffectiveHeadwaySlope = 0.2
-        self.AssignmentPeriod = 2.04
+        self.AssignmentPeriod = 3.00
         self.NormGap = 0
         self.RelGap = 0
         self.Iterations = 5

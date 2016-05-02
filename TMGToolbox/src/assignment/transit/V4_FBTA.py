@@ -241,7 +241,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         
         self.FarePerception = 15.14
         
-        self.AssignmentPeriod = 2.04 
+        self.AssignmentPeriod = 3.00 
         self.NormGap = 0
         self.RelGap = 0
         self.Iterations = 5
@@ -479,7 +479,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name= 'AssignmentPeriod', size= 10)
             with t.table_cell():
-                pb.add_html("Converts multiple-hour demand to a single assignment hour.")
+                pb.add_html("Multiple-hour demand is divided by this value to convert to a single assignment hour. <br>Typically equal to the number of hours in the assignment period.")
             t.new_row()
 
         pb.add_header("CONGESTION PARAMETERS")
