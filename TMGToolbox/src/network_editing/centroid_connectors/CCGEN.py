@@ -820,8 +820,6 @@ class CCGEN(_m.Tool()):
             TODO:
             - Generalize default attributes for link connectors (for other jurisdictions)
             '''
-            if zone.number == 6000:
-                fail = going_to_fail
             #if node is a virtual node, add it to the network
             if node.id =="":
                 #get node number
