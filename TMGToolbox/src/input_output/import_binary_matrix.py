@@ -159,6 +159,8 @@ class ImportBinaryMatrix(_m.Tool()):
         
         self.MatrixId = self.MATRIX_TYPES[xtmf_MatrixType] + str(xtmf_MatrixNumber)
         
+        self.ImportFile = ImportFile
+        
         if _util.databankHasDifferentZones(_bank):
             self.Scenario = _bank.scenario(xtmf_ScenarioNumber)
             if self.Scenario == None:
