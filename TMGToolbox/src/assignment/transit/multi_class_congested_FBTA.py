@@ -67,6 +67,9 @@ class MultiClassTransitAssignment(_m.Tool()):
     xtmf_LinkFareAttributeIdString = _m.Attribute(str)
     xtmf_SegmentFareAttributeIdString = _m.Attribute(str)
     xtmf_WalkPerceptionAttributeIdString = _m.Attribute(str)
+
+        #modes
+    xtmf_ClassModeList = _m.Attribute(str)
     #-----
 
 
@@ -127,6 +130,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.ClassWaitPerceptionList = [3.534]
         self.ClassBoardPerceptionList = [1.0]
         self.ClassFarePerceptionList = [10.694]
+        self.ClassModeList = []
 
         lines = ['1: 0.41: 1.62',
          '2: 0.41: 1.62',
@@ -314,7 +318,7 @@ class MultiClassTransitAssignment(_m.Tool()):
 
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, \
         WalkSpeed, xtmf_WalkPerceptionString, xtmf_WalkPerceptionAttributeIdString, \
-        xtmf_ClassWaitPerceptionString, xtmf_ClassBoardPerceptionString, xtmf_ClassFarePerceptionString, \
+        xtmf_ClassWaitPerceptionString, xtmf_ClassBoardPerceptionString, xtmf_ClassFarePerceptionString, xtmf_ClassModeList,\
         HeadwayFractionAttributeId, xtmf_LinkFareAttributeIdString, xtmf_SegmentFareAttributeIdString, \
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
@@ -339,7 +343,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.ClassWaitPerceptionList = [float (x) for x in xtmf_ClassWaitPerceptionString.split(',')]
         self.ClassBoardPerceptionList = [float (x) for x  in xtmf_ClassBoardPerceptionString.split(',')]
         self.ClassFarePerceptionList = [float(x) for x in xtmf_ClassFarePerceptionString.split(',')]
-
+        
 
         self.LinkFareAttributeIdList = xtmf_LinkFareAttributeIdString.split(',')
         self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
@@ -354,6 +358,13 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if self.Scenario == None:
             raise Exception('Scenario %s was not found!' % xtmf_ScenarioNumber)
+
+        aux_mode_chars = ''
+        for mode in self.Scenario.modes():
+            if mode.type == 'AUX_TRANSIT':
+                aux_mode_chars += mode.id   
+
+        self.ClassModeList = [["*"] if  "*" in x else list(set(x + aux_mode_chars) ) for x in xtmf_ClassModeList.split(',')]
 
         self.DemandMatrixList = []
         for demandMatrix in xtmf_DemandMatrixString.split(','):
@@ -438,6 +449,7 @@ class MultiClassTransitAssignment(_m.Tool()):
 
                 self.TRACKER.completeSubtask()
                 spec = self._GetBaseAssignmentSpec()
+
                 self.TRACKER.runTool(congestedAssignmentTool, transit_assignment_spec=spec, congestion_function=self._GetFuncSpec(), stopping_criteria=self._GetStopSpec(), class_names=self.ClassNames, scenario=self.Scenario)
                 self._ExtractOutputMatrices()
 
@@ -615,7 +627,7 @@ class MultiClassTransitAssignment(_m.Tool()):
             else:
                 farePerception.append( 60.0 / self.ClassFarePerceptionList[i])
         baseSpec = [ {
-            'modes': ['*'],
+            'modes': self.ClassModeList[i],
             'demand': self.DemandMatrixList[i].id,
             'waiting_time': {
                 'headway_fraction': self.HeadwayFractionAttributeId,
@@ -665,12 +677,19 @@ class MultiClassTransitAssignment(_m.Tool()):
                                                                        'truncation': 0.05}}}
             if EMME_VERSION >= (4,2,1):
                 modeList = []
+
                 partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
-        
-                for mode in partialNetwork.modes():
-                    if mode.type != 'TRANSIT': continue
-                    modeList.append({"mode": mode.id, "next_journey_level": 1})
-                
+                #if all modes are selected for class, get all transit modes for journey levels
+                if self.ClassModeList[i] == ['*']:
+                    for mode in partialNetwork.modes():
+                        if mode.type == 'TRANSIT': 
+                            modeList.append({"mode": mode.id, "next_journey_level": 1})
+                else:
+                    for modechar in self.ClassModeList[i]:
+                        mode = partialNetwork.mode(modechar)
+                        if mode.type == 'TRANSIT':
+                            modeList.append({"mode": mode.id, "next_journey_level": 1})
+
                 baseSpec[i]["journey_levels"] = [
                 {
                     "description": "Walking",
