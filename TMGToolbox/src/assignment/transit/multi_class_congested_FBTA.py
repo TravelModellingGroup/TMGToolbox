@@ -101,6 +101,7 @@ class MultiClassTransitAssignment(_m.Tool()):
     RelGap = _m.Attribute(float)
     xtmf_ScenarioNumber = _m.Attribute(int)
     xtmf_DemandMatrixString = _m.Attribute(str)
+    xtmf_NameString = _m.Attribute(str)
     
 
     xtmf_OriginDistributionLogitScale = _m.Attribute(float)
@@ -114,6 +115,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)
         self.Scenario = _MODELLER.scenario
         self.DemandMatrixList = [_MODELLER.emmebank.matrix('mf91')]
+        self.ClassNames = ['']
 
         #attribute IDs
         self.LinkFareAttributeIdList = ['@lfare']
@@ -316,7 +318,7 @@ class MultiClassTransitAssignment(_m.Tool()):
 
         self.tool_run_msg = _m.PageBuilder.format_info('Done.')
 
-    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, \
+    def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, xtmf_NameString,\
         WalkSpeed, xtmf_WalkPerceptionString, xtmf_WalkPerceptionAttributeIdString, \
         xtmf_ClassWaitPerceptionString, xtmf_ClassBoardPerceptionString, xtmf_ClassFarePerceptionString, xtmf_ClassModeList,\
         HeadwayFractionAttributeId, xtmf_LinkFareAttributeIdString, xtmf_SegmentFareAttributeIdString, \
@@ -338,7 +340,8 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.Iterations = Iterations
         self.NormGap = NormGap
         self.RelGap = RelGap
-
+        self.ClassNames = [x for x in xtmf_NameString.split(',')]
+        
         #class-specific inputs
         self.ClassWaitPerceptionList = [float (x) for x in xtmf_ClassWaitPerceptionString.split(',')]
         self.ClassBoardPerceptionList = [float (x) for x  in xtmf_ClassBoardPerceptionString.split(',')]
@@ -409,9 +412,9 @@ class MultiClassTransitAssignment(_m.Tool()):
                 if changes == 0:
                     _m.logbook_write('No problems were found')
             self._ChangeWalkSpeed()
-            self.ClassNames = []
+            #self.ClassNames = []
             for i in range(0, len(self.DemandMatrixList)):
-                self.ClassNames.append(str(self.DemandMatrixList[i].name))
+                #self.ClassNames.append(str(self.DemandMatrixList[i].name))
                 if self.InVehicleTimeMatrixList[i] != 'mf0':
                     _util.initializeMatrix(id=self.InVehicleTimeMatrixList[i], description='Transit in-vehicle travel times for %s' % self.ClassNames[-1])
                 else:
