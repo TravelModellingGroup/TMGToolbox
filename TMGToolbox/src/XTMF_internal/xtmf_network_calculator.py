@@ -95,9 +95,8 @@ class XTMFNetworkCalculator(_m.Tool()):
         spec = self.network_calculator_spec()
 
         report = networkCalculation(spec, self.Scenario)
-        sum = report["sum"]
-        if sum != None:
-            return sum
+        if report.has_key("sum"):
+            return report["sum"]
         return ""
 
     def network_calculator_spec(self):
