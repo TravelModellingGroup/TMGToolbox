@@ -507,6 +507,7 @@ class FBTNFromSchema(_m.Tool()):
             #Transform the network
             with _m.logbook_trace("Transforming hyper network"):
                 transferGrid, zoneCrossingGrid = self._TransformNetwork(network, nGroups, nZones)
+                #print transferGrid[0,1]
                 if nStationGroups > 0:
                     self._IndexStationConnectors(network, transferGrid, stationGroups, groupIds2Int)
                 print "Hyper network generated."            
@@ -987,7 +988,9 @@ class FBTNFromSchema(_m.Tool()):
         
         #Put this into a function to be able to break from deep loops using return
         def applyNodeRole(node):
-            if not node.stopping_groups and not node.passing_groups: 
+            if not node.stopping_groups and not node.passing_groups:
+                if node.is_centroid == False:
+                    node.role = 1 #  Surface node without transit
                 return #Skip nodes without an incident transit segment
             
             for link in node.outgoing_links():
@@ -1003,7 +1006,16 @@ class FBTNFromSchema(_m.Tool()):
                         node.role = 1 #Surface node
                         return
             node.role = 2 #Station node is a transit stop, but does NOT connect to any auto links
-        
+            if node.id == '97053':
+                print "node %s has role %s" % (node.id, str(node.role))
+                print "stopping groups %s" % node.stopping_groups
+                print "passing groups %s" % node.passing_groups
+
+            if node.id == '10259':
+                print "node %s has role %s" % (node.id, str(node.role))
+                print "stopping groups %s" % node.stopping_groups
+                print "passing groups %s" % node.passing_groups
+
         #Determine node role. This needs to be done AFTER stops have been identified
         for node in network.regular_nodes(): applyNodeRole(node)
             
@@ -1021,6 +1033,9 @@ class FBTNFromSchema(_m.Tool()):
             if i.role == 1 and j.role == 2 and permitsWalk: link.role = 1 #Station connector (access)
             elif i.role == 2 and j.role == 1 and permitsWalk: link.role = 1 #Station connector (egress)
             elif i.role == 2 and j.role == 2 and permitsWalk: link.role = 2 #Station transfer
+            if link.i_node.id == '97053' or link.j_node.id == '97053':
+                print "link %s has role %s" %(link.id, str(link.role))
+
 
     def _TransformNetwork(self, network, numberOfGroups, numberOfZones):
         
@@ -1243,6 +1258,7 @@ class FBTNFromSchema(_m.Tool()):
         for tup_a, tup_b in get_combinations(virtualNodes, 2): #Iterate through unique pairs of nodes
             node_a, group_a = tup_a
             node_b, group_b = tup_b
+
             link_ab = network.create_link(node_a.number, node_b.number, [transferMode])
             link_ba = network.create_link(node_b.number, node_a.number, [transferMode])
 
@@ -1645,6 +1661,7 @@ class FBTNFromSchema(_m.Tool()):
         #don't remove hypernetwork connectors  
         if int(transferLink.i_node.id) < self.VirtualNodeDomain and int(transferLink.j_node.id) < self.VirtualNodeDomain: 
             if self.ReplacementMode not in transferLink.modes:
+                #print "link %s did not have replacement mode %s" %(transferLink.id, self.ReplacementMode)
                 transferLink.modes |= set([self.ReplacementMode])
             transferLink.modes -= set([transferMode])
 
