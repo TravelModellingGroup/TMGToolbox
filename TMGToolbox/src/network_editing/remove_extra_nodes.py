@@ -78,7 +78,7 @@ class RemoveExtraNodes(_m.Tool()):
     
     version = '1.0.1'
     tool_run_msg = ""
-    number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
     BaseScenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     NewScenarioId = _m.Attribute(int)
@@ -332,6 +332,7 @@ class RemoveExtraNodes(_m.Tool()):
             log = self._RemoveNodes(network, nodesToDelete)
 
             self._RemoveStrandedNodes(network)
+            self.TRACKER.completeTask()
             
             self._WriteReport(log)
             
