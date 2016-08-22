@@ -23,7 +23,7 @@
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: nasterska
     
     
     [Description]
@@ -34,7 +34,9 @@
     0.0.1 Created on 2014-05-06 by pkucirek
     
     1.0.0 Published with proper documentation on 2014-05-29
-    
+
+    1.0.1 Nodes that have no incoming or outgoing links are removed. 2016-08-22
+        
 '''
 
 import inro.modeller as _m
@@ -74,7 +76,7 @@ class RemoveExtraNodes(_m.Tool()):
         
         return (a1 * l1 + a2 * l2) / (l1 + l2)
     
-    version = '1.0.0'
+    version = '1.0.1'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -132,8 +134,9 @@ class RemoveExtraNodes(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Remove Extra Nodes v%s" %self.version,
                      description="Removes unnecessary (i.e., cosmetic) nodes from the network. \
-                                Only candidate nodes (nodes with a degree of 2) will be removed \
-                                from the network, however the tool can be configured to \
+                                Nodes without incoming or outgoing links are removed. <br>\
+                                For nodes with a degree of 2, only candidate nodes will be removed \
+                                from the network; however, the tool can be configured to \
                                 expand and/or contract the set of candidate nodes. Three filter \
                                 attributes are used: <ul>\
                                 <li>Node filter attribute: Contracts the set of candidate nodes, \
@@ -327,12 +330,14 @@ class RemoveExtraNodes(_m.Tool()):
                 self._RemoveCandidateCentroidConnectors(nodesToDelete)
             
             log = self._RemoveNodes(network, nodesToDelete)
+
+            self._RemoveStrandedNodes(network)
             
             self._WriteReport(log)
             
             self.TRACKER.startProcess(2)
             if self.PublishFlag:
-                bank = _MODELLER.emmebank
+                bank = _MODELLER.emmebank 
                 newScenario = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioId, copy_strat_files= False, copy_path_files= False)
                 newScenario.title= self.NewScenarioTitle
                 self.TRACKER.completeSubtask()
@@ -600,6 +605,17 @@ class RemoveExtraNodes(_m.Tool()):
         _m.logbook_write("Removed %s nodes from the network." %deletedNodes)
         
         return log
+
+    def _RemoveStrandedNodes(self,network):
+        #removes nodes not connected to any links
+        for node in network.nodes():
+            is_stranded = True
+            for link in node.outgoing_links():
+                is_stranded = False
+            for link in node.incoming_links():
+                is_stranded = False
+            if is_stranded == True:
+                network.delete_node(node.id)
     
     def _WriteReport(self, log):
         pb = _m.PageBuilder(title="Error log")
