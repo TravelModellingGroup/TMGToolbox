@@ -44,9 +44,6 @@ from re import split as _regex_split
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
-_editing = _MODELLER.module('tmg.common.network_editing')
-ForceError = _editing.ForceError
-InvalidNetworkOperationError = _editing.InvalidNetworkOperationError
 
 ##########################################################################################################
 
@@ -57,11 +54,12 @@ class RemoveExtraLinks(_m.Tool()):
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
     BaseScenario = _m.Attribute(_m.InstanceType) # common variable or parameter
+    BaseNetwork = _m.Attribute(_m.InstanceType)
     NewScenarioId = _m.Attribute(int)
     NewScenarioTitle = _m.Attribute(str)
     PublishFlag = _m.Attribute(bool)
     
-    TransferModeList = _m.Attribute(list)
+    TransferModeList = _m.Attribute(_m.ListType)
     
     AttributeAggregatorString = _m.Attribute(str)
     
@@ -71,20 +69,19 @@ class RemoveExtraLinks(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.BaseScenario = _MODELLER.scenario #Default is primary scenario
-        
+        self.BaseNetwork = self.BaseScenario.get_network()
         self.PublishFlag = True 
 
-        self.TransferModeList = [network.mode('u'), network.mode('t'),network.mode('y')]
-                      
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Remove Extra Links v%s" %self.version,
-                     description="Removes unnecessary links from the network. \
+                     description="Removes unnecessary links from the network. <br><br> \
                                 Three types of links are deleted: \
-                                First, links with no transit lines, which have only transit modes \
+                                <ul>\
+                                <li> First, links with no transit lines, which have only transit modes \
                                 are deleted. \
-                                Next, non-connector dead-end links are removed. \
-                                Finally, links with transfer modes that do not connect two stations, \
+                                <li> Next, non-connector dead-end links are removed. \
+                                <li> Finally, links with transfer modes that do not connect two stations, \
                                 or connect a station to the road network are deleted. Links of this nature \
                                 which have other, non-transfer modes are not deleted; however, the transfer \
                                 modes are removed from these links.",
@@ -106,10 +103,15 @@ class RemoveExtraLinks(_m.Tool()):
         pb.add_checkbox(tool_attribute_name= 'PublishFlag',
                         label= "Publish network?")
         
+        self.TransferModeList = [self.BaseScenario.mode('u'),
+                                 self.BaseScenario.mode('t'),
+                                 self.BaseScenario.mode('y')]
+
         pb.add_select_mode(tool_attribute_name='TransferModeList',
                            filter=[ 'AUX_TRANSIT'],
                            allow_none=False,
-                           title='Transfer Modes:')
+                           title='Transfer Modes:',
+                           note='Select all transfer modes.')
         
         return pb.render()
 
@@ -126,10 +128,10 @@ class RemoveExtraLinks(_m.Tool()):
 
         self.PublishFlag = pubFlag
 
-        network = BaseScenario.get_network()
+        self.BaseNetwork = BaseScenario.get_network()
 
         for modechar in transferModeList:
-            self.TransferModeList.append (network.mode(modechar))
+            self.TransferModeList.append (self.BaseNetwork.mode(modechar))
 
         print self.TransferModeList
 
@@ -167,10 +169,10 @@ class RemoveExtraLinks(_m.Tool()):
             
             self.TRACKER.completeTask()
             
-            network = self.BaseScenario.get_network()
+            self.BaseNetwork = self.BaseScenario.get_network()
             self.TRACKER.completeTask()
                         
-            self._RemoveLinks(network)
+            self._RemoveLinks(self.BaseNetwork)
             self.TRACKER.completeTask()
             
             self.TRACKER.startProcess(2)
@@ -179,7 +181,7 @@ class RemoveExtraLinks(_m.Tool()):
                 newScenario = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioId, copy_strat_files= False, copy_path_files= False)
                 newScenario.title= self.NewScenarioTitle
                 self.TRACKER.completeSubtask()
-                newScenario.publish_network(network, True)
+                newScenario.publish_network(self.BaseNetwork, True)
                 self.TRACKER.completeSubtask()
                 
                 _MODELLER.desktop.refresh_needed(True)
@@ -291,35 +293,7 @@ class RemoveExtraLinks(_m.Tool()):
                             network.delete_link(start_node,end_node)
                         else:
                             link.modes = link.modes.difference(transfer_modes)
-    
-    def _WriteReport(self, log):
-        pb = _m.PageBuilder(title="Error log")
         
-        doc = "<br>".join(log)
-        pb.wrap_html(body=doc)
-        
-        _m.logbook_write("Error report", value=pb.render())
-    
-    @_m.method(return_type=unicode)
-    def get_scenario_node_attributes(self):
-        options = ['<option value="-1">No attribute</option>']
-        for exatt in self.BaseScenario.extra_attributes():
-            if exatt.type != 'NODE': continue
-            text = "%s - %s" %(exatt.name, exatt.description)
-            options.append('<option value="%s">%s</option>' %(exatt.name, text)) 
-        
-        return "\n".join(options)
-    
-    @_m.method(return_type=unicode)
-    def get_scenario_link_attributes(self):
-        options = ['<option value="-1">No attribute</option>']
-        for exatt in self.BaseScenario.extra_attributes():
-            if exatt.type != 'LINK': continue
-            text = "%s - %s" %(exatt.name, exatt.description)
-            options.append('<option value="%s">%s</option>' %(exatt.name, text)) 
-        
-        return "\n".join(options)
-    
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
