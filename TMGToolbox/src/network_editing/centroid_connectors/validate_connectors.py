@@ -90,7 +90,7 @@ class ValidateConnectors(_m.Tool()):
         keyvalues = {1: 'number of connectors is less than the cutoff value', 
                      2: 'number of connectors at intersections is greater than the cutoff value',
                      3: 'number of connectors to other connectors is greater than the cutoff value',
-                     4: 'minimum connector length is greater than the cutoff value (in coordinate units)'}
+                     4: 'minimum connector length is greater than the cutoff value (in length units)'}
     
         pb.add_radio_group(tool_attribute_name = "criteria",
                                 keyvalues = keyvalues,
