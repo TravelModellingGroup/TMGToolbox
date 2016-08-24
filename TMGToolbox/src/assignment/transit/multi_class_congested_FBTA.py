@@ -160,105 +160,21 @@ class MultiClassTransitAssignment(_m.Tool()):
     def page(self):
         if EMME_VERSION < (4, 1, 5):
             raise ValueError('Tool not compatible. Please upgrade to version 4.1.5+')
-        pb = _tmgTPB.TmgToolPageBuilder(self, title='Multi-Class Transit Assignment v%s' % self.version, description="Executes a congested transit assignment procedure                         for GTAModel V4.0.                         <br><br>Hard-coded assumptions:                         <ul><li> Boarding penalties are assumed stored in <b>UT3</b></li>                        <li> The congestion term is stored in <b>US3</b></li>                        <li> In-vehicle time perception is 1.0</li>                        <li> All available transit modes will be used.</li>                        </ul>                        <font color='red'>This tool is only compatible with Emme 4.1.5 and later versions</font>", branding_text='- TMG Toolbox')
-        if self.tool_run_msg != '':
-            pb.tool_run_status(self.tool_run_msg_status)
-        pb.add_header('SCENARIO INPUTS')
-    #    pb.add_select_scenario(tool_attribute_name='Scenario', title='Scenario:', allow_none=False)
-    #    pb.add_select_matrix(tool_attribute_name='DemandMatrixList', filter=['FULL'], title='Demand Matrices', note='A full matrix of OD demand for each class')
-    #    keyval1 = [(-1, 'None')]
-    #    keyval2 = [(-1, 'None')]
-    #    keyval3 = []
-    #    keyval4 = []
-    #    keyval5 = [(-1, 'None')]
-    #    for exatt in self.Scenario.extra_attributes():
-    #        tup = (exatt.id, '%s - %s' % (exatt.id, exatt.description))
-    #        if exatt.type == 'NODE':
-    #            keyval1.append(tup)
-    #        elif exatt.type == 'LINK':
-    #            keyval2.append(tup)
-    #            keyval3.append(tup)
-    #        elif exatt.type == 'TRANSIT_SEGMENT':
-    #            keyval4.append(tup)
-    #        elif exatt.type == 'TRANSIT_LINE':
-    #            keyval5.append(tup)
+        pb = _tmgTPB.TmgToolPageBuilder(self, 
+                                        title='Multi-Class Transit Assignment v%s' % self.version, 
+                                        description="Executes a congested transit assignment procedure\
+                                        for GTAModel V4.0.\
+                                        <br><br><b>Cannot be called from Modeller.</b>\
+                                        <br><br>Hard-coded assumptions:\
+                                        <ul><li> Boarding penalties are assumed stored in <b>UT3</b></li>\
+                                        <li> The congestion term is stored in <b>US3</b></li>\
+                                        <li> In-vehicle time perception is 1.0</li>\
+                                        <li> All available transit modes will be used.</li>\
+                                        </ul>\
+                                        <font color='red'>This tool is only compatible with Emme 4.1.5 and later versions</font>",
+                                        runnable = False,
+                                        branding_text='- TMG Toolbox')
 
-    #    pb.add_select(tool_attribute_name='HeadwayFractionAttributeId', keyvalues=keyval1, title='Headway Fraction Attribute', note="NODE extra attribute to store headway fraction value.                           Select NONE to create a temporary attribute.                           <br><font color='red'><b>Warning:</b></font>                          using a temporary attribute causes an error with                           subsequent strategy-based analyses.")
-    #    pb.add_select(tool_attribute_name='EffectiveHeadwayAttributeId', keyvalues=keyval5, title='Effective Headway Attribute', note="TRANSIT_LINE extra attribute to store effective headway value.                           Select NONE to create a temporary attribute.                           <br><font color='red'><b>Warning:</b></font>                          using a temporary attribute causes an error with                           subsequent strategy-based analyses.")
-    #    pb.add_select(tool_attribute_name='WalkAttributeIdList', keyvalues=keyval2, title='Walk Perception Attribute', note="LINK extra attribute to store walk perception value.                           Select NONE to create a temporary attribute.                          <br><font color='red'><b>Warning:</b></font>                          using a temporary attribute causes an error with                           subsequent strategy-based analyses.")
-    #    pb.add_select(tool_attribute_name='LinkFareAttributeId', keyvalues=keyval3, title='Link Fare Attribute', note='LINK extra attribute containing actual fare costs.')
-    #    pb.add_select(tool_attribute_name='SegmentFareAttributeId', keyvalues=keyval4, title='Segment Fare Attribute', note='SEGMENT extra attribute containing actual fare costs.')
-    #    pb.add_header('OUTPUT MATRICES')
-    #    pb.add_header('PARAMETERS')
-    #    with pb.add_table(False) as t:
-    #        with t.table_cell():
-    #            pb.add_html('<b>Assignment Period:</b>')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='AssignmentPeriod', size=10)
-    #        with t.table_cell():
-    #            pb.add_html('Converts multiple-hour demand to a single assignment hour.')
-    #        t.new_row()
-    #        with t.table_cell():
-    #            pb.add_html('<b>Effective Headway Function Slope:</b>')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='EffectiveHeadwaySlope', size=10)
-    #        with t.table_cell():
-    #            pb.add_html('Applies to headways greater than 15 minutes.')
-    #        t.new_row()
-    #        with t.table_cell():
-    #            pb.add_html('<b>Walk Time Perception:</b>                  <br>Walk perception on links.                  <br><br><b>Syntax:</b> [<em>perception</em>] : [<em>selection</em>]                  <br> Separate (perception-selection) groups with new line.')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='WalkPerception', size=500, multi_line=True)
-    #        t.new_row()
-    #        with t.table_cell():
-    #            pb.add_html('<b>Wait Time Perception:</b>')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='WaitPerception', multi_line=False)
-    #        with t.table_cell():
-    #            pb.add_html('Converts waiting minutes to impedance')
-    #        t.new_row()
-    #        with t.table_cell():
-    #            pb.add_html('<b>Walking Speed:</b>')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='WalkSpeed', multi_line=False)
-    #        with t.table_cell():
-    #            pb.add_html('Walking speed, in km/hr. Applied to all walk modes.')
-    #        t.new_row()
-    #        with t.table_cell():
-    #            pb.add_html('<b>Boarding Perception:</b>')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='BoardPerception', multi_line=False)
-    #        with t.table_cell():
-    #            pb.add_html('Converts boarding impedance to impedance')
-    #        t.new_row()
-    #        with t.table_cell():
-    #            pb.add_html('<b>Fare Perception:</b>')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='FarePerception', multi_line=False)
-    #        with t.table_cell():
-    #            pb.add_html('Converts fare costs to impedance. In $/hr.')
-    #        t.new_row()
-    #    pb.add_header('CONGESTION PARAMETERS')
-    #    pb.add_text_box(tool_attribute_name='CongestionExponentString', size=500, multi_line=True, note="List of congestion perceptions and exponents.             Applies different congestion parameter values based on a segment's ttf value.            <br><br><b>Syntax:</b> [<em>ttf</em>] : [<em>perception</em>]             : [<em>exponent</em>] ...             <br><br>Separate (ttf-perception-exponent) groups with a comma or new line.            <br><br>The ttf value must be an integer.            <br><br>Any segments with a ttf not specified above will be assigned the congestion             parameters of the final group in the list.")
-    #    pb.add_header('CONVERGANCE CRITERIA')
-    #    with pb.add_table(False) as t:
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='Iterations', size=4, title='Iterations')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='NormGap', size=12, title='Normalized Gap')
-    #        with t.table_cell():
-    #            pb.add_text_box(tool_attribute_name='RelGap', size=12, title='Relative Gap')
-    #    if EMME_VERSION >= (4, 1):
-    #        keyval3 = []
-    #        for i in range(cpu_count()):
-    #            if i == 0:
-    #                tup = (1, '1 processor')
-    #            else:
-    #                tup = (i + 1, '%s processors' % (i + 1))
-    #            keyval3.insert(0, tup)
-
-    #        pb.add_select(tool_attribute_name='NumberOfProcessors', keyvalues=keyval3, title='Number of Processors')
-    #    pb.add_html('\n<script type="text/javascript">\n    $(document).ready( function ()\n    {        \n        var tool = new inro.modeller.util.Proxy(%s) ;\n\n        $("#Scenario").bind(\'change\', function()\n        {\n            $(this).commit();\n            $("#HeadwayFractionAttributeId")\n                .empty()\n                .append(tool.get_scenario_node_attributes())\n            inro.modeller.page.preload("#HeadwayFractionAttributeId");\n            $("#HeadwayFractionAttributeId").trigger(\'change\');\n\n            $(this).commit();\n            $("#EffectiveHeadwayAttributeId")\n                .empty()\n                .append(tool.get_scenario_node_attributes())\n            inro.modeller.page.preload("#EffectiveHeadwayAttributeId");\n            $("#EffectiveHeadwayAttributeId").trigger(\'change\');\n            \n            $("#WalkAttributeIdList")\n                .empty()\n                .append(tool.get_scenario_link_attributes())\n            inro.modeller.page.preload("#WalkAttributeIdList");\n            $("#WalkAttributeIdList").trigger(\'change\');\n            \n            $("#LinkFareAttributeId")\n                .empty()\n                .append(tool.get_scenario_link_attributes(false))\n            inro.modeller.page.preload("#LinkFareAttributeId");\n            $("#LinkFareAttributeId").trigger(\'change\');\n            \n            $("#SegmentFareAttributeId")\n                .empty()\n                .append(tool.get_scenario_segment_attribtues())\n            inro.modeller.page.preload("#SegmentFareAttributeId");\n            $("#SegmentFareAttributeId").trigger(\'change\');\n        });\n        \n        $("#InVehicleTimeMatrixId").bind(\'change\', function()\n        {\n            $(this).commit();\n            var opt = $(this).prop(\'value\');\n            if (opt == -1)\n            {\n                $("#CalculateCongestedIvttFlag").parent().parent().hide();\n            } else {\n                $("#CalculateCongestedIvttFlag").parent().parent().show();\n            }\n        });\n        \n        $("#InVehicleTimeMatrixId").trigger(\'change\');\n\n        $("#CongestionExponentString").css({height: \'70px\'});\n    });\n</script>' % pb.tool_proxy_tag)
         return pb.render()
 
     def run(self):
@@ -833,7 +749,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         matrixCalcTool(matrixCalcSpec, scenario=self.Scenario)
 
     def short_description(self):
-        return 'Mult transit assignment tool for GTAModel V4'
+        return 'MultiClass transit assignment tool for GTAModel V4'
 
     @_m.method(return_type=unicode)
     def get_scenario_node_attributes(self):
