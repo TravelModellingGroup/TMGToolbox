@@ -51,6 +51,7 @@ Full Network Set Generator
 
 import inro.modeller as _m
 import traceback as _traceback
+import os
 from contextlib import contextmanager
 from contextlib import nested
 from html import HTML
@@ -979,10 +980,20 @@ class FullNetworkSetGenerator(_m.Tool()):
             
             parts = component.split(':')
             if len(parts) not in [6,7]:
-                msg = "Error parsing scenario set: Separate components with colons \
-                    Uncleaned scenario number:Cleaned scenario number:Uncleaned scenario description:Cleaned scenario description:Scenario start:Scenario End:.nup file"
-                msg += ". [%s]" %component 
-                raise SyntaxError(msg)
+				if len(parts) == 8:
+					checkPath = parts[6] + ":" + parts[7]
+					if os.path.exists(os.path.dirname(checkPath)):
+						parts[6]=checkPath
+						del parts[7]
+					else:				
+						msg = "Please verify that your scenario set is separated correctly and/or that the .nup file has a valid path"
+						msg += ". [%s]" %component 
+						raise SyntaxError(msg)
+				else:
+					msg = "Error parsing scenario set: Separate components with colons \
+							Uncleaned scenario number:Cleaned scenario number:Uncleaned scenario description:Cleaned scenario description:Scenario start:Scenario End:.nup file"
+					msg += ". [%s]" %component 
+					raise SyntaxError(msg)
             partsList = [int(parts[0]), int(parts[1]), parts[2], parts[3], int(parts[4]), int(parts[5])]
             if len(parts) == 7:
                 if parts[6].lower() == 'none':

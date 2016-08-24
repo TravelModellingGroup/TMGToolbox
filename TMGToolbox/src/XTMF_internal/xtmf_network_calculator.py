@@ -56,11 +56,12 @@ class XTMFNetworkCalculator(_m.Tool()):
     node_selection = _m.Attribute(str)
     link_selection = _m.Attribute(str)
     transit_line_selection = _m.Attribute(str)
+    result = _m.Attribute(str)
 
     def __init__(self):
         self.Scenario = _MODELLER.scenario
 
-    def __call__(self, xtmf_ScenarioNumber, domain, expression, node_selection, link_selection, transit_line_selection):
+    def __call__(self, xtmf_ScenarioNumber, domain, expression, node_selection, link_selection, transit_line_selection, result):
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -68,7 +69,11 @@ class XTMFNetworkCalculator(_m.Tool()):
 
         self.expression = expression
         self.domain = domain
-
+        if result != None and result != "None":
+            self.result = result
+        else:
+            self.result = None
+        
         if self.domain == "0": #link
             self.node_selection = None
             self.link_selection = link_selection
@@ -90,11 +95,13 @@ class XTMFNetworkCalculator(_m.Tool()):
         spec = self.network_calculator_spec()
 
         report = networkCalculation(spec, self.Scenario)
-        return report["sum"]      
+        if report.has_key("sum"):
+            return report["sum"]
+        return ""
 
     def network_calculator_spec(self):
         spec = {
-            "result": None,
+            "result": self.result,
             "expression": self.expression,
             "aggregation": None,
             "selections": {
