@@ -1006,15 +1006,6 @@ class FBTNFromSchema(_m.Tool()):
                         node.role = 1 #Surface node
                         return
             node.role = 2 #Station node is a transit stop, but does NOT connect to any auto links
-            if node.id == '97053':
-                print "node %s has role %s" % (node.id, str(node.role))
-                print "stopping groups %s" % node.stopping_groups
-                print "passing groups %s" % node.passing_groups
-
-            if node.id == '10259':
-                print "node %s has role %s" % (node.id, str(node.role))
-                print "stopping groups %s" % node.stopping_groups
-                print "passing groups %s" % node.passing_groups
 
         #Determine node role. This needs to be done AFTER stops have been identified
         for node in network.regular_nodes(): applyNodeRole(node)
@@ -1033,9 +1024,6 @@ class FBTNFromSchema(_m.Tool()):
             if i.role == 1 and j.role == 2 and permitsWalk: link.role = 1 #Station connector (access)
             elif i.role == 2 and j.role == 1 and permitsWalk: link.role = 1 #Station connector (egress)
             elif i.role == 2 and j.role == 2 and permitsWalk: link.role = 2 #Station transfer
-            if link.i_node.id == '97053' or link.j_node.id == '97053':
-                print "link %s has role %s" %(link.id, str(link.role))
-
 
     def _TransformNetwork(self, network, numberOfGroups, numberOfZones):
         

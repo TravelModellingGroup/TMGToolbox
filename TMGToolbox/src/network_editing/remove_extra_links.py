@@ -49,15 +49,15 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 class RemoveExtraLinks(_m.Tool()):
        
-    version = '1.0.0'
+    version = '0.0.1'
     tool_run_msg = ""
     number_of_tasks = 4 # For progress reporting, enter the integer number of tasks here
     
     BaseScenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     BaseNetwork = _m.Attribute(_m.InstanceType)
+    NewScenarioFlag = _m.Attribute(bool)
     NewScenarioId = _m.Attribute(int)
     NewScenarioTitle = _m.Attribute(str)
-    PublishFlag = _m.Attribute(bool)
     
     TransferModeList = _m.Attribute(_m.ListType)
     
@@ -70,7 +70,7 @@ class RemoveExtraLinks(_m.Tool()):
         #---Set the defaults of parameters used by Modeller
         self.BaseScenario = _MODELLER.scenario #Default is primary scenario
         self.BaseNetwork = self.BaseScenario.get_network()
-        self.PublishFlag = True 
+        self.NewScenarioFlag = True
 
     
     def page(self):
@@ -93,31 +93,61 @@ class RemoveExtraLinks(_m.Tool()):
         pb.add_select_scenario(tool_attribute_name='BaseScenario',
                                title="Base Scenario",
                                allow_none=False)
+
+        self.TransferModeList = [self.BaseScenario.mode('u'),
+                            self.BaseScenario.mode('t'),
+                            self.BaseScenario.mode('y')]
+
+        pb.add_select_mode(tool_attribute_name='TransferModeList',
+                    filter=[ 'AUX_TRANSIT'],
+                    allow_none=False,
+                    title='Transfer Modes:',
+                    note='Select all transfer modes.')
         
+        pb.add_checkbox(tool_attribute_name= 'NewScenarioFlag',
+                label= "Create New Scenario?")
+
         pb.add_new_scenario_select(tool_attribute_name='NewScenarioId',
                                    title="New Scenario Number")
         
         pb.add_text_box(tool_attribute_name='NewScenarioTitle',
                         size=60, title= "New Scenario Title")
-        
-        pb.add_checkbox(tool_attribute_name= 'PublishFlag',
-                        label= "Publish network?")
-        
-        self.TransferModeList = [self.BaseScenario.mode('u'),
-                                 self.BaseScenario.mode('t'),
-                                 self.BaseScenario.mode('y')]
 
-        pb.add_select_mode(tool_attribute_name='TransferModeList',
-                           filter=[ 'AUX_TRANSIT'],
-                           allow_none=False,
-                           title='Transfer Modes:',
-                           note='Select all transfer modes.')
+
+        #---JAVASCRIPT
+        pb.add_html("""
+<script type="text/javascript">
+    $(document).ready( function ()
+    {
+        var tool = new inro.modeller.util.Proxy(%s) ;
+        
+        if (tool.check_copy_flag())
+        {
+            $("#NewScenarioId").prop('disabled', false);
+            $("#NewScenarioTitle").prop('disabled', false);
+        } else {
+            $("#NewScenarioId").prop('disabled', true);
+            $("#NewScenarioTitle").prop('disabled', true);
+        }
+
+        $("NewScenarioFlag").bind('change', function()
+        {
+            $(this).commit();
+            var flag = tool.check_copy_flag();
+
+            $("#NewScenarioId").prop('disabled', flag);
+            $("#NewScenarioTitle").prop('disabled', flag);
+        }); 
+    });
+</script>""" % pb.tool_proxy_tag)
         
         return pb.render()
 
+
+
     ##########################################################################################################
         
-    def __call__(self, baseScen, newScenId, newScenTitle, transferModeList, pubFlag):
+    def __call__(self, baseScen, transferModeString, newScenFlag, newScenId,  newScenTitle):
         self.tool_run_msg = ""
         self.TRACKER.reset()
 
@@ -126,14 +156,12 @@ class RemoveExtraLinks(_m.Tool()):
         self.NewScenarioTitle = newScenTitle
         self.TransferModeList = []
 
-        self.PublishFlag = pubFlag
+        self.NewScenarioFlag = newScenFlag
 
-        self.BaseNetwork = BaseScenario.get_network()
+        self.BaseNetwork = self.BaseScenario.get_network()
 
-        for modechar in transferModeList:
+        for modechar in transferModeString:
             self.TransferModeList.append (self.BaseNetwork.mode(modechar))
-
-        print self.TransferModeList
 
         try:
             
@@ -175,16 +203,22 @@ class RemoveExtraLinks(_m.Tool()):
             self._RemoveLinks(self.BaseNetwork)
             self.TRACKER.completeTask()
             
+            self._RemoveStrandedNodes(self.BaseNetwork)
+
             self.TRACKER.startProcess(2)
-            if self.PublishFlag:
-                bank = _MODELLER.emmebank 
+
+            bank = _MODELLER.emmebank
+            
+            if self.NewScenarioFlag: 
                 newScenario = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioId, copy_strat_files= False, copy_path_files= False)
                 newScenario.title= self.NewScenarioTitle
-                self.TRACKER.completeSubtask()
                 newScenario.publish_network(self.BaseNetwork, True)
-                self.TRACKER.completeSubtask()
+            else:
+                self.BaseScenario.publish_network(self.BaseNetwork, True)
+                            
+            self.TRACKER.completeSubtask()
                 
-                _MODELLER.desktop.refresh_needed(True)
+            _MODELLER.desktop.refresh_needed(True)
             self.TRACKER.completeTask()
 
     ##########################################################################################################    
@@ -293,7 +327,22 @@ class RemoveExtraLinks(_m.Tool()):
                             network.delete_link(start_node,end_node)
                         else:
                             link.modes = link.modes.difference(transfer_modes)
-        
+
+    def _RemoveStrandedNodes(self,network):
+        #removes nodes not connected to any links
+        for node in network.nodes():
+            is_stranded = True
+            for link in node.outgoing_links():
+                is_stranded = False
+            for link in node.incoming_links():
+                is_stranded = False
+            if is_stranded == True:
+                network.delete_node(node.id)
+       
+    @_m.method(return_type= bool)
+    def check_copy_flag(self):
+        return self.NewScenarioFlag   
+                 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()

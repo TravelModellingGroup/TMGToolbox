@@ -35,7 +35,7 @@
     
     1.0.0 Published with proper documentation on 2014-05-29
 
-    1.0.1 Nodes that have no incoming or outgoing links are removed. 2016-08-22
+    1.0.1 Copy of scenario is not created 2016-08-24
         
 '''
 
@@ -81,9 +81,7 @@ class RemoveExtraNodes(_m.Tool()):
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
     BaseScenario = _m.Attribute(_m.InstanceType) # common variable or parameter
-    NewScenarioId = _m.Attribute(int)
-    NewScenarioTitle = _m.Attribute(str)
-    PublishFlag = _m.Attribute(bool)
+
     
     NodeFilterAttributeId = _m.Attribute(str)
     StopFilterAttributeId = _m.Attribute(str)
@@ -97,8 +95,6 @@ class RemoveExtraNodes(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.BaseScenario = _MODELLER.scenario #Default is primary scenario
-        
-        self.PublishFlag = True 
         
         lines = ["vdf: force",
                  "length: sum",
@@ -134,9 +130,8 @@ class RemoveExtraNodes(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Remove Extra Nodes v%s" %self.version,
                      description="Removes unnecessary (i.e., cosmetic) nodes from the network. \
-                                Nodes without incoming or outgoing links are removed. <br>\
-                                For nodes with a degree of 2, only candidate nodes will be removed \
-                                from the network; however, the tool can be configured to \
+                                Only candidate nodes (nodes with a degree of 2) will be removed \
+                                from the network, however the tool can be configured to \
                                 expand and/or contract the set of candidate nodes. Three filter \
                                 attributes are used: <ul>\
                                 <li>Node filter attribute: Contracts the set of candidate nodes, \
@@ -162,17 +157,8 @@ class RemoveExtraNodes(_m.Tool()):
             pb.tool_run_status(self.tool_run_msg_status)
             
         pb.add_select_scenario(tool_attribute_name='BaseScenario',
-                               title="Base Scenario",
-                               allow_none=False)
-        
-        pb.add_new_scenario_select(tool_attribute_name='NewScenarioId',
-                                   title="New Scenario Number")
-        
-        pb.add_text_box(tool_attribute_name='NewScenarioTitle',
-                        size=60, title= "New Scenario Title")
-        
-        pb.add_checkbox(tool_attribute_name= 'PublishFlag',
-                        label= "Publish network?")
+                               title="Scenario",
+                               allow_none=False)      
         
         pb.add_header("NETWORK FILTERS")
         
@@ -270,14 +256,11 @@ class RemoveExtraNodes(_m.Tool()):
 
     ##########################################################################################################
         
-    def __call__(self, baseScen, newScenId, newScenTitle, pubFlag, nodeFilter, stopFilter, connFilter, attAgg):
+    def __call__(self, baseScen, nodeFilter, stopFilter, connFilter, attAgg):
         self.tool_run_msg = ""
         self.TRACKER.reset()
 
         self.BaseScenario = _MODELLER.emmebank.scenario(baseScen)
-        self.NewScenarioId = newScenId
-        self.NewScenarioTitle = newScenTitle
-        self.PublishFlag = pubFlag
         self.NodeFilterAttributeId = nodeFilter
         self.StopFilterAttributeId = stopFilter
         self.ConnectorFilterAttributeId = connFilter
@@ -331,21 +314,18 @@ class RemoveExtraNodes(_m.Tool()):
             
             log = self._RemoveNodes(network, nodesToDelete)
 
-            self._RemoveStrandedNodes(network)
+            
             self.TRACKER.completeTask()
             
             self._WriteReport(log)
             
             self.TRACKER.startProcess(2)
-            if self.PublishFlag:
-                bank = _MODELLER.emmebank 
-                newScenario = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioId, copy_strat_files= False, copy_path_files= False)
-                newScenario.title= self.NewScenarioTitle
-                self.TRACKER.completeSubtask()
-                newScenario.publish_network(network, True)
-                self.TRACKER.completeSubtask()
+
+            bank = _MODELLER.emmebank 
+            self.BaseScenario.publish_network(network, True)
+            self.TRACKER.completeSubtask()
                 
-                _MODELLER.desktop.refresh_needed(True)
+            _MODELLER.desktop.refresh_needed(True)
             self.TRACKER.completeTask()
 
     ##########################################################################################################    
@@ -355,7 +335,6 @@ class RemoveExtraNodes(_m.Tool()):
     def _GetAtts(self):
         atts = {
                 "Base Scenario" : str(self.BaseScenario.id),
-                "New Scenario": self.NewScenarioId,
                 "Node Filter Attribute": self.NodeFilterAttributeId,
                 "Stop Filter Attribute": self.StopFilterAttributeId,
                 "Connector Filter Attribute": self.ConnectorFilterAttributeId,
@@ -607,16 +586,7 @@ class RemoveExtraNodes(_m.Tool()):
         
         return log
 
-    def _RemoveStrandedNodes(self,network):
-        #removes nodes not connected to any links
-        for node in network.nodes():
-            is_stranded = True
-            for link in node.outgoing_links():
-                is_stranded = False
-            for link in node.incoming_links():
-                is_stranded = False
-            if is_stranded == True:
-                network.delete_node(node.id)
+
     
     def _WriteReport(self, log):
         pb = _m.PageBuilder(title="Error log")

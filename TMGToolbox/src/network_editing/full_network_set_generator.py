@@ -21,9 +21,9 @@
 '''
 Full Network Set Generator
 
-    Authors: mattaustin222, JamesVaughan
+    Authors: mattaustin222, JamesVaughan, nasterska
 
-    Latest revision by: JamesVaughan
+    Latest revision by: nasterska
     
     
     This tool takes in a base network with zones and
@@ -45,6 +45,7 @@ Full Network Set Generator
     0.3.0 Added the ability to load in multiple alt files, this helps enhance work flow by not
         requiring all edits to be in the same document.  Typically this will get used by having
         a master alt file, and then an additional one containing scenario specific changes.
+    0.3.1 Added call to remove_extra_links tool. 2016-08-24
     
 '''
 
@@ -59,6 +60,7 @@ _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 removeExtraNodes = _MODELLER.tool('tmg.network_editing.remove_extra_nodes')
+removeExtraLinks = _MODELLER.tool('tmg.network_editing.remove_extra_links')
 prorateTransitSpeed = _MODELLER.tool('tmg.network_editing.prorate_transit_speed')
 createTimePeriod = _MODELLER.tool('tmg.network_editing.time_of_day_changes.create_transit_time_period')
 applyNetUpdate = _MODELLER.tool('tmg.input_output.import_network_update')
@@ -68,7 +70,7 @@ lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_batch_line_edits')
 
 class FullNetworkSetGenerator(_m.Tool()):
     
-    version = '0.2.0'
+    version = '0.3.1'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -128,7 +130,10 @@ class FullNetworkSetGenerator(_m.Tool()):
     AlternativeDataFile = _m.Attribute(str)
     AdditionalAlternativeDataFiles = _m.Attribute(str)
     BatchEditFile = _m.Attribute(str)
-    DefaultAgg = _m.Attribute(str)  
+    DefaultAgg = _m.Attribute(str) 
+    
+    TransferModesString = _m.Attribute(str) 
+    TransferModeList = _m.Attribute(_m.ListType)
     
     PublishFlag = _m.Attribute(bool)
     OverwriteScenarioFlag = _m.Attribute(bool)
@@ -540,6 +545,19 @@ class FullNetworkSetGenerator(_m.Tool()):
                                 size=4)
                     
         pb.add_text_element("In integer hours e.g. 2:30 PM = 1430")
+
+        pb.add_header("TRANSFER MODES")
+
+        self.TransferModeList = [self.BaseScenario.mode('u'),
+                            self.BaseScenario.mode('t'),
+                            self.BaseScenario.mode('y')]
+
+        pb.add_select_mode(tool_attribute_name='TransferModeList',
+                           filter=[ 'AUX_TRANSIT'],
+                           allow_none=False,
+                           title='Transfer Modes:',
+                           note='Select all transfer modes.')
+
         pb.add_header("NETWORK FILTERS")
         
         nodeKV = [(-1, 'No attribute')]
@@ -764,10 +782,10 @@ class FullNetworkSetGenerator(_m.Tool()):
     ##########################################################################################################
     def __call__(self, xtmf_ScenarioNumber, CustomScenarioSetString,
                  TransitServiceTableFile, AggTypeSelectionFile, AlternativeDataFile, BatchEditFile,
-                 DefaultAgg, PublishFlag, OverwriteScenarioFlag, NodeFilterAttributeId,
+                 DefaultAgg, PublishFlag, TransferModesString, OverwriteScenarioFlag, NodeFilterAttributeId,
                  StopFilterAttributeId, ConnectorFilterAttributeId, AttributeAggregatorString,
                  LineFilterExpression, AdditionalAlternativeDataFiles):
-        
+
         #---1 Set up scenario
         self.BaseScenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.BaseScenario == None):
@@ -807,6 +825,8 @@ class FullNetworkSetGenerator(_m.Tool()):
         else:
             self.BatchEditFile = BatchEditFile
 
+        self.TransferModesString = TransferModesString
+
         self.DefaultAgg = DefaultAgg
         self.PublishFlag = PublishFlag
         self.OverwriteScenarioFlag = OverwriteScenarioFlag
@@ -834,6 +854,10 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         self.AdditionalAlternativeDataFiles = None
+
+        for mode in self.TransferModeList:
+            self.TransferModesString += mode.id
+
         try:
             self._Execute()           
         except Exception, e:
@@ -917,9 +941,9 @@ class FullNetworkSetGenerator(_m.Tool()):
             print "Prorated transit speeds"
 
             for scenarios in scenarioSet:
-                removeExtraNodes(scenarios[0], scenarios[1], scenarios[3], self.PublishFlag, self.NodeFilterAttributeId,
-                                 self.StopFilterAttributeId, self.ConnectorFilterAttributeId, self.AttributeAggregatorString)
-            
+                removeExtraLinks(scenarios[0], self.TransferModesString, True, scenarios[1], scenarios[3])
+                
+                removeExtraNodes(scenarios[1], self.NodeFilterAttributeId, self.StopFilterAttributeId, self.ConnectorFilterAttributeId, self.AttributeAggregatorString)
             print "Cleaned networks"
                 
             self.BaseScenario.publish_network(network)
