@@ -32,6 +32,9 @@ Return Boardings
 
 import inro.modeller as _m
 import traceback as _traceback
+import csv
+import re
+
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.network_results')
@@ -52,6 +55,7 @@ class ReturnBoardings(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     xtmf_LineAggregationFile = _m.Attribute(str)
     xtmf_CheckAggregationFlag = _m.Attribute(bool)
+    xtmf_OutputDirectory = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -68,7 +72,7 @@ class ReturnBoardings(_m.Tool()):
     
     ##########################################################################################################
             
-    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile, xtmf_OutputDirectory):
         
         _m.logbook_write("Extracting boarding results")
         
@@ -124,10 +128,11 @@ class ReturnBoardings(_m.Tool()):
             allResults.append(results)
             
         print "Extracted results from Emme"
-        return str(allResults)            
+        self._OutputResults(allResults)       
     
     def _LoadLineAggregationFile(self):  
         mapping = {}
+
         with open(self.xtmf_LineAggregationFile) as reader:
             reader.readline()
             for line in reader:
@@ -191,7 +196,19 @@ class ReturnBoardings(_m.Tool()):
             print msg
     
     ##########################################################################################################
+    def _OutputResults(self, valueDict):
 
+        fileName = ""
+        removeSpecialString = "[^A-Za-z0-9]+"
+
+        for personClass in valueDict:
+            fileName = re.sub(removeSpecialString, '', personClass["name"]) + ".csv"
+            del personClass["name"]
+            with open(fileName, 'wb') as classFile:
+                wr = csv.writer(classFile, delimiter = ',', quoting = csv.QUOTE_NONNUMERIC)
+                wr.writerow(['line', 'boardings'])
+                for line in sorted(personClass.items()):
+                    wr.writerow(line)
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
