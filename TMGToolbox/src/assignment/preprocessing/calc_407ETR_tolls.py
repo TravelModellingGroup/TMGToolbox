@@ -188,7 +188,7 @@ class Calc407ETRTolls(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         linkAtts = set([att.id for att in self.Scenario.extra_attributes() if att.type == 'LINK'])
-        
+
         if not ResultAttributeId in linkAtts:
             raise NullPointerException("'%s' is not a valid link attribute" %ResultAttributeId)
         if not TollZoneAttributeId in linkAtts:

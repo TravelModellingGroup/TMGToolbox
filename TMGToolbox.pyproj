@@ -94,6 +94,9 @@
     <Compile Include="src\network_editing\centroid_connectors\validate_connectors.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\network_editing\remove_extra_links.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\network_editing\full_network_set_generator.py" />
     <Compile Include="src\network_editing\GTFS_utilities\clean_GTFS.py" />
     <Compile Include="src\network_editing\GTFS_utilities\export_GTFS_stops_as_shapefile.py" />
@@ -113,7 +116,7 @@
     <Compile Include="src\network_editing\NCS11\validation\check_link_VDFs.py" />
     <Compile Include="src\network_editing\network_comparison\copy_transit_lines.py" />
     <Compile Include="src\network_editing\network_comparison\create_network_correspondence_file.py" />
-    <Compile Include="src\network_editing\network_comparison\flag_network_changes.py" />
+    <Compile Include="src\network_editing\time_of_day_changes\flag_network_changes.py" />
     <Compile Include="src\network_editing\prorate_transit_speed.py" />
     <Compile Include="src\network_editing\remove_extra_nodes.py" />
     <Compile Include="src\network_editing\reverse_transit_lines.py" />
@@ -152,6 +155,7 @@
     <Compile Include="src\XTMF_internal\export_worksheet_table.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\XTMF_internal\return_boardings_multiclass.py" />
     <Compile Include="src\XTMF_internal\xtmf_network_calculator.py">
       <SubType>Code</SubType>
     </Compile>

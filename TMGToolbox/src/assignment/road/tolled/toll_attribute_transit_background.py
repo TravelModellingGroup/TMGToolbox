@@ -144,16 +144,16 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         self.Scenario = _MODELLER.scenario
         
-        mf10 = _MODELLER.emmebank.matrix('mf10')
+        mf10 = _MODELLER.emmebank.matrix('mf30')
         if mf10 != None:
             self.DemandMatrix = mf10
         
-        self.PeakHourFactor = 0.43
-        self.LinkCost = 0
-        self.TollWeight = 0
-        self.Iterations = 100
-        self.rGap = 0
-        self.brGap = 0.1
+        self.PeakHourFactor = 0.385
+        self.LinkCost = 0.153
+        self.TollWeight = 50
+        self.Iterations = 80
+        self.rGap = 0.1
+        self.brGap = 0
         self.normGap = 0.05
         self.PerformanceFlag = False
         self.RunTitle = ""
@@ -201,6 +201,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                              allow_none=False)
         
         keyval = {}
+        print self.Scenario.id
         for att in self.Scenario.extra_attributes():
             if not att.type == 'LINK': continue
             label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)

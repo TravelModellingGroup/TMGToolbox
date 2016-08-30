@@ -12,32 +12,38 @@
     The TMG Toolbox is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details. 
+    GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
 #---METADATA---------------------
 '''
-Return Boardings
+Returb Boardings
 
-    Authors: nasterska
-       
+    Authors: Monika Nasterska
+
+  
+    
+    Returns a 'serialized' (e.g. string repr) of transit line boardings to XTMF.
+    See XTMF for documentation.
         
 '''
 #---VERSION HISTORY
 '''
-    0.0.1 Created on 2016-07-25 by nasterska
+    0.0.1 Created on 2014-02-05 by pkucirek
+    
+    0.1.0 Upgraded to work with get_attribute_values (partial read)
 '''
 
 import inro.modeller as _m
 import traceback as _traceback
-import csv
-import re
-
+from contextlib import contextmanager
+from contextlib import nested
+from json import loads
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
-networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.network_results')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 ##########################################################################################################
 
@@ -55,7 +61,6 @@ class ReturnBoardings(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     xtmf_LineAggregationFile = _m.Attribute(str)
     xtmf_CheckAggregationFlag = _m.Attribute(bool)
-    xtmf_OutputDirectory = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -63,16 +68,16 @@ class ReturnBoardings(_m.Tool()):
 
         
     def page(self):
-        pb = _m.ToolPageBuilder(self, title="Return MultiClass Boardings",
+        pb = _m.ToolPageBuilder(self, title="Return Boardings",
                      description="Cannot be called from Modeller.",
                      runnable=False,
-                     branding_text="XTMF") 
+                     branding_text="XTMF")
         
         return pb.render()
     
     ##########################################################################################################
             
-    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile, xtmf_OutputDirectory):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_LineAggregationFile, xtmf_CheckAggregationFlag):
         
         _m.logbook_write("Extracting boarding results")
         
@@ -84,8 +89,7 @@ class ReturnBoardings(_m.Tool()):
             raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber)              
         
         self.xtmf_LineAggregationFile = xtmf_LineAggregationFile
-        self.xtmf_OutputDirectory = xtmf_OutputDirectory
-        #self.xtmf_CheckAggregationFlag = xtmf_CheckAggregationFlag
+        self.xtmf_CheckAggregationFlag = xtmf_CheckAggregationFlag
         
         try:
             return self._Execute(scenario)
@@ -98,40 +102,35 @@ class ReturnBoardings(_m.Tool()):
     def _Execute(self, scenario):
         
         lineAggregation = self._LoadLineAggregationFile()
-
-        lineBoardings = self._GetLineResults(scenario)
-
-        for PersonClass in lineBoardings:
-            netSet = set([key for key in PersonClass])
-            #if self.xtmf_CheckAggregationFlag:
-            #self._CheckAggregationFile(netSet, lineAggregation)
         
+        lineBoardings = self._GetLineResults(scenario)
+        netSet = set([key for key in lineBoardings.iterkeys()])
+        if self.xtmf_CheckAggregationFlag:
+            self._CheckAggregationFile(netSet, lineAggregation)
         self.TRACKER.completeTask()
         
+        results = {}
         self.TRACKER.startProcess(len(lineBoardings))
-
-        allResults = []
-        for PersonClass in lineBoardings:
-            results = {}
-            for lineId, lineCount in PersonClass.iteritems():
-                if lineId == 'name':
-                    results[lineId] = lineCount
-                else:
-                    if not lineId in lineAggregation:
-                        continue #Skip unmapped lines
-                    lineGroupId = lineAggregation[lineId]
+        for lineId, lineDict in lineBoardings.iteritems():
+            if not lineId in lineAggregation:
+                self.TRACKER.completeSubtask()
+                continue #Skip unmapped lines
+            lineGroupId = lineAggregation[lineId]
             
-                    if lineGroupId in results:
-                        results[lineGroupId] += lineCount
+            if lineGroupId in results:
+                for personClass, count in lineDict.iteritems():
+                    if personClass in results[lineGroupId]:
+                        results[lineGroupId][personClass] += count
                     else:
-                        results[lineGroupId] = lineCount
+                        results[lineGroupId][personClass] = count
+            else:
+                results[lineGroupId] = lineDict
             self.TRACKER.completeSubtask()
-            allResults.append(results)
             
         print "Extracted results from Emme"
-        self._OutputResults(allResults)       
+        return str(results)            
     
-    def _LoadLineAggregationFile(self):  
+    def _LoadLineAggregationFile(self):
         mapping = {}
         with open(self.xtmf_LineAggregationFile) as reader:
             reader.readline()
@@ -143,53 +142,53 @@ class ReturnBoardings(_m.Tool()):
         return mapping
     
     def _GetLineResults(self, scenario):
+        
+        networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.network_results')
+        board_att = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', default=0.0)
+        if not scenario.transit_strategies.data['multi_class']:
+            raise Exception("Scenario %s has no multi-class transit results!" %xtmf_ScenarioNumber)
 
-        multiBoardings = []
-
-        for PersonClass in scenario.transit_strategies.data["classes"]:
-            with _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT') as ClassBoardings:
-
-                spec=     {
-                    "on_links": None,
-                    "on_segments": {
-                        "total_boardings": ClassBoardings.id,
-                        },
-                    "aggregated_from_segments": None,
-                    "analyzed_demand": None,
-                    "constraint": None,
-                    "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"
-                }
-
-                self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec, class_name = PersonClass['name'])
-                    
-                results = _util.fastLoadSummedSegmentAttributes(scenario, [ClassBoardings.id])
+        #get boardings for each class
+        for personClass in scenario.transit_strategies.data["classes"]:
+            spec = {
+                "on_links": None,
+                "on_segments": {
+                    "total_boardings": board_att},
+                "aggregated_from_segments": None,
+                "analyzed_demand": personClass["demand"],
+                "constraint": None,
+                "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"}
+            self.TRACKER.runTool(networkResultsTool, specification= spec, scenario = self.Scenario, class_name= personClass['name'])
+        results = _util.fastLoadSummedSegmentAttributes(scenario, [board_att])
+        retVal = {}
+        for lineId, attributes in results.iteritems():
+            id = str(lineId)
+            retVal[id]={personClass['name']: attributes[board_att]}
+        
+        return retVal
+        
+    def _CheckAggregationFile(self, netSet, lineAggregation):
+        aggSet = set([key for key in lineAggregation.iterkeys()])
+        
+        linesInNetworkButNotMapped = [id for id in (netSet - aggSet)]
+        linesMappedButNotInNetwork = [id for id in (aggSet - netSet)]
+        
+        if len(linesMappedButNotInNetwork) > 0:
+            msg = "%s lines have been found in the network without a line grouping: " %len(linesInNetworkButNotMapped)
+            msg += ",".join(linesInNetworkButNotMapped[:10])
+            if len(linesInNetworkButNotMapped) > 10:
+                msg += "...(%s more)" %(len(linesInNetworkButNotMapped) - 10)
+            print msg
             
-                retVal = {}
-                for lineId, attributes in results.iteritems():
-                    id = str(lineId)
-                    retVal[id] = attributes[ClassBoardings.id]
-          
-            retVal['name'] = PersonClass['name']
-
-            multiBoardings.append(retVal)
-
-        return multiBoardings
-            
+        if len(linesMappedButNotInNetwork) > 0:
+            msg = "%s lines have been found in the aggregation file but do not exist in the network: " %len(linesMappedButNotInNetwork)
+            msg += ",".join(linesMappedButNotInNetwork[:10])
+            if len(linesMappedButNotInNetwork) > 10:
+                msg += "...(%s more)" %(len(linesMappedButNotInNetwork) - 10)
+            print msg
+    
     ##########################################################################################################
-    def _OutputResults(self, valueDict):
 
-        fileName = ""
-        removeSpecialString = "[^A-Za-z0-9]+"
-
-        for personClass in valueDict:
-            fileName = self. xtmf_OutputDirectory + "\\" + re.sub(removeSpecialString, '', personClass["name"]) + ".csv"
-            print fileName
-            del personClass["name"]
-            with open(fileName, 'wb') as classFile:
-                wr = csv.writer(classFile, delimiter = ',', quoting = csv.QUOTE_NONNUMERIC)
-                wr.writerow(['line', 'boardings'])
-                for line in sorted(personClass.items()):
-                    wr.writerow(line)
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):

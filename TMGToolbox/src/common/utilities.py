@@ -405,7 +405,7 @@ def fastLoadSummedSegmentAttributes(scenario, list_of_attributes):
     root_data = scenario.get_attribute_values('TRANSIT_SEGMENT', list_of_attributes)
     indices = root_data[0]
     values = root_data[1:]
-    
+   
     major, minor, release, beta = getEmmeVersion(tuple)
     if (major,minor,release) >= (4,1,2):
         get_iter = lambda segmentIndices: segmentIndices.iteritems()
@@ -418,6 +418,7 @@ def fastLoadSummedSegmentAttributes(scenario, list_of_attributes):
         for iNode, dataRow in get_iter(segmentIndices):
             for attName, dataColumn in itersync(list_of_attributes, values):
                 value = dataColumn[dataRow]
+
                 if attName in line: line[attName] += value
                 else: line[attName] = value
         
