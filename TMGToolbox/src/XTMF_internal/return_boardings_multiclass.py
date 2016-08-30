@@ -34,6 +34,7 @@ import inro.modeller as _m
 import traceback as _traceback
 import csv
 import re
+import os
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -181,8 +182,12 @@ class ReturnBoardings(_m.Tool()):
         fileName = ""
         removeSpecialString = "[^A-Za-z0-9]+"
 
+        #check if output directory exists
+        if not os.path.exists(self.xtmf_OutputDirectory):
+                os.makedirs(self.xtmf_OutputDirectory)
+
         for personClass in valueDict:
-            fileName = self. xtmf_OutputDirectory + "\\" + re.sub(removeSpecialString, '', personClass["name"]) + ".csv"
+            fileName = self.xtmf_OutputDirectory + "\\" + re.sub(removeSpecialString, '', personClass["name"]) + ".csv"
             print fileName
             del personClass["name"]
             with open(fileName, 'wb') as classFile:
