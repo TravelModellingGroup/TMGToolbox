@@ -98,6 +98,8 @@ class ReturnBoardings(_m.Tool()):
     
     def _Execute(self, scenario):
         
+        print "Extracting Boarding Results"
+
         lineAggregation = self._LoadLineAggregationFile()
 
         lineBoardings = self._GetLineResults(scenario)
