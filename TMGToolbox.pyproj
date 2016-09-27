@@ -36,7 +36,7 @@
     <Compile Include="src\analysis\traffic\Import_Cordon_Counts.py" />
     <Compile Include="src\analysis\transit\create_station_access_file.py" />
     <Compile Include="src\analysis\transit\export_boardings.py" />
-    <Compile Include="src\assignment\transit\export_transit_screenline_results.py" />
+    <Compile Include="src\analysis\transit\export_transit_screenline_results.py" />
     <Compile Include="src\analysis\transit\export_station_boarding_alighting.py">
       <SubType>Code</SubType>
     </Compile>
