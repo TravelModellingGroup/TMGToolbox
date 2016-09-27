@@ -130,7 +130,7 @@ class RemoveExtraLinks(_m.Tool()):
             $("#NewScenarioTitle").prop('disabled', true);
         }
 
-        $("NewScenarioFlag").bind('change', function()
+        $("#NewScenarioFlag").bind('change', function()
         {
             $(this).commit();
             var flag = tool.check_copy_flag();
