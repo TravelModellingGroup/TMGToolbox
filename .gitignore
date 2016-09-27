@@ -4,6 +4,9 @@
 #python
 *.pyc
 
+#Toolbox
+*.mtbx
+
 # User-specific files
 *.suo
 *.user
