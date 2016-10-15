@@ -224,65 +224,84 @@ class ImportNetworkPackage(_m.Tool()):
                 _m.logbook_write("Created new scenario %s" % self.ScenarioId)
                 self.TRACKER.completeTask()
 
-                with _m.logbook_trace("Reading modes"):
-                    zf.extract(self.__components[0], temp_folder)
-                    self.TRACKER.runTool(import_modes,
-                                         transaction_file="%s/%s" % (temp_folder, self.__components[0]),
-                                         scenario=scenario)
-
-                with _m.logbook_trace("Reading vehicles"):
-                    zf.extract(self.__components[1], temp_folder)
-                    self.TRACKER.runTool(import_vehicles,
-                                         transaction_file="%s/%s" % (temp_folder, self.__components[1]),
-                                         scenario=scenario)
-
-                with _m.logbook_trace("Reading base network"):
-                    zf.extract(self.__components[2], temp_folder)
-                    self.TRACKER.runTool(import_base,
-                                         transaction_file="%s/%s" % (temp_folder, self.__components[2]),
-                                         scenario=scenario)
-
-                with _m.logbook_trace("Reading link shapes"):
-                    zf.extract(self.__components[5], temp_folder)
-                    self.TRACKER.runTool(import_link_shape,
-                                         transaction_file="%s/%s" % (temp_folder, self.__components[5]),
-                                         scenario=scenario)
-
-                with _m.logbook_trace("Reading transit lines"):
-                    zf.extract(self.__components[3], temp_folder)
-                    self.TRACKER.runTool(import_lines,
-                                         transaction_file="%s/%s" % (temp_folder, self.__components[3]),
-                                         scenario=scenario)
-
-                with _m.logbook_trace("Reading turns"):
-                    zf.extract(self.__components[4], temp_folder)
-                    self.TRACKER.runTool(import_turns,
-                                         transaction_file="%s/%s" % (temp_folder, self.__components[4]),
-                                         scenario=scenario)
+                self._batchin_modes(scenario, temp_folder, zf)
+                self._batchin_vehicles(scenario, temp_folder, zf)
+                self._batchin_base(scenario, temp_folder, zf)
+                self._batchin_link_shapes(scenario, temp_folder, zf)
+                self._batchin_lines(scenario, temp_folder, zf)
+                self._batchin_turns(scenario, temp_folder, zf)
 
                 if "exatts.241" in zf.namelist():
-                    with _m.logbook_trace("Reading extra attributes"):
-                        types = self._load_extra_attributes(zf, temp_folder, scenario)
-
-                        self.TRACKER.startProcess(len(types))
-                        for t in types:
-                            filename = "exatt_%ss.241" % t.lower()
-                            if t == "TRANSIT_SEGMENT":
-                                filename = "exatt_segments.241"
-
-                            zf.extract(filename, temp_folder)
-                            import_attributes(file_path="%s/%s" % (temp_folder, filename),
-                                              field_separator=",",
-                                              scenario=scenario)
-                            self.TRACKER.completeSubtask()
+                    self._batchin_extra_attributes(scenario, temp_folder, zf)
                 self.TRACKER.completeTask()
 
                 if "functions.411" in self.__components:
-                    zf.extract(self.__components[6], temp_folder)
-                    merge_functions.FunctionFile = "%s/%s" % (temp_folder, self.__components[6])
-                    merge_functions.ConflictOption = self.ConflictOption
-                    merge_functions.run()
+                    self._batchin_functions(temp_folder, zf)
                 self.TRACKER.completeTask()
+
+    @_m.logbook_trace("Reading modes")
+    def _batchin_modes(self, scenario, temp_folder, zf):
+        zf.extract(self.__components[0], temp_folder)
+        self.TRACKER.runTool(import_modes,
+                             transaction_file=_path.join(temp_folder, self.__components[0]),
+                             scenario=scenario)
+
+    @_m.logbook_trace("Reading vehicles")
+    def _batchin_vehicles(self, scenario, temp_folder, zf):
+        zf.extract(self.__components[1], temp_folder)
+        self.TRACKER.runTool(import_vehicles,
+                             transaction_file=_path.join(temp_folder, self.__components[1]),
+                             scenario=scenario)
+
+    @_m.logbook_trace("Reading base network")
+    def _batchin_base(self, scenario, temp_folder, zf):
+            zf.extract(self.__components[2], temp_folder)
+            self.TRACKER.runTool(import_base,
+                                 transaction_file=_path.join(temp_folder, self.__components[2]),
+                                 scenario=scenario)
+
+    @_m.logbook_trace("Reading link shapes")
+    def _batchin_link_shapes(self, scenario, temp_folder, zf):
+        zf.extract(self.__components[5], temp_folder)
+        self.TRACKER.runTool(import_link_shape,
+                             transaction_file=_path.join(temp_folder, self.__components[5]),
+                             scenario=scenario)
+
+    @_m.logbook_trace("Reading transit lines")
+    def _batchin_lines(self, scenario, temp_folder, zf):
+        zf.extract(self.__components[3], temp_folder)
+        self.TRACKER.runTool(import_lines,
+                             transaction_file=_path.join(temp_folder, self.__components[3]),
+                             scenario=scenario)
+
+    @_m.logbook_trace("Reading turns")
+    def _batchin_turns(self, scenario, temp_folder, zf):
+        zf.extract(self.__components[4], temp_folder)
+        self.TRACKER.runTool(import_turns,
+                             transaction_file=_path.join(temp_folder, self.__components[4]),
+                             scenario=scenario)
+
+    @_m.logbook_trace("Reading extra attributes")
+    def _batchin_extra_attributes(self, scenario, temp_folder, zf):
+        types = self._load_extra_attributes(zf, temp_folder, scenario)
+
+        self.TRACKER.startProcess(len(types))
+        for t in types:
+            filename = "exatt_%ss.241" % t.lower()
+            if t == "TRANSIT_SEGMENT":
+                filename = "exatt_segments.241"
+
+            zf.extract(filename, temp_folder)
+            import_attributes(file_path=_path.join(temp_folder, filename),
+                              field_separator=",",
+                              scenario=scenario)
+            self.TRACKER.completeSubtask()
+
+    def _batchin_functions(self, temp_folder, zf):
+        zf.extract(self.__components[6], temp_folder)
+        merge_functions.FunctionFile = "%s/%s" % (temp_folder, self.__components[6])
+        merge_functions.ConflictOption = self.ConflictOption
+        merge_functions.run()
 
     @contextmanager
     def _temp_file(self):
