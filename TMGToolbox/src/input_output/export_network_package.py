@@ -38,12 +38,13 @@ _export_link_shapes = _MODELLER.tool('inro.emme.data.network.base.export_link_sh
 _export_turns = _MODELLER.tool('inro.emme.data.network.turn.export_turns')
 _export_attributes = _MODELLER.tool('inro.emme.data.extra_attribute.export_extra_attributes')
 _export_functions = _MODELLER.tool('inro.emme.data.function.export_functions')
+_pdu = _MODELLER.module('tmg.common.pandas_utils')
 
 
 class ExportNetworkPackage(_m.Tool()):
     version = '1.0.0'
     tool_run_msg = ""
-    number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
+    number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
     Scenario = _m.Attribute(_m.InstanceType)
     ExportFile = _m.Attribute(str)
@@ -100,9 +101,9 @@ class ExportNetworkPackage(_m.Tool()):
         var tool = new inro.modeller.util.Proxy(%s) ;
         if (tool.check_all_flag())
         {
-            $("#AttributeIdsToExport").prop('disabled', true);  
+            $("#AttributeIdsToExport").prop('disabled', true);
         } else {
-            $("#AttributeIdsToExport").prop('disabled', false);  
+            $("#AttributeIdsToExport").prop('disabled', false);
         }
         $("#Scenario").bind('change', function()
         {
@@ -118,8 +119,8 @@ class ExportNetworkPackage(_m.Tool()):
             $(this).commit();
             var not_flag = ! tool.check_all_flag();
             var flag = tool.check_all_flag();
-            
-            $("#AttributeIdsToExport").prop('disabled', flag);  
+
+            $("#AttributeIdsToExport").prop('disabled', flag);
         });
     });
 </script>""" % pb.tool_proxy_tag)
@@ -201,6 +202,14 @@ class ExportNetworkPackage(_m.Tool()):
                     self._batchout_extra_attributes(temp_folder, zf)
                 else:
                     self.TRACKER.completeTask()
+
+                if self.Scenario.has_traffic_results:
+                    self._batchout_traffic_results(temp_folder, zf)
+                self.TRACKER.completeTask()
+
+                if self.Scenario.has_transit_results:
+                    self._batchout_transit_results(temp_folder, zf)
+                self.TRACKER.completeTask()
 
     @_m.logbook_trace("Exporting modes")
     def _batchout_modes(self, temp_folder, zf):
@@ -291,6 +300,27 @@ class ExportNetworkPackage(_m.Tool()):
         summary_file = _path.join(temp_folder, "exatts.241")
         self._export_attribute_definition_file(summary_file, extra_attributes)
         zf.write(summary_file, arcname="exatts.241")
+
+    def _batchout_traffic_results(self, temp_folder, zf):
+        link_filepath = _path.join(temp_folder, "link_results.csv")
+        turn_filepath = _path.join(temp_folder, "turn_results.csv")
+        traffic_result_attributes = ['auto_volume', 'additional_volume', 'auto_time']
+
+        links = _pdu.load_link_dataframe(self.Scenario).loc[:, traffic_result_attributes]
+        links.to_csv(link_filepath, index=True)
+        zf.write(link_filepath, arcname=_path.basename(link_filepath))
+
+        turns = _pdu.load_turn_dataframe(self.Scenario).loc[:, traffic_result_attributes]
+        turns.to_csv(turn_filepath)
+        zf.write(turn_filepath, arcname=_path.basename(turn_filepath))
+
+    def _batchout_transit_results(self, temp_folder, zf):
+        segment_filename = "segment_results.csv"
+        segment_filepath = _path.join(temp_folder, segment_filename)
+        result_attributes = ['transit_boardings', 'transit_time', 'transit_volume']
+        segments = _pdu.load_transit_segment_dataframe(self.Scenario).loc[:, result_attributes]
+        segments.to_csv(segment_filepath)
+        zf.write(segment_filepath, arcname=segment_filename)
 
     @contextmanager
     def _temp_file(self):
