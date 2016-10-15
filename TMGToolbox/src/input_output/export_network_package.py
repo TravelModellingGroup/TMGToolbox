@@ -189,90 +189,108 @@ class ExportNetworkPackage(_m.Tool()):
                 self._write_info_file(info_path)
                 zf.write(info_path, arcname="info.txt")
 
-                with _m.logbook_trace("Exporting modes"):
-                    export_file = _path.join(temp_folder, "modes.201")
-                    self.TRACKER.runTool(_export_modes,
-                                         export_file=export_file,
-                                         scenario=self.Scenario)
-                    zf.write(export_file, arcname="modes.201")
-
-                with _m.logbook_trace("Exporting vehicles"):
-                    export_file = _path.join(temp_folder, "vehicles.202")
-                    if self.Scenario.element_totals['transit_vehicles'] == 0:
-                        self._export_blank_batch_file(export_file, "vehicles")
-                        self.TRACKER.completeTask()
-                    else:
-                        self.TRACKER.runTool(_export_vehicles,
-                                             export_file=export_file,
-                                             scenario=self.Scenario)
-                    zf.write(export_file, arcname="vehicles.202")
-
-                with _m.logbook_trace("Exporting base network"):
-                    export_file = _path.join(temp_folder, "base.211")
-                    self.TRACKER.runTool(_export_base_network,
-                                         export_file=export_file,
-                                         scenario=self.Scenario)
-                    zf.write(export_file, arcname="base.211")
-
-                with _m.logbook_trace("Exporting link shapes"):
-                    export_file = _path.join(temp_folder, "shapes.251")
-                    self.TRACKER.runTool(_export_link_shapes,
-                                         export_file=export_file,
-                                         scenario=self.Scenario)
-                    zf.write(export_file, arcname="shapes.251")
-
-                with _m.logbook_trace("Exporting transit lines"):
-                    export_file = _path.join(temp_folder, "transit.221")
-                    if self.Scenario.element_totals['transit_lines'] == 0:
-                        self._export_blank_batch_file(export_file, "lines")
-                        self.TRACKER.completeTask()
-                    else:
-                        self.TRACKER.runTool(_export_transit_lines,
-                                             export_file=export_file,
-                                             scenario=self.Scenario)
-
-                    zf.write(export_file, arcname="transit.221")
-
-                with _m.logbook_trace("Exporting turns"):
-                    export_file = _path.join(temp_folder, "turns.231")
-                    if self.Scenario.element_totals['turns'] == 0:
-                        self._export_blank_batch_file(export_file, "turns")
-                        self.TRACKER.completeTask()
-                    else:
-                        self.TRACKER.runTool(_export_turns,
-                                             export_file=export_file,
-                                             scenario=self.Scenario)
-
-                    zf.write(export_file, arcname="turns.231")
-
-                with _m.logbook_trace("Exporting Functions"):
-                    export_file = _path.join(temp_folder, "functions.411")
-                    self.TRACKER.runTool(_export_functions,
-                                         export_file=export_file)
-                    zf.write(export_file, arcname="functions.411")
+                self._batchout_modes(temp_folder, zf)
+                self._batchout_vehicles(temp_folder, zf)
+                self._batchout_base(temp_folder, zf)
+                self._batchout_shapes(temp_folder, zf)
+                self._batchout_lines(temp_folder, zf)
+                self._batchout_turns(temp_folder, zf)
+                self._batchout_functions(temp_folder, zf)
 
                 if len(self.AttributeIdsToExport) > 0:
-                    with _m.logbook_trace("Exporting extra attributes"):
-                        _m.logbook_write("List of attributes: %s" % self.AttributeIdsToExport)
-
-                        extra_attributes = [self.Scenario.extra_attribute(id_) for id_ in self.AttributeIdsToExport]
-                        types = set([att.type.lower() for att in extra_attributes])
-
-                        self.TRACKER.runTool(_export_attributes, extra_attributes,
-                                             temp_folder,
-                                             field_separator=',',
-                                             scenario=self.Scenario)
-                        for t in types:
-                            if t == 'transit_segment':
-                                t = 'segment'
-                            filename = temp_folder + "/extra_%ss_%s.csv" % (t, self.Scenario.number)
-                            zf.write(filename, arcname="exatt_%ss.241" % t)
-
-                        summary_file = _path.join(temp_folder, "exatts.241")
-                        self._export_attribute_definition_file(summary_file, extra_attributes)
-                        zf.write(summary_file, arcname=_path.basename("exatts.241"))
+                    self._batchout_extra_attributes(temp_folder, zf)
                 else:
                     self.TRACKER.completeTask()
+
+    @_m.logbook_trace("Exporting modes")
+    def _batchout_modes(self, temp_folder, zf):
+        export_file = _path.join(temp_folder, "modes.201")
+        self.TRACKER.runTool(_export_modes,
+                             export_file=export_file,
+                             scenario=self.Scenario)
+        zf.write(export_file, arcname="modes.201")
+
+    @_m.logbook_trace("Exporting vehicles")
+    def _batchout_vehicles(self, temp_folder, zf):
+        export_file = _path.join(temp_folder, "vehicles.202")
+        if self.Scenario.element_totals['transit_vehicles'] == 0:
+            self._export_blank_batch_file(export_file, "vehicles")
+            self.TRACKER.completeTask()
+        else:
+            self.TRACKER.runTool(_export_vehicles,
+                                 export_file=export_file,
+                                 scenario=self.Scenario)
+        zf.write(export_file, arcname="vehicles.202")
+
+    @_m.logbook_trace("Exporting base network")
+    def _batchout_base(self, temp_folder, zf):
+        export_file = _path.join(temp_folder, "base.211")
+        self.TRACKER.runTool(_export_base_network,
+                             export_file=export_file,
+                             scenario=self.Scenario)
+        zf.write(export_file, arcname="base.211")
+
+    @_m.logbook_trace("Exporting link shapes")
+    def _batchout_shapes(self, temp_folder, zf):
+        export_file = _path.join(temp_folder, "shapes.251")
+        self.TRACKER.runTool(_export_link_shapes,
+                             export_file=export_file,
+                             scenario=self.Scenario)
+        zf.write(export_file, arcname="shapes.251")
+
+    @_m.logbook_trace("Exporting transit lines")
+    def _batchout_lines(self, temp_folder, zf):
+        export_file = _path.join(temp_folder, "transit.221")
+        if self.Scenario.element_totals['transit_lines'] == 0:
+            self._export_blank_batch_file(export_file, "lines")
+            self.TRACKER.completeTask()
+        else:
+            self.TRACKER.runTool(_export_transit_lines,
+                                 export_file=export_file,
+                                 scenario=self.Scenario)
+
+        zf.write(export_file, arcname="transit.221")
+
+    @_m.logbook_trace("Exporting turns")
+    def _batchout_turns(self, temp_folder, zf):
+        export_file = _path.join(temp_folder, "turns.231")
+        if self.Scenario.element_totals['turns'] == 0:
+            self._export_blank_batch_file(export_file, "turns")
+            self.TRACKER.completeTask()
+        else:
+            self.TRACKER.runTool(_export_turns,
+                                 export_file=export_file,
+                                 scenario=self.Scenario)
+
+        zf.write(export_file, arcname="turns.231")
+
+    @_m.logbook_trace("Exporting Functions")
+    def _batchout_functions(self, temp_folder, zf):
+        export_file = _path.join(temp_folder, "functions.411")
+        self.TRACKER.runTool(_export_functions,
+                             export_file=export_file)
+        zf.write(export_file, arcname="functions.411")
+
+    @_m.logbook_trace("Exporting extra attributes")
+    def _batchout_extra_attributes(self, temp_folder, zf):
+        _m.logbook_write("List of attributes: %s" % self.AttributeIdsToExport)
+
+        extra_attributes = [self.Scenario.extra_attribute(id_) for id_ in self.AttributeIdsToExport]
+        types = set([att.type.lower() for att in extra_attributes])
+
+        self.TRACKER.runTool(_export_attributes, extra_attributes,
+                             temp_folder,
+                             field_separator=',',
+                             scenario=self.Scenario)
+        for t in types:
+            if t == 'transit_segment':
+                t = 'segment'
+            filename = _path.join(temp_folder, "extra_%ss_%s.csv" % (t, self.Scenario.number))
+            zf.write(filename, arcname="exatt_%ss.241" % t)
+
+        summary_file = _path.join(temp_folder, "exatts.241")
+        self._export_attribute_definition_file(summary_file, extra_attributes)
+        zf.write(summary_file, arcname="exatts.241")
 
     @contextmanager
     def _temp_file(self):
