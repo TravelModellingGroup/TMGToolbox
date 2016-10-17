@@ -39,12 +39,43 @@ import_turns = _MODELLER.tool('inro.emme.data.network.turn.turn_transaction')
 import_attributes = _MODELLER.tool('inro.emme.data.network.import_attribute_values')
 
 
+class ComponentContainer(object):
+    """A simple data container. It's fully written out so I can get auto-completion"""
+    def __init__(self):
+        self.mode_file = None
+        self.vehicles_file = None
+        self.base_file = None
+        self.lines_file = None
+        self.turns_file = None
+        self.shape_file = None
+        self.functions_file = None
+
+        self.attribute_header_file = None
+        self.attribute_value_files = None
+
+        self.traffic_results_files = None
+        self.transit_results_files = None
+
+    def reset(self):
+        self.mode_file = None
+        self.vehicles_file = None
+        self.base_file = None
+        self.lines_file = None
+        self.turns_file = None
+        self.shape_file = None
+        self.functions_file = None
+
+        self.attribute_header_file = None
+        self.attribute_value_files = None
+
+        self.traffic_results_files = None
+        self.transit_results_files = None
+
+
 class ImportNetworkPackage(_m.Tool()):
     version = '1.1.0'
     tool_run_msg = ""
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
-
-    __components = ['modes.201', 'vehicles.202', 'base.211', 'transit.221', 'turns.231', 'shapes.251']
 
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
@@ -65,6 +96,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.ScenarioDescription = ""
         self.OverwriteScenarioFlag = False
         self.ConflictOption = merge_functions.EDIT_OPTION
+        self._components = ComponentContainer()
 
     def page(self):
         pb = _tmg_tpb.TmgToolPageBuilder(self, title="Import Network Package v%s" % self.version,
@@ -207,6 +239,8 @@ class ImportNetworkPackage(_m.Tool()):
             if _bank.scenario(self.ScenarioId) is not None and not self.OverwriteScenarioFlag:
                 raise IOError("Scenario %s exists and overwrite flag is set to false." % self.ScenarioId)
 
+            self._components.reset()  # Clear any held-over contents from previous run
+
             with _zipfile.ZipFile(self.NetworkPackageFile) as zf, self._temp_file() as temp_folder:
 
                 self._check_network_package(zf)  # Check the file format.
@@ -231,54 +265,54 @@ class ImportNetworkPackage(_m.Tool()):
                 self._batchin_lines(scenario, temp_folder, zf)
                 self._batchin_turns(scenario, temp_folder, zf)
 
-                if "exatts.241" in zf.namelist():
+                if self._components.attribute_header_file is not None:
                     self._batchin_extra_attributes(scenario, temp_folder, zf)
                 self.TRACKER.completeTask()
 
-                if "functions.411" in self.__components:
+                if self._components.functions_file is not None:
                     self._batchin_functions(temp_folder, zf)
                 self.TRACKER.completeTask()
 
     @_m.logbook_trace("Reading modes")
     def _batchin_modes(self, scenario, temp_folder, zf):
-        zf.extract(self.__components[0], temp_folder)
+        zf.extract(self._components.mode_file, temp_folder)
         self.TRACKER.runTool(import_modes,
-                             transaction_file=_path.join(temp_folder, self.__components[0]),
+                             transaction_file=_path.join(temp_folder, self._components.mode_file),
                              scenario=scenario)
 
     @_m.logbook_trace("Reading vehicles")
     def _batchin_vehicles(self, scenario, temp_folder, zf):
-        zf.extract(self.__components[1], temp_folder)
+        zf.extract(self._components.vehicles_file, temp_folder)
         self.TRACKER.runTool(import_vehicles,
-                             transaction_file=_path.join(temp_folder, self.__components[1]),
+                             transaction_file=_path.join(temp_folder, self._components.vehicles_file),
                              scenario=scenario)
 
     @_m.logbook_trace("Reading base network")
     def _batchin_base(self, scenario, temp_folder, zf):
-            zf.extract(self.__components[2], temp_folder)
+            zf.extract(self._components.base_file, temp_folder)
             self.TRACKER.runTool(import_base,
-                                 transaction_file=_path.join(temp_folder, self.__components[2]),
+                                 transaction_file=_path.join(temp_folder, self._components.base_file),
                                  scenario=scenario)
 
     @_m.logbook_trace("Reading link shapes")
     def _batchin_link_shapes(self, scenario, temp_folder, zf):
-        zf.extract(self.__components[5], temp_folder)
+        zf.extract(self._components.shape_file, temp_folder)
         self.TRACKER.runTool(import_link_shape,
-                             transaction_file=_path.join(temp_folder, self.__components[5]),
+                             transaction_file=_path.join(temp_folder, self._components.shape_file),
                              scenario=scenario)
 
     @_m.logbook_trace("Reading transit lines")
     def _batchin_lines(self, scenario, temp_folder, zf):
-        zf.extract(self.__components[3], temp_folder)
+        zf.extract(self._components.lines_file, temp_folder)
         self.TRACKER.runTool(import_lines,
-                             transaction_file=_path.join(temp_folder, self.__components[3]),
+                             transaction_file=_path.join(temp_folder, self._components.lines_file),
                              scenario=scenario)
 
     @_m.logbook_trace("Reading turns")
     def _batchin_turns(self, scenario, temp_folder, zf):
-        zf.extract(self.__components[4], temp_folder)
+        zf.extract(self._components.turns_file, temp_folder)
         self.TRACKER.runTool(import_turns,
-                             transaction_file=_path.join(temp_folder, self.__components[4]),
+                             transaction_file=_path.join(temp_folder, self._components.turns_file),
                              scenario=scenario)
 
     @_m.logbook_trace("Reading extra attributes")
@@ -298,8 +332,8 @@ class ImportNetworkPackage(_m.Tool()):
             self.TRACKER.completeSubtask()
 
     def _batchin_functions(self, temp_folder, zf):
-        zf.extract(self.__components[6], temp_folder)
-        merge_functions.FunctionFile = "%s/%s" % (temp_folder, self.__components[6])
+        zf.extract(self._components.functions_file, temp_folder)
+        merge_functions.FunctionFile = _path.join(temp_folder, self._components.functions_file)
         merge_functions.ConflictOption = self.ConflictOption
         merge_functions.run()
 
@@ -323,35 +357,38 @@ class ImportNetworkPackage(_m.Tool()):
 
         contents = package.namelist()
         if 'version.txt' in contents:
-            self.__components = ['modes.201', 'vehicles.202', 'base.211', 'transit.221', 'turns.231', 'shapes.251']
+            (self._components.mode_file, self._components.vehicles_file, self._components.base_file,
+             self._components.lines_file, self._components.turns_file, self._components.shape_file) = (
+                'modes.201', 'vehicles.202', 'base.211', 'transit.221', 'turns.231', 'shapes.251'
+            )
 
             vf = package.open('version.txt')
             version = float(vf.readline())
 
             if version >= 3:
-                self.__components.append('functions.411')
+                self._components.functions_file = 'functions.411'
 
             return version
 
         renumber_count = 0
         for component in contents:
             if component.endswith(".201"):
-                self.__components[0] = component
+                self._components.mode_file = component
                 renumber_count += 1
             elif component.endswith(".202"):
-                self.__components[1] = component
+                self._components.vehicles_file = component
                 renumber_count += 1
             elif component.endswith(".211"):
-                self.__components[2] = component
+                self._components.base_file = component
                 renumber_count += 1
             elif component.endswith(".221"):
-                self.__components[3] = component
+                self._components.lines_file = component
                 renumber_count += 1
             elif component.endswith(".231"):
-                self.__components[4] = component
+                self._components.turns_file = component
                 renumber_count += 1
             elif component.endswith(".251"):
-                self.__components[5] = component
+                self._components.shape_file = component
                 renumber_count += 1
         if renumber_count != 6:
             raise IOError("File appears to be missing some components. Please contact TMG for assistance.")
@@ -367,11 +404,10 @@ class ImportNetworkPackage(_m.Tool()):
 
         return atts
 
-    @staticmethod
-    def _load_extra_attributes(zf, temp_folder, scenario):
-        zf.extract("exatts.241", temp_folder)
+    def _load_extra_attributes(self, zf, temp_folder, scenario):
+        zf.extract(self._components.attribute_header_file, temp_folder)
         types = set()
-        with open(temp_folder + "/exatts.241") as reader:
+        with open(_path.join(temp_folder, self._components.attribute_header_file)) as reader:
             reader.readline()  # toss first line
             for line in reader.readlines():
                 cells = line.split(',', 3)
