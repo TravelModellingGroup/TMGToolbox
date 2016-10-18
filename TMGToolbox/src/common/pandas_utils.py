@@ -237,7 +237,7 @@ try:
                 if len(tupl) == 3: i,j, loop = tupl
                 else:
                     i,j = tupl
-                    loop = 0
+                    loop = 1
 
                 segment_indexer[(line, i, j, loop)] = pos
         segment_indexer = pd.Series(segment_indexer)
