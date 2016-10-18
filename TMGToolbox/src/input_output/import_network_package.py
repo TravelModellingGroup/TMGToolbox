@@ -265,6 +265,12 @@ class ImportNetworkPackage(_m.Tool()):
                 self._batchin_lines(scenario, temp_folder, zf)
                 self._batchin_turns(scenario, temp_folder, zf)
 
+                if self._components.traffic_results_files is not None:
+                    self._batchin_traffic_results(scenario, temp_folder, zf)
+
+                if self._components.transit_results_files is not None:
+                    self._batchin_transit_results(scenario, temp_folder, zf)
+
                 if self._components.attribute_header_file is not None:
                     self._batchin_extra_attributes(scenario, temp_folder, zf)
                 self.TRACKER.completeTask()
@@ -337,6 +343,66 @@ class ImportNetworkPackage(_m.Tool()):
         merge_functions.ConflictOption = self.ConflictOption
         merge_functions.run()
 
+    @_m.logbook_trace("Importing traffic results")
+    def _batchin_traffic_results(self, scenario, temp_folder, zf):
+        scenario.has_traffic_results = True
+
+        links_filename, turns_filename = self._components.traffic_results_files
+        zf.extract(links_filename, temp_folder); zf.extract(turns_filename, temp_folder)
+
+        links_filepath = _path.join(temp_folder, links_filename)
+        turns_filepath = _path.join(temp_folder, turns_filename)
+
+        attribute_names = 'auto_volume', 'additional_volume', 'auto_time'
+
+        index, _ = scenario.get_attribute_values('LINK', ['data1'])
+        tables = []
+        with _util.tempExtraAttributeMANAGER(scenario, 'LINK', returnId=True) as temp_attribute:
+            column_labels = {0: 'i_node', 1: 'j_node'}
+            for i, attribute_name in enumerate(attribute_names):
+                column_labels[i + 2] = temp_attribute
+                import_attributes(links_filepath, ',', column_labels, scenario=scenario)
+                del column_labels[i + 2]
+
+                _, table = scenario.get_attribute_values('LINK', [temp_attribute])
+                tables.append(table)
+        scenario.set_attribute_values('LINK', attribute_names, [index] + tables)
+
+        index, _ = scenario.get_attribute_values('TURN', ['data1'])
+        tables = []
+        with _util.tempExtraAttributeMANAGER(scenario, 'TURN', returnId=True) as temp_attribute:
+            column_labels = {0: 'i_node', 1: 'j_node', 2: 'k_node'}
+            for i, attribute_name in enumerate(attribute_names):
+                column_labels[i + 3] = temp_attribute
+                import_attributes(turns_filepath, ',', column_labels, scenario=scenario)
+                del column_labels[i + 3]
+
+                _, table = scenario.get_attribute_values('TURN', [temp_attribute])
+                tables.append(table)
+        scenario.set_attribute_values('TURN', attribute_names, [index] + tables)
+
+    @_m.logbook_trace("Importing transit results")
+    def _batchin_transit_results(self, scenario, temp_folder, zf):
+        scenario.has_transit_results = True
+
+        segments_filename = self._components.transit_results_files
+        zf.extract(segments_filename, temp_folder)
+        segments_filepath = _path.join(temp_folder, segments_filename)
+
+        attribute_names = ['transit_boardings', 'transit_time', 'transit_volume']
+        index, _ = scenario.get_attribute_values('TRANSIT_SEGMENT', ['data1'])
+        tables = []
+        with _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT', returnId=True) as temp_attribute:
+            column_labels= {0: 'line', 1: 'i_node', 2: 'j_node', 3: 'loop_idx'}
+            for i, attribute_name in enumerate(attribute_names):
+                column_labels[i + 4] = temp_attribute
+                import_attributes(segments_filepath, ',', column_labels, scenario=scenario)
+                del column_labels[i + 4]
+
+                _, table = scenario.get_attribute_values('TRANSIT_SEGMENT', [temp_attribute])
+                tables.append(table)
+        scenario.set_attribute_values('TRANSIT_SEGMENT', attribute_names, [index] + tables)
+
     @contextmanager
     def _temp_file(self):
         foldername = _tf.mkdtemp()
@@ -367,6 +433,12 @@ class ImportNetworkPackage(_m.Tool()):
 
             if version >= 3:
                 self._components.functions_file = 'functions.411'
+
+            if 'link_results.csv' in contents and 'turn_results.csv' in contents:
+                self._components.traffic_results_files = 'link_results.csv', 'turn_results.csv'
+
+            if 'segment_results.csv' in contents:
+                self._components.transit_results_files = 'segment_results.csv'
 
             return version
 
@@ -436,7 +508,7 @@ class ImportNetworkPackage(_m.Tool()):
 
     @_m.method(return_type=unicode)
     def get_file_info(self):
-        with self._zipFileMANAGER() as zf:
+        with _zipfile.ZipFile(self.NetworkPackageFile) as zf:
             nl = zf.namelist()
             if 'version.txt' in nl:
                 vf = zf.open('version.txt')
