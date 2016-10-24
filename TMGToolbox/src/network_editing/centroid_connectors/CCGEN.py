@@ -187,14 +187,13 @@ class CCGEN(_m.Tool()):
                       title= "Zone ID Attribute",
                       note= "Shapefile field containing zone ID attribute (corresponds to network zone ID).")
         
-        self.ConnectorModeIds = [self.Scenario.mode('c'),
-                                 self.Scenario.mode('v'),
-                                 self.Scenario.mode('h'),
-                                 self.Scenario.mode('i'),
-                                 self.Scenario.mode('j'),
-                                 self.Scenario.mode('f'),
-                                 self.Scenario.mode('e'),
-                                 self.Scenario.mode('d')]
+        #NCS11 connector mode characters
+        ConnectorModeChars = u'cvhijfed'
+        self.ConnectorModeIds = []
+        for char in ConnectorModeChars:
+            if self.Scenario.mode(char):
+                self.ConnectorModeIds.append(self.Scenario.mode(char))
+
         pb.add_select_mode("ConnectorModeIds",
                            title = "Modes on new connectors")
 
