@@ -156,7 +156,7 @@ class ElementTree():
         self.children = []
         
         #Version is of the form "Emme 4.x.x"
-        version = '.'.join([str(n) for n in get_emme_version(tuple)])
+        version = get_emme_version(str)
         self.version = "Emme %s" %version
     
     def next_id(self):
