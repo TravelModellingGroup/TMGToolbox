@@ -1245,10 +1245,10 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 },
                 "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
             }
-        
-        
-        
-        self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
+        if EMME_VERSION >= (4,2,9,0):
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
+        else:
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)           
     
     def _ExtractCongestionMatrix(self, congestionMatrixId):
         spec = {"trip_components": {
@@ -1278,7 +1278,10 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 },
                 "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
             }
-        self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)
+        if EMME_VERSION >= (4,2,9,0):
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
+        else:
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)           
     
     def _FixRawIVTT(self, congestionMatrixId):
         expression = "{mfivtt} - {mfcong}".format(mfivtt= self.InVehicleTimeMatrixId,
@@ -1332,8 +1335,10 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                             },
                             "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
                         }
-            
-            self.TRACKER.runTool(strategyAnalysisTool, analysisSpec, scenario= self.Scenario)
+            if EMME_VERSION >= (4,2,9,0):
+                self.TRACKER.runTool(strategyAnalysisTool, analysisSpec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
+            else:
+                self.TRACKER.runTool(strategyAnalysisTool, analysisSpec, scenario= self.Scenario)           
             
             expression = "{mfivtt} - {mfcong}".format(mfivtt= self.InVehicleTimeMatrixId,
                                                              mfcong= congestionMatrix.id)
