@@ -94,9 +94,12 @@ class RemoveExtraLinks(_m.Tool()):
                                title="Base Scenario",
                                allow_none=False)
 
-        self.TransferModeList = [self.BaseScenario.mode('u'),
-                            self.BaseScenario.mode('t'),
-                            self.BaseScenario.mode('y')]
+        #string of NCS11 transfer modes:
+        TransferModes = 'tuy'
+        self.TransferModeList = []
+        for char in TransferModes:
+            if self.BaseScenario.mode(char):
+                self.TransferModeList.append(self.BaseScenario.mode(char))
 
         pb.add_select_mode(tool_attribute_name='TransferModeList',
                     filter=[ 'AUX_TRANSIT'],
