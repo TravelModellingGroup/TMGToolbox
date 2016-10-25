@@ -393,7 +393,7 @@ class OperatorTransferMatrix(_m.Tool()):
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
 
     def __call__(self, xtmf_ScenarioNumber, ExportTransferMatrixFlag, ExportWalkAllWayMatrixFlag, TransferMatrixFile, 
-                 xtmf_AggregationPartition, WalkAllWayExportFile):
+                 xtmf_AggregationPartition, WalkAllWayExportFile, LineGroupOptionOrAttributeId):
         self.tool_run_msg = ""
         self.TRACKER.reset()                              
 

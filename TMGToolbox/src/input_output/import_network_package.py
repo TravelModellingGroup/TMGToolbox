@@ -324,13 +324,13 @@ class ImportNetworkPackage(_m.Tool()):
     @_m.logbook_trace("Reading extra attributes")
     def _batchin_extra_attributes(self, scenario, temp_folder, zf):
         types = self._load_extra_attributes(zf, temp_folder, scenario)
-
         self.TRACKER.startProcess(len(types))
         for t in types:
-            filename = "exatt_%ss.241" % t.lower()
             if t == "TRANSIT_SEGMENT":
                 filename = "exatt_segments.241"
-
+            else:            
+                filename = "exatt_%ss.241" % t.lower()
+            
             zf.extract(filename, temp_folder)
             import_attributes(file_path=_path.join(temp_folder, filename),
                               field_separator=",",
@@ -440,6 +440,10 @@ class ImportNetworkPackage(_m.Tool()):
             if 'segment_results.csv' in contents:
                 self._components.transit_results_files = 'segment_results.csv'
 
+            if "exatts.241" in contents:
+                self._components.attribute_header_file = "exatts.241"
+
+
             return version
 
         renumber_count = 0
@@ -483,11 +487,11 @@ class ImportNetworkPackage(_m.Tool()):
             reader.readline()  # toss first line
             for line in reader.readlines():
                 cells = line.split(',', 3)
-                att = scenario.create_extra_attribute(cells[1], cells[0], default_value=float(cells[2]))
-                att.description = cells[3].strip().strip("'")
-                # strip called twice: once to remove the '\n' character, and once to remove both ' characters
-                types.add(att.type)
-
+                if len(cells) >= 3:
+                    att = scenario.create_extra_attribute(cells[1], cells[0], default_value=float(cells[2]))
+                    att.description = cells[3].strip().strip("'")
+                    # strip called twice: once to remove the '\n' character, and once to remove both ' characters
+                    types.add(att.type)
         return types
 
     @_m.method(return_type=_m.TupleType)
