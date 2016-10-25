@@ -165,6 +165,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     CongestionMatrixId = _m.Attribute(str)
     PenaltyMatrixId = _m.Attribute(str)
     ImpedanceMatrixId = _m.Attribute(str)
+    DistanceMatrixId = _m.Attribute(str)
     
     xtmf_InVehicleTimeMatrixNumber = _m.Attribute(int)
     xtmf_WaitTimeMatrixNumber = _m.Attribute(int)
@@ -386,6 +387,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                                     title= "Impendance Matrix",
                                     note= "<font color='green'><b>Optional.</b></font> Select \
                                         a matrix in which to save impedance values.")
+
+        pb.add_select_output_matrix(tool_attribute_name= 'DistanceMatrixId',
+                                    include_existing= True,
+                                    title= "Distance Matrix",
+                                    note= "<font color='green'><b>Optional.</b></font> Select \
+                                        a matrix in which to save transit distances.")
         
         pb.add_header("PARAMETERS")
         with pb.add_table(False) as t:
@@ -736,6 +743,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             self.PenaltyMatrixId = "mf%s" %xtmf_PenaltyMatrixNumber
         if xtmf_ImpedanceMatrixNumber:
             self.ImpedanceMatrixId = "mf%s" %xtmf_ImpedanceMatrixNumber
+        if xtmf_DistanceMatrixNumber:
+            self.DistanceMatrixId = "mf%s" %xtmf_DistanceMatrixNumber
        
         
         print "Running V4 Transit Assignment"
@@ -1215,6 +1224,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
         if self.PenaltyMatrixId:
             spec["by_mode_subset"]["actual_total_boarding_times"] = self.PenaltyMatrixId
         self.TRACKER.runTool(matrixResultsTool, spec, scenario= self.Scenario)
+        if self.
     
     def _ExtractCostMatrix(self):
         spec = {
