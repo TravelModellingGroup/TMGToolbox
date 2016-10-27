@@ -174,6 +174,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
     xtmf_CongestionMatrixNumber = _m.Attribute(int)
     xtmf_PenaltyMatrixNumber = _m.Attribute(int)
     xtmf_ImpedanceMatrixNumber = _m.Attribute(int)
+    xtmf_DistanceMatrixNumber = _m.Attribute(int)
     
     CalculateCongestedIvttFlag = _m.Attribute(bool)
     UseBoardingLevelFlag = _m.Attribute(bool) 
@@ -662,7 +663,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                  BoardPerception, FarePerception,
                  AssignmentPeriod, Iterations, NormGap, RelGap,
                  xtmf_InVehicleTimeMatrixNumber, xtmf_WaitTimeMatrixNumber, xtmf_WalkTimeMatrixNumber,
-                 xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_PenaltyMatrixNumber, xtmf_OriginDistributionLogitScale, 
+                 xtmf_FareMatrixNumber, xtmf_CongestionMatrixNumber, xtmf_PenaltyMatrixNumber, xtmf_DistanceMatrixNumber,
+                 xtmf_OriginDistributionLogitScale, 
                  CalculateCongestedIvttFlag, CongestionExponentString, xtmf_ImpedanceMatrixNumber, UseBoardingLevelFlag):                 
         
         if EMME_VERSION < (4,1,5):
@@ -1223,8 +1225,9 @@ def calc_segment_cost(transit_volume, capacity, segment): """
             }
         if self.PenaltyMatrixId:
             spec["by_mode_subset"]["actual_total_boarding_times"] = self.PenaltyMatrixId
+        if self.DistanceMatrixId:
+            spec["by_mode_subset"]["distance"] = self.DistanceMatrixId
         self.TRACKER.runTool(matrixResultsTool, spec, scenario= self.Scenario)
-        if self.
     
     def _ExtractCostMatrix(self):
         spec = {
