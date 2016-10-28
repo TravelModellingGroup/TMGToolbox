@@ -164,7 +164,7 @@ class RemoveExtraLinks(_m.Tool()):
         self.BaseNetwork = self.BaseScenario.get_network()
 
         for modechar in transferModeString:
-            if self.BaseNetwork(modechar):
+            if self.BaseNetwork.mode(modechar):
                 self.TransferModeList.append (self.BaseNetwork.mode(modechar))
             else:
                 raise Exception ("Transfer mode %s was not found in the network!" %modechar)
