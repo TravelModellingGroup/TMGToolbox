@@ -164,7 +164,10 @@ class RemoveExtraLinks(_m.Tool()):
         self.BaseNetwork = self.BaseScenario.get_network()
 
         for modechar in transferModeString:
-            self.TransferModeList.append (self.BaseNetwork.mode(modechar))
+            if self.BaseNetwork(modechar):
+                self.TransferModeList.append (self.BaseNetwork.mode(modechar))
+            else:
+                raise Exception ("Transfer mode %s was not found in the network!" %modechar)
 
         try:
             
@@ -253,7 +256,6 @@ class RemoveExtraLinks(_m.Tool()):
                     if mode.type != "TRANSIT":
                         transit_only = False
                 if transit_only == True:
-                    print "removing link", link.id
                     network.delete_link(link.i_node,link.j_node) 
                      
         #remove dead-end links
@@ -280,57 +282,60 @@ class RemoveExtraLinks(_m.Tool()):
                             dead_end = False
                 if dead_start or dead_end:
                     network.delete_link(start_node,end_node)
-
         #remove unnecessary transfer links
-        transfer_modes = set(self.TransferModeList)
+
+        #create transfer mode id string
+        transfer_modes = set()
+        for mode in self.TransferModeList:
+            transfer_modes.add(network.mode(mode.id))
         for link in network.links():
             linkmodes = link.modes
             #check if link has at least one transfer mode
-            if len(transfer_modes.intersection(linkmodes))> 0:
-                    start_node = link.i_node
-                    end_node = link.j_node
-                    start_stop = False
-                    end_stop = False
-                    start_road = False
-                    end_road = False
-            for in_link in start_node.incoming_links():
-                #only check if non-reverse links are on the road network
-                if in_link.i_node != link.j_node:
-                    for mode in in_link.modes:
-                        if mode.type != 'TRANSIT' and mode not in transfer_modes:
-                            start_road = True
-            #check if start node has transit stops
-            for out_link in start_node.outgoing_links():
-                for segment in out_link.segments():
-                    if segment.allow_boardings or segment.allow_alightings:
-                        start_stop = True
-            for out_link in end_node.outgoing_links():
-                #only check if non-reverse links are on the road network
-                if out_link.j_node != link.i_node:
-                    for mode in out_link.modes:
-                        if mode.type != 'TRANSIT'and mode not in transfer_modes:
-                            end_road = True
-                #check to see if end node has transit stops
-                for segment in out_link.segments():
-                    if segment.allow_boardings or segment.allow_alightings:
+            if len(linkmodes.intersection(transfer_modes))>0:
+                start_node = link.i_node
+                end_node = link.j_node
+                start_stop = False
+                end_stop = False
+                start_road = False
+                end_road = False
+                for in_link in start_node.incoming_links():
+                    #only check if non-reverse links are on the road network
+                    if in_link.i_node != link.j_node:
+                        for mode in in_link.modes:
+                            if mode.type != 'TRANSIT' and mode not in transfer_modes:
+                                start_road = True
+                #check if start node has transit stops
+                for out_link in start_node.outgoing_links():
+                    for segment in out_link.segments():
+                        if segment.allow_boardings or segment.allow_alightings:
+                            start_stop = True
+                for out_link in end_node.outgoing_links():
+                    #only check if non-reverse links are on the road network
+                    if out_link.j_node != link.i_node:
+                        for mode in out_link.modes:
+                            if mode.type != 'TRANSIT'and mode not in transfer_modes:
+                                end_road = True
+                    #check to see if end node has transit stops
+                    for segment in out_link.segments():
+                        if segment.allow_boardings or segment.allow_alightings:
+                            end_stop = True
+                #check to see if node is end-of-line stop
+                for segment in link.segments():
+                    if segment.line.segment(str(end_node.number) + "-0") != False:
                         end_stop = True
-            #check to see if node is end-of-line stop
-            for segment in link.segments():
-                if segment.line.segment(str(end_node.number) + "-0") != False:
-                    end_stop = True
-            keep = False
-            if start_stop == True and end_stop == True:
-                keep = True
-            elif start_stop == True and end_road == True:
-                keep = True
-            elif end_stop == True and start_road == True:
-                keep = True
-            if keep == False:
-                #check if link has non-transfer modes, in which case these modes are removed from link, otherwise link is deleted
-                if link.modes.issubset(transfer_modes):
-                    network.delete_link(start_node,end_node)
-                else:
-                    link.modes = link.modes.difference(transfer_modes)
+                keep = False
+                if start_stop == True and end_stop == True:
+                    keep = True
+                elif start_stop == True and end_road == True:
+                    keep = True
+                elif end_stop == True and start_road == True:
+                    keep = True
+                if keep == False:
+                    #check if link has non-transfer modes, in which case these modes are removed from link, otherwise link is deleted
+                    if link.modes.issubset(transfer_modes):
+                        network.delete_link(start_node,end_node)
+                    else:
+                        link.modes = link.modes.difference(transfer_modes)
 
     def _RemoveStrandedNodes(self,network):
         #removes nodes not connected to any links
