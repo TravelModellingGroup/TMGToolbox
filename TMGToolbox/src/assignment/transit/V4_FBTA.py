@@ -794,6 +794,9 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.PenaltyMatrixId:
                 _util.initializeMatrix(id= self.PenaltyMatrixId,
                                        description= "Transit total boarding penalties")
+            if self.DistanceMatrixId:
+                _util.initializeMatrix(id= self.DistanceMatrixId,
+                                       description= "Transit distances")
 
             if self.ImpedanceMatrixId:
                 _util.initializeMatrix(id= self.ImpedanceMatrixId,
