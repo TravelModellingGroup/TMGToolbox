@@ -290,7 +290,8 @@ class ExportNetworkPackage(_m.Tool()):
         self.TRACKER.runTool(_export_attributes, extra_attributes,
                              temp_folder,
                              field_separator=',',
-                             scenario=self.Scenario)
+                             scenario=self.Scenario,
+                             export_format='SCI_DATA_FORMAT')
         for t in types:
             if t == 'transit_segment':
                 t = 'segment'
