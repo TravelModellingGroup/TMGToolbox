@@ -308,7 +308,7 @@ class ExportNetworkPackage(_m.Tool()):
     def _batchout_traffic_results(self, temp_folder, zf):
         link_filepath = _path.join(temp_folder, "link_results.csv")
         turn_filepath = _path.join(temp_folder, "turn_results.csv")
-        traffic_result_attributes = ['auto_volume', 'additional_volume', 'auto_time']
+        traffic_result_attributes = ['auto_volume', 'additional_volume', 'auto_time', 'aux_transit_volume']
 
         links = _pdu.load_link_dataframe(self.Scenario).loc[:, traffic_result_attributes]
         links.to_csv(link_filepath, index=True)
