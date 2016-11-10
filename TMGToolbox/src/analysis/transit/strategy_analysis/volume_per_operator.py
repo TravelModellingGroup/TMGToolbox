@@ -202,7 +202,7 @@ class VolumePerOperator(_m.Tool()):
                     demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
                     report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)            
                     matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
-                    matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+")
+                    matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
 
                     self.results[scenario.id][filter[1]] =  tempResultMatrix.data                     
     
