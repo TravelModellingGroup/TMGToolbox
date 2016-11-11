@@ -308,7 +308,7 @@ class ExportNetworkPackage(_m.Tool()):
     def _batchout_traffic_results(self, temp_folder, zf):
         link_filepath = _path.join(temp_folder, "link_results.csv")
         turn_filepath = _path.join(temp_folder, "turn_results.csv")
-        traffic_result_attributes = ['auto_volume', 'additional_volume', 'auto_time', 'aux_transit_volume']
+        traffic_result_attributes = ['auto_volume', 'additional_volume', 'auto_time']
 
         links = _pdu.load_link_dataframe(self.Scenario).loc[:, traffic_result_attributes]
         links.to_csv(link_filepath, index=True)
@@ -318,13 +318,25 @@ class ExportNetworkPackage(_m.Tool()):
         turns.to_csv(turn_filepath)
         zf.write(turn_filepath, arcname=_path.basename(turn_filepath))
 
+
     def _batchout_transit_results(self, temp_folder, zf):
         segment_filename = "segment_results.csv"
         segment_filepath = _path.join(temp_folder, segment_filename)
-        result_attributes = ['transit_boardings', 'transit_time', 'transit_volume']
+        result_attributes = ['transit_boardings', 'transit_time', 'transit_volume', 'aux_transit_volume']
+
         segments = _pdu.load_transit_segment_dataframe(self.Scenario).loc[:, result_attributes]
         segments.to_csv(segment_filepath)
         zf.write(segment_filepath, arcname=segment_filename)
+
+
+        aux_transit_filename = "aux_transit_results.csv"
+        aux_transit_filepath = _path.join(temp_folder,aux_transit_filename)
+        aux_result_attributes = ['aux_transit_volume']
+
+        aux_transit = _pdu.load_link_dataframe(self.Scenario).loc[:, aux_result_attributes]
+        aux_transit.to_csv(aux_transit_filepath)
+        zf.write(aux_transit_filepath, arcname=aux_transit_filename)
+
 
     @contextmanager
     def _temp_file(self):

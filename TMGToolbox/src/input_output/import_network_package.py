@@ -55,6 +55,7 @@ class ComponentContainer(object):
 
         self.traffic_results_files = None
         self.transit_results_files = None
+        self.aux_transit_results_file = None
 
     def reset(self):
         self.mode_file = None
@@ -403,6 +404,25 @@ class ImportNetworkPackage(_m.Tool()):
                 tables.append(table)
         scenario.set_attribute_values('TRANSIT_SEGMENT', attribute_names, [index] + tables)
 
+        aux_transit_filename = self._components.aux_transit_results_file
+        zf.extract(aux_transit_filename,temp_folder)
+        aux_transit_filepath = _path.join(temp_folder, aux_transit_filename)
+
+        aux_attribute_names = ['aux_transit_volume']
+        index, _ = scenario.get_attribute_values('LINK', ['data1'])
+
+        tables = []
+        with _util.tempExtraAttributeMANAGER(scenario, 'LINK', returnId=True) as temp_attribute:
+            column_labels = {0:  'i_node', 1: 'j_node'}
+            for i, attribute_name in enumerate(aux_attribute_names):
+                column_labels[i + 2] = temp_attribute
+                import_attributes(aux_transit_filepath, ',', column_labels, scenario=scenario)
+                del column_labels[i + 2]
+
+                _, table = scenario.get_attribute_values('LINK', [temp_attribute])
+                tables.append(table)
+        scenario.set_attribute_values('LINK', aux_attribute_names, [index] + tables)
+
     @contextmanager
     def _temp_file(self):
         foldername = _tf.mkdtemp()
@@ -439,6 +459,9 @@ class ImportNetworkPackage(_m.Tool()):
 
             if 'segment_results.csv' in contents:
                 self._components.transit_results_files = 'segment_results.csv'
+
+            if 'aux_transit_results.csv' in contents:
+                self._components.aux_transit_results_file = 'aux_transit_results.csv'
 
             if "exatts.241" in contents:
                 self._components.attribute_header_file = "exatts.241"
