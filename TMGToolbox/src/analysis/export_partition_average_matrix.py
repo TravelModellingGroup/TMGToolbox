@@ -232,7 +232,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                         scenario=self.Scenario)
                 
                 #Return the average matrix
-                retVal = partitionAggTool(finalAggregateMatrix, self.Partition, self.Partition)
+                retVal = partitionAggTool(finalAggregateMatrix, self.Partition, self.Partition,scenario=self.Scenario)
                 
                 if writeToFile:
                     title = ["Value Matrix: %s" %matrixToAggregate.description,
