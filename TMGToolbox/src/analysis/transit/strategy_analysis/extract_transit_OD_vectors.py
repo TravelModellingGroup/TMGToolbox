@@ -237,11 +237,11 @@ class ExtractTransitODVectors(_m.Tool()):
                     pathAnalysis(self._BuildPathSpec(lineFlag.id, "9000-9999", "1-8999", transitVolumesSecondary.id, 
                                                      auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Sum transit demands"):
-                    matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId))
-                    matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemandSecondary.id, self.LineODMatrixId))
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId), scenario=self.Scenario)
+                    matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemandSecondary.id, self.LineODMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Aggregating transit matrices"):
-                    matrixAgg(self.LineODMatrixId, self.AggOriginMatrixId, agg_op="+")
-                    matrixAgg(self.LineODMatrixId, self.AggDestinationMatrixId, agg_op="+")
+                    matrixAgg(self.LineODMatrixId, self.AggOriginMatrixId, agg_op="+",scenario=self.Scenario)
+                    matrixAgg(self.LineODMatrixId, self.AggDestinationMatrixId, agg_op="+",scenario=self.Scenario)
                 with _m.logbook_trace("Copying auto matrices"):
                     matrixCopy(self.AutoODMatrixId, autoOrigMatrix.id, matrix_name="autoOrigFull", matrix_description="", 
                                                 scenario=self.Scenario)
@@ -266,8 +266,8 @@ class ExtractTransitODVectors(_m.Tool()):
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(destProbMatrix.id, " * ", autoDestMatrix.id, autoDestMatrix.id), self.Scenario)
                 with _m.logbook_trace("Aggregating DAT demand and producing final O & D matrices"):
                     #Aggregate the adjusted DAT matrices
-                    matrixAgg(autoOrigMatrix.id, tempDatOrig.id, agg_op="+")
-                    matrixAgg(autoDestMatrix.id, tempDatDest.id, agg_op="+")
+                    matrixAgg(autoOrigMatrix.id, tempDatOrig.id, agg_op="+",scenario=self.Scenario)
+                    matrixAgg(autoDestMatrix.id, tempDatDest.id, agg_op="+", scenario=self.Scenario)
                     #Find the total O & D matrices
                     #if EMME_VERSION >= (4,2,1):
                     #    matrixCalc(self._BuildSimpleMatrixCalcSpec(autoOrigMatrix.id, " + ", self.AggOriginMatrixId, self.AggOriginMatrixId), self.Scenario,

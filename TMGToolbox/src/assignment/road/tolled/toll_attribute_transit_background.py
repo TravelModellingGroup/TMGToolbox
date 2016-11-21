@@ -452,9 +452,9 @@ class TollBasedRoadAssignment(_m.Tool()):
                     
                 with _m.logbook_trace("Calculating peak hour matrix"):
                     if EMME_VERSION >= (4,2,1):
-                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id), num_processors=self.NumberOfProcessors)
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id), num_processors=self.NumberOfProcessors, scenario=self.Scenario)
                     else:
-                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id),scenario=self.Scenario)
                     self._tracker.completeSubtask()
                     
                 

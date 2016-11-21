@@ -398,7 +398,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                 raise Exception("Error applying toll link selector expression: %s" %e)
                     
                     with _m.logbook_trace("Calculating peak hour matrix"):
-                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id),scenario=self.Scenario)
                         self._tracker.completeSubtask()
                         
                     

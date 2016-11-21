@@ -419,7 +419,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         self._tracker.completeSubtask()
                     
                     with _m.logbook_trace("Calculating peak hour matrix"):
-                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id))
+                        matrixCalcTool(self._getPeakHourSpec(peakHourMatrix.id),scenario=self.Scenario)
                         self._tracker.completeSubtask()
                         
                     
