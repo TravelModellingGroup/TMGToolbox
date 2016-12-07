@@ -684,7 +684,6 @@ class FBTNFromSchema(_m.Tool()):
                     msg = "Emme runtime error processing line group '%s'." %id
                     _m.logbook_write(msg)
                     print msg
-                    raise
             
             msg = "Loaded group %s: %s" %(groupNumber, id)
             print msg
