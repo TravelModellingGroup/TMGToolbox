@@ -42,7 +42,7 @@ _pdu = _MODELLER.module('tmg.common.pandas_utils')
 
 
 class ExportNetworkPackage(_m.Tool()):
-    version = '1.0.0'
+    version = '1.2.0'
     tool_run_msg = ""
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 

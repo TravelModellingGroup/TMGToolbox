@@ -74,7 +74,7 @@ class ComponentContainer(object):
 
 
 class ImportNetworkPackage(_m.Tool()):
-    version = '1.1.0'
+    version = '1.2.0'
     tool_run_msg = ""
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
 
