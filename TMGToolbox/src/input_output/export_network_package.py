@@ -42,7 +42,7 @@ _pdu = _MODELLER.module('tmg.common.pandas_utils')
 
 
 class ExportNetworkPackage(_m.Tool()):
-    version = '1.0.0'
+    version = '1.2.0'
     tool_run_msg = ""
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
@@ -236,7 +236,8 @@ class ExportNetworkPackage(_m.Tool()):
         export_file = _path.join(temp_folder, "base.211")
         self.TRACKER.runTool(_export_base_network,
                              export_file=export_file,
-                             scenario=self.Scenario)
+                             scenario=self.Scenario,
+                             export_format='ENG_DATA_FORMAT')
         zf.write(export_file, arcname="base.211")
 
     @_m.logbook_trace("Exporting link shapes")
@@ -256,7 +257,8 @@ class ExportNetworkPackage(_m.Tool()):
         else:
             self.TRACKER.runTool(_export_transit_lines,
                                  export_file=export_file,
-                                 scenario=self.Scenario)
+                                 scenario=self.Scenario,
+                                 export_format='ENG_DATA_FORMAT')
 
         zf.write(export_file, arcname="transit.221")
 
@@ -269,7 +271,8 @@ class ExportNetworkPackage(_m.Tool()):
         else:
             self.TRACKER.runTool(_export_turns,
                                  export_file=export_file,
-                                 scenario=self.Scenario)
+                                 scenario=self.Scenario,
+                                 export_format='ENG_DATA_FORMAT')
 
         zf.write(export_file, arcname="turns.231")
 
@@ -290,7 +293,8 @@ class ExportNetworkPackage(_m.Tool()):
         self.TRACKER.runTool(_export_attributes, extra_attributes,
                              temp_folder,
                              field_separator=',',
-                             scenario=self.Scenario)
+                             scenario=self.Scenario,
+                             export_format='SCI_DATA_FORMAT')
         for t in types:
             if t == 'transit_segment':
                 t = 'segment'
