@@ -27,6 +27,7 @@ _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
+extendedAssignmentTool=_MODELLER.tool('inro.emme.transit_assignment.extended_transit_assignment')
 networkCalcTool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 matrixResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix_results')
 strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
@@ -102,7 +103,7 @@ class MultiClassTransitAssignment(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(int)
     xtmf_DemandMatrixString = _m.Attribute(str)
     xtmf_NameString = _m.Attribute(str)
-    
+    xtmf_congestedAssignment=_m.Attribute(bool)
 
     xtmf_OriginDistributionLogitScale = _m.Attribute(float)
     xtmf_WalkDistributionLogitScale = _m.Attribute(float)
@@ -241,7 +242,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
         xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, \
-        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString):
+        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, xtmf_congestedAssignment):
         
         if EMME_VERSION < (4, 1, 5):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
@@ -369,7 +370,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                 self.TRACKER.completeSubtask()
                 spec = self._GetBaseAssignmentSpec()
 
-                self.TRACKER.runTool(congestedAssignmentTool, transit_assignment_spec=spec, congestion_function=self._GetFuncSpec(), stopping_criteria=self._GetStopSpec(), class_names=self.ClassNames, scenario=self.Scenario)
+                if xtmf_congestedAssignment==True:
+                    self.TRACKER.runTool(congestedAssignmentTool, transit_assignment_spec=spec, congestion_function=self._GetFuncSpec(), stopping_criteria=self._GetStopSpec(), class_names=self.ClassNames, scenario=self.Scenario)
+                else:
+                    self.TRACKER.runTool(extendedAssignmentTool, specification=spec, class_names=self.ClassNames, scenario=self.Scenario)
                 self._ExtractOutputMatrices()
 
     def _GetAtts(self):
@@ -545,10 +549,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                 farePerception.append(0.0)
             else:
                 farePerception.append( 60.0 / self.ClassFarePerceptionList[i])
-        baseSpec = [ {
-            'modes': self.ClassModeList[i],
-            'demand': self.DemandMatrixList[i].id,
-            'waiting_time': {
+            baseSpec = [ {
+                'modes': self.ClassModeList[i],
+                'demand': self.DemandMatrixList[i].id,
+                'waiting_time': {
                 'headway_fraction': self.HeadwayFractionAttributeId,
                 'effective_headways': self.EffectiveHeadwayAttributeId,
                 'spread_factor': 1,
@@ -674,9 +678,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                     finally:
                         pass
 
-            if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag or self.CongestionMatrixList[i]:
-                with congestionMatrixManager() as congestionMatrix:
-                    self._ExtractCongestionMatrix(congestionMatrix.id, i)
+            if xtmf_congestedAssignment==True:
+                if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag or self.CongestionMatrixList[i]:
+                    with congestionMatrixManager() as congestionMatrix:
+                        self._ExtractCongestionMatrix(congestionMatrix.id, i)
                     if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag:
                         self._FixRawIVTT(congestionMatrix.id, i)
             if self.FareMatrixList[i]:
