@@ -257,6 +257,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.Iterations = Iterations
         self.NormGap = NormGap
         self.RelGap = RelGap
+        self.xtmf_congestedAssignment = xtmf_congestedAssignment
         self.ClassNames = [x for x in xtmf_NameString.split(',')]
         
         #class-specific inputs
@@ -678,7 +679,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                     finally:
                         pass
 
-            if xtmf_congestedAssignment==True:
+            if self.xtmf_congestedAssignment==True:
                 if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag or self.CongestionMatrixList[i]:
                     with congestionMatrixManager() as congestionMatrix:
                         self._ExtractCongestionMatrix(congestionMatrix.id, i)
