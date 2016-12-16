@@ -374,7 +374,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                 if self.xtmf_congestedAssignment==True:
                     self.TRACKER.runTool(congestedAssignmentTool, transit_assignment_spec=spec, congestion_function=self._GetFuncSpec(), stopping_criteria=self._GetStopSpec(), class_names=self.ClassNames, scenario=self.Scenario)
                 else:
-                    self.TRACKER.runTool(extendedAssignmentTool, specification=spec, class_names=self.ClassNames, scenario=self.Scenario)
+                    self.TRACKER.runTool(extendedAssignmentTool, specification=spec, class_name=self.ClassNames, scenario=self.Scenario)
                 self._ExtractOutputMatrices()
 
     def _GetAtts(self):
