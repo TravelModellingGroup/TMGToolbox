@@ -374,7 +374,9 @@ class MultiClassTransitAssignment(_m.Tool()):
                 if self.xtmf_congestedAssignment==True:
                     self.TRACKER.runTool(congestedAssignmentTool, transit_assignment_spec=spec, congestion_function=self._GetFuncSpec(), stopping_criteria=self._GetStopSpec(), class_names=self.ClassNames, scenario=self.Scenario)
                 else:
-                    self.TRACKER.runTool(extendedAssignmentTool, specification=spec, class_name=self.ClassNames, scenario=self.Scenario)
+                    for i in range(0, len(self.ClassNames)):
+                        specUncongested = self._GetBaseAssignmentSpecUncongested(i)
+                        self.TRACKER.runTool(extendedAssignmentTool, specification=specUncongested, class_name=self.ClassNames[i], scenario=self.Scenario, add_volumes=(i!=0))
                 self._ExtractOutputMatrices()
 
     def _GetAtts(self):
@@ -633,7 +635,91 @@ class MultiClassTransitAssignment(_m.Tool()):
                 }
             ]
         return baseSpec
+    def _GetBaseAssignmentSpecUncongested(self, index):
+        if self.ClassFarePerceptionList[index] == 0.0:
+                farePerception = 0.0
+        else:
+                farePerception = 60.0 / self.ClassFarePerceptionList[index]
+        baseSpec = {
+                'modes': self.ClassModeList[index],
+                'demand': self.DemandMatrixList[index].id,
+                'waiting_time': {
+                'headway_fraction': self.HeadwayFractionAttributeId,
+                'effective_headways': self.EffectiveHeadwayAttributeId,
+                'spread_factor': 1,
+                'perception_factor': self.ClassWaitPerceptionList[index]},
+                'boarding_time': {
+                    'at_nodes': None,
+                    'on_lines': {
+                        'penalty': 'ut3',
+                        'perception_factor': self.ClassBoardPerceptionList[index]}},
+                'boarding_cost': {
+                    'at_nodes': {
+                        'penalty': 0,
+                        'perception_factor': 1},
+                    'on_lines': None},
+            'in_vehicle_time': {
+                'perception_factor': 1},
+            'in_vehicle_cost': {
+                'penalty': self.SegmentFareAttributeIdList[index],
+                'perception_factor': farePerception},
+            'aux_transit_time': {
+                'perception_factor': self.WalkAttributeIdList[index]},
+            'aux_transit_cost': {
+                'penalty': self.LinkFareAttributeIdList[index],
+                'perception_factor': farePerception},
+            'connector_to_connector_path_prohibition': None,
+            'od_results': {
+                'total_impedance': None},
+            'flow_distribution_between_lines': {
+                'consider_travel_time': self._considerTotalImpedance},
+            'save_strategies': True,
+            'type': 'EXTENDED_TRANSIT_ASSIGNMENT'}
+        if self._useLogitConnectorChoice:
+            baseSpec['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
+                                                      'truncation': self._connectorLogitTruncation}},
+                 'by_fixed_proportions': None}
+        if EMME_VERSION >= (4, 1):
+            baseSpec['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
+            if self._useLogitAuxTrChoice:
+                raise NotImplementedError()
+                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': 'ui1',
+                                                  'aux_transit_choice_set': 'BEST_LINK',
+                                                  'logit_parameters': {'scale': self.xtmf_WalkDistributionLogitScale,
+                                                                       'truncation': 0.05}}}
+        if EMME_VERSION >= (4,2,1):
+            modeList = []
+            partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
+            #if all modes are selected for class, get all transit modes for journey levels
+            if self.ClassModeList == ['*']:
+                for mode in partialNetwork.modes():
+                    if mode.type == 'TRANSIT': 
+                        modeList.append({"mode": mode.id, "next_journey_level": 1})
+                    else:
+                        for modechar in self.ClassModeList:
+                            mode = partialNetwork.mode(modechar)
+                            if mode.type == 'TRANSIT':
+                                modeList.append({"mode": mode.id, "next_journey_level": 1})
 
+                    baseSpec["journey_levels"] = [
+                    {
+                        "description": "Walking",
+                        "destinations_reachable": False,
+                        "transition_rules": modeList,
+                        "boarding_time": None,
+                        "boarding_cost": None,
+                        "waiting_time": None
+                    },
+                    {
+                        "description": "Transit",
+                        "destinations_reachable": True,
+                        "transition_rules": modeList,
+                        "boarding_time": None,
+                        "boarding_cost": None,
+                        "waiting_time": None
+                    }
+            ]
+        return baseSpec
     def _GetFuncSpec(self):
         parameterList = self._ParseExponentString()
         partialSpec = 'import math \ndef calc_segment_cost(transit_volume, capacity, segment): '
