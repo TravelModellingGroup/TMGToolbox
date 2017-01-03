@@ -691,17 +691,11 @@ class MultiClassTransitAssignment(_m.Tool()):
             modeList = []
             partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
             #if all modes are selected for class, get all transit modes for journey levels
-            if self.ClassModeList == ['*']:
+            if self.ClassModeList[index] == ['*']:
                 for mode in partialNetwork.modes():
                     if mode.type == 'TRANSIT': 
                         modeList.append({"mode": mode.id, "next_journey_level": 1})
-                    else:
-                        for modechar in self.ClassModeList:
-                            mode = partialNetwork.mode(modechar)
-                            if mode.type == 'TRANSIT':
-                                modeList.append({"mode": mode.id, "next_journey_level": 1})
-
-                    baseSpec["journey_levels"] = [
+            baseSpec["journey_levels"] = [
                     {
                         "description": "Walking",
                         "destinations_reachable": False,
