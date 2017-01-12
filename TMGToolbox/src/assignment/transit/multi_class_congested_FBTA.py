@@ -90,6 +90,7 @@ class MultiClassTransitAssignment(_m.Tool()):
     xtmf_FareMatrixString = _m.Attribute(str)
     xtmf_CongestionMatrixString = _m.Attribute(str)
     xtmf_PenaltyMatrixString = _m.Attribute(str)
+    xtmf_ImpedanceMatrixString = _m.Attribute(str)
     
     #-----
 
@@ -241,7 +242,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         HeadwayFractionAttributeId, xtmf_LinkFareAttributeIdString, xtmf_SegmentFareAttributeIdString, \
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
-        xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, \
+        xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, xtmf_ImpedanceMatrixString, \
         xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, xtmf_congestedAssignment):
         
         if EMME_VERSION < (4, 1, 5):
@@ -319,6 +320,8 @@ class MultiClassTransitAssignment(_m.Tool()):
             self.CongestionMatrixList = xtmf_CongestionMatrixString.split(',')
         if xtmf_PenaltyMatrixString:
             self.PenaltyMatrixList = xtmf_PenaltyMatrixString.split(',')
+        if xtmf_ImpedanceMatrixString:
+            self.ImpedanceMatrixList = xtmf_ImpedanceMatrixString.split(',')
         print 'Running Multi-Class Transit Assignment'
         self._Execute()
         print 'Done running transit assignment'
@@ -357,6 +360,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                     _util.initializeMatrix(id=self.PenaltyMatrixList[i], description='Transit total boarding penalties for %s' % self.ClassNames[-1])
                 else:
                     self.PenaltyMatrixList[i] = None
+                if self.ImpedanceMatrixList[i] != 'mf0':
+                    _util.initializeMatrix(id=self.ImpedanceMatrixList[i], description='Transit Perceived Travel times for %s' % self.ClassNames[-1])
+                else:
+                    self.ImpedanceMatrixList[i] = None
 
             with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
                 self.TRACKER.startProcess(3)
@@ -582,7 +589,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                 'perception_factor': farePerception[i]},
             'connector_to_connector_path_prohibition': None,
             'od_results': {
-                'total_impedance': None},
+                'total_impedance': self.ImpedanceMatrixList[i]},
             'flow_distribution_between_lines': {
                 'consider_travel_time': self._considerTotalImpedance},
             'save_strategies': True,
@@ -670,7 +677,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                 'perception_factor': farePerception},
             'connector_to_connector_path_prohibition': None,
             'od_results': {
-                'total_impedance': None},
+                'total_impedance': self.ImpedanceMatrixList[index]},
             'flow_distribution_between_lines': {
                 'consider_travel_time': self._considerTotalImpedance},
             'save_strategies': True,
