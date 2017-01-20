@@ -606,7 +606,10 @@ class OperatorTransferMatrix(_m.Tool()):
     def _GetTraversalMatrix(self, lineGroupAtributeID, tempFolder):
         #---2. Load class / iteration information for traversal analysis
         if self._GetAssignmentType() == "CONGESTED_TRANSIT_ASSIGNMENT":
-            classWeights = self._LoadClassInfo()
+            if EMME_VERSION >= (4,1,0):
+                classWeights = []
+            else:
+                classWeights = self._LoadClassInfo()
         elif self._GetAssignmentType() == "MULTICLASS_TRANSIT_ASSIGNMENT":
             classWeights = [(self.ClassName, 1.0)]
         else:

@@ -810,7 +810,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         if EMME_VERSION >= (4,2,9,0):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i], num_processors=self.NumberOfProcessors)
         else:
-            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)       
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])       
         
 
     def _ExtractCongestionMatrix(self, congestionMatrixId, i):
@@ -823,7 +823,7 @@ class MultiClassTransitAssignment(_m.Tool()):
          'selected_demand_and_transit_volumes': {'sub_strategies_to_retain': 'ALL',
                                                  'selection_threshold': {'lower': -999999,
                                                                          'upper': 999999}},
-         'analyzed_demand': None,
+         'analyzed_demand': self.DemandMatrixList[i].id,
          'constraint': None,
          'results': {'strategy_values': congestionMatrixId,
                      'selected_demand': None,
@@ -835,7 +835,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         if EMME_VERSION >= (4,2,9,0):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i], num_processors=self.NumberOfProcessors)
         else:
-            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)       
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])       
 
     def _FixRawIVTT(self, congestionMatrix, i):
         expression = '{mfivtt} - {mfcong}'.format(mfivtt=self.InVehicleTimeMatrixList[i], mfcong=congestionMatrix)
