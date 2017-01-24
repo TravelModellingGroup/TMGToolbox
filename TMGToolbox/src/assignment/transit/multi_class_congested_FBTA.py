@@ -553,13 +553,15 @@ class MultiClassTransitAssignment(_m.Tool()):
     def _GetBaseAssignmentSpec(self):
 
         farePerception = []
+        print len(self.DemandMatrixList)
+        baseSpec = []
         for i in range(0, len(self.DemandMatrixList)):
             
             if self.ClassFarePerceptionList[i] == 0.0:
                 farePerception.append(0.0)
             else:
                 farePerception.append( 60.0 / self.ClassFarePerceptionList[i])
-            baseSpec = [ {
+            baseSpec.append({
                 'modes': self.ClassModeList[i],
                 'demand': self.DemandMatrixList[i].id,
                 'waiting_time': {
@@ -593,8 +595,7 @@ class MultiClassTransitAssignment(_m.Tool()):
             'flow_distribution_between_lines': {
                 'consider_travel_time': self._considerTotalImpedance},
             'save_strategies': True,
-            'type': 'EXTENDED_TRANSIT_ASSIGNMENT'} for i in range(0, len(self.DemandMatrixList)) ]
-        
+            'type': 'EXTENDED_TRANSIT_ASSIGNMENT'})
         for i in range(0, len(baseSpec)):
             if self._useLogitConnectorChoice:
                 baseSpec[i]['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
@@ -807,10 +808,12 @@ class MultiClassTransitAssignment(_m.Tool()):
                     'total_boardings': None,
                     'total_alightings': None},
                 'type': 'EXTENDED_TRANSIT_STRATEGY_ANALYSIS'}
-        if EMME_VERSION >= (4,2,9,0):
+        if EMME_VERSION >= (4,3,0):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i], num_processors=self.NumberOfProcessors)
+        elif EMME_VERSION >= (4,2,0) and EMME_VERSION < (4,3,0):
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])
         else:
-            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])       
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)       
         
 
     def _ExtractCongestionMatrix(self, congestionMatrixId, i):
@@ -832,10 +835,12 @@ class MultiClassTransitAssignment(_m.Tool()):
                      'total_boardings': None,
                      'total_alightings': None},
          'type': 'EXTENDED_TRANSIT_STRATEGY_ANALYSIS'}
-        if EMME_VERSION >= (4,2,9,0):
+        if EMME_VERSION >= (4,3,0):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i], num_processors=self.NumberOfProcessors)
+        elif EMME_VERSION >= (4,2,0) and EMME_VERSION < (4,3,0):
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])
         else:
-            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])       
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)   
 
     def _FixRawIVTT(self, congestionMatrix, i):
         expression = '{mfivtt} - {mfcong}'.format(mfivtt=self.InVehicleTimeMatrixList[i], mfcong=congestionMatrix)

@@ -229,13 +229,15 @@ class OperatorTransferMatrix(_m.Tool()):
                              note= "If set to None, the tool will use the demand matrix from the assignment, \
                                  however this will affect run time for this tool.")
         
-        if self._GetAssignmentType() == "MULTICLASS_TRANSIT_ASSIGNMENT":
-            classes = self._LoadClassInfo()
-            keyval1 = []
-            for className, alpha in classes:
-                keyval1.append((className, className))
+        if self._GetAssignmentType() == "MULTICLASS_TRANSIT_ASSIGNMENT" or self._GetMulticlass() == True:
+            classes = self._LoadClassNames()
+            keyval1 = {}
+            for className in classes:
+                keyval1[className] = className
+                #keyval1.append((className, className))
         else:
-            keyval1 = [(-1, "Multiclass assignment not available")]
+            keyval1 = {-1: "Multiclass assignment not available"}
+        print keyval1
         pb.add_select(tool_attribute_name= 'ClassName',
                       keyvalues= keyval1,
                       title= "Class Name",
@@ -302,7 +304,7 @@ class OperatorTransferMatrix(_m.Tool()):
         {
             $("#ClassName").prop('disabled', false);
         } else {
-            $("#ClassName").prop('disabled', true);
+           // $("#ClassName").prop('disabled', true);
         }
         
         if (! tool.preload_transfer_matrix_flag())
@@ -323,25 +325,25 @@ class OperatorTransferMatrix(_m.Tool()):
             
             $("#LineGroupOptionOrAttributeId")
                 .empty()
-                .append(tool.preload_line_group_options())
+                .append(tool.preload_line_group_options());
             inro.modeller.page.preload("#LineGroupOptionOrAttributeId");
-            $("#LineGroupOptionOrAttributeId").trigger('change')
+            $("#LineGroupOptionOrAttributeId").trigger('change');
             
             if (tool.class_name_is_required())
             {
                 $("#ClassName")
                     .empty()
-                    .append(tool.preload_class_names())
+                    .append(tool.preload_class_names());
                 inro.modeller.page.preload("#ClassName");
-                $("#ClassName").trigger('change')
+                $("#ClassName").trigger('change');
             
                 $("#ClassName").prop('disabled', false);
             } else {
                 $("#ClassName")
                     .empty()
-                    .append("<option value='-1'>Multiclass assignment not available</option>")
+                    .append("<option value='-1'>Multiclass assignment not available</option>");
                 inro.modeller.page.preload("#ClassName");
-                $("#ClassName").trigger('change')
+                $("#ClassName").trigger('change');
             
                 $("#ClassName").prop('disabled', true);
             }
@@ -553,7 +555,23 @@ class OperatorTransferMatrix(_m.Tool()):
         data = config['data']
         return data['type']
         
-    
+    def _GetMulticlass(self):
+        if not self.Scenario.has_transit_results: return None
+        
+        configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %self.Scenario
+        
+        if not exists(configPath): return self.Scenario.transit_assignment_type
+        
+        with open(configPath) as reader:
+            config = _parsedict(reader.readline())
+        
+        data = config['data']
+        if 'multi_class' in data:
+            return data['multi_class']
+        else:
+            return False
+
     def _LoadClassInfo(self):
         
         if not self.Scenario.has_transit_results: return []
@@ -569,11 +587,38 @@ class OperatorTransferMatrix(_m.Tool()):
         classes = []
         for info in config['strat_files']:
             className = info['name']
-            if not 'alpha' in info['data']:
-                alpha = 0.0
-            else: alpha = info['data']['alpha']
-            
+
+            if(info['data'] != None):
+                if not 'alpha' in info['data']:
+                    alpha = 0.0
+                else: 
+                    alpha = info['data']['alpha']
             classes.append((className, alpha))
+        
+        return classes
+
+    def _LoadClassNames(self):
+        
+        if not self.Scenario.has_transit_results: return []
+        
+        configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %self.Scenario
+        
+        if not exists(configPath): return []
+        
+        with open(configPath) as reader:
+            config = _parsedict(reader.readline())
+        
+        classes = []
+        if self._GetAssignmentType() == 'MULTICLASS_TRANSIT_ASSIGNMENT':
+            for classz in config['strat_files']:
+                className = classz['name']
+                classes.append(className)
+        else:
+            info = config['data']
+            for classz in info['classes']:
+                className = classz['name']
+                classes.append(className)
         
         return classes
     
@@ -605,13 +650,13 @@ class OperatorTransferMatrix(_m.Tool()):
     
     def _GetTraversalMatrix(self, lineGroupAtributeID, tempFolder):
         #---2. Load class / iteration information for traversal analysis
-        if self._GetAssignmentType() == "CONGESTED_TRANSIT_ASSIGNMENT":
+        if self._GetAssignmentType() == "MULTICLASS_TRANSIT_ASSIGNMENT" or self._GetMulticlass() == True:
+            classWeights = [(self.ClassName, 1.0)]
+        elif self._GetAssignmentType() == "CONGESTED_TRANSIT_ASSIGNMENT":
             if EMME_VERSION >= (4,1,0):
                 classWeights = []
             else:
                 classWeights = self._LoadClassInfo()
-        elif self._GetAssignmentType() == "MULTICLASS_TRANSIT_ASSIGNMENT":
-            classWeights = [(self.ClassName, 1.0)]
         else:
             classWeights = []
         
