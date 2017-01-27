@@ -23,7 +23,7 @@ Extract Operator Transfer Matrix
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: byusuf
     
     
     [Description]
@@ -912,4 +912,4 @@ class OperatorTransferMatrix(_m.Tool()):
                          partition_aggregation= partSpec,
                          export_file= self.WalkAllWayExportFile,
                          field_separator= ',',
-                         full_matrix_line_format= 'SQUARE')
+                         full_matrix_line_format= 'SQUARE', scenario = self.Scenario)

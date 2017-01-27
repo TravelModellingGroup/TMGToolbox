@@ -814,9 +814,14 @@ class FullNetworkSetGenerator(_m.Tool()):
             self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
         
         #--3 Set up other parameters
-        self.TransitServiceTableFile = TransitServiceTableFile
-        self.AggTypeSelectionFile = AggTypeSelectionFile
-        
+        if TransitServiceTableFile.lower() == "none":
+            self.TransitServiceTableFile = None
+        else:
+            self.TransitServiceTableFile = TransitServiceTableFile
+        if AggTypeSelectionFile.lower() == "none":
+            self.AggTypeSelectionFile = None
+        else:
+            self.AggTypeSelectionFile = AggTypeSelectionFile
         if AlternativeDataFile.lower() == "none":
             self.AlternativeDataFile = None
         else:
@@ -855,6 +860,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         self.AdditionalAlternativeDataFiles = None
+        self.TransferModeList = ""
 
         for mode in self.TransferModeList:
             self.TransferModesString += mode.id

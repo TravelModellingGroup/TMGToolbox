@@ -1,6 +1,6 @@
 #Embedded file name: C:/Users/Monika/Documents/Visual Studio 2013/Projects/PythonApplication1/PythonApplication1/PythonApplication1.py
 """
-    Copyright 2016 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -27,7 +27,7 @@ _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
-extendedAssignmentTool=_MODELLER.tool('inro.emme.transit_assignment.extended_transit_assignment')
+extendedAssignmentTool =_MODELLER.tool('inro.emme.transit_assignment.extended_transit_assignment')
 networkCalcTool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 matrixResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix_results')
 strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
@@ -553,7 +553,6 @@ class MultiClassTransitAssignment(_m.Tool()):
     def _GetBaseAssignmentSpec(self):
 
         farePerception = []
-        print len(self.DemandMatrixList)
         baseSpec = []
         for i in range(0, len(self.DemandMatrixList)):
             

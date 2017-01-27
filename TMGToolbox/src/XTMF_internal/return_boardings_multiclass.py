@@ -158,7 +158,6 @@ class ReturnBoardings(_m.Tool()):
                         "total_boardings": ClassBoardings.id,
                         },
                     "aggregated_from_segments": None,
-                    "analyzed_demand": None,
                     "constraint": None,
                     "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"
                 }

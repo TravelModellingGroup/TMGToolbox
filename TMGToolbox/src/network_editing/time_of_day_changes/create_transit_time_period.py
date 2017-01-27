@@ -343,37 +343,38 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
         bounds = _util.FloatRange(start, end)
         badIds = set()
-        
-        with open(self.TransitServiceTableFile) as reader:
-            header = reader.readline()
-            cells = header.strip().split(self.COMMA)
+
+        if self.TransitServiceTableFile:
+            with open(self.TransitServiceTableFile) as reader:
+                header = reader.readline()
+                cells = header.strip().split(self.COMMA)
             
-            emmeIdCol = cells.index('emme_id')
-            departureCol = cells.index('trip_depart')
-            arrivalCol = cells.index('trip_arrive')
+                emmeIdCol = cells.index('emme_id')
+                departureCol = cells.index('trip_depart')
+                arrivalCol = cells.index('trip_arrive')
             
-            for num, line in enumerate(reader):
-                cells = line.strip().split(self.COMMA)
+                for num, line in enumerate(reader):
+                    cells = line.strip().split(self.COMMA)
                 
-                id = cells[emmeIdCol]
-                transitLine = network.transit_line(id)
+                    id = cells[emmeIdCol]
+                    transitLine = network.transit_line(id)
                 
-                if transitLine == None:
-                    badIds.add(id)
-                    continue #Skip and report
+                    if transitLine == None:
+                        badIds.add(id)
+                        continue #Skip and report
                 
-                try:
-                    departure = self._ParseStringTime(cells[departureCol])
-                    arrival = self._ParseStringTime(cells[arrivalCol])
-                except Exception, e:
-                    print "Line " + num + " skipped: " + str(e)
-                    continue
+                    try:
+                        departure = self._ParseStringTime(cells[departureCol])
+                        arrival = self._ParseStringTime(cells[arrivalCol])
+                    except Exception, e:
+                        print "Line " + num + " skipped: " + str(e)
+                        continue
                 
-                if not departure in bounds: continue #Skip departures not in the time period
+                    if not departure in bounds: continue #Skip departures not in the time period
                 
-                trip = (departure, arrival)
-                if transitLine.trips == None: transitLine.trips = [trip]
-                else: transitLine.trips.append(trip)
+                    trip = (departure, arrival)
+                    if transitLine.trips == None: transitLine.trips = [trip]
+                    else: transitLine.trips.append(trip)
         
         return badIds
 
@@ -381,31 +382,31 @@ class CreateTimePeriodNetworks(_m.Tool()):
         network.create_attribute('TRANSIT_LINE', 'aggtype', None)
         
         badIds = set()
-        
-        with open(self.AggTypeSelectionFile) as reader:
-            header = reader.readline()
-            cells = header.strip().split(self.COMMA)
+        if self.AggTypeSelectionFile:
+            with open(self.AggTypeSelectionFile) as reader:
+                header = reader.readline()
+                cells = header.strip().split(self.COMMA)
             
-            emmeIdCol = cells.index('emme_id')
-            aggCol = cells.index('agg_type')
-            
-            for num, line in enumerate(reader):
-                cells = line.strip().split(self.COMMA)
+                emmeIdCol = cells.index('emme_id')
+                aggCol = cells.index('agg_type')
                 
-                id = cells[emmeIdCol]
-                transitLine = network.transit_line(id)
+                for num, line in enumerate(reader):
+                    cells = line.strip().split(self.COMMA)
+                    
+                    id = cells[emmeIdCol]
+                    transitLine = network.transit_line(id)
                 
-                if transitLine == None:
-                    badIds.add(id)
-                    continue #Skip and report
-                
-                try:
-                    aggregation = self._ParseAggType(cells[aggCol])
-                except Exception, e:
-                    print "Line " + num + " skipped: " + str(e)
-                    continue
+                    if transitLine == None:
+                        badIds.add(id)
+                        continue #Skip and report
+                    
+                    try:
+                        aggregation = self._ParseAggType(cells[aggCol])
+                    except Exception, e:
+                        print "Line " + num + " skipped: " + str(e)
+                        continue
                                 
-                if transitLine.aggtype == None: transitLine.aggtype = aggregation
+                    if transitLine.aggtype == None: transitLine.aggtype = aggregation
         
         return badIds
 
@@ -461,7 +462,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 #    toDelete.add(k)
             doNotDelete = altData.keys()
         else:
-            doNotDelete = None
+            return
         self.TRACKER.startProcess(network.element_totals['transit_lines'])
         for line in network.transit_lines():
             #Pick aggregation type for given line
