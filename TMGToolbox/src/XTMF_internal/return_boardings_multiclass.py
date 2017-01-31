@@ -35,6 +35,9 @@ import traceback as _traceback
 import csv
 import re
 import os
+from json import loads as _parsedict
+from os.path import dirname
+from os.path import exists
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -79,6 +82,7 @@ class ReturnBoardings(_m.Tool()):
         
         #---1 Set up scenario
         scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
+        self.scenarioNumber = xtmf_ScenarioNumber
         if (scenario == None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         if not scenario.has_transit_results:
@@ -148,16 +152,32 @@ class ReturnBoardings(_m.Tool()):
     def _GetLineResults(self, scenario):
 
         multiBoardings = []
-
+        '''configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %scenario
+        
+        if not exists(configPath): 
+            print "path cannot be found"
+            return []
+        
+        with open(configPath) as reader:
+            config = _parsedict(reader.readline())
+        
+        classDemandMatrix = {}
+        for info in config['strat_files']:
+            className = info['name']
+            print className
+            if(info['data'] != None):
+                classDemandMatrix[className] = info['data']['demand']
+        '''
         for PersonClass in scenario.transit_strategies.data["classes"]:
             with _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT') as ClassBoardings:
-
                 spec=     {
                     "on_links": None,
                     "on_segments": {
                         "total_boardings": ClassBoardings.id,
                         },
                     "aggregated_from_segments": None,
+                    "analyzed_demand": PersonClass['demand'],
                     "constraint": None,
                     "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"
                 }
@@ -174,6 +194,33 @@ class ReturnBoardings(_m.Tool()):
             retVal['name'] = PersonClass['name']
 
             multiBoardings.append(retVal)
+            '''
+        for PersonClass in classDemandMatrix:
+            with _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT') as ClassBoardings:
+
+                spec=     {
+                    "on_links": None,
+                    "on_segments": {
+                        "total_boardings": ClassBoardings.id,
+                        },
+                    "aggregated_from_segments": None,
+                    "analyzed_demand":classDemandMatrix[PersonClass],
+                    "constraint": None,
+                    "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"
+                }
+
+                self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec, class_name = PersonClass)
+                    
+                results = _util.fastLoadSummedSegmentAttributes(scenario, [ClassBoardings.id])
+            
+                retVal = {}
+                for lineId, attributes in results.iteritems():
+                    id = str(lineId)
+                    retVal[id] = attributes[ClassBoardings.id]
+          
+            retVal['name'] = PersonClass
+
+            multiBoardings.append(retVal)'''
 
         return multiBoardings
             
