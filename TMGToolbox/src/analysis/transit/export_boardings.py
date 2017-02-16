@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2014-2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -23,7 +23,7 @@ Export Transit Line Boardings
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: James Vaughan
     
     
     [Description]
@@ -36,6 +36,8 @@ Export Transit Line Boardings
     1.0.0 Documented and published on 2014-06-11
     
     1.0.1 Added XTMF interface
+
+    1.0.2 Updated XTMF Interface by James Vaughan
     
 '''
 
@@ -53,7 +55,7 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 class ExtractTransitLineBoardings(_m.Tool()):
     
-    version = '1.0.1'
+    version = '1.0.2'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -62,7 +64,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     
-    LineAggrgeationFile = _m.Attribute(str)
+    LineAggregationFile = _m.Attribute(str)
     ReportFile = _m.Attribute(str)
     
     WriteIndividualRoutesFlag = _m.Attribute(bool)
@@ -101,7 +103,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
         
         pb.add_header("AGGREGATION FILE")
         
-        pb.add_select_file(tool_attribute_name='LineAggrgeationFile',
+        pb.add_select_file(tool_attribute_name='LineAggregationFile',
                            title="Line aggregation file:",
                            window_type='file',
                            file_filter= "*.csv",
@@ -135,7 +137,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
             $("#ReportErrorsToLogbookFlag").prop('disabled', true);
         }
 
-        $("#LineAggrgeationFile").bind('change', function()
+        $("#LineAggregationFile").bind('change', function()
         {
             $(this).commit();
             
@@ -170,12 +172,12 @@ class ExtractTransitLineBoardings(_m.Tool()):
     
     @_m.method(return_type= bool)
     def check_agg_file(self):
-        return bool(self.LineAggrgeationFile)
+        return bool(self.LineAggregationFile)
     
     #---
     #---XTMF INTERFACE METHODS
     
-    def __call__(self, xtmf_ScenarioNumber, ReportFile, LineAggrgeationFile):
+    def __call__(self, xtmf_ScenarioNumber, ReportFile, LineAggregationFile, WriteIndividualRoutesFlag):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
@@ -183,10 +185,10 @@ class ExtractTransitLineBoardings(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         self.ReportFile = ReportFile
-        if LineAggrgeationFile:
-            self.LineAggrgeationFile = LineAggrgeationFile
+        if LineAggregationFile:
+            self.LineAggregationFile = LineAggregationFile
             self.ReportErrorsToLogbookFlag = False
-            self.WriteIndividualRoutesFlag = False
+        self.WriteIndividualRoutesFlag = WriteIndividualRoutesFlag
         
         try:
             self._Execute()
@@ -206,7 +208,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
             if not self.Scenario.has_transit_results:
                 raise Exception("Scenario %s has no transit results" %self.Scenario)
             
-            if self.LineAggrgeationFile:
+            if self.LineAggregationFile:
                 groupLines = self._LoadAggregationFile()
             else: groupLines = {}
             
@@ -227,7 +229,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
         return atts
     
     def _LoadAggregationFile(self):
-        with open(self.LineAggrgeationFile) as reader:
+        with open(self.LineAggregationFile) as reader:
             groupLines = {}
             
             for line in reader:
