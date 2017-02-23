@@ -129,8 +129,7 @@ class MultiClassRoadAssignment(_m.Tool()):
              
     def __call__(self, xtmf_ScenarioNumber, Mode_List, xtmf_Demand_String, TimesMatrixId, CostMatrixId, TollsMatrixId,
                  PeakHourFactor, LinkCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
-                 RunTitle, LinkTollAttributeId):
-        
+                 RunTitle, LinkTollAttributeId, xtmf_NameString):
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -147,8 +146,12 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.CostMatrixId = CostMatrixId.split(",")
         self.TollsMatrixId = TollsMatrixId.split(",")
         self.Mode_List_Split = Mode_List.split(",")
+        self.ClassNames = [x for x in xtmf_NameString.split(",")]
+        self.TollWeight = [float (x) for x in TollWeight.split(",")]
+        self.LinkCost = LinkCost.split(",")
+        self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
         
-        #Cleaning list to only the numbers of the matricies, i.e. mf10 -> 10, Do I even need to do this?
+        '''#Cleaning list to only the numbers of the matricies, i.e. mf10 -> 10, Do I even need to do this?
         #Demand_List now references the EMMEBANK for the Matricies
         self.Demand_List_Clean=[str.strip('mf') for str in self.Demand_List]
    
@@ -157,13 +160,17 @@ class MultiClassRoadAssignment(_m.Tool()):
                 #raise Exception("Matrix %s was not found!" %self.Demand_List_Clean[i])
            # else:
             self.Demand_List[i] = (_MODELLER.emmebank.matrix("mf%s" %self.Demand_List_Clean[i]))
+        self.DemandMatrixList = []'''
 
+        for demandMatrix in self.Demand_List:
+            if _MODELLER.emmebank.matrix(demandMatrix) == None:
+                raise Exception('Matrix %s was not found!' % demandMatrix)
+            else:
+                self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
         
         #---2. Pass in remaining args
         
         self.PeakHourFactor = PeakHourFactor
-        self.LinkCost = LinkCost
-        self.TollWeight = TollWeight
         self.Iterations = Iterations
         self.rGap = rGap
         self.brGap = brGap
@@ -171,7 +178,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         
         
         self.RunTitle = RunTitle[:25]
-        self.LinkTollAttributeId = LinkTollAttributeId
+        
         
         
         #---3. Run
@@ -408,7 +415,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                 #"Toll Attribute": self.LinkTollAttributeId,
                 "Peak Hour Factor" : str(self.PeakHourFactor),
                 "Link Cost" : str(self.LinkCost),
-                "Toll Weight" : str(self.TollWeight),
+                #"Toll Weight" : str(self.TollWeight),
                 "Iterations" : str(self.Iterations),
                 "self": self.__MODELLER_NAMESPACE__}
             
@@ -461,9 +468,10 @@ class MultiClassRoadAssignment(_m.Tool()):
                 }
         
     def _calculateAppliedTollFactor(self):
-        appliedTollFactor = 0
-        if self.TollWeight != 0:
-            appliedTollFactor = 60.0 / self.TollWeight #Toll weight is in $/hr, needs to be converted to min/$
+        appliedTollFactor = []
+        if self.TollWeight != None:
+            for i in range(0,len(self.TollWeight)):
+                appliedTollFactor[i] = 60.0 / self.TollWeight[i] #Toll weight is in $/hr, needs to be converted to min/$
         return appliedTollFactor
     
     def _getPrimarySOLASpec(self, peakHourMatrixId, appliedTollFactor, Mode_List, TimesMatrixId,\
@@ -474,8 +482,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         else:
             numberOfPocessors = max(multiprocessing.cpu_count() - 1, 1)
         
-        Mode_List_Split = Mode_List.split(",") #Creates a list where each entry denotes one mode
-        
+               
         #Generic Spec for SOLA
         SOLA_spec = {
                 "type": "SOLA_TRAFFIC_ASSIGNMENT",
@@ -496,12 +503,13 @@ class MultiClassRoadAssignment(_m.Tool()):
             }     
         
         #Creates a list entry for each mode specified in the Mode List and its associated Demand Matrix
-        SOLA_Class_Generator = [{
-                        "mode": k,
-                        "demand": 'str',
+        for i in range(0, len(self.Mode_List_Split)):
+            SOLA_Class_Generator[i] = [{
+                        "mode": self.Mode_List_Split[i],
+                        "demand": peakHourMatrixId[i].id,
                         "generalized_cost": {
-                            "link_costs": self.LinkTollAttributeId,
-                            "perception_factor": appliedTollFactor
+                            "link_costs": self.LinkTollAttributeId[i],
+                            "perception_factor": appliedTollFactor[i]
                         },
                         "results": {
                             "link_volumes": None,
@@ -511,7 +519,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             }
                         },
                         "path_analysis": {
-                            "link_component": self.LinkTollAttributeId,
+                            "link_component": self.LinkTollAttributeId[i],
                             "turn_component": None,
                             "operator": "+",
                             "selection_threshold": {
@@ -538,13 +546,14 @@ class MultiClassRoadAssignment(_m.Tool()):
                         }
                     } for k in Mode_List_Split]
         
-        i = 0
+        '''i = 0
         while i < len (Mode_List_Split):
            SOLA_Class_Generator[i]['demand'] = peakHourMatrixId[i].id
            SOLA_Class_Generator[i]['results']['od_travel_times']['shortest_paths'] = TimesMatrixId[i]
            SOLA_Class_Generator[i]['analysis']['results']['od_values'] = TollsMatrixId[i]
            SOLA_Class_Generator[i]['results']['link_volumes'] = linkvolumeattributes[i]
-           i = i + 1               
+           i = i + 1
+           '''
         SOLA_spec['classes'] = SOLA_Class_Generator
         
         return SOLA_spec
