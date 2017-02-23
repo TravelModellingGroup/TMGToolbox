@@ -1,6 +1,6 @@
 #---LICENSE----------------------
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2014-2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -23,7 +23,7 @@ Export Countpost Results
 
     Authors: pkucirek
 
-    Latest revision by: David King
+    Latest revision by: James Vaughan
     
     
     [Description]
@@ -43,6 +43,9 @@ Export Countpost Results
     1.1.1 Fixed a bug in the tool page Javascript
 
     1.1.2 Added additional functionality for XTMF
+    
+    1.1.3 Added checks to make sure the alternative countpost attribute is not used form XTMF if
+          there is a blank string.
 '''
 
 import inro.modeller as _m
@@ -59,7 +62,7 @@ NullPointerException = _util.NullPointerException
 
 class ExportCountpostResults(_m.Tool()):
     
-    version = '1.1.1'
+    version = '1.1.3'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -210,7 +213,7 @@ class ExportCountpostResults(_m.Tool()):
         
         if not CountpostAttributeId in linkAtts:
             raise NullPointerException("'%s' is not a valid link attribute" %CountpostAttributeId)
-        if not AlternateCountpostAttributeId in linkAtts:
+        if AlternateCountpostAttributeId != "" and not AlternateCountpostAttributeId in linkAtts:
             raise NullPointerException("'%s' is not a valid link attribute" %AlternateCountpostAttributeId)
         
         self.CountpostAttributeId = CountpostAttributeId
@@ -237,7 +240,7 @@ class ExportCountpostResults(_m.Tool()):
                                                                        'auto_time'])
             
             alternateLinkResults = {}
-            if self.AlternateCountpostAttributeId:
+            if self.AlternateCountpostAttributeId and self.AlternateCountpostAttributeId != "":
                 alternateLinkResults = _util.fastLoadLinkAttributes(self.Scenario, 
                                                                     [self.AlternateCountpostAttributeId])
             
