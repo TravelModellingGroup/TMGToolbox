@@ -1,5 +1,5 @@
 '''
-    Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2015-2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -84,7 +84,7 @@ class MultiClassRoadAssignment(_m.Tool()):
     
     PeakHourFactor = _m.Attribute(float)
     LinkCost = _m.Attribute(float)
-    TollWeight = _m.Attribute(float)
+    TollWeight = _m.Attribute(str)
     Iterations = _m.Attribute(int)
     rGap = _m.Attribute(float)
     brGap = _m.Attribute(float)
@@ -92,6 +92,8 @@ class MultiClassRoadAssignment(_m.Tool()):
     
     PerformanceFlag = _m.Attribute(bool)
     SOLAFlag = _m.Attribute(bool)
+    xtmf_NameString = _m.Attribute(str)
+    ResultAttributes = _m.Attribute(str)
 
     NumberOfProcessors = _m.Attribute(int)
     
@@ -127,9 +129,10 @@ class MultiClassRoadAssignment(_m.Tool()):
         
         return pb.render()
              
-    def __call__(self, xtmf_ScenarioNumber, Mode_List, xtmf_Demand_String, TimesMatrixId, CostMatrixId, TollsMatrixId,
-                 PeakHourFactor, LinkCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
-                 RunTitle, LinkTollAttributeId, xtmf_NameString):
+    def __call__(self, xtmf_ScenarioNumber, Mode_List, xtmf_Demand_String, TimesMatrixId,
+                 CostMatrixId, TollsMatrixId, PeakHourFactor, LinkCost,
+                 TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
+                 RunTitle, LinkTollAttributeId, xtmf_NameString, ResultAttributes):
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -140,28 +143,15 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.Demand_List = xtmf_Demand_String.split(",")
         
         #Splitting the Time, Cost and Toll string into Lists, and Modes for denoting results
-        
-       
         self.TimesMatrixId = TimesMatrixId.split(",")
         self.CostMatrixId = CostMatrixId.split(",")
         self.TollsMatrixId = TollsMatrixId.split(",")
         self.Mode_List_Split = Mode_List.split(",")
         self.ClassNames = [x for x in xtmf_NameString.split(",")]
         self.TollWeight = [float (x) for x in TollWeight.split(",")]
-        self.LinkCost = LinkCost.split(",")
+        self.LinkCost = float(LinkCost)
         self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
-        
-        '''#Cleaning list to only the numbers of the matricies, i.e. mf10 -> 10, Do I even need to do this?
-        #Demand_List now references the EMMEBANK for the Matricies
-        self.Demand_List_Clean=[str.strip('mf') for str in self.Demand_List]
-   
-        for i in range(len(self.Demand_List_Clean)):
-            #if self.Demand_List_Clean[i] == None:
-                #raise Exception("Matrix %s was not found!" %self.Demand_List_Clean[i])
-           # else:
-            self.Demand_List[i] = (_MODELLER.emmebank.matrix("mf%s" %self.Demand_List_Clean[i]))
-        self.DemandMatrixList = []'''
-
+        self.DemandMatrixList = []
         for demandMatrix in self.Demand_List:
             if _MODELLER.emmebank.matrix(demandMatrix) == None:
                 raise Exception('Matrix %s was not found!' % demandMatrix)
@@ -169,18 +159,13 @@ class MultiClassRoadAssignment(_m.Tool()):
                 self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
         
         #---2. Pass in remaining args
-        
         self.PeakHourFactor = PeakHourFactor
         self.Iterations = Iterations
         self.rGap = rGap
         self.brGap = brGap
-        self.normGap = normGap
-        
-        
+        self.normGap = normGap      
         self.RunTitle = RunTitle[:25]
-        
-        
-        
+
         #---3. Run
         try:          
                 print "Starting assignment."
@@ -216,9 +201,14 @@ class MultiClassRoadAssignment(_m.Tool()):
            
                 #Adding @ for the process of generating link cost attributes and declaring list variables
                 
-                Mode_List_for_attributes = self.Mode_List_Split
-                for i in range(len(self.Demand_List)):
-                    Mode_List_for_attributes[i]= "@"+ Mode_List_for_attributes[i]
+                def get_attribute_name(at):
+                    if at.startswith("@"):
+                        return at
+                    else:
+                        return "@" + at
+
+                Mode_List_for_attributes = [ get_attribute_name(at)
+                                             for at in self.ResultAttributes.split(',')]
                 
                 for name in Mode_List_for_attributes:
                     
@@ -244,7 +234,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                         with _m.logbook_trace("Calculating peak hour matrix"):  #For each class
                             for i in range(len(self.Demand_List)):
                                 if EMME_VERSION >= (4,2,1):
-                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id), 
+                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i]), 
                                                    num_processors=self.NumberOfProcessors)
                                 else:
                                     matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id))                        
@@ -256,7 +246,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                         
                         with _m.logbook_trace("Running primary road assignment."):                    
                            
-                            spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List,\
+                            spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split,\
                                                              self.TimesMatrixId, self.TollsMatrixId,  Mode_List_for_attributes)
                             
                                
@@ -410,12 +400,8 @@ class MultiClassRoadAssignment(_m.Tool()):
         atts = { "Run Title": self.RunTitle,
                 "Scenario" : str(self.Scenario.id),                
                 "Times Matrix" : str(self.TimesMatrixId),
-                #"Cost Matrix" : str(self.CostMatrixId),
-                #"Toll Matrix" : str(self.TollsMatrixId),
-                #"Toll Attribute": self.LinkTollAttributeId,
                 "Peak Hour Factor" : str(self.PeakHourFactor),
                 "Link Cost" : str(self.LinkCost),
-                #"Toll Weight" : str(self.TollWeight),
                 "Iterations" : str(self.Iterations),
                 "self": self.__MODELLER_NAMESPACE__}
             
@@ -471,7 +457,8 @@ class MultiClassRoadAssignment(_m.Tool()):
         appliedTollFactor = []
         if self.TollWeight != None:
             for i in range(0,len(self.TollWeight)):
-                appliedTollFactor[i] = 60.0 / self.TollWeight[i] #Toll weight is in $/hr, needs to be converted to min/$
+                #Toll weight is in $/hr, needs to be converted to min/$
+                appliedTollFactor.append(60.0 / self.TollWeight[i]) 
         return appliedTollFactor
     
     def _getPrimarySOLASpec(self, peakHourMatrixId, appliedTollFactor, Mode_List, TimesMatrixId,\
@@ -503,59 +490,48 @@ class MultiClassRoadAssignment(_m.Tool()):
             }     
         
         #Creates a list entry for each mode specified in the Mode List and its associated Demand Matrix
-        for i in range(0, len(self.Mode_List_Split)):
-            SOLA_Class_Generator[i] = [{
-                        "mode": self.Mode_List_Split[i],
-                        "demand": peakHourMatrixId[i].id,
-                        "generalized_cost": {
-                            "link_costs": self.LinkTollAttributeId[i],
-                            "perception_factor": appliedTollFactor[i]
+        SOLA_Class_Generator = [{
+                    "mode": Mode_List[i],
+                    "demand": peakHourMatrixId[i].id,
+                    "generalized_cost": {
+                        "link_costs": self.LinkTollAttributeId[i],
+                        "perception_factor": appliedTollFactor[i]
+                    },
+                    "results": {
+                        "link_volumes": None,
+                        "turn_volumes": None,
+                        "od_travel_times": {
+                            "shortest_paths": None
+                        }
+                    },
+                    "path_analysis": {
+                        "link_component": self.LinkTollAttributeId[i],
+                        "turn_component": None,
+                        "operator": "+",
+                        "selection_threshold": {
+                            "lower": None,
+                            "upper": None
                         },
-                        "results": {
-                            "link_volumes": None,
-                            "turn_volumes": None,
-                            "od_travel_times": {
-                                "shortest_paths": None
-                            }
-                        },
-                        "path_analysis": {
-                            "link_component": self.LinkTollAttributeId[i],
-                            "turn_component": None,
-                            "operator": "+",
-                            "selection_threshold": {
-                                "lower": None,
-                                "upper": None
-                            },
-                            "path_to_od_composition": {
-                                "considered_paths": "ALL",
-                                "multiply_path_proportions_by": {
-                                    "analyzed_demand": False,
-                                    "path_value": True
-                                }
-                            }
-                        },
-                        "cutoff_analysis": None,
-                        "traversal_analysis": None,
-                        "analysis": {
-                            "analyzed_demand": None,
-                            "results": {
-                                "od_values": None,
-                                "selected_link_volumes": None,
-                                "selected_turn_volumes": None
+                        "path_to_od_composition": {
+                            "considered_paths": "ALL",
+                            "multiply_path_proportions_by": {
+                                "analyzed_demand": False,
+                                "path_value": True
                             }
                         }
-                    } for k in Mode_List_Split]
-        
-        '''i = 0
-        while i < len (Mode_List_Split):
-           SOLA_Class_Generator[i]['demand'] = peakHourMatrixId[i].id
-           SOLA_Class_Generator[i]['results']['od_travel_times']['shortest_paths'] = TimesMatrixId[i]
-           SOLA_Class_Generator[i]['analysis']['results']['od_values'] = TollsMatrixId[i]
-           SOLA_Class_Generator[i]['results']['link_volumes'] = linkvolumeattributes[i]
-           i = i + 1
-           '''
+                    },
+                    "cutoff_analysis": None,
+                    "traversal_analysis": None,
+                    "analysis": {
+                        "analyzed_demand": None,
+                        "results": {
+                            "od_values": None,
+                            "selected_link_volumes": None,
+                            "selected_turn_volumes": None
+                        }
+                    }
+                } for i in range(len(Mode_List))]        
         SOLA_spec['classes'] = SOLA_Class_Generator
-        
         return SOLA_spec
         
           
