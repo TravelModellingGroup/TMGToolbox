@@ -882,4 +882,10 @@ EMME_VERSION is a tuple, scenario is the scenario object.
 '''
 def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario): 
     strats = scenario.transit_strategies
-    return strats.data["demand"]
+    if strats.data["multi_class"]:
+        c = {}
+        for cls in strats.data["classes"]:
+            c[cls["name"]] = cls["demand"]
+        return c
+    else:
+        return strats.data["demand"]

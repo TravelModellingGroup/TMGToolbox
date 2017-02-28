@@ -94,6 +94,15 @@
     <Compile Include="src\network_editing\centroid_connectors\validate_connectors.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\network_editing\GTFS_utilities\GTFS_EMME_node_map.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\GTFS_utilities\node_mapping.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\GTFS_utilities\shp_emme_map.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\network_editing\remove_extra_links.py">
       <SubType>Code</SubType>
     </Compile>

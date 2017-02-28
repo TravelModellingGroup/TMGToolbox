@@ -862,8 +862,9 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.AdditionalAlternativeDataFiles = None
         self.TransferModeList = ""
 
-        for mode in self.TransferModeList:
-            self.TransferModesString += mode.id
+        if self.TransferModeList:
+            for mode in self.TransferModeList:
+                self.TransferModesString += mode.id
 
         try:
             self._Execute()           
