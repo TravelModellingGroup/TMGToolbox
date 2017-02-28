@@ -32,6 +32,7 @@ import sys as _sys
 import traceback as _tb
 import subprocess as _sp
 from itertools import izip
+from json import loads as _parsedict
 _MODELLER = _m.Modeller()
 _DATABANK = _MODELLER.emmebank
 class Face(_m.Tool()):
@@ -880,13 +881,24 @@ previous transit assignment for the given scenario.
 
 EMME_VERSION is a tuple, scenario is the scenario object.
 '''
-def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario): 
-    strats = scenario.transit_strategies
-    if strats.data["multi_class"]:
-        if len(strats.data["classes"]) > 1:
-            raise Exception()
-        else: 
-            for cls in strats.data["classes"]:
-                return cls["demand"]
-    else:
-        return strats.data["demand"]
+def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario):
+    configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %scenario 
+    with open(configPath) as reader:
+        config = _parsedict(reader.readline())
+        
+        data = config['data']
+        if 'multi_class' in data:
+            multiclass = "yes"
+        else:
+            multiclass = "no"
+        dataType = data['type']
+        strat = config['strat_files']
+        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+            if len(strat) > 1:
+                raise Exception()
+            else:
+                return strat['data']['demand']
+        else:
+            strats = scenario.transit_strategies
+            return strats.data["demand"]
