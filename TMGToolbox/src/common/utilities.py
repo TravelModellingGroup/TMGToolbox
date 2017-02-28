@@ -900,7 +900,7 @@ def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario):
             if len(strat) > 1:
                 raise Exception()
             else:
-                return strat['data']['demand']
+                return strat[0]['data']['demand']
         else:
             strats = scenario.transit_strategies
             return strats.data["demand"]
