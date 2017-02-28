@@ -526,7 +526,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                         "analyzed_demand": None,
                         "results": {
                             "od_values": None,
-                            "selected_link_volumes": None,
+                            "selected_link_volumes": linkvolumeattributes[i],
                             "selected_turn_volumes": None
                         }
                     }
