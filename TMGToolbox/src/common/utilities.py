@@ -33,6 +33,8 @@ import traceback as _tb
 import subprocess as _sp
 from itertools import izip
 from json import loads as _parsedict
+from os.path import dirname
+
 _MODELLER = _m.Modeller()
 _DATABANK = _MODELLER.emmebank
 class Face(_m.Tool()):
