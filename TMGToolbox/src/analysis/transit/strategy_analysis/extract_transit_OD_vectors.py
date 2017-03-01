@@ -46,6 +46,10 @@ import numpy as np
 from contextlib import contextmanager
 from contextlib import nested
 from multiprocessing import cpu_count
+from json import loads as _parsedict
+from os.path import dirname
+from copy import deepcopy
+
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -84,6 +88,9 @@ class ExtractTransitODVectors(_m.Tool()):
     xtmf_AggOriginMatrixNumber = _m.Attribute(int)
     xtmf_AggDestinationMatrixNumber = _m.Attribute(int)
     xtmf_AutoODMatrixId = _m.Attribute(int)
+    xtmf_AccessStationRange = _m.Attribute(str)
+    xtmf_ZoneCentroidRange = _m.Attribute(str)
+
 
     NumberOfProcessors = _m.Attribute(int)
     
@@ -228,35 +235,46 @@ class ExtractTransitODVectors(_m.Tool()):
                     as (lineFlag, auxTransitVolumes, transitVolumes, auxTransitVolumesSecondary, transitVolumesSecondary, origProbMatrix,  
                         destProbMatrix, tempDatOrig, tempDatDest,autoOrigMatrix, autoDestMatrix, tempDatDemand, tempDatDemandSecondary): 
                 demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
+                configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %self.Scenario 
+                with open(configPath) as reader:
+                    config = _parsedict(reader.readline())
+                    data = deepcopy(config['data'])
+                    strat  = deepcopy(config['strat_files'])
+                    if 'multi_class' in data:
+                        multiclass = "yes"
+                    else:
+                        multiclass = "no"
+                    dataType = data['type']
+                    className = strat[0]["name"]
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
                 with _m.logbook_trace("Running strategy analysis"):
-                    configPath = dirname(_MODELLER.desktop.project_file_name()) \
-                    + "/Database/STRATS_s%s/config" %scenario 
-                    with open(configPath) as reader:
-                        config = _parsedict(reader.readline())
-                        data = config['data']
-                        if 'multi_class' in data:
-                            multiclass = "yes"
-                        else:
-                            multiclass = "no"
-                        dataType = data['type']
-                        strat = config['strat_files']
-                        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
-                            report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario, class_name=strat[0]["name"])
-                        else:
-                            report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario)
+
+                    if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario, class_name=className)
+                    else:
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario)
+
+
                 with _m.logbook_trace("Calculating WAT demand"):  
                 
                     matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
                     self.AccessStationRangeSplit = self.AccessStationRange.split('-')
                     self.ZoneCentroidRangeSplit = self.ZoneCentroidRange.split('-')
-                    if int(self.AccessStationRangeSplit[0]) != 0 or int(self.AccessStationRangeSplit[1]) != 0:
-                        pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
+                    if len(self.AccessStationRangeSplit)!=1 and int(self.AccessStationRangeSplit[0]) != 0:
+                        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
+                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario, class_name=className)
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario,class_name=className)
+                        else:
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
                                                      auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)
-                        pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
                                                      auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario)
+
                 with _m.logbook_trace("Sum transit demands"):
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId), scenario=self.Scenario)
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemandSecondary.id, self.LineODMatrixId), scenario=self.Scenario)
