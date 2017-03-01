@@ -146,7 +146,7 @@ class ExtractTransitODVectors(_m.Tool()):
     ##########################################################################################################
         
     def __call__(self, xtmf_ScenarioNumber, LineFilterExpression, xtmf_LineODMatrixNumber,
-                  xtmf_AggOriginMatrixNumber, xtmf_AggDestinationMatrixNumber, xtmf_AutoODMatrixId):
+                  xtmf_AggOriginMatrixNumber, xtmf_AggDestinationMatrixNumber, xtmf_AutoODMatrixId, xtmf_AccessStationRange, xtmf_ZoneCentroidRange):
 
         self.tool_run_msg = ""
         self.TRACKER.reset()
@@ -170,6 +170,10 @@ class ExtractTransitODVectors(_m.Tool()):
         self.AggDestinationMatrixId = "md"+str(xtmf_AggDestinationMatrixNumber)
         _util.initializeMatrix(self.AggDestinationMatrixId, name='aggD', 
                                description= 'Destinations for selected lines', matrix_type= 'DESTINATION')
+        self.AccessStationRange = xtmf_AccessStationRange
+        self.ZoneCentroidRange = xtmf_ZoneCentroidRange
+        #self.AccessStationRangeSplit = xtmf_AccessStationRange.split('-')
+        #self.ZoneCentroidRangeSplit = xtmf_ZoneCentroidRange.split('-')
 
         try:           
             self._Execute()
@@ -226,15 +230,32 @@ class ExtractTransitODVectors(_m.Tool()):
                 demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
-                with _m.logbook_trace("Running strategy analysis"):    
-                    report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario)
+                with _m.logbook_trace("Running strategy analysis"):
+                    configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %scenario 
+                    with open(configPath) as reader:
+                        config = _parsedict(reader.readline())
+                        data = config['data']
+                        if 'multi_class' in data:
+                            multiclass = "yes"
+                        else:
+                            multiclass = "no"
+                        dataType = data['type']
+                        strat = config['strat_files']
+                        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                            report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario, class_name=strat[0]["name"])
+                        else:
+                            report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating WAT demand"):  
                 
                     matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
-                    pathAnalysis(self._BuildPathSpec(lineFlag.id, "1-8999", "9000-9999", transitVolumes.id, 
+                    self.AccessStationRangeSplit = self.AccessStationRange.split('-')
+                    self.ZoneCentroidRangeSplit = self.ZoneCentroidRange.split('-')
+                    if int(self.AccessStationRangeSplit[0]) != 0 or int(self.AccessStationRangeSplit[1]) != 0:
+                        pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
                                                      auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)
-                    pathAnalysis(self._BuildPathSpec(lineFlag.id, "9000-9999", "1-8999", transitVolumesSecondary.id, 
+                        pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
                                                      auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Sum transit demands"):
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId), scenario=self.Scenario)

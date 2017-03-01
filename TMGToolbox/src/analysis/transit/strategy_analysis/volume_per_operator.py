@@ -200,7 +200,21 @@ class VolumePerOperator(_m.Tool()):
                 with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
                     networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
                     demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
-                    report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)            
+                    configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %scenario 
+                    with open(configPath) as reader:
+                        config = _parsedict(reader.readline())
+                        data = config['data']
+                        if 'multi_class' in data:
+                            multiclass = "yes"
+                        else:
+                            multiclass = "no"
+                        dataType = data['type']
+                        strat = config['strat_files']
+                        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario, class_name=strat[0]["name"])
+                        else:
+                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)            
                     matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
                     matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
 
