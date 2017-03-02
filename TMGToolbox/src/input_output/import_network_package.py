@@ -79,9 +79,9 @@ class ImportNetworkPackage(_m.Tool()):
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
 
     # Tool Input Parameters
-    #    Only those parameters neccessary for Modeller and/or XTMF to dock with
+    #    Only those parameters necessary for Modeller and/or XTMF to dock with
     #    need to be placed here. Internal parameters (such as lists and dicts)
-    #    get intitialized during construction (__init__)
+    #    get initialized during construction (__init__)
 
     ScenarioId = _m.Attribute(int)  # common variable or parameter
     NetworkPackageFile = _m.Attribute(str)
@@ -317,8 +317,9 @@ class ImportNetworkPackage(_m.Tool()):
 
     @_m.logbook_trace("Reading turns")
     def _batchin_turns(self, scenario, temp_folder, zf):
-        zf.extract(self._components.turns_file, temp_folder)
-        self.TRACKER.runTool(import_turns,
+        if self._components.turns_file != None and (self._components.turns_file in zf.namelist()):
+            zf.extract(self._components.turns_file, temp_folder)
+            self.TRACKER.runTool(import_turns,
                              transaction_file=_path.join(temp_folder, self._components.turns_file),
                              scenario=scenario)
 

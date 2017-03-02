@@ -266,7 +266,7 @@ class ExportNetworkPackage(_m.Tool()):
     def _batchout_turns(self, temp_folder, zf):
         export_file = _path.join(temp_folder, "turns.231")
         if self.Scenario.element_totals['turns'] == 0:
-            self._export_blank_batch_file(export_file, "turns")
+            #self._export_blank_batch_file(export_file, "turns")
             self.TRACKER.completeTask()
         else:
             self.TRACKER.runTool(_export_turns,
@@ -314,9 +314,11 @@ class ExportNetworkPackage(_m.Tool()):
         links.to_csv(link_filepath, index=True)
         zf.write(link_filepath, arcname=_path.basename(link_filepath))
 
-        turns = _pdu.load_turn_dataframe(self.Scenario).loc[:, traffic_result_attributes]
-        turns.to_csv(turn_filepath)
-        zf.write(turn_filepath, arcname=_path.basename(turn_filepath))
+        turns = _pdu.load_turn_dataframe(self.Scenario)
+        if turns != None:
+            turns = turns.loc[:, traffic_result_attributes]
+            turns.to_csv(turn_filepath)
+            zf.write(turn_filepath, arcname=_path.basename(turn_filepath))
 
 
     def _batchout_transit_results(self, temp_folder, zf):

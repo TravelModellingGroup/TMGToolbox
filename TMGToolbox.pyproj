@@ -73,6 +73,7 @@
     <Compile Include="src\assignment\transit\V4_FBTA.py" />
     <Compile Include="src\common\geometry.py" />
     <Compile Include="src\common\network_editing.py" />
+    <Compile Include="src\common\pandas_utils.py" />
     <Compile Include="src\common\spatial_index.py" />
     <Compile Include="src\common\TMG_tool_page_builder.py" />
     <Compile Include="src\common\utilities.py" />

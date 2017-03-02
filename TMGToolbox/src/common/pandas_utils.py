@@ -100,7 +100,7 @@ try:
                 to True, then "@stn1" will become "x_stn1".
 
         Returns:
-
+            A dataframe with the results.  None if there are no turns.
         '''
         attr_list = scenario.attributes("TURN")
         package = scenario.get_attribute_values("TURN", attr_list)
@@ -108,12 +108,16 @@ try:
         index_data = package[0]
         tables = package[1:]
 
-        turn_indexer = {}
-        for (i, j), outgoing_data in index_data.iteritems():
+        turn_index = []
+        indexer_values = []
+
+        for (i,j), outgoing_data in index_data.iteritems():
             for k, pos in outgoing_data.iteritems():
-                turn_indexer[(i,j,k)] = pos
-        turn_indexer = pd.Series(turn_indexer)
-        turn_indexer.index.names = "i j k".split()
+                turn_index.append((i,j,k))
+                indexer_values.append(pos)
+        if len(turn_index) == 0:
+            return None
+        turn_indexer = pd.Series(indexer_values, pd.MultiIndex.from_tuples(turn_index, names=['i', 'j', 'k']))
 
         if pythonize_exatts:
             attr_list = [attname.replace("@", "x_")  for attname in attr_list]
