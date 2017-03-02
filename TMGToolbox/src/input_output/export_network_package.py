@@ -273,8 +273,7 @@ class ExportNetworkPackage(_m.Tool()):
                                  export_file=export_file,
                                  scenario=self.Scenario,
                                  export_format='ENG_DATA_FORMAT')
-
-        zf.write(export_file, arcname="turns.231")
+            zf.write(export_file, arcname="turns.231")
 
     @_m.logbook_trace("Exporting Functions")
     def _batchout_functions(self, temp_folder, zf):
