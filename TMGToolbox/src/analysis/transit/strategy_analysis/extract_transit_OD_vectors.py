@@ -218,7 +218,12 @@ class ExtractTransitODVectors(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-                        
+            self.AccessStationRangeSplit = self.AccessStationRange.split('-')
+            self.ZoneCentroidRangeSplit = self.ZoneCentroidRange.split('-')
+            if len(self.ZoneCentroidRangeSplit) == 1:
+                self.ZoneCentroidRangeSplit = (int(self.ZoneCentroidRangeSplit[0]),int(self.ZoneCentroidRangeSplit[0]))
+            if len(self.AccessStationRangeSplit) == 1:
+                self.AccessStationRangeSplit = (int(self.AccessStationRangeSplit[0]),int(self.AccessStationRangeSplit[0]))
             with nested(_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= 'Line Flag'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes'),
@@ -252,18 +257,16 @@ class ExtractTransitODVectors(_m.Tool()):
                 with _m.logbook_trace("Running strategy analysis"):
 
                     if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
-                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario, class_name=className)
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario, class_name=className)
                     else:
-                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario)
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario)
 
 
                 with _m.logbook_trace("Calculating WAT demand"):  
                 
                     matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
-                    self.AccessStationRangeSplit = self.AccessStationRange.split('-')
-                    self.ZoneCentroidRangeSplit = self.ZoneCentroidRange.split('-')
-                    if len(self.AccessStationRangeSplit)!=1 and int(self.AccessStationRangeSplit[0]) != 0:
+                    if self.AccessStationRangeSplit[1] != 0:
                         if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
                             pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
                                                      auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario, class_name=className)
@@ -360,7 +363,7 @@ class ExtractTransitODVectors(_m.Tool()):
 
         return spec
 
-    def _BuildStratSpec(self, tripComponentId, demandMatrixId):
+    def _BuildStratSpec(self, tripComponentId, demandMatrixId, minZone, maxZone):
         return {
                 "trip_components": {
                     "boarding": tripComponentId,
@@ -381,8 +384,8 @@ class ExtractTransitODVectors(_m.Tool()):
                 "constraint": {
                         "by_value": None,
                         "by_zone": {
-                            "origins": "1-8999",
-                            "destinations": "1-8999"
+                            "origins": str(minZone) + '-' + str(maxZone),
+                            "destinations": str(minZone) + '-' + str(maxZone)
                         }
                     },
                 "results": {
@@ -437,8 +440,8 @@ class ExtractTransitODVectors(_m.Tool()):
                 "constraint": {
                     "by_value": None,
                     "by_zone": {
-                        "origins": originRange,
-                        "destinations": destinationRange
+                        "origins": str(originRange[0]) + '-' + str(originRange[1]),
+                        "destinations": str(destinationRange[0]) + '-' + str(destinationRange[1])
                     }
                 },
                 "results_from_retained_paths": {
