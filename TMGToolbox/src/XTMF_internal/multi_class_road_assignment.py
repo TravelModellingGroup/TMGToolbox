@@ -94,6 +94,8 @@ class MultiClassRoadAssignment(_m.Tool()):
     SOLAFlag = _m.Attribute(bool)
     xtmf_NameString = _m.Attribute(str)
     ResultAttributes = _m.Attribute(str)
+    xtmf_AggAttributes = _m.Attribute(str)
+    aggAttributesMatrixId = _m.Attribute(str)
 
     NumberOfProcessors = _m.Attribute(int)
     
@@ -132,7 +134,7 @@ class MultiClassRoadAssignment(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, Mode_List, xtmf_Demand_String, TimesMatrixId,
                  CostMatrixId, TollsMatrixId, PeakHourFactor, LinkCost,
                  TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
-                 RunTitle, LinkTollAttributeId, xtmf_NameString, ResultAttributes):
+                 RunTitle, LinkTollAttributeId, xtmf_NameString, ResultAttributes, xtmf_AggAttributes, aggAttributesMatrixId):
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario == None):
@@ -143,6 +145,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.Demand_List = xtmf_Demand_String.split(",")
         
         #Splitting the Time, Cost and Toll string into Lists, and Modes for denoting results
+        self.ResultAttributes = ResultAttributes
         self.TimesMatrixId = TimesMatrixId.split(",")
         self.CostMatrixId = CostMatrixId.split(",")
         self.TollsMatrixId = TollsMatrixId.split(",")
@@ -151,6 +154,8 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.TollWeight = [float (x) for x in TollWeight.split(",")]
         self.LinkCost = float(LinkCost)
         self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
+        self.xtmf_AggAttributes = [x for x in xtmf_AggAttributes.split(",")]
+        self.aggAttributesMatrixId = aggAttributesMatrixId.split(",")
         self.DemandMatrixList = []
         for demandMatrix in self.Demand_List:
             if _MODELLER.emmebank.matrix(demandMatrix) == None:
@@ -251,7 +256,14 @@ class MultiClassRoadAssignment(_m.Tool()):
                             
                                
                             report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
-                            
+                            if self.xtmf_AggAttributes:
+                                attributes = [[y for y in self.xtmf_AggAttributes[f::(len(self.xtmf_AggAttributes)/len(self.DemandMatrixList))]] for f in range(0,(len(self.xtmf_AggAttributes)/len(self.DemandMatrixList)))]
+                                matrices = [[x for x in self.aggAttributesMatrixId[f::(len(self.aggAttributesMatrixId)/len(self.DemandMatrixList))]] for f in range(0,(len(self.aggAttributesMatrixId)/len(self.DemandMatrixList)))]
+                                for i in range(0,len(attributes)):
+                                    specAttribute = self._getSOLASpecAttribute(peakHourMatrix, appliedTollFactor, self.Mode_List_Split,\
+                                                                 self.TimesMatrixId, self.TollsMatrixId,  attributes[i], matrices[i])
+                                    self._tracker.runTool(trafficAssignmentTool, specAttribute, scenario=self.Scenario)
+
                             stoppingCriterion = report['stopping_criterion']
                             iterations = report['iterations']
                             if len(iterations) > 0: finalIteration = iterations[-1]
@@ -426,6 +438,8 @@ class MultiClassRoadAssignment(_m.Tool()):
                 _util.initializeMatrix(self.CostMatrixId[i], name='acost', description='AUTO COST FOR MODE: %s' %Mode[i])
                 _util.initializeMatrix(self.TimesMatrixId[i], name='aivtt', description='AUTO TIME FOR MODE: %s' %Mode[i])
                 _util.initializeMatrix(self.TollsMatrixId[i], name='atoll', description='AUTO TOLL FOR MODE: %s' %Mode[i])
+            for i in range(len(self.aggAttributesMatrixId)):
+                _util.initializeMatrix(self.aggAttributesMatrixId[i], name=self.xtmf_AggAttributes[i], description='Aggregate Attribute %s matrix' %self.xtmf_AggAttributes[i])
     
     def _getLinkCostCalcSpec(self, costAttributeId):
         return {
@@ -461,8 +475,8 @@ class MultiClassRoadAssignment(_m.Tool()):
                 appliedTollFactor.append(60.0 / self.TollWeight[i]) 
         return appliedTollFactor
     
-    def _getPrimarySOLASpec(self, peakHourMatrixId, appliedTollFactor, Mode_List, TimesMatrixId,\
-            TollsMatrixId, linkvolumeattributes):
+    def _getSOLASpecAttribute(self, peakHourMatrixId, appliedTollFactor, Mode_List, TimesMatrixId,\
+            TollsMatrixId, aggAttribute, aggAttributeMatrixId):
         
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
@@ -505,6 +519,79 @@ class MultiClassRoadAssignment(_m.Tool()):
                         }
                     },
                     "path_analysis": {
+                        "link_component": aggAttribute[i],
+                        "turn_component": None,
+                        "operator": "+",
+                        "selection_threshold": {
+                            "lower": None,
+                            "upper": None
+                        },
+                        "path_to_od_composition": {
+                            "considered_paths": "ALL",
+                            "multiply_path_proportions_by": {
+                                "analyzed_demand": False,
+                                "path_value": True
+                            }
+                        }
+                    },
+                    "cutoff_analysis": None,
+                    "traversal_analysis": None,
+                    "analysis": {
+                        "analyzed_demand": None,
+                        "results": {
+                            "od_values": aggAttributeMatrixId[i],
+                            "selected_link_volumes": None,
+                            "selected_turn_volumes": None
+                        }
+                    }
+                } for i in range(len(Mode_List))]        
+        SOLA_spec['classes'] = SOLA_Class_Generator
+        return SOLA_spec
+                
+    def _getPrimarySOLASpec(self, peakHourMatrixId, appliedTollFactor, Mode_List, TimesMatrixId,\
+            TollsMatrixId, linkvolumeattributes):
+        
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 1, 1)
+        
+               
+        #Generic Spec for SOLA
+        SOLA_spec = {
+                "type": "SOLA_TRAFFIC_ASSIGNMENT",
+                "classes":[],
+                "path_analysis": None,
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "performance_settings": {
+                    "number_of_processors": numberOfPocessors
+                },
+                "background_traffic": None,
+                "stopping_criteria": {
+                    "max_iterations": self.Iterations,
+                    "relative_gap": self.rGap,
+                    "best_relative_gap": self.brGap,
+                    "normalized_gap": self.normGap
+                }
+            }     
+        
+        #Creates a list entry for each mode specified in the Mode List and its associated Demand Matrix
+        SOLA_Class_Generator = [{
+                    "mode": Mode_List[i],
+                    "demand": peakHourMatrixId[i].id,
+                    "generalized_cost": {
+                        "link_costs": self.LinkTollAttributeId[i],
+                        "perception_factor": appliedTollFactor[i]
+                    },
+                    "results": {
+                        "link_volumes": linkvolumeattributes[i],
+                        "turn_volumes": None,
+                        "od_travel_times": {
+                            "shortest_paths": TimesMatrixId[i]
+                        }
+                    },
+                    "path_analysis": {
                         "link_component": self.LinkTollAttributeId[i],
                         "turn_component": None,
                         "operator": "+",
@@ -525,17 +612,15 @@ class MultiClassRoadAssignment(_m.Tool()):
                     "analysis": {
                         "analyzed_demand": None,
                         "results": {
-                            "od_values": None,
-                            "selected_link_volumes": linkvolumeattributes[i],
+                            "od_values": TollsMatrixId[i],
+                            "selected_link_volumes": None,
                             "selected_turn_volumes": None
                         }
                     }
                 } for i in range(len(Mode_List))]        
         SOLA_spec['classes'] = SOLA_Class_Generator
         return SOLA_spec
-        
-          
-        
+
     def _getSaveAutoTimesSpec(self):
         return {
                 "result": "ul2",

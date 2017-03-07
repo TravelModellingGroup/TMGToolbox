@@ -51,7 +51,8 @@ class ShptoEmmeMap(_m.Tool()):
 
         pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
                      description = "Takes the <b>stops.txt</b> file and creates a mapping file that shows \
-                             the node in the EMME network which it corresponds to.",
+                             the node in the EMME network which it corresponds to. \
+                             EXPERIMENTAL",
                      branding_text = "- TMG Toolbox")
                 
         if self.tool_run_msg != "": # to display messages in the page

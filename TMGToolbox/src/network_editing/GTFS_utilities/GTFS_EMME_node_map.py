@@ -24,6 +24,8 @@ from contextlib import contextmanager
 from contextlib import nested
 from os import path as _path
 from pyproj import Proj
+from osgeo import ogr
+import osgeo.ogr
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -39,7 +41,7 @@ class GTFStoEmmeMap(_m.Tool()):
     number_of_tasks = 1 
 
     #Tool Parameters
-    StopsFileName = _m.Attribute(str)
+    FileName = _m.Attribute(str)
     MappingFileName = _m.Attribute(str)
 
     def __init__(self):
@@ -51,28 +53,26 @@ class GTFStoEmmeMap(_m.Tool()):
 
         pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
                      description = "Takes the <b>stops.txt</b> file and creates a mapping file that shows \
-                             the node in the EMME network which it corresponds to.",
+                             the node in the EMME network which it corresponds to. \
+                             EXPERIMENTAL",
                      branding_text = "- TMG Toolbox")
                 
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
             
-        pb.add_select_file(tool_attribute_name="StopsFileName",
+        pb.add_select_file(tool_attribute_name="FileName",
                            window_type='file',
-                           file_filter="*.txt",
-                           title="stops.txt file from the GTFS folder")
+                           file_filter="*.txt *.shp",
+                           title="stops.txt file from the GTFS folder or stops file in shp format")
         
         pb.add_select_file(tool_attribute_name="MappingFileName",
                            window_type='save_file',
                            title="Map file to export")
 
-        '''pb.add_select_file(tool_attribute_name="MappingfileName",
-                           window_type='save_file',
-                           title="Map file to export")'''
         return pb.render()
 
     def __call__(self, StopFileName, MappingFileName):
-        self.StopsFileName = StopFileName
+        self.FileName = StopFileName
         self.MappingFileName = MappingFileName
         
         self.tool_run_msg = ""
@@ -103,9 +103,13 @@ class GTFStoEmmeMap(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-            
-            #load stops
-            stops = self._LoadStops()
+            #def file type
+            if self.FileName[-3:].lower == "txt":
+                stops = self._LoadStopsTxt
+            elif self.FileName[-3:].lower == "shp":
+                stops = self._LoadStopsShp
+            else:
+                raise Exception("Not a correct format")
             #need to convert stops from lat lon to UTM
             convertedStops = self._ConvertStops(stops)
             #load nodes from network
@@ -120,21 +124,6 @@ class GTFStoEmmeMap(_m.Tool()):
             self._FindNearest(extents,convertedStops,nodes)
 
 
-
-
-            '''routeModes = self._LoadRoutes()
-            print "Routes Loaded."
-            tripModes = self._LoadTrips(routeModes)
-            print "Trips loaded."
-            stops = self._LoadStops()
-            print "Stops loaded."
-            self._LoadStopTimes(stops, tripModes)
-            print "Stop times loaded."
-            self._WriteStopsToShapefile(stops)
-            self._WriteProjectionFile()
-            print "Shapefile written."'''
-
-
     def _GetAtts(self):
         atts = {
                 "Version": self.version, 
@@ -144,7 +133,7 @@ class GTFStoEmmeMap(_m.Tool()):
 
 
     
-    def _LoadStops(self):
+    def _LoadStopsTxt(self):
         stops = {}
         with open(self.StopsFileName) as reader:
             #stop_lat,zone_id,stop_lon,stop_id,stop_desc,stop_name,location_type
@@ -164,8 +153,23 @@ class GTFStoEmmeMap(_m.Tool()):
                                 cells[nameCol],
                                 cells[descCol])
                 stops[id] = [float(cells[lonCol]),float(cells[latCol])]
-        return stops #StopID -> stop
-    
+        return stops 
+
+    def _LoadStopsShp(self):
+        stops = {}
+        shp = ogr.Open(self.ShpFileName)
+        layer = shp.GetLayer(0)
+        if layer.GetGeomType() == 1:
+            for feat in layer:
+                index1 = feat.GetFieldIndex("StopID")
+                id = feat.GetField(index1)
+                geom  = feat.GetGeometryRef()
+                points = geom.GetPointCount()
+                for point in xrange(points):
+                    lon, lat, z = geom.GetPoint(point)
+                    stops[id] = [float(lon),float(lat)]
+        return stops 
+
     def _ConvertStops(self, stops):
         convertedStops = {}
         # find what zone system the file is using
