@@ -104,14 +104,18 @@ class XTMFNetworkCalculator(_m.Tool()):
             "result": self.result,
             "expression": self.expression,
             "aggregation": None,
-            "selections": {
-                "node": self.node_selection,
-                "link": self.link_selection,
-                "transit_line": self.transit_line_selection
-                },
             "type": "NETWORK_CALCULATION"            
             }
-
+        selections = {}
+        if self.node_selection != None:
+            selections["node"] = self.node_selection
+        elif self.link_selection != None:
+            selections["link"] = self.link_selection
+        elif self.transit_line_selection != None:
+            selections["transit_line"] = self.transit_line_selection
+        if len(selections) == 0:
+            selections["node"] = "all"
+        spec["selections"] = selections
         return spec
 
 

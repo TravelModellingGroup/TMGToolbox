@@ -481,6 +481,8 @@ def explore_source_folder(root_folder_path, parent_node, consolidate):
             folders.append(item)
     
     for foldername in folders:
+        if foldername == ".vs":
+            continue
         folderpath = pathlib.join(root_folder_path, foldername)
         namespace = foldername
         title = capitalize_name(namespace)
