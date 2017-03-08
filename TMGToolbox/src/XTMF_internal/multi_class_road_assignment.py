@@ -256,7 +256,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             
                                
                             report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
-                            if self.xtmf_AggAttributes:
+                            if self.xtmf_AggAttributes != None or self.xtmf_AggAttributes != "":
                                 attributes = [[y for y in self.xtmf_AggAttributes[f::(len(self.xtmf_AggAttributes)/len(self.DemandMatrixList))]] for f in range(0,(len(self.xtmf_AggAttributes)/len(self.DemandMatrixList)))]
                                 matrices = [[x for x in self.aggAttributesMatrixId[f::(len(self.aggAttributesMatrixId)/len(self.DemandMatrixList))]] for f in range(0,(len(self.aggAttributesMatrixId)/len(self.DemandMatrixList)))]
                                 for i in range(0,len(attributes)):
@@ -438,8 +438,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                 _util.initializeMatrix(self.CostMatrixId[i], name='acost', description='AUTO COST FOR MODE: %s' %Mode[i])
                 _util.initializeMatrix(self.TimesMatrixId[i], name='aivtt', description='AUTO TIME FOR MODE: %s' %Mode[i])
                 _util.initializeMatrix(self.TollsMatrixId[i], name='atoll', description='AUTO TOLL FOR MODE: %s' %Mode[i])
-            for i in range(len(self.aggAttributesMatrixId)):
-                _util.initializeMatrix(self.aggAttributesMatrixId[i], name=self.xtmf_AggAttributes[i], description='Aggregate Attribute %s matrix' %self.xtmf_AggAttributes[i])
+            if self.aggAttributesMatrixId != None or self.aggAttributesMatrixId != "":
+                for i in range(len(self.aggAttributesMatrixId)):
+                    _util.initializeMatrix(self.aggAttributesMatrixId[i], name=self.xtmf_AggAttributes[i], description='Aggregate Attribute %s matrix' %self.xtmf_AggAttributes[i])
     
     def _getLinkCostCalcSpec(self, costAttributeId):
         return {
