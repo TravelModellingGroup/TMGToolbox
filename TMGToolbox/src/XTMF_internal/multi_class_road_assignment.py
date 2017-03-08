@@ -154,8 +154,24 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.TollWeight = [float (x) for x in TollWeight.split(",")]
         self.LinkCost = float(LinkCost)
         self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
-        self.xtmf_AggAttributes = [x for x in xtmf_AggAttributes.split(",")]
-        self.aggAttributesMatrixId = aggAttributesMatrixId.split(",")
+        if xtmf_AggAttributes:
+            self.xtmf_AggAttributes = [x for x in xtmf_AggAttributes.split(",")]
+            for i in range(len(self.xtmf_AggAttributes)):
+                if self.xtmf_AggAttributes[i] == None or self.xtmf_AggAttributes[i] == "" or self.xtmf_AggAttributes[i] == " ":
+                    self.xtmf_AggAttributes[i] = None
+                    if self.aggAttributesMatrixId[i] != 'mf0':
+                        raise Exception("Matrix %s was specified with an incorrect aggregation attribute" %self.aggAttributesMatrixId[i])
+        else:
+            self.xtmf_AggAttributes = None    
+        if aggAttributesMatrixId:
+            self.aggAttributesMatrixId = aggAttributesMatrixId.split(",")
+            for i in range(len(self.aggAttributesMatrixId)):
+                if self.aggAttributesMatrixId[i] == "mf0":
+                    self.aggAttributesMatrixId[i] = None
+                    if self.xtmf_AggAttributes[i] != None or self.xtmf_AggAttributes[i] != "" or self.xtmf_AggAttributes[i] != " ":
+                        raise Exception("An attribute %s was specified with no matrix defined" %self.xtmf_AggAttributes[i])
+
+
         self.DemandMatrixList = []
         for demandMatrix in self.Demand_List:
             if _MODELLER.emmebank.matrix(demandMatrix) == None:
@@ -256,7 +272,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             
                                
                             report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
-                            if self.xtmf_AggAttributes != None or self.xtmf_AggAttributes != "":
+                            if self.xtmf_AggAttributes != None:
                                 attributes = [[y for y in self.xtmf_AggAttributes[f::(len(self.xtmf_AggAttributes)/len(self.DemandMatrixList))]] for f in range(0,(len(self.xtmf_AggAttributes)/len(self.DemandMatrixList)))]
                                 matrices = [[x for x in self.aggAttributesMatrixId[f::(len(self.aggAttributesMatrixId)/len(self.DemandMatrixList))]] for f in range(0,(len(self.aggAttributesMatrixId)/len(self.DemandMatrixList)))]
                                 for i in range(0,len(attributes)):
@@ -435,11 +451,20 @@ class MultiClassRoadAssignment(_m.Tool()):
     def _initOutputMatrices(self, Mode):
         with _m.logbook_trace("Initializing output matrices:"):
             for i in range(len(self.Demand_List)):
-                _util.initializeMatrix(self.CostMatrixId[i], name='acost', description='AUTO COST FOR MODE: %s' %Mode[i])
-                _util.initializeMatrix(self.TimesMatrixId[i], name='aivtt', description='AUTO TIME FOR MODE: %s' %Mode[i])
-                _util.initializeMatrix(self.TollsMatrixId[i], name='atoll', description='AUTO TOLL FOR MODE: %s' %Mode[i])
-            if self.aggAttributesMatrixId != None or self.aggAttributesMatrixId != "":
-                for i in range(len(self.aggAttributesMatrixId)):
+                if self.CostMatrixId[i] == 'mf0':
+                    self.CostMatrixId[i] = None
+                else:
+                    _util.initializeMatrix(self.CostMatrixId[i], name='acost', description='AUTO COST FOR MODE: %s' %Mode[i])
+                if self.TimesMatrixId[i] == 'mf0':
+                    self.TimesMatrixId[i] = None
+                else:
+                    _util.initializeMatrix(self.TimesMatrixId[i], name='aivtt', description='AUTO TIME FOR MODE: %s' %Mode[i])
+                if self.TollsMatrixId[i] == 'mf0':
+                    self.TollsMatrixId[i] = None
+                else:
+                    _util.initializeMatrix(self.TollsMatrixId[i], name='atoll', description='AUTO TOLL FOR MODE: %s' %Mode[i])
+            for i in range(len(self.aggAttributesMatrixId)):
+                if self.aggAttributesMatrixId[i] != None:
                     _util.initializeMatrix(self.aggAttributesMatrixId[i], name=self.xtmf_AggAttributes[i], description='Aggregate Attribute %s matrix' %self.xtmf_AggAttributes[i])
     
     def _getLinkCostCalcSpec(self, costAttributeId):
