@@ -42,7 +42,7 @@ _pdu = _MODELLER.module('tmg.common.pandas_utils')
 
 
 class ExportNetworkPackage(_m.Tool()):
-    version = '1.2.0'
+    version = '1.2.1'
     tool_run_msg = ""
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
@@ -172,13 +172,13 @@ class ExportNetworkPackage(_m.Tool()):
                 name="{classname} v{version}".format(classname=self.__class__.__name__, version=self.version),
                 attributes=self._get_logbook_attributes()):
 
+            if self.ExportAllFlag:
+                self.AttributeIdsToExport = [att.name for att in self.Scenario.extra_attributes()]
+
             self._check_attributes()
             # Due to the dynamic nature of the selection process, it could happen that attributes are
             # selected which don't exist in the current scenario. The method checks early to catch
             # any problems
-
-            if self.ExportAllFlag:
-                self.AttributeIdsToExport = [att.name for att in self.Scenario.extra_attributes()]
 
             with _zipfile.ZipFile(self.ExportFile, 'w', _zipfile.ZIP_DEFLATED) as zf, self._temp_file() as temp_folder:
                 version_file = _path.join(temp_folder, "version.txt")
