@@ -85,6 +85,9 @@
     <Compile Include="src\input_output\import_network_package.py" />
     <Compile Include="src\input_output\import_network_update.py" />
     <Compile Include="src\input_output\merge_functions.py" />
+    <Compile Include="src\input_output\export_network_shapefile.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\license.py" />
     <Compile Include="src\network_editing\calculate_station_frequencies.py" />
     <Compile Include="src\network_editing\centroid_connectors\CCGEN.py" />
