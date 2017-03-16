@@ -313,7 +313,7 @@ class ExportNetworkPackage(_m.Tool()):
         zf.write(link_filepath, arcname=_path.basename(link_filepath))
 
         turns = _pdu.load_turn_dataframe(self.Scenario)
-        if turns != None:
+        if not (turns is None):
             turns = turns.loc[:, traffic_result_attributes]
             turns.to_csv(turn_filepath)
             zf.write(turn_filepath, arcname=_path.basename(turn_filepath))
