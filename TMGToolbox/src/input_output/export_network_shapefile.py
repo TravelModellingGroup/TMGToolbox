@@ -43,7 +43,7 @@ class ExportNetworkAsShapefile(_m.Tool()):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)  # init the ProgressTracker
 
         # Set the defaults of parameters used by Modeller
-        self.Scenario = _MODELLER.scenario  # Default is primary scenario
+        self.scenario = _MODELLER.scenario  # Default is primary scenario
         self.ExportMetadata = ""
 
     def page(self):
@@ -56,7 +56,7 @@ class ExportNetworkAsShapefile(_m.Tool()):
     def __call__(self, xtmf_exportPath, xtmf_transitShapes, xtmf_scenario):
         self.export_path = xtmf_exportPath
         self.transit_shapes = xtmf_transitShapes
-        self.scenario = xtmf_scenario
+        self.scenario = _m.Modeller().emmebank.scenario(xtmf_scenario)
 
         try:          
                 print "Starting export."
@@ -66,6 +66,8 @@ class ExportNetworkAsShapefile(_m.Tool()):
             raise Exception(_util.formatReverseStack())
 
     def _execute(self):
+        if self.transit_shapes == '' or self.transit_shapes == None or self.transit_shapes == ' ':
+            self.transit_shapes == 'SEGMENTS'
 
         _exportShapefile(export_path = self.export_path, transit_shapes = self.transit_shapes, scenario = self.scenario)
 
