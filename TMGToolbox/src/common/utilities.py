@@ -891,16 +891,22 @@ def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario):
         
         data = config['data']
         if 'multi_class' in data:
-            multiclass = "yes"
+            if data['multi_class'] == True:
+                multiclass = "yes"
+            else:
+                multiclass = "no"
         else:
             multiclass = "no"
-        dataType = data['type']
         strat = config['strat_files']
-        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
-            if len(strat) > 1:
-                raise Exception()
-            else:
-                return strat[0]['data']['demand']
-        else:
+        demandMatrices = {}
+        if data['type'] == "MULTICLASS_TRANSIT_ASSIGNMENT": # multiclass extended transit assignment
+            for i in range(len(strat)):
+                demandMatrices[strat[i]["name"]] = strat[i]["data"]["demand"]
+            return demandMatrices
+        elif multiclass == "yes": # multiclass congested assignment
+            for i in range(len(data["classes"])):
+                demandMatrices[data["classes"][i]["name"]] = data["classes"][i]["demand"]
+            return demandMatrices
+        else: #non multiclass congested
             strats = scenario.transit_strategies
             return strats.data["demand"]

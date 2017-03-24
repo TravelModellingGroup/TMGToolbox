@@ -111,7 +111,7 @@ class VolumePerOperator(_m.Tool()):
                  "Durham: line=D_____",
                  "Halton: line=H_____",
                  "Hamilton: line=W_____"]
-
+        self.multiclass = False
         self.filtersToCompute = "\n".join(lines)
         self.results = {};     
         
@@ -174,10 +174,17 @@ class VolumePerOperator(_m.Tool()):
 
         with open(filePath, 'wb') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
-            writer.writerow(["Scenario", "Line Filter", "Ridership"])
-            for scenario in sorted(self.results):
-                for lineFilter in sorted(self.results[scenario]):
-                    writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
+            if self.multiclass == False:
+                writer.writerow(["Scenario", "Line Filter", "Ridership"])
+                for scenario in sorted(self.results):
+                    for lineFilter in sorted(self.results[scenario]):
+                        writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
+            elif self.multiclass == True:
+                writer.writerow(["Scenario", "Line Filter", "Class", "Ridership"])
+                for scenario in sorted(self.results):
+                    for lineFilter in sorted(self.results[scenario]):
+                        for cls in sorted(self.results[scenario][lineFilter]):
+                            writer.writerow([scenario, lineFilter, cls, self.results[scenario][lineFilter][cls]])
         
         print "Finished Ridership calculations"
 
@@ -192,34 +199,32 @@ class VolumePerOperator(_m.Tool()):
             self.results[scenario.id] = {}
             
             for filter in parsed_filter_list:
-                
-                managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
-                        _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
-                        _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]        
+                demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
+                if type(demandMatrixId) == type(dict()):
+                    self.multiclass = True
+                    self.results[scenario.id][filter[1]] = {}
+                    for key in demandMatrixId:
+                        managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
+                                    _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
+                                    _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]       
+                        with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
+                            networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
+                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key)
+                            matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId[key]), scenario=self.Scenario)
+                            matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
+                            self.results[scenario.id][filter[1]][key] = tempResultMatrix.data
+                else:
+                    self.multiclass = False
+                    managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
+                                    _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
+                                    _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]
+                    with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
+                        networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
+                        report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)  
+                        matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
+                        matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)         
+                        self.results[scenario.id][filter[1]] =  tempResultMatrix.data
 
-                with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
-                    networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
-                    demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
-                    configPath = dirname(_MODELLER.desktop.project_file_name()) \
-                    + "/Database/STRATS_s%s/config" %scenario 
-                    with open(configPath) as reader:
-                        config = _parsedict(reader.readline())
-                        data = config['data']
-                        if 'multi_class' in data:
-                            multiclass = "yes"
-                        else:
-                            multiclass = "no"
-                        dataType = data['type']
-                        strat = config['strat_files']
-                        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
-                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario, class_name=strat[0]["name"])
-                        else:
-                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)            
-                    matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
-                    matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
-
-                    self.results[scenario.id][filter[1]] =  tempResultMatrix.data                     
-    
     def assign_line_filter(self, lineFilter, marker):
         return {"result": marker.id,
                     "expression": "1",
@@ -292,14 +297,3 @@ class VolumePerOperator(_m.Tool()):
             filterList.append(strippedParts)
 
         return filterList
-
-    
-        
-
-            
-    
-
-
-
-
-             

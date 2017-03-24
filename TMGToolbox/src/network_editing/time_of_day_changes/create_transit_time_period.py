@@ -454,7 +454,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         bounds = _util.FloatRange(0.01, 1000.0)
         
         toDelete = set()
-        if altData:
+        if altData != None:
             for k, v in altData.items(): #check if any headways or speeds are zero. Allow those lines to be deletable
                 if v[0] == 0 or v[1] == 0:
                     del altData[k]
