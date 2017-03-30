@@ -28,7 +28,8 @@ import tempfile as _tf
 
 _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
-_exportShapefile = _MODELLER.module('inro.emme.data.network.export_network_as_shapefile')
+_exportShapefile = _MODELLER.tool('inro.emme.data.network.export_network_as_shapefile')
+_util = _MODELLER.module('tmg.common.utilities')
 
 class ExportNetworkAsShapefile(_m.Tool()):
     version = '0.0.1'
@@ -36,7 +37,10 @@ class ExportNetworkAsShapefile(_m.Tool()):
     number_of_tasks = 1
 
     scenario = _m.Attribute(_m.InstanceType)
+    xtmf_scenario = _m.Attribute(str)
+    xtmf_exportPath = _m.Attribute(str)
     export_path = _m.Attribute(str)
+    xtmf_transitShapes = _m.Attribute(str)
     transit_shapes = _m.Attribute(str)
     def __init__(self):
         # Init internal variables
@@ -56,6 +60,7 @@ class ExportNetworkAsShapefile(_m.Tool()):
     def __call__(self, xtmf_exportPath, xtmf_transitShapes, xtmf_scenario):
         self.export_path = xtmf_exportPath
         self.transit_shapes = xtmf_transitShapes
+        xtmf_scenario = int(xtmf_scenario)
         self.scenario = _m.Modeller().emmebank.scenario(xtmf_scenario)
 
         try:          
@@ -67,7 +72,7 @@ class ExportNetworkAsShapefile(_m.Tool()):
 
     def _execute(self):
         if self.transit_shapes == '' or self.transit_shapes == None or self.transit_shapes == ' ':
-            self.transit_shapes == 'SEGMENTS'
+            self.transit_shapes = 'SEGMENTS'
 
         _exportShapefile(export_path = self.export_path, transit_shapes = self.transit_shapes, scenario = self.scenario)
 
