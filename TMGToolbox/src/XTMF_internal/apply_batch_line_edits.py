@@ -67,7 +67,7 @@ class ApplyBatchLineEdits(_m.Tool()):
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
 
-    InstructionFile = _m.Attribute(str) # file should have the following header: 
+    inputFile = _m.Attribute(str) # file should have the following header: 
                                         # filter|x_hdwchange|x_spdchange
                                         # where filter is a network calculator filter expression
                                         # x refers to the scenario number
