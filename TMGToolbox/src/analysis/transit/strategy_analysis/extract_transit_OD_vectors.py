@@ -264,14 +264,14 @@ class ExtractTransitODVectors(_m.Tool()):
 
                 with _m.logbook_trace("Calculating WAT demand"):  
                 
-                    matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
+                    matrixCalc(self._ExpandStratFractions(demandMatrixId[className]), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
                     if self.AccessStationRangeSplit[1] != 0:
                         if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
                             pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
-                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario, class_name=className)
+                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId[className]), scenario=self.Scenario, class_name=className)
                             pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
-                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario,class_name=className)
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId[className]), scenario=self.Scenario,class_name=className)
                         else:
                             pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
                                                      auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)
