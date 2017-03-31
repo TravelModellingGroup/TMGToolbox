@@ -257,7 +257,7 @@ class ExtractTransitODVectors(_m.Tool()):
                 with _m.logbook_trace("Running strategy analysis"):
 
                     if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
-                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario, class_name=className)
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId[className], self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario, class_name=className)
                     else:
                         report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario)
 
