@@ -107,6 +107,9 @@
     <Compile Include="src\network_editing\GTFS_utilities\shp_emme_map.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\network_editing\attribute_changer.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\network_editing\remove_extra_links.py">
       <SubType>Code</SubType>
     </Compile>

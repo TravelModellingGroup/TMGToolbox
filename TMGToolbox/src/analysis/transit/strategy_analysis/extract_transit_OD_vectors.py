@@ -263,8 +263,10 @@ class ExtractTransitODVectors(_m.Tool()):
 
 
                 with _m.logbook_trace("Calculating WAT demand"):  
-                
-                    matrixCalc(self._ExpandStratFractions(demandMatrixId[className]), scenario=self.Scenario)
+                    if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                        matrixCalc(self._ExpandStratFractions(demandMatrixId[className]), scenario=self.Scenario)
+                    else:
+                        matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
                     if self.AccessStationRangeSplit[1] != 0:
                         if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
