@@ -355,7 +355,7 @@ class ImportNetworkPackage(_m.Tool()):
         try:
             indexOfLastSlash = zipPath[::-1].index("/")
             return zipPath[len(zipPath) - indexOfLastSlash:]
-        except IndexError:
+        except:
             return zipPath
     
     @_m.logbook_trace("Importing traffic results")
