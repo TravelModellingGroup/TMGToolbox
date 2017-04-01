@@ -178,7 +178,6 @@ class ExportNetworkPackage(_m.Tool()):
                 self.AttributeIdsToExport = [att.name for att in self.Scenario.extra_attributes()]
 
             self._check_attributes()
-
             with _zipfile.ZipFile(self.ExportFile, 'w', _zipfile.ZIP_DEFLATED) as zf, self._temp_file() as temp_folder:
                 version_file = _path.join(temp_folder, "version.txt")
                 with open(version_file, 'w') as writer:
@@ -287,7 +286,7 @@ class ExportNetworkPackage(_m.Tool()):
 
         extra_attributes = [self.Scenario.extra_attribute(id_) for id_ in self.AttributeIdsToExport]
         types = set([att.type.lower() for att in extra_attributes])
-
+        
         self.TRACKER.runTool(_export_attributes, extra_attributes,
                              temp_folder,
                              field_separator=',',
