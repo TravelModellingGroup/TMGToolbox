@@ -367,7 +367,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                         departure = self._ParseStringTime(cells[departureCol])
                         arrival = self._ParseStringTime(cells[arrivalCol])
                     except Exception, e:
-                        print "Line " + num + " skipped: " + str(e)
+                        print "Line " + str(num) + " skipped: " + str(e)
                         continue
                 
                     if not departure in bounds: continue #Skip departures not in the time period

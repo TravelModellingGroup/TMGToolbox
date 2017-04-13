@@ -257,21 +257,23 @@ class ExtractTransitODVectors(_m.Tool()):
                 with _m.logbook_trace("Running strategy analysis"):
 
                     if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
-                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario, class_name=className)
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId[className], self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario, class_name=className)
                     else:
                         report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario)
 
 
                 with _m.logbook_trace("Calculating WAT demand"):  
-                
-                    matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
+                    if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                        matrixCalc(self._ExpandStratFractions(demandMatrixId[className]), scenario=self.Scenario)
+                    else:
+                        matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
                     if self.AccessStationRangeSplit[1] != 0:
                         if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
                             pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
-                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario, class_name=className)
+                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId[className]), scenario=self.Scenario, class_name=className)
                             pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
-                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario,class_name=className)
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId[className]), scenario=self.Scenario,class_name=className)
                         else:
                             pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
                                                      auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)

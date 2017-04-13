@@ -74,7 +74,7 @@ class ComponentContainer(object):
 
 
 class ImportNetworkPackage(_m.Tool()):
-    version = '1.2.0'
+    version = '1.2.1'
     tool_run_msg = ""
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
 
@@ -282,9 +282,9 @@ class ImportNetworkPackage(_m.Tool()):
 
     @_m.logbook_trace("Reading modes")
     def _batchin_modes(self, scenario, temp_folder, zf):
-        zf.extract(self._components.mode_file, temp_folder)
+        fileName = zf.extract(self._components.mode_file, temp_folder)
         self.TRACKER.runTool(import_modes,
-                             transaction_file=_path.join(temp_folder, self._components.mode_file),
+                             transaction_file=fileName,
                              scenario=scenario)
 
     @_m.logbook_trace("Reading vehicles")
@@ -326,16 +326,22 @@ class ImportNetworkPackage(_m.Tool()):
     @_m.logbook_trace("Reading extra attributes")
     def _batchin_extra_attributes(self, scenario, temp_folder, zf):
         types = self._load_extra_attributes(zf, temp_folder, scenario)
+        contents = zf.namelist()
+        processed = [self._getZipFileName(x) for x in contents]
         self.TRACKER.startProcess(len(types))
         for t in types:
             if t == "TRANSIT_SEGMENT":
                 filename = "exatt_segments.241"
             else:            
                 filename = "exatt_%ss.241" % t.lower()
-            
-            zf.extract(filename, temp_folder)
-            import_attributes(file_path=_path.join(temp_folder, filename),
+            newfilename = self._getZipOriginalString(processed, contents, filename)
+            try:
+                import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
                               field_separator=",",
+                              scenario=scenario)
+            except:
+                import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
+                              field_separator=" ",
                               scenario=scenario)
             self.TRACKER.completeSubtask()
 
@@ -344,7 +350,14 @@ class ImportNetworkPackage(_m.Tool()):
         merge_functions.FunctionFile = _path.join(temp_folder, self._components.functions_file)
         merge_functions.ConflictOption = self.ConflictOption
         merge_functions.run()
-
+    
+    def _getZipFileName(self, zipPath):
+        try:
+            indexOfLastSlash = zipPath[::-1].index("/")
+            return zipPath[len(zipPath) - indexOfLastSlash:]
+        except:
+            return zipPath
+    
     @_m.logbook_trace("Importing traffic results")
     def _batchin_traffic_results(self, scenario, temp_folder, zf):
         scenario.has_traffic_results = True
@@ -438,6 +451,12 @@ class ImportNetworkPackage(_m.Tool()):
             _shutil.rmtree(foldername, True)
             _m.logbook_write("Deleted temporary directory at '%s'" % foldername)
 
+    def _getZipOriginalString(self, processed, contents, objective):
+        for i in range(len(processed)):
+            if processed[i] == objective:
+                return contents[i]
+        return None
+
     def _check_network_package(self, package):
         """"""
 
@@ -447,32 +466,28 @@ class ImportNetworkPackage(_m.Tool()):
         '''
 
         contents = package.namelist()
-        if 'version.txt' in contents:
-            (self._components.mode_file, self._components.vehicles_file, self._components.base_file,
-             self._components.lines_file, self._components.turns_file, self._components.shape_file) = (
-                'modes.201', 'vehicles.202', 'base.211', 'transit.221', 'turns.231', 'shapes.251'
-            )
-
-            vf = package.open('version.txt')
-            version = float(vf.readline())
-
-            if version >= 3:
-                self._components.functions_file = 'functions.411'
-
-            if 'link_results.csv' in contents and 'turn_results.csv' in contents:
-                self._components.traffic_results_files = 'link_results.csv', 'turn_results.csv'
-
-            if 'segment_results.csv' in contents:
-                self._components.transit_results_files = 'segment_results.csv'
-
-            if 'aux_transit_results.csv' in contents:
-                self._components.aux_transit_results_file = 'aux_transit_results.csv'
-
-            if "exatts.241" in contents:
-                self._components.attribute_header_file = "exatts.241"
-
-
-            return version
+        processed = [self._getZipFileName(x) for x in contents]
+        if 'version.txt' in processed:
+            self._components.mode_file = self._getZipOriginalString(processed, contents, 'modes.201')
+            self._components.vehicles_file = self._getZipOriginalString(processed, contents, 'vehicles.202')
+            self._components.base_file = self._getZipOriginalString(processed, contents, 'base.211')
+            self._components.lines_file = self._getZipOriginalString(processed, contents, 'transit.221')
+            self._components.turns_file = self._getZipOriginalString(processed, contents, 'turns.231')
+            self._components.shape_file = self._getZipOriginalString(processed, contents, 'shapes.251')
+            s = self._getZipOriginalString(processed, contents, 'version.txt')
+            if s != None:
+                 vf = package.open(s)
+                 version = float(vf.readline())
+                 if version >= 3:
+                     self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
+                 s = self._getZipOriginalString(processed, contents, 'link_results.csv')
+                 s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
+                 if s != None and s2 != None:
+                     self._components.traffic_results_files = s, s2
+                 self._components.transit_results_files = self._getZipOriginalString(processed, contents, 'segment_results.csv')
+                 self._components.aux_transit_results_file = self._getZipOriginalString(processed, contents, 'aux_transit_results.csv')	     
+                 self._components.attribute_header_file = self._getZipOriginalString(processed, contents, "exatts.241")		     
+                 return version
 
         renumber_count = 0
         for component in contents:
