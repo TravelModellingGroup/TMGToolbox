@@ -29,6 +29,7 @@ import osgeo.ogr
 import shapely
 import glob
 import os
+import inro.modeller as _m
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -40,7 +41,7 @@ gtfsExportTool = _MODELLER.tool('tmg.network_editing.GTFS_utilities.export_GTFS_
 gtfsEmmeMap = _MODELLER.tool('tmg.network_editing.GTFS_utilities.GTFS_EMME_node_map')
 shpEmmeMap = _MODELLER.tool('tmg.network_editing.GTFS_utilities.shp_emme_map')
 
-class NodeEMMEmap:
+class NodeEMMEmap(_m.Tool()):
     version = '0.0.1'
     tool_run_msg = ""
     number_of_tasks = 1 
