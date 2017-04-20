@@ -171,7 +171,7 @@ class ReturnBoardings(_m.Tool()):
             if(info['data'] != None):
                 classDemandMatrix[className] = info['data']['demand']
         '''
-        if type(classDemandMatrixId) == type(dict()) and len(classDemandMatrixId) > 1:
+        if type(classDemandMatrixId) == type(dict()):
             for PersonClass in classDemandMatrixId:
                 with _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT') as ClassBoardings:
                     spec=     {

@@ -579,7 +579,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                         'perception_factor': 1},
                     'on_lines': None},
             'in_vehicle_time': {
-                'perception_factor': 1},
+                'perception_factor': 'us2'},
             'in_vehicle_cost': {
                 'penalty': self.SegmentFareAttributeIdList[i],
                 'perception_factor': farePerception[i]},
@@ -666,7 +666,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                         'perception_factor': 1},
                     'on_lines': None},
             'in_vehicle_time': {
-                'perception_factor': 1},
+                'perception_factor': 'us2'},
             'in_vehicle_cost': {
                 'penalty': self.SegmentFareAttributeIdList[index],
                 'perception_factor': farePerception},
