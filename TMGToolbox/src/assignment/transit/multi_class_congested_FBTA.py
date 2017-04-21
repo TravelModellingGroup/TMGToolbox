@@ -484,7 +484,7 @@ class MultiClassTransitAssignment(_m.Tool()):
             if component.isspace():
                 continue
             parts = component.split(':')
-            if len(parts) < 3:
+            if len(parts) !=3 :
                 msg = 'Error parsing penalty and filter string: Separate ttf, perception and exponent with colons ttf:perception:exponent'
                 msg += '. [%s]' % component
                 raise SyntaxError(msg)

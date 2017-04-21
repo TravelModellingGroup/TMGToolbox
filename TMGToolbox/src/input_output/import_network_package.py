@@ -218,7 +218,7 @@ class ImportNetworkPackage(_m.Tool()):
 
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario %s created." % self.ScenarioId)
 
-    def __call__(self, NetworkPackageFile, ScenarioId, ConflictOption):
+    def __call__(self, NetworkPackageFile, ScenarioId, ConflictOption, AddFunction):
 
         self.NetworkPackageFile = NetworkPackageFile
         self.ScenarioDescription = ""
