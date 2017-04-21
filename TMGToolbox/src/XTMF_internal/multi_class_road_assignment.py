@@ -230,7 +230,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                                              for at in self.ResultAttributes.split(',')]
                 
                 for name in Mode_List_for_attributes:
-                    
+                    if name == "@None":
+                        name = None
+                        continue
                     if self.Scenario.extra_attribute(name) is not None:
                         _m.logbook_write("Deleting Previous Extra Attributes.")
                         self.Scenario.delete_extra_attribute(name)
