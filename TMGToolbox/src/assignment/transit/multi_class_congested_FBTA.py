@@ -271,10 +271,10 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
 
 
-        if xtmf_WalkPerceptionString:
+        if xtmf_WalkPerceptionString != None:
             xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.replace('::', '\n')
             self.WalkPerceptionList = xtmf_WalkPerceptionString.split(';')
-        if xtmf_WalkPerceptionAttributeIdString:
+        if xtmf_WalkPerceptionAttributeIdString != None:
             self.WalkAttributeIdList = xtmf_WalkPerceptionAttributeIdString.split(',')
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
