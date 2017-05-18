@@ -116,3 +116,10 @@ class NodeEMMEmap(_m.Tool()):
             extents = self._FindExtents(convertedStops,nodes)
             #load and find nearest point
             self._FindNearest(extents,convertedStops,nodes)'''
+
+    def _GetAtts(self):
+        atts = {
+                "Version": self.version, 
+                "self": self.__MODELLER_NAMESPACE__}
+            
+        return atts 

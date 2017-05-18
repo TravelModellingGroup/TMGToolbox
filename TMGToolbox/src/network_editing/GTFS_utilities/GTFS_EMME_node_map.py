@@ -34,6 +34,7 @@ _geo = _MODELLER.module('tmg.common.geometry')
 _spindex = _MODELLER.module('tmg.common.spatial_index')
 networkExportTool = _MODELLER.tool('inro.emme.data.network.export_network_as_shapefile')
 gtfsExportTool = _MODELLER.tool('tmg.network_editing.GTFS_utilities.export_GTFS_stops_as_shapefile')
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class GTFStoEmmeMap(_m.Tool()):
     version = '0.0.1'
@@ -104,10 +105,10 @@ class GTFStoEmmeMap(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             #def file type
-            if self.FileName[-3:].lower == "txt":
-                stops = self._LoadStopsTxt
-            elif self.FileName[-3:].lower == "shp":
-                stops = self._LoadStopsShp
+            if self.FileName[-3:].lower() == "txt":
+                stops = self._LoadStopsTxt()
+            elif self.FileName[-3:].lower() == "shp":
+                stops = self._LoadStopsShp()
             else:
                 raise Exception("Not a correct format")
             #need to convert stops from lat lon to UTM
@@ -135,7 +136,7 @@ class GTFStoEmmeMap(_m.Tool()):
     
     def _LoadStopsTxt(self):
         stops = {}
-        with open(self.StopsFileName) as reader:
+        with open(self.FileName) as reader:
             #stop_lat,zone_id,stop_lon,stop_id,stop_desc,stop_name,location_type
             header = reader.readline().strip().split(',')
             latCol = header.index('stop_lat')
@@ -174,8 +175,14 @@ class GTFStoEmmeMap(_m.Tool()):
         convertedStops = {}
         # find what zone system the file is using
         fullzonestring = _m.Modeller().desktop.project.spatial_reference_file
-        hemisphere = fullzonestring[-5:-4]
-        prjzone = int(fullzonestring[-7:-5])
+        if EMME_VERSION >= (4,3,0):
+            with open(fullzonestring, 'r') as zoneFile:
+                zoneString = zoneFile.read()
+                hemisphere = zoneString[28:29]
+                prjzone = int(zoneString[26:28])
+        else:
+            hemisphere = fullzonestring[-5:-4]
+            prjzone = int(fullzonestring[-7:-5])
         # put try and exception statements here?
         if hemisphere.lower() == 's':
             p = Proj("+proj=utm +ellps=WGS84 +zone=%d +south" %prjzone)
@@ -183,7 +190,7 @@ class GTFStoEmmeMap(_m.Tool()):
             p = Proj("+proj=utm +ellps=WGS84 +zone=%d" %prjzone)
         stoplons = ()
         stoplats = ()
-        for stop in stops:
+        for stop in stops.keys():
             templons = (float(stops[stop][0]),)
             templats = (float(stops[stop][1]),)
             x, y = p(templons, templats)
