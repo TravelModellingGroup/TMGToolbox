@@ -810,7 +810,7 @@ class TransitLineProxy():
         self.segments = [TransitSegmentProxy(segment) for segment in line.segments(True)]
     
     def __getitem__(self, key):
-        if type(key) != str: raise TypeError("Attribute must be a string")
+        if type(key) != str and type(key) != unicode: raise TypeError("Attribute must be a string")
         
         if key in self.__MAP: key = self.__MAP[key]
         if key in self.exatts:
@@ -818,7 +818,7 @@ class TransitLineProxy():
         return self.__dict__[key]
     
     def __setitem__(self, key, value):
-        if type(key) != str: raise TypeError("Attribute must be a string")
+        if type(key) != str and type(key) != unicode: raise TypeError("Attribute must be a string")
         
         if key in self.__MAP: key = self.__MAP[key]
         if key in self.exatts:
@@ -889,7 +889,7 @@ class TransitSegmentProxy():
                 self.exatts[attId] = segment[attId]
     
     def __getitem__(self, key):
-        if type(key) != str: raise TypeError("Attribute must be a string")
+        if type(key) != str and type(key) != unicode: raise TypeError("Attribute must be a string")
         
         if key in self.__MAP: key = self.__MAP[key]
         if key in self.exatts:
@@ -897,7 +897,7 @@ class TransitSegmentProxy():
         return self.__dict__[key]
     
     def __setitem__(self, key, value):
-        if type(key) != str: raise TypeError("Attribute must be a string")
+        if type(key) != str and type(key) != unicode: raise TypeError("Attribute must be a string")
         
         if key in self.__MAP: key = self.__MAP[key]
         if key in self.exatts:
