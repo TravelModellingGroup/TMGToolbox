@@ -887,7 +887,7 @@ def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario):
     configPath = dirname(_MODELLER.desktop.project_file_name()) \
                     + "/Database/STRATS_s%s/config" %scenario 
     with open(configPath) as reader:
-        config = _parsedict(reader.readline())
+        config = _parsedict(reader.read())
         
         data = config['data']
         if 'multi_class' in data:

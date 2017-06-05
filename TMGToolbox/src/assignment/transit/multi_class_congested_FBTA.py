@@ -271,10 +271,10 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
 
 
-        if xtmf_WalkPerceptionString:
+        if xtmf_WalkPerceptionString != None:
             xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.replace('::', '\n')
             self.WalkPerceptionList = xtmf_WalkPerceptionString.split(';')
-        if xtmf_WalkPerceptionAttributeIdString:
+        if xtmf_WalkPerceptionAttributeIdString != None:
             self.WalkAttributeIdList = xtmf_WalkPerceptionAttributeIdString.split(',')
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
@@ -484,7 +484,7 @@ class MultiClassTransitAssignment(_m.Tool()):
             if component.isspace():
                 continue
             parts = component.split(':')
-            if len(parts) < 3:
+            if len(parts) !=3 :
                 msg = 'Error parsing penalty and filter string: Separate ttf, perception and exponent with colons ttf:perception:exponent'
                 msg += '. [%s]' % component
                 raise SyntaxError(msg)
@@ -579,7 +579,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                         'perception_factor': 1},
                     'on_lines': None},
             'in_vehicle_time': {
-                'perception_factor': 1},
+                'perception_factor': 'us2'},
             'in_vehicle_cost': {
                 'penalty': self.SegmentFareAttributeIdList[i],
                 'perception_factor': farePerception[i]},
@@ -666,7 +666,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                         'perception_factor': 1},
                     'on_lines': None},
             'in_vehicle_time': {
-                'perception_factor': 1},
+                'perception_factor': 'us2'},
             'in_vehicle_cost': {
                 'penalty': self.SegmentFareAttributeIdList[index],
                 'perception_factor': farePerception},

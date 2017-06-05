@@ -88,6 +88,7 @@ class ImportNetworkPackage(_m.Tool()):
     ScenarioDescription = _m.Attribute(str)
     OverwriteScenarioFlag = _m.Attribute(bool)
     ConflictOption = _m.Attribute(str)
+    AddFunction = _m.Attribute(bool)
 
     def __init__(self):
         # ---Init internal variables
@@ -218,13 +219,14 @@ class ImportNetworkPackage(_m.Tool()):
 
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario %s created." % self.ScenarioId)
 
-    def __call__(self, NetworkPackageFile, ScenarioId, ConflictOption):
+    def __call__(self, NetworkPackageFile, ScenarioId, ConflictOption, AddFunction):
 
         self.NetworkPackageFile = NetworkPackageFile
         self.ScenarioDescription = ""
         self.ScenarioId = ScenarioId
         self.OverwriteScenarioFlag = True
         self.ConflictOption = ConflictOption
+        self.AddFunction = AddFunction
 
         try:
             self._execute()
