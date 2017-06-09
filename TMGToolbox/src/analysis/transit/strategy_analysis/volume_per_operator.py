@@ -42,10 +42,12 @@ from contextlib import contextmanager
 from contextlib import nested
 from os.path import exists
 from json import loads as _parsedict
+from multiprocessing import cpu_count
 from os.path import dirname
 import tempfile as _tf
 import shutil as _shutil
 import csv
+import numpy as np
 from re import split as _regex_split
 
 _MODELLER = _m.Modeller()
@@ -183,8 +185,8 @@ class VolumePerOperator(_m.Tool()):
                 writer.writerow(["Scenario", "Line Filter", "Class", "Ridership"])
                 for scenario in sorted(self.results):
                     for lineFilter in sorted(self.results[scenario]):
-                        for cls in sorted(self.results[scenario][lineFilter]):
-                            writer.writerow([scenario, lineFilter, cls, self.results[scenario][lineFilter][cls]])
+                        for EmmeClass in sorted(self.results[scenario][lineFilter]):
+                            writer.writerow([scenario, lineFilter, EmmeClass, self.results[scenario][lineFilter][EmmeClass]])
         
         print "Finished Ridership calculations"
 
@@ -193,7 +195,7 @@ class VolumePerOperator(_m.Tool()):
         if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")      
 
         parsed_filter_list = self._ParseFilterString(self.filtersToCompute)
-
+        self.NumberOfProcessors = cpu_count()
         for scenario in self.Scenarios:
             self.Scenario = _MODELLER.emmebank.scenario(scenario.id)
             self.results[scenario.id] = {}
@@ -209,7 +211,19 @@ class VolumePerOperator(_m.Tool()):
                                     _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]       
                         with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
                             networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
-                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key)
+                            if EMME_VERSION >= (4, 3, 2):
+                                report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key, num_processors = self.NumberOfProcessors)
+                            else:
+                                report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key)
+                            tempMatrix = _MODELLER.emmebank.matrix(tempIntermediateMatrix.id)
+                            numpyData = tempMatrix.get_numpy_data(scenario_id = scenario.id)
+                            count = 0 
+                            for i in range(numpyData.shape[0]-1):
+                                if numpyData[i,i] != 0:
+                                    numpyData[i,i] = 0
+                                    count += 1
+                            print count + "numbers had to be adjusted from negative infinity to 0"
+                            tempMatrix.set_numpy_data(numpyData, scenario_id = scenario.id)
                             matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId[key]), scenario=self.Scenario)
                             matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
                             self.results[scenario.id][filter[1]][key] = tempResultMatrix.data
@@ -220,7 +234,19 @@ class VolumePerOperator(_m.Tool()):
                                     _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]
                     with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
                         networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
-                        report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)  
+                        if EMME_VERSION >= (4, 3, 2):
+                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario, num_processors = self.NumberOfProcessors)  
+                        else:
+                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)
+                        tempMatrix = _MODELLER.emmebank.matrix(tempIntermediateMatrix.id)
+                        numpyData = tempMatrix.get_numpy_data(scenario_id = scenario.id)
+                        count = 0 
+                        for i in range(numpyData.shape[0]-1):
+                            if numpyData[i,i] != 0:
+                                numpyData[i,i] = 0
+                                count += 1
+                        print count + "numbers had to be adjusted from negative infinity to 0"
+                        tempMatrix.set_numpy_data(numpyData, scenario_id = scenario.id)                         
                         matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
                         matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)         
                         self.results[scenario.id][filter[1]] =  tempResultMatrix.data

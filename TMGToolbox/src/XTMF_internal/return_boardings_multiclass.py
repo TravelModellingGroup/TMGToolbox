@@ -38,6 +38,7 @@ import os
 from json import loads as _parsedict
 from os.path import dirname
 from os.path import exists
+from multiprocessing import cpu_count
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -117,6 +118,7 @@ class ReturnBoardings(_m.Tool()):
         self.TRACKER.completeTask()
         
         self.TRACKER.startProcess(len(lineBoardings))
+        self.NumberOfProcessors = cpu_count()
 
         allResults = []
         for PersonClass in lineBoardings:
@@ -184,8 +186,10 @@ class ReturnBoardings(_m.Tool()):
                         "constraint": None,
                         "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"
                     }
-
-                    self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec, class_name = PersonClass)
+                    if EMME_VERSION >= (4,3,2):
+                        self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec, class_name = PersonClass, num_processors = self.NumberOfProcessors)
+                    else:
+                        self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec, class_name = PersonClass)
                     
                     results = _util.fastLoadSummedSegmentAttributes(scenario, [ClassBoardings.id])
             
@@ -209,9 +213,10 @@ class ReturnBoardings(_m.Tool()):
                     "constraint": None,
                     "type": "EXTENDED_TRANSIT_NETWORK_RESULTS"
                 }
-
-                self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec)
-                    
+                if EMME_VERSION >= (4,3,2):
+                    self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec, num_processors = self.NumberOfProcessors)
+                else:
+                    self.TRACKER.runTool(networkResultsTool, scenario = scenario, specification = spec)
                 results = _util.fastLoadSummedSegmentAttributes(scenario, [ClassBoardings.id])
             
                 retVal = {}
