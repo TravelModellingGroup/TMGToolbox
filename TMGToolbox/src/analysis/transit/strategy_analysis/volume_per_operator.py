@@ -222,7 +222,6 @@ class VolumePerOperator(_m.Tool()):
                                 if numpyData[i,i] != 0:
                                     numpyData[i,i] = 0
                                     count += 1
-                            print count + "numbers had to be adjusted from negative infinity to 0"
                             tempMatrix.set_numpy_data(numpyData, scenario_id = scenario.id)
                             matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId[key]), scenario=self.Scenario)
                             matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
@@ -245,7 +244,6 @@ class VolumePerOperator(_m.Tool()):
                             if numpyData[i,i] != 0:
                                 numpyData[i,i] = 0
                                 count += 1
-                        print count + "numbers had to be adjusted from negative infinity to 0"
                         tempMatrix.set_numpy_data(numpyData, scenario_id = scenario.id)                         
                         matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
                         matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)         
