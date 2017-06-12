@@ -46,6 +46,10 @@ import numpy as np
 from contextlib import contextmanager
 from contextlib import nested
 from multiprocessing import cpu_count
+from json import loads as _parsedict
+from os.path import dirname
+from copy import deepcopy
+
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -84,6 +88,9 @@ class ExtractTransitODVectors(_m.Tool()):
     xtmf_AggOriginMatrixNumber = _m.Attribute(int)
     xtmf_AggDestinationMatrixNumber = _m.Attribute(int)
     xtmf_AutoODMatrixId = _m.Attribute(int)
+    xtmf_AccessStationRange = _m.Attribute(str)
+    xtmf_ZoneCentroidRange = _m.Attribute(str)
+
 
     NumberOfProcessors = _m.Attribute(int)
     
@@ -146,7 +153,7 @@ class ExtractTransitODVectors(_m.Tool()):
     ##########################################################################################################
         
     def __call__(self, xtmf_ScenarioNumber, LineFilterExpression, xtmf_LineODMatrixNumber,
-                  xtmf_AggOriginMatrixNumber, xtmf_AggDestinationMatrixNumber, xtmf_AutoODMatrixId):
+                  xtmf_AggOriginMatrixNumber, xtmf_AggDestinationMatrixNumber, xtmf_AutoODMatrixId, xtmf_AccessStationRange, xtmf_ZoneCentroidRange):
 
         self.tool_run_msg = ""
         self.TRACKER.reset()
@@ -170,6 +177,10 @@ class ExtractTransitODVectors(_m.Tool()):
         self.AggDestinationMatrixId = "md"+str(xtmf_AggDestinationMatrixNumber)
         _util.initializeMatrix(self.AggDestinationMatrixId, name='aggD', 
                                description= 'Destinations for selected lines', matrix_type= 'DESTINATION')
+        self.AccessStationRange = xtmf_AccessStationRange
+        self.ZoneCentroidRange = xtmf_ZoneCentroidRange
+        #self.AccessStationRangeSplit = xtmf_AccessStationRange.split('-')
+        #self.ZoneCentroidRangeSplit = xtmf_ZoneCentroidRange.split('-')
 
         try:           
             self._Execute()
@@ -207,7 +218,12 @@ class ExtractTransitODVectors(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-                        
+            self.AccessStationRangeSplit = self.AccessStationRange.split('-')
+            self.ZoneCentroidRangeSplit = self.ZoneCentroidRange.split('-')
+            if len(self.ZoneCentroidRangeSplit) == 1:
+                self.ZoneCentroidRangeSplit = (int(self.ZoneCentroidRangeSplit[0]),int(self.ZoneCentroidRangeSplit[0]))
+            if len(self.AccessStationRangeSplit) == 1:
+                self.AccessStationRangeSplit = (int(self.AccessStationRangeSplit[0]),int(self.AccessStationRangeSplit[0]))
             with nested(_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= 'Line Flag'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes'),
@@ -224,18 +240,46 @@ class ExtractTransitODVectors(_m.Tool()):
                     as (lineFlag, auxTransitVolumes, transitVolumes, auxTransitVolumesSecondary, transitVolumesSecondary, origProbMatrix,  
                         destProbMatrix, tempDatOrig, tempDatDest,autoOrigMatrix, autoDestMatrix, tempDatDemand, tempDatDemandSecondary): 
                 demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
+                configPath = dirname(_MODELLER.desktop.project_file_name()) \
+                    + "/Database/STRATS_s%s/config" %self.Scenario 
+                with open(configPath) as reader:
+                    config = _parsedict(reader.readline())
+                    data = deepcopy(config['data'])
+                    strat  = deepcopy(config['strat_files'])
+                    if 'multi_class' in data:
+                        multiclass = "yes"
+                    else:
+                        multiclass = "no"
+                    dataType = data['type']
+                    className = strat[0]["name"]
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
-                with _m.logbook_trace("Running strategy analysis"):    
-                    report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId), scenario=self.Scenario)
+                with _m.logbook_trace("Running strategy analysis"):
+
+                    if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId[className], self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario, class_name=className)
+                    else:
+                        report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario)
+
+
                 with _m.logbook_trace("Calculating WAT demand"):  
-                
-                    matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
+                    if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                        matrixCalc(self._ExpandStratFractions(demandMatrixId[className]), scenario=self.Scenario)
+                    else:
+                        matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
                 with _m.logbook_trace("Calculating DAT demand"):
-                    pathAnalysis(self._BuildPathSpec(lineFlag.id, "1-8999", "9000-9999", transitVolumes.id, 
+                    if self.AccessStationRangeSplit[1] != 0:
+                        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
+                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId[className]), scenario=self.Scenario, class_name=className)
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId[className]), scenario=self.Scenario,class_name=className)
+                        else:
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
                                                      auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)
-                    pathAnalysis(self._BuildPathSpec(lineFlag.id, "9000-9999", "1-8999", transitVolumesSecondary.id, 
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
                                                      auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario)
+
                 with _m.logbook_trace("Sum transit demands"):
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId), scenario=self.Scenario)
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemandSecondary.id, self.LineODMatrixId), scenario=self.Scenario)
@@ -321,7 +365,7 @@ class ExtractTransitODVectors(_m.Tool()):
 
         return spec
 
-    def _BuildStratSpec(self, tripComponentId, demandMatrixId):
+    def _BuildStratSpec(self, tripComponentId, demandMatrixId, minZone, maxZone):
         return {
                 "trip_components": {
                     "boarding": tripComponentId,
@@ -342,8 +386,8 @@ class ExtractTransitODVectors(_m.Tool()):
                 "constraint": {
                         "by_value": None,
                         "by_zone": {
-                            "origins": "1-8999",
-                            "destinations": "1-8999"
+                            "origins": str(minZone) + '-' + str(maxZone),
+                            "destinations": str(minZone) + '-' + str(maxZone)
                         }
                     },
                 "results": {
@@ -398,8 +442,8 @@ class ExtractTransitODVectors(_m.Tool()):
                 "constraint": {
                     "by_value": None,
                     "by_zone": {
-                        "origins": originRange,
-                        "destinations": destinationRange
+                        "origins": str(originRange[0]) + '-' + str(originRange[1]),
+                        "destinations": str(destinationRange[0]) + '-' + str(destinationRange[1])
                     }
                 },
                 "results_from_retained_paths": {

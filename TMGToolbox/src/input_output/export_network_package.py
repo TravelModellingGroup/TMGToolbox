@@ -171,15 +171,13 @@ class ExportNetworkPackage(_m.Tool()):
         with _m.logbook_trace(
                 name="{classname} v{version}".format(classname=self.__class__.__name__, version=self.version),
                 attributes=self._get_logbook_attributes()):
-
+            # Due to the dynamic nature of the selection process, it could happen that attributes are
+            # selected which don't exist in the current scenario. The method checks early to catch
+            # any problems
             if self.ExportAllFlag:
                 self.AttributeIdsToExport = [att.name for att in self.Scenario.extra_attributes()]
 
             self._check_attributes()
-            # Due to the dynamic nature of the selection process, it could happen that attributes are
-            # selected which don't exist in the current scenario. The method checks early to catch
-            # any problems
-
             with _zipfile.ZipFile(self.ExportFile, 'w', _zipfile.ZIP_DEFLATED) as zf, self._temp_file() as temp_folder:
                 version_file = _path.join(temp_folder, "version.txt")
                 with open(version_file, 'w') as writer:
@@ -266,15 +264,14 @@ class ExportNetworkPackage(_m.Tool()):
     def _batchout_turns(self, temp_folder, zf):
         export_file = _path.join(temp_folder, "turns.231")
         if self.Scenario.element_totals['turns'] == 0:
-            self._export_blank_batch_file(export_file, "turns")
+            #self._export_blank_batch_file(export_file, "turns")
             self.TRACKER.completeTask()
         else:
             self.TRACKER.runTool(_export_turns,
                                  export_file=export_file,
                                  scenario=self.Scenario,
                                  export_format='ENG_DATA_FORMAT')
-
-        zf.write(export_file, arcname="turns.231")
+            zf.write(export_file, arcname="turns.231")
 
     @_m.logbook_trace("Exporting Functions")
     def _batchout_functions(self, temp_folder, zf):
@@ -314,9 +311,11 @@ class ExportNetworkPackage(_m.Tool()):
         links.to_csv(link_filepath, index=True)
         zf.write(link_filepath, arcname=_path.basename(link_filepath))
 
-        turns = _pdu.load_turn_dataframe(self.Scenario).loc[:, traffic_result_attributes]
-        turns.to_csv(turn_filepath)
-        zf.write(turn_filepath, arcname=_path.basename(turn_filepath))
+        turns = _pdu.load_turn_dataframe(self.Scenario)
+        if not (turns is None):
+            turns = turns.loc[:, traffic_result_attributes]
+            turns.to_csv(turn_filepath)
+            zf.write(turn_filepath, arcname=_path.basename(turn_filepath))
 
 
     def _batchout_transit_results(self, temp_folder, zf):

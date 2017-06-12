@@ -42,10 +42,12 @@ from contextlib import contextmanager
 from contextlib import nested
 from os.path import exists
 from json import loads as _parsedict
+from multiprocessing import cpu_count
 from os.path import dirname
 import tempfile as _tf
 import shutil as _shutil
 import csv
+import numpy as np
 from re import split as _regex_split
 
 _MODELLER = _m.Modeller()
@@ -111,7 +113,7 @@ class VolumePerOperator(_m.Tool()):
                  "Durham: line=D_____",
                  "Halton: line=H_____",
                  "Hamilton: line=W_____"]
-
+        self.multiclass = False
         self.filtersToCompute = "\n".join(lines)
         self.results = {};     
         
@@ -174,10 +176,17 @@ class VolumePerOperator(_m.Tool()):
 
         with open(filePath, 'wb') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
-            writer.writerow(["Scenario", "Line Filter", "Ridership"])
-            for scenario in sorted(self.results):
-                for lineFilter in sorted(self.results[scenario]):
-                    writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
+            if self.multiclass == False:
+                writer.writerow(["Scenario", "Line Filter", "Ridership"])
+                for scenario in sorted(self.results):
+                    for lineFilter in sorted(self.results[scenario]):
+                        writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
+            elif self.multiclass == True:
+                writer.writerow(["Scenario", "Line Filter", "Class", "Ridership"])
+                for scenario in sorted(self.results):
+                    for lineFilter in sorted(self.results[scenario]):
+                        for EmmeClass in sorted(self.results[scenario][lineFilter]):
+                            writer.writerow([scenario, lineFilter, EmmeClass, self.results[scenario][lineFilter][EmmeClass]])
         
         print "Finished Ridership calculations"
 
@@ -186,26 +195,60 @@ class VolumePerOperator(_m.Tool()):
         if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")      
 
         parsed_filter_list = self._ParseFilterString(self.filtersToCompute)
-
+        self.NumberOfProcessors = cpu_count()
         for scenario in self.Scenarios:
             self.Scenario = _MODELLER.emmebank.scenario(scenario.id)
             self.results[scenario.id] = {}
             
             for filter in parsed_filter_list:
-                
-                managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
-                        _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
-                        _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]        
+                demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
+                if type(demandMatrixId) == type(dict()):
+                    self.multiclass = True
+                    self.results[scenario.id][filter[1]] = {}
+                    for key in demandMatrixId:
+                        managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
+                                    _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
+                                    _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]       
+                        with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
+                            networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
+                            if EMME_VERSION >= (4, 3, 2):
+                                report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key, num_processors = self.NumberOfProcessors)
+                            else:
+                                report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key)
+                            tempMatrix = _MODELLER.emmebank.matrix(tempIntermediateMatrix.id)
+                            numpyData = tempMatrix.get_numpy_data(scenario_id = scenario.id)
+                            count = 0 
+                            for i in range(numpyData.shape[0]-1):
+                                if numpyData[i,i] != 0:
+                                    numpyData[i,i] = 0
+                                    count += 1
+                            tempMatrix.set_numpy_data(numpyData, scenario_id = scenario.id)
+                            matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId[key]), scenario=self.Scenario)
+                            matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
+                            self.results[scenario.id][filter[1]][key] = tempResultMatrix.data
+                else:
+                    self.multiclass = False
+                    managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
+                                    _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
+                                    _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]
+                    with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
+                        networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
+                        if EMME_VERSION >= (4, 3, 2):
+                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario, num_processors = self.NumberOfProcessors)  
+                        else:
+                            report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)
+                        tempMatrix = _MODELLER.emmebank.matrix(tempIntermediateMatrix.id)
+                        numpyData = tempMatrix.get_numpy_data(scenario_id = scenario.id)
+                        count = 0 
+                        for i in range(numpyData.shape[0]):
+                            if numpyData[i,i] != 0:
+                                numpyData[i,i] = 0
+                                count += 1
+                        tempMatrix.set_numpy_data(numpyData, scenario_id = scenario.id)                         
+                        matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
+                        matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)         
+                        self.results[scenario.id][filter[1]] =  tempResultMatrix.data
 
-                with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
-                    networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
-                    demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
-                    report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario)            
-                    matrixCalculator(self._CalcRidership(tempIntermediateMatrix.id, demandMatrixId), scenario=self.Scenario)
-                    matrixAggregation(tempIntermediateMatrix.id, tempResultMatrix.id, agg_op="+", scenario=self.Scenario)
-
-                    self.results[scenario.id][filter[1]] =  tempResultMatrix.data                     
-    
     def assign_line_filter(self, lineFilter, marker):
         return {"result": marker.id,
                     "expression": "1",
@@ -278,14 +321,3 @@ class VolumePerOperator(_m.Tool()):
             filterList.append(strippedParts)
 
         return filterList
-
-    
-        
-
-            
-    
-
-
-
-
-             

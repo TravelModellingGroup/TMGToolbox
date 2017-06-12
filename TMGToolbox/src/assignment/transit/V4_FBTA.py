@@ -1261,7 +1261,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 },
                 "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
             }
-        if EMME_VERSION >= (4,2,9,0):
+        if EMME_VERSION >= (4,3,0):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
         else:
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)           
@@ -1294,7 +1294,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 },
                 "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
             }
-        if EMME_VERSION >= (4,2,9,0):
+        if EMME_VERSION >= (4,3,0):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
         else:
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)           
@@ -1351,7 +1351,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                             },
                             "type": "EXTENDED_TRANSIT_STRATEGY_ANALYSIS"
                         }
-            if EMME_VERSION >= (4,2,9,0):
+            if EMME_VERSION >= (4,3,0):
                 self.TRACKER.runTool(strategyAnalysisTool, analysisSpec, scenario= self.Scenario, num_processors=self.NumberOfProcessors)
             else:
                 self.TRACKER.runTool(strategyAnalysisTool, analysisSpec, scenario= self.Scenario)           

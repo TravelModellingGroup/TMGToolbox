@@ -73,6 +73,7 @@
     <Compile Include="src\assignment\transit\V4_FBTA.py" />
     <Compile Include="src\common\geometry.py" />
     <Compile Include="src\common\network_editing.py" />
+    <Compile Include="src\common\pandas_utils.py" />
     <Compile Include="src\common\spatial_index.py" />
     <Compile Include="src\common\TMG_tool_page_builder.py" />
     <Compile Include="src\common\utilities.py" />
@@ -84,6 +85,9 @@
     <Compile Include="src\input_output\import_network_package.py" />
     <Compile Include="src\input_output\import_network_update.py" />
     <Compile Include="src\input_output\merge_functions.py" />
+    <Compile Include="src\input_output\export_network_shapefile.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\license.py" />
     <Compile Include="src\network_editing\calculate_station_frequencies.py" />
     <Compile Include="src\network_editing\centroid_connectors\CCGEN.py" />
@@ -92,6 +96,18 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\network_editing\centroid_connectors\validate_connectors.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\GTFS_utilities\GTFS_EMME_node_map.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\GTFS_utilities\node_mapping.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\GTFS_utilities\shp_emme_map.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\attribute_changer.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\network_editing\remove_extra_links.py">
@@ -131,6 +147,9 @@
     <Compile Include="src\network_editing\transit_fare_hypernetworks\calculate_hypernetwork_size.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\generate_hypernetwork_from_schema.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\Hypernetwork_Volume_Importer.py" />
+    <Compile Include="src\network_editing\transit_fare_hypernetworks\generate_hypernetwork_from_schema_multiclass.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\tool_list.py" />
     <Compile Include="src\XTMF_internal\apply_batch_line_edits.py" />
     <Compile Include="src\XTMF_internal\attach_centroids_to_nodes.py">

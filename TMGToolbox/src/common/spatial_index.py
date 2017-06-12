@@ -369,7 +369,7 @@ class GridIndex():
                 retval.add((col, row))
         return retval
     
-    def _index_cirlce(self, center_x, center_y, radius):
+    def _index_circle(self, center_x, center_y, radius):
         center_x, center_y, radius = float(center_x), float(center_y), float(radius)
         
         x0, x1 = center_x - radius, center_x + radius
@@ -535,6 +535,25 @@ class GridIndex():
     #------------------------------------------------------------------------------
     #---QUERY
     
+    def querycell(self, col, row):
+        '''
+        Queries a single cell. 
+        
+        Args:
+            - col: the column number
+            - row: the row number
+        
+        All 'query' functions check the grid for the contents of all of the cells
+        intersected by the given geometry. THERE IS NO GURANATEE that the returned
+        contents intersect the given geometry, merely that they intersect the CELLS
+        that intersect the given geometry. Tests for containment, intersection,
+        overlap, etc. (i.e. DE-9IM relations) must be done separately.
+        '''
+        address = (col, row)
+        if address in self._grid:
+            return set(self._grid[address]) #Return a copy of the set
+        return set()
+
     def queryxy(self, x, y):
         '''
         Queries a single point. The point does not have to overlap the grid.
@@ -762,7 +781,7 @@ class GridIndex():
         
         retval = set()
         
-        for address in self._index_cirlce(x, y, radius):
+        for address in self._index_circle(x, y, radius):
             if address in self._grid:
                 retval |= self._grid[address]
         return retval
@@ -786,49 +805,36 @@ class GridIndex():
         self._check_x(x)
         self._check_y(y)
         
-        centerCol, centerRow = self._index_point(x, y)
-
+        originCol, originRow = self._index_point(x, y)
         # if the first grid cell returns points, find the nearest one.
-        candidates = self._grid[centerCol,centerRow]
+        candidates = self.queryxy(x,y)
         if len(candidates) > 0: 
             nearest, minDistance = find_nearest(candidates, x, y)
             candidates = self.queryCircle(x,y,minDistance)
             nearest, minDistance = find_nearest(candidates, x, y)
-        col0 = max(1, centerCol - 1)
-        col1 = min(self.maxCol, centerCol + 1)
-        row0 = max(1, centerRow - 1)
-        row1 = min(self.maxRow, centerRow + 1)
-        
-        retval = set()
-        while col0 > 1 or col1 < self.maxCol or row0 > 1 or row1 < self.maxRow:
-            
-            for col in nrange(col0 + 1, col1): retval |= self._grid[col, row1]
-            for row in nrange(row1 - 1 , row0): retval |= self._grid[col1, row]
-            for col in nrange(col1 - 1 , col0): retval |= self._grid[col, row0]
-            for row in nrange(row0 + 1, row1): retval |= self._grid[col0, row]
-            
-            if len(retval) > 0: 
-                nearest, minDistance = find_nearest(retval, x, y)
-                candidates = self.queryCircle(x,y,minDistance)
-                nearest, minDistance = find_nearest(candidates, x, y)
-                return [nearest]
-
-            #expand the search box
-            col0 = max(1, col0 -1)
-            col1 = min(self.maxCol, col1 + 1)
-            row0 = max(1, row0 -1)
-            row1 = min(self.maxRow, row1 + 1)
-        
-        for col in nrange(2, self.maxCol): retval |= self._grid[col, self.maxRow]
-        for row in nrange(self.maxRow - 1, 1): retval |= self._grid[self.maxCol, row]
-        for col in nrange(self.maxCol - 1, 1): retval |= self._grid[col, 1]
-        for row in nrange(2, self.maxRow): retval |= self._grid[1, row]
-        
-
-        nearest, minDistance = find_nearest(retval, x, y)
-        candidates = self.queryCircle(x,y,minDistance)
-        nearest, minDistance = find_nearest(candidates, x, y)
-        return [nearest]
+            return [nearest]
+        else:
+            i = 1
+            checked = set()
+            candidates = set()
+            while ((originCol-i)>0) and ((originRow-i)>0) and ((originCol+i)<=self.maxCol) and ((originRow+i)<=self.maxRow): 
+                for j in nrange(originCol-i, originCol+i+1):
+                    for k in nrange(originRow-i, originRow+i+1):
+                        #candidates.update(self.querycell(j,k))
+                        if (j,k) not in checked:
+                            candidates.update(self.querycell(j,k))
+                            checked.add((j,k))
+                if len(candidates) > 0:
+                    nearest, minDistance = find_nearest(candidates, x, y)
+                    candidates = self.queryCircle(x,y,minDistance)
+                    nearest, minDistance = find_nearest(candidates, x, y)
+                    if nearest==None:
+                        i+=1
+                    else:
+                        return [nearest]
+                else:
+                    i+=1
+            return ["Nothing Found"]
 
 def find_nearest( candidates, x, y ):
     nearest = None
@@ -860,7 +866,7 @@ def find_nearest( candidates, x, y ):
         if distance < minDistance:
             minDistance = distance
             nearest = candidate
-            
     return nearest, minDistance
+
 
 

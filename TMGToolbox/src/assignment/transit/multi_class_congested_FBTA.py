@@ -1,6 +1,6 @@
 #Embedded file name: C:/Users/Monika/Documents/Visual Studio 2013/Projects/PythonApplication1/PythonApplication1/PythonApplication1.py
 """
-    Copyright 2016 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -27,6 +27,7 @@ _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 congestedAssignmentTool = _MODELLER.tool('inro.emme.transit_assignment.congested_transit_assignment')
+extendedAssignmentTool =_MODELLER.tool('inro.emme.transit_assignment.extended_transit_assignment')
 networkCalcTool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 matrixResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix_results')
 strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
@@ -89,6 +90,7 @@ class MultiClassTransitAssignment(_m.Tool()):
     xtmf_FareMatrixString = _m.Attribute(str)
     xtmf_CongestionMatrixString = _m.Attribute(str)
     xtmf_PenaltyMatrixString = _m.Attribute(str)
+    xtmf_ImpedanceMatrixString = _m.Attribute(str)
     
     #-----
 
@@ -102,7 +104,7 @@ class MultiClassTransitAssignment(_m.Tool()):
     xtmf_ScenarioNumber = _m.Attribute(int)
     xtmf_DemandMatrixString = _m.Attribute(str)
     xtmf_NameString = _m.Attribute(str)
-    
+    xtmf_congestedAssignment=_m.Attribute(bool)
 
     xtmf_OriginDistributionLogitScale = _m.Attribute(float)
     xtmf_WalkDistributionLogitScale = _m.Attribute(float)
@@ -240,8 +242,8 @@ class MultiClassTransitAssignment(_m.Tool()):
         HeadwayFractionAttributeId, xtmf_LinkFareAttributeIdString, xtmf_SegmentFareAttributeIdString, \
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
-        xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, \
-        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString):
+        xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, xtmf_ImpedanceMatrixString, \
+        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, xtmf_congestedAssignment):
         
         if EMME_VERSION < (4, 1, 5):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
@@ -256,6 +258,7 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.Iterations = Iterations
         self.NormGap = NormGap
         self.RelGap = RelGap
+        self.xtmf_congestedAssignment = xtmf_congestedAssignment
         self.ClassNames = [x for x in xtmf_NameString.split(',')]
         
         #class-specific inputs
@@ -268,10 +271,10 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
 
 
-        if xtmf_WalkPerceptionString:
+        if xtmf_WalkPerceptionString != None:
             xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.replace('::', '\n')
             self.WalkPerceptionList = xtmf_WalkPerceptionString.split(';')
-        if xtmf_WalkPerceptionAttributeIdString:
+        if xtmf_WalkPerceptionAttributeIdString != None:
             self.WalkAttributeIdList = xtmf_WalkPerceptionAttributeIdString.split(',')
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
@@ -317,6 +320,8 @@ class MultiClassTransitAssignment(_m.Tool()):
             self.CongestionMatrixList = xtmf_CongestionMatrixString.split(',')
         if xtmf_PenaltyMatrixString:
             self.PenaltyMatrixList = xtmf_PenaltyMatrixString.split(',')
+        if xtmf_ImpedanceMatrixString:
+            self.ImpedanceMatrixList = xtmf_ImpedanceMatrixString.split(',')
         print 'Running Multi-Class Transit Assignment'
         self._Execute()
         print 'Done running transit assignment'
@@ -355,6 +360,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                     _util.initializeMatrix(id=self.PenaltyMatrixList[i], description='Transit total boarding penalties for %s' % self.ClassNames[-1])
                 else:
                     self.PenaltyMatrixList[i] = None
+                if self.ImpedanceMatrixList[i] != 'mf0':
+                    _util.initializeMatrix(id=self.ImpedanceMatrixList[i], description='Transit Perceived Travel times for %s' % self.ClassNames[-1])
+                else:
+                    self.ImpedanceMatrixList[i] = None
 
             with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
                 self.TRACKER.startProcess(3)
@@ -369,7 +378,12 @@ class MultiClassTransitAssignment(_m.Tool()):
                 self.TRACKER.completeSubtask()
                 spec = self._GetBaseAssignmentSpec()
 
-                self.TRACKER.runTool(congestedAssignmentTool, transit_assignment_spec=spec, congestion_function=self._GetFuncSpec(), stopping_criteria=self._GetStopSpec(), class_names=self.ClassNames, scenario=self.Scenario)
+                if self.xtmf_congestedAssignment==True:
+                    self.TRACKER.runTool(congestedAssignmentTool, transit_assignment_spec=spec, congestion_function=self._GetFuncSpec(), stopping_criteria=self._GetStopSpec(), class_names=self.ClassNames, scenario=self.Scenario)
+                else:
+                    for i in range(0, len(self.ClassNames)):
+                        specUncongested = self._GetBaseAssignmentSpecUncongested(i)
+                        self.TRACKER.runTool(extendedAssignmentTool, specification=specUncongested, class_name=self.ClassNames[i], scenario=self.Scenario, add_volumes=(i!=0))
                 self._ExtractOutputMatrices()
 
     def _GetAtts(self):
@@ -470,7 +484,7 @@ class MultiClassTransitAssignment(_m.Tool()):
             if component.isspace():
                 continue
             parts = component.split(':')
-            if len(parts) < 3:
+            if len(parts) !=3 :
                 msg = 'Error parsing penalty and filter string: Separate ttf, perception and exponent with colons ttf:perception:exponent'
                 msg += '. [%s]' % component
                 raise SyntaxError(msg)
@@ -539,16 +553,17 @@ class MultiClassTransitAssignment(_m.Tool()):
     def _GetBaseAssignmentSpec(self):
 
         farePerception = []
+        baseSpec = []
         for i in range(0, len(self.DemandMatrixList)):
             
             if self.ClassFarePerceptionList[i] == 0.0:
                 farePerception.append(0.0)
             else:
                 farePerception.append( 60.0 / self.ClassFarePerceptionList[i])
-        baseSpec = [ {
-            'modes': self.ClassModeList[i],
-            'demand': self.DemandMatrixList[i].id,
-            'waiting_time': {
+            baseSpec.append({
+                'modes': self.ClassModeList[i],
+                'demand': self.DemandMatrixList[i].id,
+                'waiting_time': {
                 'headway_fraction': self.HeadwayFractionAttributeId,
                 'effective_headways': self.EffectiveHeadwayAttributeId,
                 'spread_factor': 1,
@@ -564,7 +579,7 @@ class MultiClassTransitAssignment(_m.Tool()):
                         'perception_factor': 1},
                     'on_lines': None},
             'in_vehicle_time': {
-                'perception_factor': 1},
+                'perception_factor': 'us2'},
             'in_vehicle_cost': {
                 'penalty': self.SegmentFareAttributeIdList[i],
                 'perception_factor': farePerception[i]},
@@ -575,12 +590,11 @@ class MultiClassTransitAssignment(_m.Tool()):
                 'perception_factor': farePerception[i]},
             'connector_to_connector_path_prohibition': None,
             'od_results': {
-                'total_impedance': None},
+                'total_impedance': self.ImpedanceMatrixList[i]},
             'flow_distribution_between_lines': {
                 'consider_travel_time': self._considerTotalImpedance},
             'save_strategies': True,
-            'type': 'EXTENDED_TRANSIT_ASSIGNMENT'} for i in range(0, len(self.DemandMatrixList)) ]
-        
+            'type': 'EXTENDED_TRANSIT_ASSIGNMENT'})
         for i in range(0, len(baseSpec)):
             if self._useLogitConnectorChoice:
                 baseSpec[i]['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
@@ -628,7 +642,85 @@ class MultiClassTransitAssignment(_m.Tool()):
                 }
             ]
         return baseSpec
-
+    def _GetBaseAssignmentSpecUncongested(self, index):
+        if self.ClassFarePerceptionList[index] == 0.0:
+                farePerception = 0.0
+        else:
+                farePerception = 60.0 / self.ClassFarePerceptionList[index]
+        baseSpec = {
+                'modes': self.ClassModeList[index],
+                'demand': self.DemandMatrixList[index].id,
+                'waiting_time': {
+                'headway_fraction': self.HeadwayFractionAttributeId,
+                'effective_headways': self.EffectiveHeadwayAttributeId,
+                'spread_factor': 1,
+                'perception_factor': self.ClassWaitPerceptionList[index]},
+                'boarding_time': {
+                    'at_nodes': None,
+                    'on_lines': {
+                        'penalty': 'ut3',
+                        'perception_factor': self.ClassBoardPerceptionList[index]}},
+                'boarding_cost': {
+                    'at_nodes': {
+                        'penalty': 0,
+                        'perception_factor': 1},
+                    'on_lines': None},
+            'in_vehicle_time': {
+                'perception_factor': 'us2'},
+            'in_vehicle_cost': {
+                'penalty': self.SegmentFareAttributeIdList[index],
+                'perception_factor': farePerception},
+            'aux_transit_time': {
+                'perception_factor': self.WalkAttributeIdList[index]},
+            'aux_transit_cost': {
+                'penalty': self.LinkFareAttributeIdList[index],
+                'perception_factor': farePerception},
+            'connector_to_connector_path_prohibition': None,
+            'od_results': {
+                'total_impedance': self.ImpedanceMatrixList[index]},
+            'flow_distribution_between_lines': {
+                'consider_travel_time': self._considerTotalImpedance},
+            'save_strategies': True,
+            'type': 'EXTENDED_TRANSIT_ASSIGNMENT'}
+        if self._useLogitConnectorChoice:
+            baseSpec['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
+                                                      'truncation': self._connectorLogitTruncation}},
+                 'by_fixed_proportions': None}
+        if EMME_VERSION >= (4, 1):
+            baseSpec['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
+            if self._useLogitAuxTrChoice:
+                raise NotImplementedError()
+                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': 'ui1',
+                                                  'aux_transit_choice_set': 'BEST_LINK',
+                                                  'logit_parameters': {'scale': self.xtmf_WalkDistributionLogitScale,
+                                                                       'truncation': 0.05}}}
+        if EMME_VERSION >= (4,2,1):
+            modeList = []
+            partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
+            #if all modes are selected for class, get all transit modes for journey levels
+            if self.ClassModeList[index] == ['*']:
+                for mode in partialNetwork.modes():
+                    if mode.type == 'TRANSIT': 
+                        modeList.append({"mode": mode.id, "next_journey_level": 1})
+            baseSpec["journey_levels"] = [
+                    {
+                        "description": "Walking",
+                        "destinations_reachable": False,
+                        "transition_rules": modeList,
+                        "boarding_time": None,
+                        "boarding_cost": None,
+                        "waiting_time": None
+                    },
+                    {
+                        "description": "Transit",
+                        "destinations_reachable": True,
+                        "transition_rules": modeList,
+                        "boarding_time": None,
+                        "boarding_cost": None,
+                        "waiting_time": None
+                    }
+            ]
+        return baseSpec
     def _GetFuncSpec(self):
         parameterList = self._ParseExponentString()
         partialSpec = 'import math \ndef calc_segment_cost(transit_volume, capacity, segment): '
@@ -674,9 +766,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                     finally:
                         pass
 
-            if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag or self.CongestionMatrixList[i]:
-                with congestionMatrixManager() as congestionMatrix:
-                    self._ExtractCongestionMatrix(congestionMatrix.id, i)
+            if self.xtmf_congestedAssignment==True:
+                if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag or self.CongestionMatrixList[i]:
+                    with congestionMatrixManager() as congestionMatrix:
+                        self._ExtractCongestionMatrix(congestionMatrix.id, i)
                     if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag:
                         self._FixRawIVTT(congestionMatrix.id, i)
             if self.FareMatrixList[i]:
@@ -714,10 +807,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                     'total_boardings': None,
                     'total_alightings': None},
                 'type': 'EXTENDED_TRANSIT_STRATEGY_ANALYSIS'}
-        if EMME_VERSION >= (4,2,9,0):
+        if EMME_VERSION >= (4,3,2):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i], num_processors=self.NumberOfProcessors)
         else:
-            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)       
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])   
         
 
     def _ExtractCongestionMatrix(self, congestionMatrixId, i):
@@ -730,7 +823,7 @@ class MultiClassTransitAssignment(_m.Tool()):
          'selected_demand_and_transit_volumes': {'sub_strategies_to_retain': 'ALL',
                                                  'selection_threshold': {'lower': -999999,
                                                                          'upper': 999999}},
-         'analyzed_demand': None,
+         'analyzed_demand': self.DemandMatrixList[i].id,
          'constraint': None,
          'results': {'strategy_values': congestionMatrixId,
                      'selected_demand': None,
@@ -739,10 +832,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                      'total_boardings': None,
                      'total_alightings': None},
          'type': 'EXTENDED_TRANSIT_STRATEGY_ANALYSIS'}
-        if EMME_VERSION >= (4,2,9,0):
+        if EMME_VERSION >= (4,3,2):
             self.TRACKER.runTool(strategyAnalysisTool, spec, scenario=self.Scenario, class_name=self.ClassNames[i], num_processors=self.NumberOfProcessors)
         else:
-            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario)       
+            self.TRACKER.runTool(strategyAnalysisTool, spec, scenario= self.Scenario, class_name=self.ClassNames[i])
 
     def _FixRawIVTT(self, congestionMatrix, i):
         expression = '{mfivtt} - {mfcong}'.format(mfivtt=self.InVehicleTimeMatrixList[i], mfcong=congestionMatrix)
