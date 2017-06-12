@@ -42,7 +42,7 @@ _pdu = _MODELLER.module('tmg.common.pandas_utils')
 
 
 class ExportNetworkPackage(_m.Tool()):
-    version = '1.2.0'
+    version = '1.2.1'
     tool_run_msg = ""
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
@@ -286,7 +286,7 @@ class ExportNetworkPackage(_m.Tool()):
 
         extra_attributes = [self.Scenario.extra_attribute(id_) for id_ in self.AttributeIdsToExport]
         types = set([att.type.lower() for att in extra_attributes])
-        
+
         self.TRACKER.runTool(_export_attributes, extra_attributes,
                              temp_folder,
                              field_separator=',',
