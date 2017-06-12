@@ -47,7 +47,7 @@ _bank = _MODELLER.emmebank
 
 class ImportBinaryMatrix(_m.Tool()):
     
-    version = '0.0.1'
+    version = '0.0.2'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -88,7 +88,7 @@ class ImportBinaryMatrix(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name= 'ImportFile',
                            window_type= 'file',
-                           file_filter= '*.emxd *.mtx',
+                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx\nAll files (*.*)",
                            title= "Import File")
         
         pb.add_select_matrix(tool_attribute_name= 'MatrixId',
