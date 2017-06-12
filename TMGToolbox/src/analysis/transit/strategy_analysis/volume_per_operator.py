@@ -240,7 +240,7 @@ class VolumePerOperator(_m.Tool()):
                         tempMatrix = _MODELLER.emmebank.matrix(tempIntermediateMatrix.id)
                         numpyData = tempMatrix.get_numpy_data(scenario_id = scenario.id)
                         count = 0 
-                        for i in range(numpyData.shape[0]-1):
+                        for i in range(numpyData.shape[0]):
                             if numpyData[i,i] != 0:
                                 numpyData[i,i] = 0
                                 count += 1
