@@ -92,6 +92,7 @@ class ReturnBoardings(_m.Tool()):
         
         self.xtmf_LineAggregationFile = xtmf_LineAggregationFile
         self.xtmf_OutputDirectory = xtmf_OutputDirectory
+        self.NumberOfProcessors = cpu_count()
         #self.xtmf_CheckAggregationFlag = xtmf_CheckAggregationFlag
         
         try:
@@ -118,7 +119,7 @@ class ReturnBoardings(_m.Tool()):
         self.TRACKER.completeTask()
         
         self.TRACKER.startProcess(len(lineBoardings))
-        self.NumberOfProcessors = cpu_count()
+        
 
         allResults = []
         for PersonClass in lineBoardings:

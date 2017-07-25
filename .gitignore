@@ -194,3 +194,7 @@ GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
 /TMGToolbox/Deploy.bat
+/TMGToolbox/src/network_editing/GTFS_utilities/clean_GTFS_with_stops.py
+/TMGToolbox/src/network_editing/GTFS_utilities/clean_GTFS_with_stops.py
+/TMGToolbox/src/network_editing/attribute_changer.py
+/TMGToolbox/src/network_editing/GTFS_utilities/clean_GTFS_with_stops.py
