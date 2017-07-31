@@ -256,10 +256,10 @@ class MultiClassRoadAssignment(_m.Tool()):
                         with _m.logbook_trace("Calculating peak hour matrix"):  #For each class
                             for i in range(len(self.Demand_List)):
                                 if EMME_VERSION >= (4,2,1):
-                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i]), 
+                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i]), scenario = self.Scenario, 
                                                    num_processors=self.NumberOfProcessors)
                                 else:
-                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id))                        
+                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id), scenario = self.Scenario)                        
                             self._tracker.completeSubtask()
                             
                         
@@ -355,6 +355,48 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split,\
                                                             Mode_List_for_attributes, costAttribute, attribute, matrices)
                                 report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
+                                  
+                            '''analysisAttributes = []
+                            analysisMatrices = []
+                            for i in range(len(self.Mode_List_Split)):
+                                analysisAttributes.append([])
+                                analysisMatrices.append([])
+                            for i in range(len(self.CostMatrixId)):
+                                if self.CostMatrixId[i] != None:
+                                    analysisAttributes[i].append(costAttribute[i].id)
+                                    analysisMatrices[i].append(self.CostMatrixId[i])
+                            for i in range(len(self.TollsMatrixId)):
+                                if self.TollsMatrixId[i] != None:
+                                    analysisAttributes[i].append(self.LinkTollAttributeId[i])
+                                    analysisMatrices[i].append(self.TollsMatrixId[i])
+                            for i in range(len(self.aggAttributesClass)):
+                                for j in range(len(self.aggAttributesClass[i])):
+                                    if self.aggAttributesClass[i][j] != None:
+                                        analysisAttributes[i].append(self.aggAttributesClass[i][j])
+                                        analysisMatrices[i].append(self.aggAttributesClassMatrix[i][j])
+                            spec = self._getSOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split, \
+                                Mode_List_for_attributes, costAttribute, analysisAttributes, analysisMatrices)
+                            report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
+                            x = 0                            
+                            for i in range(len(self.TimesMatrixId)):
+                                if self.TimesMatrixId[i] != None:
+                                    analysisAttributes[i].append(self.TimesMatrixId[i]) 
+                                    analysisMatrices[i].append(self.timeAttribute[i].id)
+                                    x = 1
+                            if x == 1:
+                                with _m.logbook_trace("Calculating link time"): #Do for each class 
+                                    for i in range(len(self.Mode_List_Split)):
+                                        networkCalculationTool(self._getSaveAutoTimesSpec(timeAttribute[i].id), scenario=self.Scenario)
+                                        self._tracker.completeSubtask()
+                                analysisAttributes = []
+                                analysisMatrices = []
+                                for i in range(len(timeAttribute)):
+                                    analysisAttributes.append(timeAttribute[i].id)  
+                                    analysisMatrices.append(self.TimesMatrixId[i])
+                                spec = self._getSOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split, \
+                                    Mode_List_for_attributes, costAttribute, analysisAttributes, analysisMatrices)
+                                report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)'''
+
                             stoppingCriterion = report['stopping_criterion']
                             iterations = report['iterations']
                             if len(iterations) > 0: finalIteration = iterations[-1]
@@ -538,7 +580,7 @@ class MultiClassRoadAssignment(_m.Tool()):
     def _getTransitBGSpec(self):
         return {
                 "result": "@tvph",
-                "expression": "(60 / hdw) * (vauteq) * (ttf == 3)",
+                "expression": "(60 / hdw) * (vauteq) * (ttf >= 3)",
                 "aggregation": "+",
                 "selections": {
                                 "link": "all",
@@ -693,6 +735,88 @@ class MultiClassRoadAssignment(_m.Tool()):
         SOLA_spec['classes'] = SOLA_Class_Generator
 
         return SOLA_spec
+
+    def _getSOLASpec(self, peakHourMatrixId, appliedTollFactor, modeList, \
+            linkVolumeAttributes, costAttribute, attributeList, matrixIdList):
+
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 1, 1)
+
+        spec = {
+                "type": "SOLA_TRAFFIC_ASSIGNMENT",
+                "classes":[],
+                "path_analysis": None,
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "performance_settings": {
+                    "number_of_processors": numberOfPocessors
+                },
+                "background_traffic": None,
+                "stopping_criteria": {
+                    "max_iterations": self.Iterations,
+                    "relative_gap": self.rGap,
+                    "best_relative_gap": self.brGap,
+                    "normalized_gap": self.normGap
+                }
+            }
+        SolaClasses = []
+        for i in range(len(modeList)):
+            SolaPathAnalysis = []
+            for j in range(len(attributeList)):
+                if attributeList[i][j] != None:
+                    path = {
+                            "link_component": attributeList[i][j],
+                            "turn_component": None,
+                            "operator": "+",
+                            "selection_threshold": {
+                                "lower": None,
+                                "upper": None
+                                },
+                            "path_to_od_composition": {
+                                "considered_paths": "ALL",
+                                "multiply_path_proportions_by": {
+                                    "analyzed_demand": False,
+                                    "path_value": True
+                                    },
+                                },
+                            "analysis": {
+                                "analyzed_demand": None,
+                                "results": {
+                                    "od_values": matrixIdList[i][j],
+                                    "selected_link_volumes": None,
+                                    "selected_turn_volumes": None
+                                    }
+                                }       
+                            }
+                    SolaPathAnalysis.append(path)
+            if len(SolaPathAnalysis) == 0:
+                SolaPathAnalysis = None
+            SolaClass = {
+                "mode": modeList[i],
+                "demand": peakHourMatrixId[i].id,
+                "generalized_cost": {
+                    "link_costs": costAttribute[i].id,
+                    "perception_factor": appliedTollFactor[i]
+                },
+                "results": {
+                    "link_volumes": linkVolumeAttributes[i],
+                    "turn_volumes": None,
+                    "od_travel_times": {
+                        "shortest_paths": None
+                    }
+                },
+                "path_analysis": SolaPathAnalysis,
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+            }
+            SolaClasses.append(SolaClass)
+        spec['classes'] = SolaClasses
+        return spec
+
+
+
 
     def _getSaveAutoTimesSpec(self, timeAttribute):
         return {

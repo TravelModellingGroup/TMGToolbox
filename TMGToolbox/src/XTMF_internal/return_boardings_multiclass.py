@@ -89,10 +89,10 @@ class ReturnBoardings(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         if not scenario.has_transit_results:
             raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber)              
-        
+        self.NumberOfProcessors = cpu_count()
         self.xtmf_LineAggregationFile = xtmf_LineAggregationFile
         self.xtmf_OutputDirectory = xtmf_OutputDirectory
-        self.NumberOfProcessors = cpu_count()
+        
         #self.xtmf_CheckAggregationFlag = xtmf_CheckAggregationFlag
         
         try:
