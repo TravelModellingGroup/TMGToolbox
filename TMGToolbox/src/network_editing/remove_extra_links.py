@@ -165,7 +165,7 @@ class RemoveExtraLinks(_m.Tool()):
 
         for modechar in transferModeString:
             if self.BaseNetwork.mode(modechar):
-                self.TransferModeList.append (self.BaseNetwork.mode(modechar))
+                self.TransferModeList.append(self.BaseNetwork.mode(modechar))
             else:
                 raise Exception ("Transfer mode %s was not found in the network!" %modechar)
 
@@ -286,8 +286,8 @@ class RemoveExtraLinks(_m.Tool()):
 
         #create transfer mode id string
         transfer_modes = set()
-        for mode in self.TransferModeList:
-            transfer_modes.add(network.mode(mode.id))
+        for m in self.TransferModeList:
+            transfer_modes.add(network.mode(m.id))
         for link in network.links():
             linkmodes = link.modes
             #check if link has at least one transfer mode
@@ -304,8 +304,12 @@ class RemoveExtraLinks(_m.Tool()):
                         for mode in in_link.modes:
                             if mode.type != 'TRANSIT' and mode not in transfer_modes:
                                 start_road = True
-                #check if start node has transit stops
+                    #check if start node is end of line stop
+                    for segment in in_link.segments():
+                        if segment.line.segment(str(start_node.number) + "-0") != False:
+                            start_stop = True
                 for out_link in start_node.outgoing_links():
+                    #check if start node has transit stops
                     for segment in out_link.segments():
                         if segment.allow_boardings or segment.allow_alightings:
                             start_stop = True
