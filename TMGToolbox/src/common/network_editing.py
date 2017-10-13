@@ -26,6 +26,7 @@ _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
 _geolib = _MODELLER.module('tmg.common.geometry')
 COORD_FACTOR = _MODELLER.emmebank.coord_unit_length
+EMME_VERSION = _util.getEmmeVersion(tuple) 
 
 
 class Face(_m.Tool()):
@@ -624,8 +625,12 @@ def mergeLinks(node, deleteStop= False, vertex= True, linkAggregators= {}, segme
             newLink = _mergeLinkPair(network, link1, link2, linkAggregators, createdLinks)
             
             #Optionally insert the deleted node as a vertex in the merged link
-            if vertex:
-                newLink.vertices.insert(len(link1.vertices), (node.x, node.y))
+            if vertex == True:
+                verticesList = newLink.vertices
+                verticesList1 = link1.vertices
+                verticesList.insert(len(verticesList1), (node.x, node.y))
+                newLink.vertices = verticesList
+                    #newLink.vertices.insert(len(link1.vertices), (node.x, node.y))
         
         for line, segmentNumbersToRemove in lineQueue.iteritems():
             _mergeLineSegments(network, line, segmentNumbersToRemove, segmentAggregators, lineRenamingMap)
@@ -735,7 +740,16 @@ def _mergeLinkPair(network, link1, link2, linkAggregators, createdLinks):
         
         newVal = func(attName, link1, link2)
         newLink[attName] = cast(newVal)
-    
+
+    #create link vertices
+    vertices_list_link1 = link1.vertices
+    vertices_list_link2 = link2.vertices
+    vertices_list_newLink = []
+    for vertex in vertices_list_link1:
+        vertices_list_newLink.append(vertex)
+    for vertex in vertices_list_link2:
+        vertices_list_newLink.append(vertex)
+    newLink.vertices = vertices_list_newLink
     return newLink
 
 def _mergeLineSegments(network, line, segmentNumbersToRemove, segmentAggregators, lineRenamingMap):
