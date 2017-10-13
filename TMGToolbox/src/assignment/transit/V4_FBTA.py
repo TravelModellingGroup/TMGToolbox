@@ -1011,13 +1011,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             networkCalcTool(spec, self.Scenario)
         
         with _m.logbook_trace("Assigning walk time perception factors"):
-            applySelection(self.WalkPerceptionToronto, "i=10000,20000 or j=10000,20000 or i=97000,98000 or j=97000,98000")
-            applySelection(self.WalkPerceptionNonToronto, "i=20000,90000 or j=20000,90000")
+            applySelection(self.WalkPerceptionToronto, "i=10000,19999 or j=10000,19999 or i=97000,98000 or j=97000,98000")
+            applySelection(self.WalkPerceptionNonToronto, "i=20000,91999 or j=20000,91999")
             applySelection(self.WalkPerceptionPD1, "type=101")
             applySelection(self.WalkPerceptionTorontoConnectors, "i=0,1000 or j=0,1000")
-            applySelection(self.WalkPerceptionNonTorontoConnectors, "i=1000,7000 or j=1000,7000")
+            applySelection(self.WalkPerceptionNonTorontoConnectors, "i=1001,7000 or j=1001,7000")
             applySelection(1, "mode=t and i=97000,98000 and j=97000,98000")
-            applySelection(0, "i=9700,10000 or j=9700,10000")
+            applySelection(0, "i=9700,9999 or j=9700,9999")
     
     def _GetBaseAssignmentSpec(self):
         
