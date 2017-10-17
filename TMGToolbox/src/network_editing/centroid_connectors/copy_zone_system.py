@@ -267,15 +267,15 @@ class CopyZoneSystem2(_m.Tool()):
         self.MatchOption = int(self.MatchOption)
         
         try:
-            if self.FromEmmebankPath == None: raise NullPointerException("Source emmebank not specified")
-            if self.FromScenarioId == None: raise NullPointerException("Source scenario not specified")
+            if self.FromEmmebankPath is None: raise NullPointerException("Source emmebank not specified")
+            if self.FromScenarioId is None: raise NullPointerException("Source scenario not specified")
             
             if self.MatchOption == 1:
-                if self.CoordinateTolerance == None: raise NullPointerException("Coordinate tolerance not specified")
+                if self.CoordinateTolerance is None: raise NullPointerException("Coordinate tolerance not specified")
             else:
-                if self.LinkLengthTolerance == None: raise NullPointerException("Link length tolerance not specified")
+                if self.LinkLengthTolerance is None: raise NullPointerException("Link length tolerance not specified")
             
-            if self.ClearTargetZonesFlag == None: self.ClearTargetZonesFlag = False
+            if self.ClearTargetZonesFlag is None: self.ClearTargetZonesFlag = False
             
             self._Execute()
         except Exception, e:
@@ -298,7 +298,7 @@ class CopyZoneSystem2(_m.Tool()):
                 sourceBank = Emmebank(self.FromEmmebankPath)
                 try:
                     sourceScenario = sourceBank.scenario(self.FromScenarioId)
-                    if sourceScenario == None:
+                    if sourceScenario is None:
                         #Check, because the scenario could've been deleted in between the time
                         #that the list of scenarios was extracted, and the time that this tool
                         #is running
@@ -439,7 +439,7 @@ class CopyZoneSystem2(_m.Tool()):
             source_jNodeId = connector.j_node.number
             target_jNode = targetNetwork.node(source_jNodeId)
             
-            if target_jNode == None:
+            if target_jNode is None:
                 uncopiedConnectors.append((connector, "No match (ID)"))
                 return None
             
@@ -477,7 +477,7 @@ class CopyZoneSystem2(_m.Tool()):
                     target_jNode = node
                     minDistance = d
             
-            if target_jNode == None:
+            if target_jNode is None:
                 uncopiedConnectors.append((connector, "No match (Coordinate)"))
                 return None
             
@@ -485,7 +485,7 @@ class CopyZoneSystem2(_m.Tool()):
                 uncopiedConnectors.append((connector, "Flagged to skip"))
                 return None
             
-            if targetNetwork.link(zone.number, target_jNode.number) != None:
+            if targetNetwork.link(zone.number, target_jNode.number) is not None:
                 uncopiedConnectors.append((connector, "Found overlap"))
                 return None
             
@@ -499,7 +499,7 @@ class CopyZoneSystem2(_m.Tool()):
         count = 0
         for zone in zonesToCopy:            
             targetZone = targetNetwork.node(zone.number)
-            if targetZone != None:
+            if targetZone is not None:
                 if self.OverrideDuplicates:
                     targetNetwork.delete_node(zone.number, cascade=True)
                     targetZone = targetNetwork.create_centroid(zone.number)
@@ -514,7 +514,7 @@ class CopyZoneSystem2(_m.Tool()):
             
             for connector in zone.outgoing_links():
                 target_jNode = getJNodeLambda(connector, flagAtt, uncopiedConnectors)
-                if target_jNode == None: continue #The lambda handles adding to uncopiedConnectors               
+                if target_jNode is None: continue #The lambda handles adding to uncopiedConnectors
                 
                 try:
                     self._copyConnector(connector, targetNetwork, zone.number, target_jNode.number, atts)
@@ -535,7 +535,7 @@ class CopyZoneSystem2(_m.Tool()):
         
         #Now copy the reverse
         sourceReverse = sourceConnector.reverse_link
-        if sourceReverse != None:
+        if sourceReverse is not None:
             newReverse = targetNetwork.create_link(new_j, new_i, sourceReverse.modes)
             for att in atts: newReverse[att] = sourceReverse[att]
             newReverse.vertices = [v for v in sourceReverse.vertices]

@@ -254,7 +254,7 @@ class ConvertVehicles(_m.Tool()):
     
     def _changeVehicleProperties(self, vehicle, description="", aeq=0.0, scap=0, tcap=0):
         
-        if description != "" and description != None:
+        if description != "" and description is not None:
             vehicle.description = description
             _m.logbook_write("Description = '%s'" %description)
         

@@ -72,7 +72,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
     
     def add_header(self,text, note=None):      
         s = '<div class="hdr1 t_element"><br><b>%s</b></div>' %text
-        if note != None:
+        if note is not None:
             s += '<div class="t_element">%s</div>' %note
         self.root.add_html(s)
         
@@ -100,7 +100,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
         nextScenario = None
         for i in range(1, _MODELLER.emmebank.dimensions['scenarios'] + 1):
             if not i in scenarios:
-                if nextScenario == None:
+                if nextScenario is None:
                     nextScenario = i
                 availableScenarioIds.append((i, str(i)))
         if next_scenario_option:
@@ -167,11 +167,11 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
                     id = prefix + str(i)
                     
                     matrix = _EMMEBANK.matrix(id)
-                    if matrix == None and include_new:
+                    if matrix is None and include_new:
                         options.append((id,
                                        "%s - New matrix %s" %(id, id)))
                         
-                    elif matrix != None and include_existing:
+                    elif matrix is not None and include_existing:
                         if matrix.read_only: continue #Skip protected matrices
                         options.append((id,
                                        _getMatrixText(matrix)))
@@ -206,7 +206,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
             id = "%s%s" %(prefix, i)
             
             if not id in currentMatrixIds: #Matrix id is not yet defined
-                if nextMatrix == None:
+                if nextMatrix is None:
                     nextMatrix = id
                 availableMatrixIds.append((id, "%s *new*" %id))
             else: #Matrix is defined
@@ -250,7 +250,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
 
     def add_multi_widget(self, func_name='add_text_box', list_of_kwargs=None, width=None):
         widget_creator_func = getattr(self, func_name)
-        if list_of_kwargs == None: list_of_kwargs = []
+        if list_of_kwargs is None: list_of_kwargs = []
 
         with self.add_table(width=width) as t:
             for row in list_of_kwargs:
@@ -333,7 +333,7 @@ class _table():
             borderWidth = "1"
             frame = "solid"
         
-        if self.width == None:
+        if self.width is None:
             s = "<div class='sm_indent'><table class='tmg_table' style='border-style:{1};' border={0} \
             cellpadding='0'>".format(borderWidth,  frame)
         else:

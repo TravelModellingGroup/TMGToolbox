@@ -61,7 +61,7 @@ class XTMFNetworkCalculator(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, expression, node_selection, link_selection, transit_line_selection):
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         spec = network_calculator_spec()

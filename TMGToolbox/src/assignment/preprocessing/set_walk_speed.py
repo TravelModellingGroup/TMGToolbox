@@ -123,7 +123,7 @@ class SetWalkSpeed(_m.Tool()):
         #---1 Set up scenario
         sc = emmebank.scenario(xtmf_ScenarioNumber)
         self.Scenarios = [sc]
-        if (sc == None):
+        if (sc is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         try:

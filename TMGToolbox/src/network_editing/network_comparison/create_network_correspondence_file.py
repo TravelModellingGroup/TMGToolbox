@@ -157,7 +157,7 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         
-        if self.CorrespondenceFile == None:
+        if self.CorrespondenceFile is None:
             raise IOError("Export file not specified")
         
         self.CorrespondenceFile = _path.splitext(self.CorrespondenceFile)[0] + ".zip"
@@ -252,7 +252,7 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
                     twin = node
                     minDistance = d
             
-            if twin == None:
+            if twin is None:
                 self.TRACKER.completeSubtask()
                 continue
         
@@ -279,7 +279,7 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
             
             twins = self._GetTwinLinks(primaryLink)
             
-            if twins == None:
+            if twins is None:
                 self.TRACKER.completeSubtask()
                 continue
             
@@ -310,7 +310,7 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
             
             twins = self._GetTwinLinks(secondaryLink)
             
-            if twins == None:
+            if twins is None:
                 self.TRACKER.completeSubtask()
                 continue
             
@@ -331,7 +331,7 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
         
     def _GetTwinLinks(self, originalLink):
         
-        if originalLink.i_node['twin_node'] == None or originalLink.j_node['twin_node'] == None:
+        if originalLink.i_node['twin_node'] is None or originalLink.j_node['twin_node'] is None:
             return None #Cannot ever find a corresponding originalLink for a originalLink with no twin nodes
     
         # Check for the same link in the other network
@@ -402,7 +402,7 @@ class CreateNetworkCorrespondenceFile(_m.Tool()):
             writer.write("primary_node,secondary_node")
             for node in primaryNetwork.nodes():
                 twin = node['twin_node']
-                if twin == None:
+                if twin is None:
                     writer.write("\n%s,null" %node)
                 else:
                     writer.write("\n%s,%s" %(node,twin))
@@ -478,9 +478,9 @@ class CorrespondenceFileReader():
         
         #Get the scenarios
         pScenario = self.emmebank.scenario(config['primary_scenario'])
-        if pScenario == None: raise IOError("Primary scenario %s doesn't exist." %config['primary_scenario'])
+        if pScenario is None: raise IOError("Primary scenario %s doesn't exist." %config['primary_scenario'])
         sScenario = self.emmebank.scenario(config['secondary_scenario'])
-        if sScenario == None: raise IOError("Secondary scenario %s doesn't exist." %config['secondary_scenario'])
+        if sScenario is None: raise IOError("Secondary scenario %s doesn't exist." %config['secondary_scenario'])
         
         #Load the networks into RAM
         primaryNetwork = pScenario.get_network()

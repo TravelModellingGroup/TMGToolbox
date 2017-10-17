@@ -185,7 +185,7 @@ class ImportNetworkUpdate(_m.Tool()):
     def __call__(self, xtmf_ScenarioString, NetworkUpdateFile):
         
         xtmf_ScenarioList = xtmf_ScenarioString.split(',')
-        if xtmf_ScenarioList == None:
+        if xtmf_ScenarioList is None:
             raise Exception("No scenarios chosen!")
 
         self.Scenarios = []
@@ -197,7 +197,7 @@ class ImportNetworkUpdate(_m.Tool()):
             
         self.NetworkUpdateFile = NetworkUpdateFile
 
-        if self.NetworkUpdateFile == None or self.NetworkUpdateFile.lower() == "none":
+        if self.NetworkUpdateFile is None or self.NetworkUpdateFile.lower() == "none":
             print "No network update file selected" # won't throw an error if called without a nup file
         else:
             try:

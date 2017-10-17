@@ -64,12 +64,12 @@ class XTMFNetworkCalculator(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, domain, expression, node_selection, link_selection, transit_line_selection, result):
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         self.expression = expression
         self.domain = domain
-        if result != None and result != "None":
+        if result is not None and result != "None":
             self.result = result
         else:
             self.result = None
@@ -107,11 +107,11 @@ class XTMFNetworkCalculator(_m.Tool()):
             "type": "NETWORK_CALCULATION"            
             }
         selections = {}
-        if self.node_selection != None:
+        if self.node_selection is not None:
             selections["node"] = self.node_selection
-        elif self.link_selection != None:
+        elif self.link_selection is not None:
             selections["link"] = self.link_selection
-        elif self.transit_line_selection != None:
+        elif self.transit_line_selection is not None:
             selections["transit_line"] = self.transit_line_selection
         if len(selections) == 0:
             selections["node"] = "all"

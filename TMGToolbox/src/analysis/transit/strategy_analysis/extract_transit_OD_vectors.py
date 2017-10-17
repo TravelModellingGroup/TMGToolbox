@@ -159,14 +159,14 @@ class ExtractTransitODVectors(_m.Tool()):
         self.TRACKER.reset()
         
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         self.LineFilterExpression = LineFilterExpression
 
         self.AutoODMatrixId = "mf%s" %xtmf_AutoODMatrixId
 
-        if _MODELLER.emmebank.matrix(self.AutoODMatrixId) == None:
+        if _MODELLER.emmebank.matrix(self.AutoODMatrixId) is None:
             raise Exception("Matrix %s was not found!" %self.AutoODMatrixId)
 
         self.LineODMatrixId = "mf"+str(xtmf_LineODMatrixNumber)

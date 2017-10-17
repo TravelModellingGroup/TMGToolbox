@@ -218,14 +218,14 @@ class ReverseTransitLines(_m.Tool()):
         if len(originalId) < 6:
             for i in range(ord('a'), ord('z') + 1):
                 newId = originalId + unichr(i)
-                if network.transit_line(newId) == None:
+                if network.transit_line(newId) is None:
                     return newId
             raise Exception("Could not create a valid ID for the reversed line")
         
         lastDigit = originalId[5]
         for i in range(ord(lastDigit), ord('z') + 1):
             newId = originalId[:-1] + unichr(i)
-            if network.transit_line(newId) == None:
+            if network.transit_line(newId) is None:
                 return newId
         raise Exception("Could not create a valid ID for the reverse line")
     

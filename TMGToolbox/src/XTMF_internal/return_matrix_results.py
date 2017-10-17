@@ -84,18 +84,18 @@ class SupplementalTransitMatrices(_m.Tool()):
         
         #---1 Set up scenario
         scenario = database.scenario(xtmf_ScenarioNumber)
-        if (scenario == None):
+        if (scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         if not scenario.has_transit_results:
             raise Exception("Scenario %s has no transit assignment results" %xtmf_ScenarioNumber)
         
         partition = database.partition(xtmf_PartitionId)
-        if partition == None:
+        if partition is None:
             raise Exception("Partition '%s' does not exist" %xtmf_PartitionId)
         
         demandMatrix = database.matrix(xtmf_DemandMatrixId)
-        if demandMatrix == None:
+        if demandMatrix is None:
             raise Exception("Demand matrix '%s' does not exist" %xtmf_DemandMatrixId)
         
         try:

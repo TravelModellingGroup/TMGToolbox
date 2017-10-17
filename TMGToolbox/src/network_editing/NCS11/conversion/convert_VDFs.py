@@ -82,7 +82,7 @@ class ConvertVDFs(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         
-        if self.makeChangesPermanent == None: # Fix the checkbox problem
+        if self.makeChangesPermanent is None: # Fix the checkbox problem
             self.makeChangesPermanent = False;
         
         try:
@@ -148,7 +148,7 @@ class ConvertVDFs(_m.Tool()):
         att = None
         
         att = self.scenario.extra_attribute("@vdf")
-        if att == None:
+        if att is None:
             att =  self.scenario.create_extra_attribute('LINK', '@vdf', default_value=0)
             _m.logbook_write("Created temporary link '%s' attribute to store new VDFs." %att.id)
         else:

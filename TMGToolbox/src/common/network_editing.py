@@ -122,7 +122,7 @@ def isLinkParallel(link):
     '''
     
     reverse = link.reverse_link
-    if reverse == None:
+    if reverse is None:
         return False
     revertices = [vtx for vtx in reverse.vertices]
     revertices.reverse()
@@ -208,7 +208,7 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTO
             newLinksF.append(newLinkF)
             copyLinkAtts(link, newLinkF, segLength, vertexBuffer)
             
-            if link.reverse_link != None and twoWay:
+            if link.reverse_link is not None and twoWay:
                 newLinkR = network.create_link(newNode.number, prevNode.number, link.reverse_link.modes)
                 vertexBuffer.reverse()
                 copyLinkAtts(link.reverse_link, newLinkR, segLength, vertexBuffer)
@@ -222,7 +222,7 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTO
         newLinkF = network.create_link(prevNode.number, newNode.number, link.modes)
         newLinksF.append(newLinkF)
         copyLinkAtts(link, newLinkF, segLength, vertexBuffer)
-        if link.reverse_link != None and twoWay:
+        if link.reverse_link is not None and twoWay:
             newLinkR = network.create_link(newNode.number, prevNode.number, link.reverse_link.modes)
             vertexBuffer.reverse()
             copyLinkAtts(link.reverse_link, newLinkR, segLength, vertexBuffer)
@@ -247,7 +247,7 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTO
             network.delete_transit_line(lineProxy.id)
             newLines.append(lineProxy.copyToNetwork(network))
             
-        if link.reverse_link != None and twoWay:
+        if link.reverse_link is not None and twoWay:
             for segment in  link.reverse_link.segments():
                 lineProxy = TransitLineProxy(segment.line)
                 lineProxy.segments.pop(segment.number) #Cut this segment from the line's itinerary
@@ -283,7 +283,7 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTO
     for turn in link.outgoing_turns():
         newTurn = network.turn(lastForwardLink.i_node.number, turn.j_node.number, turn.k_node.number)
         for att in turnAtts: newTurn[att] = turn[att]
-    if link.reverse_link != None and twoWay:
+    if link.reverse_link is not None and twoWay:
         firstRevrseLink = newLinksR[0]
         for turn in link.reverse_link.incoming_turns():
             newTurn = network.turn(turn.i_node.number, turn.j_node.number, firstRevrseLink.j_node.number)
@@ -294,7 +294,7 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTO
             for att in turnAtts: newTurn[att] = turn[att]
             
     #Delete the original links
-    if link.reverse_link != None:
+    if link.reverse_link is not None:
         network.delete_link(link.j_node.number, link.i_node.number)
     network.delete_link(link.i_node.number, link.j_node.number)
     
@@ -312,7 +312,7 @@ def addReverseLink(link):
     
     Returns: The reverse link (whether it's new or not).
     '''
-    if link.reverse_link != None:
+    if link.reverse_link is not None:
         return link.reverse_link
     
     network = link.network
@@ -368,7 +368,7 @@ def renumberTransitVehicle(oldVehicle, newId):
     
     net = oldVehicle.network
     
-    if net.transit_vehicle(newId) != None:
+    if net.transit_vehicle(newId) is not None:
         raise InvalidNetworkOperationError("Cannot change transit vehicle %s to %s as this ID already exists in the scenario" %(oldVehicle, newId))
     
     created = False
@@ -712,14 +712,14 @@ def _getLinkPairs(incomingLinks, outgoingLinks):
 def _getTempLineId(network):
     n = 1
     tl = network.transit_line(n)
-    while tl != None:
+    while tl is not None:
         n += 1
         tl = network.transit_line(n)
     return str(n) 
 
 def _mergeLinkPair(network, link1, link2, linkAggregators, createdLinks):
     #Check if the merged link already exists
-    if network.link(link1.i_node.number, link2.j_node.number) != None:
+    if network.link(link1.i_node.number, link2.j_node.number) is not None:
         raise InvalidNetworkOperationError("Merged link %s-%s already exists!" %(link1.i_node.number, link2.j_node.number))
     
     newModes = link1.modes | link2.modes #Always permit the union of the set of modes
@@ -885,7 +885,7 @@ class TransitSegmentProxy():
         but this can be set manually for transit line itinerary modifications.
         '''
         self.iNode = segment.i_node
-        if iNode != None:
+        if iNode is not None:
             self.iNode = iNode
             
         self.allowBoardings = segment.allow_boardings
@@ -1038,15 +1038,15 @@ class AStarLinks():
         self.__speedFactor = link_speed_unit
         
         self.__getLinkSpeed = link_speed_func
-        if link_speed_func == None:
+        if link_speed_func is None:
             self.__getLinkSpeed = self.__speedInUl2
         
         self.__calcTurnCost = turn_penalty_func
-        if turn_penalty_func == None:
+        if turn_penalty_func is None:
             self.__calcTurnCost = self.__zeroTurnPenalty
         
         self.__calcLinkPenalty = link_penalty_func
-        if link_penalty_func == None:
+        if link_penalty_func is None:
             self.__calcLinkPenalty = self.__zeroLinkPenalty
         
         self.__network = network
@@ -1191,7 +1191,7 @@ class AStarLinks():
         
         path = []
         prevLink = destinationLink.previousLink
-        while prevLink != None:
+        while prevLink is not None:
             path.append(prevLink)
             prevLink = prevLink.previousLink
         path.reverse()

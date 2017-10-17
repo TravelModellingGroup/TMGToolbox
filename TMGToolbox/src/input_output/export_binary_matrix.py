@@ -161,12 +161,12 @@ class ExportBinaryMatrix(_m.Tool()):
                           "4 for full matrices.")
         
         self.MatrixId = self.MATRIX_TYPES[xtmf_MatrixType] + str(xtmf_MatrixNumber)
-        if _bank.matrix(self.MatrixId) == None:
+        if _bank.matrix(self.MatrixId) is None:
             raise IOError("Matrix %s does not exist." %self.MatrixId)
         
         if _util.databankHasDifferentZones(_bank):
             self.Scenario = _bank.scenario(xtmf_ScenarioNumber)
-            if self.Scenario == None:
+            if self.Scenario is None:
                 raise Exception("A valid scenario must be specified as there are " +
                                     "multiple zone systems in this Emme project. "+
                                     "'%s' is not a valid scenario." %xtmf_ScenarioNumber)

@@ -182,8 +182,8 @@ class ExportCountpostResults(_m.Tool()):
             if not self.Scenario.has_traffic_results:
                 raise Exception("Scenario %s has no traffic assignment results" %self.Scenario.number)
             
-            if self.CountpostAttributeId == None: raise NullPointerException("Countpost Attribute not specified")
-            if self.ExportFile == None: raise NullPointerException("Export File not specified")
+            if self.CountpostAttributeId is None: raise NullPointerException("Countpost Attribute not specified")
+            if self.ExportFile is None: raise NullPointerException("Export File not specified")
         except Exception, e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
@@ -203,7 +203,7 @@ class ExportCountpostResults(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         if not self.Scenario.has_traffic_results:

@@ -163,7 +163,7 @@ class RevenueCalculation(_m.Tool()):
         self.Scenarios = []
         for number in xtmf_ScenarioNumbers.split(','):
             sc = _MODELLER.emmebank.scenario(number)
-            if (sc == None):
+            if (sc is None):
                 raise Exception("Scenarios %s was not found!" %number)
             self.Scenarios.append(sc)
 

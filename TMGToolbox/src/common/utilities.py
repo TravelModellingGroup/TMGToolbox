@@ -217,7 +217,7 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
 
     mtx = _DATABANK.matrix(id)
 
-    if mtx == None:
+    if mtx is None:
         #Matrix does not exist, so create it.
         mtx = _DATABANK.create_matrix(id, default_value=default)
         if name: mtx.name = name[:40]
@@ -241,7 +241,7 @@ def getAvailableScenarioNumber():
     if the _DATABANK is full.
     '''
     for i in range(0, _m.Modeller().emmebank.dimensions['scenarios']):
-        if _m.Modeller().emmebank.scenario(i + 1) == None:
+        if _m.Modeller().emmebank.scenario(i + 1) is None:
             return (i + 1)
     
     raise inro.emme.core.exception.CapacityError("No new scenarios are available: databank is full!")
@@ -328,7 +328,7 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
     mtx = initializeMatrix(default=default, description= 'Temporary %s' %description, \
                            matrix_type=matrix_type)
     
-    if mtx == None:
+    if mtx is None:
         raise Exception("Could not create temporary matrix: %s" %description)
     
     try:
@@ -690,7 +690,7 @@ class ProgressTracker():
         self._processIsRunning = False
         self._activeTool = None
         
-        if numberOfTasks != None: #Can be reset with a new number of tasks
+        if numberOfTasks is not None: #Can be reset with a new number of tasks
             self._taskIncr = 1000.0 / numberOfTasks
     
     def completeTask(self):
@@ -763,7 +763,7 @@ class ProgressTracker():
         
         if self._toolIsRunning:
             tup = self._activeTool.percent_completed()
-            if tup[2] == None: # Tool is returning the 'marquee' display option
+            if tup[2] is None: # Tool is returning the 'marquee' display option
                 #Just return the current progress. The task will be completed by the other thread.
                 self._toolIsRunning = False 
                 return (0, 1000, self._progress)
