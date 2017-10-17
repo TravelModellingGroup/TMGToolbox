@@ -165,10 +165,10 @@ class Calc407ETRTolls(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         
-        if self.ResultAttributeId == None: raise NullPointerException("Result attribute not specified")
-        if self.TollZoneAttributeId == None: raise NullPointerException("Toll zone attribute not specified")
-        if self.LightZoneToll == None: raise NullPointerException("Light zone toll not specified")
-        if self.RegularZoneToll == None: raise NullPointerException("Regular zone toll not specified")       
+        if self.ResultAttributeId is None: raise NullPointerException("Result attribute not specified")
+        if self.TollZoneAttributeId is None: raise NullPointerException("Toll zone attribute not specified")
+        if self.LightZoneToll is None: raise NullPointerException("Light zone toll not specified")
+        if self.RegularZoneToll is None: raise NullPointerException("Regular zone toll not specified")
         
         try:
             self._Execute()
@@ -184,7 +184,7 @@ class Calc407ETRTolls(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         linkAtts = set([att.id for att in self.Scenario.extra_attributes() if att.type == 'LINK'])

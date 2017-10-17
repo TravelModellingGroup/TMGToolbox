@@ -216,7 +216,7 @@ class ValidateConnectors(_m.Tool()):
 #----Filters and Exclusions----------------------------------------------------------------------------
 
     def _applyInfeasibleLinkFilter(self, attributeId): 
-        if self.InfeasibleLinkSelector == "" or self.InfeasibleLinkSelector == None:
+        if self.InfeasibleLinkSelector == "" or self.InfeasibleLinkSelector is None:
             self._tracker.completeTask() 
             return
         else:
@@ -240,7 +240,7 @@ class ValidateConnectors(_m.Tool()):
 #------------------------------------------------------------------------------------------------
 
     def _applyZoneFilter(self, attributeId):
-        if self.ZoneSelector == "" or self.ZoneSelector == None:
+        if self.ZoneSelector == "" or self.ZoneSelector is None:
             self._tracker.completeTask() 
             return
         else:

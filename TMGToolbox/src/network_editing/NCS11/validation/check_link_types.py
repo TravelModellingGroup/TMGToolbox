@@ -66,7 +66,7 @@ class CheckLinkTypes(_m.Tool()):
     
     def __call__(self):
         worksheet = None
-        if not (self.WorksheetFile == None or self.WorksheetFile == ""):
+        if not (self.WorksheetFile is None or self.WorksheetFile == ""):
             #Open a worksheet file
             worksheet = _m.Modeller().desktop.open_worksheet(self.WorksheetFile)
         else:

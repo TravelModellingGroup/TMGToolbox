@@ -148,7 +148,7 @@ class GetStationAccessFile(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         self.SearchRadius = SearchRadius
@@ -273,7 +273,7 @@ class GetStationAccessFile(_m.Tool()):
     
     def _GetCheckMode(self, network, modeId):
         mode = network.mode(modeId)
-        if mode == None:
+        if mode is None:
             raise Exception("Scenario %s does not have mode '%s' defined!" %(self.Scenario.id, modeId))
         elif mode.type != 'TRANSIT':
             raise Exception("Scenario %s mode '%s' is not a transit mode!" %(self.Scenario.id, modeId))

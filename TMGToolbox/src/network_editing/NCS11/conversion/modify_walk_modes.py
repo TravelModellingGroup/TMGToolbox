@@ -395,7 +395,7 @@ class ModifyWalkModes(_m.Tool()):
             if link[self._walkableLinkFlag.id] == 0:
                 continue #skip links which shouldn't be one-way roads
             
-            if link.reverse_link == None:
+            if link.reverse_link is None:
                 # Reverse link doesn't exist, therefore it is a one way road
                 
                 rLink = network.create_link(link.j_node.id, link.i_node.id, modes)

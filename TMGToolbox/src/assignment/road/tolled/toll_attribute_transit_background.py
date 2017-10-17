@@ -145,7 +145,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.Scenario = _MODELLER.scenario
         
         mf10 = _MODELLER.emmebank.matrix('mf30')
-        if mf10 != None:
+        if mf10 is not None:
             self.DemandMatrix = mf10
         
         self.PeakHourFactor = 0.385
@@ -341,15 +341,15 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         '''Run is called from Modeller.'''
         
-        if self.DemandMatrix == None: raise NullPointerException("Demand matrix not specified")
-        if self.LinkTollAttributeId == None: raise NullPointerException("Link toll attribute not specified")
-        if self.PeakHourFactor == None: raise NullPointerException("Peak hour factor not specified")
-        if self.LinkCost == None: raise NullPointerException("Link unit cost not specified")
-        if self.TollWeight == None: raise NullPointerException("Toll perception not specified")
-        if self.Iterations == None: raise NullPointerException("Max iterations not specified")
-        if self.rGap == None: raise NullPointerException("Relative gap not specified")
-        if self.brGap == None: raise NullPointerException("Best relative gap not specified")
-        if self.normGap == None: raise NullPointerException("Normalized gap not specified")
+        if self.DemandMatrix is None: raise NullPointerException("Demand matrix not specified")
+        if self.LinkTollAttributeId is None: raise NullPointerException("Link toll attribute not specified")
+        if self.PeakHourFactor is None: raise NullPointerException("Peak hour factor not specified")
+        if self.LinkCost is None: raise NullPointerException("Link unit cost not specified")
+        if self.TollWeight is None: raise NullPointerException("Toll perception not specified")
+        if self.Iterations is None: raise NullPointerException("Max iterations not specified")
+        if self.rGap is None: raise NullPointerException("Relative gap not specified")
+        if self.brGap is None: raise NullPointerException("Best relative gap not specified")
+        if self.normGap is None: raise NullPointerException("Normalized gap not specified")
         
         try:
             self._execute()
@@ -366,14 +366,14 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         if xtmf_DemandMatrixNumber == 0:
             manager = _util.tempMatrixMANAGER(matrix_type= 'SCALAR')
         else:
             demandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
-            if demandMatrix == None:
+            if demandMatrix is None:
                 raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
             manager = blankManager(demandMatrix)
         
@@ -510,7 +510,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                                 spec, scenario=self.Scenario)                  
                     
                 self._tracker.startProcess(1)
-                if not (self.TollsMatrixId == "null" or self.TollsMatrixId == None):
+                if not (self.TollsMatrixId == "null" or self.TollsMatrixId is None):
                     self._tracker.completeSubtask
                     
                     with _m.logbook_trace("Tertiary assignment to recover toll costs separately:"):
@@ -548,7 +548,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         tempScenarioNumber = _util.getAvailableScenarioNumber()
         
-        if tempScenarioNumber == None:
+        if tempScenarioNumber is None:
             raise Exception("No additional scenarios are available!")
         
         scenario = _MODELLER.emmebank.copy_scenario(self.Scenario.id, tempScenarioNumber, 
@@ -574,7 +574,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         attributeCreated = False
         
         costAttribute = self.Scenario.extra_attribute('@lkcst')
-        if costAttribute == None:
+        if costAttribute is None:
             #@lkcst hasn't been defined
             _m.logbook_write("Creating temporary link cost attribute '@lkcst'.")
             costAttribute = self.Scenario.create_extra_attribute('LINK', '@lkcst', default_value=0)
@@ -606,7 +606,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         attributeCreated = False
         
         timeAttribute = self.Scenario.extra_attribute('@ltime')
-        if timeAttribute == None:
+        if timeAttribute is None:
             #@ltime hasn't been defined
             _m.logbook_write("Creating temporary link cost attribute '@ltime'.")
             timeAttribute = self.Scenario.create_extra_attribute('LINK', '@ltime', default_value=0)
@@ -637,7 +637,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         attributeCreated = False
         bgTrafficAttribute = self.Scenario.extra_attribute('@tvph')
         
-        if bgTrafficAttribute == None:
+        if bgTrafficAttribute is None:
             bgTrafficAttribute = self.Scenario.create_extra_attribute('LINK','@tvph', 0)
             attributeCreated = True
             _m.logbook_write("Created extra attribute '@tvph'")
@@ -694,7 +694,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         with _m.logbook_trace("Initializing output matrices:"):
             _util.initializeMatrix(self.CostMatrixId, name='acost', description='AUTO COST: %s' %self.RunTitle)
             _util.initializeMatrix(self.TimesMatrixId, name='aivtt', description='AUTO TIME: %s' %self.RunTitle)
-            if not (self.TollsMatrixId == "null" or self.TollsMatrixId == None):
+            if not (self.TollsMatrixId == "null" or self.TollsMatrixId is None):
                 _util.initializeMatrix(self.TollsMatrixId, name='atoll', description='AUTO TOLL: %s' %self.RunTitle)
     
     def _getLinkCostCalcSpec(self, costAttributeId):
@@ -1013,7 +1013,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     #def _modifyFunctionForAoNAssignment(self):
     #    allOrNothingFunc = _MODELLER.emmebank.function('fd98')
-    #    if allOrNothingFunc == None:
+    #    if allOrNothingFunc is None:
     #        allOrNothingFunc = _MODELLER.emmebank.create_function('fd98', 'ul2')
     #    else:
     #        allOrNothingFunc.expression = 'ul2'

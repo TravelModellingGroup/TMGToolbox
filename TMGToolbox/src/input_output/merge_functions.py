@@ -126,7 +126,7 @@ class MergeFunctions(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         
-        if self.FunctionFile == None:
+        if self.FunctionFile is None:
             raise IOError("Import file not specified")
         
         try:
@@ -215,10 +215,10 @@ class MergeFunctions(_m.Tool()):
                     index = record.index('=')
                     currentId = record[:index].strip()
                     expressionBuffer = record[(index + 1):].replace(' ', '')
-                    if currentId != None:
+                    if currentId is not None:
                         functions[currentId] = expressionBuffer
                 elif linecode == ' ':
-                    if currentId != None and trecord:
+                    if currentId is not None and trecord:
                         s = record.strip().replace(' ', '')
                         expressionBuffer += s
                         functions[currentId] = expressionBuffer
@@ -435,7 +435,7 @@ in the database.""")
             def getWidth(grid, row, col):
                 item = grid.itemAtPosition(row, col)
                 width = 0
-                if item != None:
+                if item is not None:
                     width = item.widget().sizeHint().width()
                 return width
             

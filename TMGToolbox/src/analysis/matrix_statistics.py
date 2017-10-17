@@ -197,21 +197,21 @@ class MatrixSummary(_m.Tool()):
         
         
         self.ValueMatrix = _MODELLER.emmebank.matrix('mf%s' %xtmf_ValueMatrixNumber)
-        if self.ValueMatrix == None:
+        if self.ValueMatrix is None:
             raise Exception("Full matrix mf%s was not found!" %xtmf_ValueMatrixNumber)
         
         if xtmf_WeightingMatrixNumber == 0:
             self.WeightingMatrix = None
         else:
             self.WeightingMatrix = _MODELLER.emmebank.matrix('mf%s' %xtmf_WeightingMatrixNumber)
-            if self.WeightingMatrix == None:
+            if self.WeightingMatrix is None:
                 raise Exception("Full matrix mf%s was not found!" %xtmf_WeightingMatrixNumber)
         
         if xtmf_ScenarioNumber == 0:
-            self.Scenario == None
+            self.Scenario is None
         else:
             self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-            if (self.Scenario == None):
+            if (self.Scenario is None):
                 raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         originFilter = self._ParseRangeSetString(xtmf_OriginRangeSetString)
@@ -277,7 +277,7 @@ class MatrixSummary(_m.Tool()):
             self.TRACKER.completeTask() #4
             
             #Get weighted values if neccessary
-            if self.WeightingMatrix != None:
+            if self.WeightingMatrix is not None:
                 if self.Scenario:
                     weightData = self.WeightingMatrix.get_data(self.Scenario.number)
                 else:
@@ -401,7 +401,7 @@ class MatrixSummary(_m.Tool()):
                                                   mtx2= self.WeightingMatrix,
                                                   desc1= self.ValueMatrix.description, 
                                                   stamp1= self.ValueMatrix.timestamp)
-        if self.WeightingMatrix != None: bodyText += " - %s" %self.WeightingMatrix.description
+        if self.WeightingMatrix is not None: bodyText += " - %s" %self.WeightingMatrix.description
         bodyText += "</b><br>"
         
         rows = []
@@ -411,7 +411,7 @@ class MatrixSummary(_m.Tool()):
         rows.append("<b>Standard Deviation:</b> %s" %unweightedStdDev)
         rows.append("<b>Median:</b> %s" %unweightedMedian)
         
-        if weightedAverage != None:
+        if weightedAverage is not None:
             rows.append("<br><br><b>Weighted Average:</b> %s" %weightedAverage)
             rows.append("<b>Weighted Standard Deviation:</b> %s" %weightedStdDev)
         
@@ -432,7 +432,7 @@ class MatrixSummary(_m.Tool()):
                 uwVal = unweightedHistogram[i - 1]
             uwData.append((int(prevEdge), float(uwVal)))
             
-            if weightedHistogram != None:
+            if weightedHistogram is not None:
                 if (i - 1) >= len(weightedHistogram):
                     wVal = 0.0
                 else:
@@ -444,7 +444,7 @@ class MatrixSummary(_m.Tool()):
         cds = [{"title": "Unweighted frequency", 
                 "data": uwData,
                 "color": "red"}]
-        if weightedHistogram != None:
+        if weightedHistogram is not None:
             cds.append({"title": "Weighted frequency",
                         "data": wData,
                         "color": "blue"})
@@ -491,7 +491,7 @@ Generated on %s\n\n''' %dt.now())
                                                                         stamp= self.ValueMatrix.timestamp))
             
             writer.write("\nWeight Matrix: %s" %self.WeightingMatrix)
-            if self.WeightingMatrix != None:
+            if self.WeightingMatrix is not None:
                 writer.write(" - {desc!s} ({stamp!s})".format(desc= self.WeightingMatrix.description,
                                                               stamp = self.WeightingMatrix.timestamp))
             
@@ -501,9 +501,9 @@ Generated on %s\n\n''' %dt.now())
             writer.write("\nStd. Dev:\t%s" %unweightedStdDev)
             writer.write("\n Median:\t%s" %unweightedMedian)
             
-            if weightedAverage != None:
+            if weightedAverage is not None:
                 writer.write("\nWeighted Avg.:\t%s" %weightedAverage)
-            if weightedStdDev != None:
+            if weightedStdDev is not None:
                 writer.write("\nWeighted StDv:\t%s" %weightedStdDev)
            
             writer.write('''
@@ -512,7 +512,7 @@ Generated on %s\n\n''' %dt.now())
 HISTOGRAM
 BinMin,BinMax,Freq''')
             
-            if weightedHistogram != None: writer.write(",wFreq")
+            if weightedHistogram is not None: writer.write(",wFreq")
             
             for i, binEdge in enumerate(bins):
                 if i == 0:
@@ -525,7 +525,7 @@ BinMin,BinMax,Freq''')
                     uwVal = unweightedHistogram[i - 1]
                 writer.write("\n%s,%s,%s" %(prevEdge, binEdge, uwVal))
                 
-                if weightedHistogram != None:
+                if weightedHistogram is not None:
                     if (i - 1) >= len(weightedHistogram):
                         wVal = 0.0
                     else:

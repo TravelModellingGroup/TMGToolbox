@@ -72,7 +72,7 @@ class ExportNetworkBatchFile(_m.Tool()):
         
         #---1 Set up scenario
         scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (scenario == None):
+        if (scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         try:

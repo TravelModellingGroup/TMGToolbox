@@ -183,23 +183,23 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.tool_run_msg = ''
         self.TRACKER.reset()
         try:
-            if self.AssignmentPeriod == None:
+            if self.AssignmentPeriod is None:
                 raise NullPointerException('Assignment period not specified')
-            if self.WalkPerception == None:
+            if self.WalkPerception is None:
                 raise NullPointerException('Walk perception not specified')
-            if self.CongestionExponentString == None:
+            if self.CongestionExponentString is None:
                 raise NullPointerException('Congestion parameters not specified')
-            if self.Iterations == None:
+            if self.Iterations is None:
                 raise NullPointerException('Maximum iterations not specified')
-            if self.NormGap == None:
+            if self.NormGap is None:
                 raise NullPointerException('Normalized gap not specified')
-            if self.RelGap == None:
+            if self.RelGap is None:
                 raise NullPointerException('Relative gap not specified')
-            if self.EffectiveHeadwaySlope == None:
+            if self.EffectiveHeadwaySlope is None:
                 raise NullPointerException('Effective headway slope not specified')
-            if self.LinkFareAttributeIdList == None:
+            if self.LinkFareAttributeIdList is None:
                 raise NullPointerException('Link fare attribute not specified')
-            if self.SegmentFareAttributeIdList == None:
+            if self.SegmentFareAttributeIdList is None:
                 raise NullPointerException('Segment fare attribute not specified')
 
             @contextmanager
@@ -209,15 +209,15 @@ class MultiClassTransitAssignment(_m.Tool()):
                 finally:
                     pass
 
-            if self.HeadwayFractionAttributeId == None:
+            if self.HeadwayFractionAttributeId is None:
                 manager1 = _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', default=0.5)
             else:
                 manager1 = blank(self.Scenario.extra_attribute(self.HeadwayFractionAttributeId))
-            if self.WalkAttributeIdList == None:
+            if self.WalkAttributeIdList is None:
                 manager2 = _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', default=1.0)
             else:
                 manager2 = blank(self.Scenario.extra_attribute(self.WalkAttributeIdList))
-            if self.EffectiveHeadwayAttributeId == None:
+            if self.EffectiveHeadwayAttributeId is None:
                 manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default=0.0)
             else:
                 manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
@@ -271,14 +271,14 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
 
 
-        if xtmf_WalkPerceptionString != None:
+        if xtmf_WalkPerceptionString is not None:
             xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.replace('::', '\n')
             self.WalkPerceptionList = xtmf_WalkPerceptionString.split(';')
-        if xtmf_WalkPerceptionAttributeIdString != None:
+        if xtmf_WalkPerceptionAttributeIdString is not None:
             self.WalkAttributeIdList = xtmf_WalkPerceptionAttributeIdString.split(',')
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if self.Scenario == None:
+        if self.Scenario is None:
             raise Exception('Scenario %s was not found!' % xtmf_ScenarioNumber)
 
         aux_mode_chars = ''
@@ -290,23 +290,23 @@ class MultiClassTransitAssignment(_m.Tool()):
 
         self.DemandMatrixList = []
         for demandMatrix in xtmf_DemandMatrixString.split(','):
-            if _MODELLER.emmebank.matrix(demandMatrix) == None:
+            if _MODELLER.emmebank.matrix(demandMatrix) is None:
                 raise Exception('Matrix %s was not found!' % demandMatrix)
             else:
                 self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
 
         for walk in self.WalkAttributeIdList:
-            if self.Scenario.extra_attribute(walk) == None:
+            if self.Scenario.extra_attribute(walk) is None:
                 raise Exception('Walk perception attribute %s does not exist' % walk)
-        if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) == None:
+        if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) is None:
             raise Exception('Headway fraction attribute %s does not exist' % self.HeadwayFractionAttributeId)
-        if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) == None:
+        if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) is None:
             raise Exception('Effective headway attribute %s does not exist' % self.EffectiveHeadwayAttributeId)
         for id in self.LinkFareAttributeIdList:
-            if  self.Scenario.extra_attribute(id) == None:
+            if  self.Scenario.extra_attribute(id) is None:
                 raise Exception('Link fare attribute %s does not exist' % id)
         for id in self.SegmentFareAttributeIdList:
-           if self.Scenario.extra_attribute(id) == None:
+           if self.Scenario.extra_attribute(id) is None:
                 raise Exception('Segment fare attribute %s does not exist' % id)
         if xtmf_InVehicleTimeMatrixString:
             self.InVehicleTimeMatrixList = xtmf_InVehicleTimeMatrixString.split(',')

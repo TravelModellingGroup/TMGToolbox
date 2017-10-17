@@ -77,7 +77,7 @@ class CalculateStationFrequency(_m.Tool()):
         #---TODO: Validate variables!
         
         Scenario = _m.Modeller().emmebank.scenario(ScenarioId)
-        if (Scenario == None):
+        if (Scenario is None):
             raise Exception("Could not find scenario %s" %ScenarioId)
         
         Network = Scenario.get_network()
@@ -108,7 +108,7 @@ class CalculateStationFrequency(_m.Tool()):
                             Station = Link.j_node
                     
                     # Stop has a corresponding station centroid
-                    if (not Station == None):
+                    if (not Station is None):
                         # Add this line's number of trains to the existing map.
                         if (Station.id in StationFrequency):
                             StationFrequency[Station.id] = StationFrequency[Station.id] + Frequency

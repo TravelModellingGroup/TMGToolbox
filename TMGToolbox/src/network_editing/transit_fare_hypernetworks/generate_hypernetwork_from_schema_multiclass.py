@@ -348,7 +348,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
         
         #---1 Set up scenario
         self.BaseScenario = _MODELLER.emmebank.scenario(xtmf_BaseScenarioNumber)
-        if (self.BaseScenario == None):
+        if (self.BaseScenario is None):
             raise Exception("Base scenario %s was not found!" %xtmf_BaseScenarioNumber)
         XMLFareRulesJSON = json.loads(XMLFareRules.replace("\'","\"").replace("\\","/"))
         self.XMLFareRulesFile  = []
@@ -360,14 +360,14 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             self.SegmentFareAttributeId.append(FareClasses[i]['SegmentFareAttribute'])
             self.LinkFareAttributeId.append(FareClasses[i]['LinkFareAttribute'])
         for i in range(len(self.SegmentFareAttributeId)):
-            if self.BaseScenario.extra_attribute(self.SegmentFareAttributeId[i]) == None:
+            if self.BaseScenario.extra_attribute(self.SegmentFareAttributeId[i]) is None:
                 att = self.BaseScenario.create_extra_attribute('TRANSIT_SEGMENT',
                                                            self.SegmentFareAttributeId[i])
                 att.description = "SEGMENT transit fare"
                 _m.logbook_write("Created segment fare attribute %s" %self.SegmentFareAttributeId[i])
             
         for i in range(len(self.LinkFareAttributeId)):
-            if self.BaseScenario.extra_attribute(self.LinkFareAttributeId[i]) == None:
+            if self.BaseScenario.extra_attribute(self.LinkFareAttributeId[i]) is None:
                 att = self.BaseScenario.create_extra_attribute('LINK',
                                                            self.LinkFareAttributeId[i])
                 att.description = "LINK transit fare"
@@ -423,13 +423,13 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
                     print "Loaded groups."
                 
                 stationGroupsElement = rootBase.find('station_groups')
-                if stationGroupsElement != None:
+                if stationGroupsElement is not None:
                     with _m.logbook_trace("Station Groups"):
                         stationGroups = self._LoadStationGroups(stationGroupsElement)
                         print "Loaded station groups"
                 
                 zonesElement = rootBase.find('zones')
-                if zonesElement != None:
+                if zonesElement is not None:
                     with _m.logbook_trace("Fare Zones"):
                         zoneId2Int, int2ZoneId, nodeProxies = self._LoadZones(zonesElement, zoneAtt.id)
                         print "Loaded zones."
@@ -468,7 +468,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             
             #Publish the network
             bank = _MODELLER.emmebank
-            if bank.scenario(self.NewScenarioNumber) != None:
+            if bank.scenario(self.NewScenarioNumber) is not None:
                 bank.delete_scenario(self.NewScenarioNumber)
             newSc = bank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber, \
                                        copy_path_files=False, copy_strat_files=False)
@@ -494,11 +494,11 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
         
         #Check the top-level of the file
         versionElem = root.find('version')
-        if versionElem == None:
+        if versionElem is None:
             raise XmlValidationError("Base schema must specify a 'version' element.")
         
         groupsElement = root.find('groups')
-        if groupsElement == None:
+        if groupsElement is None:
             raise XmlValidationError("Base schema must specify a 'groups' element.")
         
         zonesElement = root.find('zones')
@@ -529,7 +529,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             
         #Validate zones, if required
         self.validZoneIds = set()
-        if zonesElement != None:
+        if zonesElement is not None:
             shapeFileElements = zonesElement.findall('shapefile')
             zoneElements = zonesElement.findall('zone')
             
@@ -570,7 +570,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
                         raise XmlValidationError("Zone type 'node_selection' for zone '%s' must specify at least one 'node_selector' element." %id)
                 elif zoneType == 'from_shapefile':
                     childElement = zoneElement.find('from_shapefile')
-                    if childElement == None:
+                    if childElement is None:
                         raise XmlValidationError("Zone type 'from_shapefile' for zone '%s' must specify exactly one 'from_shapefile' element." %id)
                     
                     if not 'id' in childElement.attrib:
@@ -592,7 +592,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
         
         nStationGroups = 0
         stationGroupsElement = root.find('station_groups')
-        if stationGroupsElement != None:
+        if stationGroupsElement is not None:
             stationGroupElements = stationGroupsElement.findall('station_group')
             
             for element in stationGroupElements:
@@ -620,7 +620,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
         
         
         fareRulesElement = root.find('fare_rules')
-        if fareRulesElement == None:
+        if fareRulesElement is None:
             raise XmlValidationError("Fare schema must specify a 'fare_rules' element.")
 
 
@@ -672,7 +672,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             #Check required children
             for name, checkFunc in requiredChildren.iteritems():
                 child = fareElement.find(name)
-                if child == None:
+                if child is None:
                     raise XmlValidationError("Fare element #%s of type '%s' must specify a '%s' element" %(i, ruleType, name))
                 
                 text = child.text
@@ -681,7 +681,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             #Check optional children
             for name, checkFunc in optionalChildren.iteritems():
                 child = fareElement.find(name)
-                if child == None: continue
+                if child is None: continue
                 
                 text = child.text
                 checkFunc(text, name)
@@ -1037,7 +1037,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
         totalLinks3 = network.element_totals['links']
         _m.logbook_write("Created %s road-to-transit connector links" %(totalLinks3 - totalLinks2))
         
-        if self.SegmentINodeAttributeId != None:
+        if self.SegmentINodeAttributeId is not None:
             def saveFunction(segment, iNodeId):
                 segment[self.SegmentINodeAttributeId] = iNodeId
         else:
@@ -1058,7 +1058,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
     
     def _GetNewNodeNumber(self, network, baseNodeNumber):
         testNode = network.node(self._nextNodeId)
-        while testNode != None:
+        while testNode is not None:
             self._nextNodeId += 1
             testNode = network.node(self._nextNodeId)
         return self._nextNodeId
@@ -1239,7 +1239,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
                 for groupNumber2 in baseNode2.stopping_groups:
                     virtualNode2 = baseNode2.to_hyper_node[groupNumber2]
                     
-                    if network.link(virtualNode1.number, virtualNode2.number) != None:
+                    if network.link(virtualNode1.number, virtualNode2.number) is not None:
                         #Link already exists. Index it just in case
                         if groupNumber1 != groupNumber2:
                             transferGrid[groupNumber1, groupNumber2].add(network.link(virtualNode1.number, virtualNode2.number))
@@ -1268,7 +1268,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             newItinerary.append(jv)
             
             vLink = network.link(iv, jv)
-            if vLink == None:
+            if vLink is None:
                 vLink = network.create_link(iv, jv, lineMode)
                 for att in network.attributes('LINK'): vLink[att] = baseLink[att]
             else:
@@ -1284,7 +1284,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             saveFunction(newSegment, segment.i_node.number)
             
             link = segment.link
-            if link != None:
+            if link is not None:
                 fzi = link.i_node.fare_zone
                 fzj = link.j_node.fare_zone
                 
@@ -1355,7 +1355,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             groupNumber = groupIds2Int[groupId]
             
             inZoneElement = fareElement.find('in_zone')
-            if inZoneElement != None:
+            if inZoneElement is not None:
                 zoneId = inZoneElement.text
                 zoneNumber = zoneId2sInt[zoneId]
                 _m.logbook_write("In zone: %s" %zoneId)
@@ -1365,7 +1365,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
                 checkLink = lambda link: True
             
             includeAllElement = fareElement.find('include_all_groups')
-            if includeAllElement != None:
+            if includeAllElement is not None:
                 includeAll = self.__BOOL_PARSER[includeAllElement.text]
                 _m.logbook_write("Include all groups: %s" %includeAll)
             else:
@@ -1398,7 +1398,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             _m.logbook_write("To Group: %s" %toGroupId)
             
             bidirectionalElement = fareElement.find('bidirectional')
-            if bidirectionalElement != None:
+            if bidirectionalElement is not None:
                 bidirectional = self.__BOOL_PARSER[bidirectionalElement.text.upper()]
                 _m.logbook_write("Bidirectional: %s" %bidirectional)
             else:
@@ -1447,7 +1447,7 @@ class FBTNFromSchemaMulticlass(_m.Tool()):
             _m.logbook_write("To Zone: %s" %toZoneId)
             
             bidirectionalElement = fareElement.find('bidirectional')
-            if bidirectionalElement != None:
+            if bidirectionalElement is not None:
                 bidirectional = self.__BOOL_PARSER[bidirectionalElement.text.upper()]
                 _m.logbook_write("Bidirectional: %s" %bidirectional)
             else:

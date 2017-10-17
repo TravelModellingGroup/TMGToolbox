@@ -400,11 +400,11 @@ class OperatorTransferMatrix(_m.Tool()):
         self.TRACKER.reset()                              
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         if(xtmf_AggregationPartition.lower() == "none"):
-            self.AggregationPartition == None;
+            self.AggregationPartition is None;
         else:
             self.AggregationPartition = _MODELLER.emmebank.partition(xtmf_AggregationPartition)                    
 
@@ -588,7 +588,7 @@ class OperatorTransferMatrix(_m.Tool()):
         for info in config['strat_files']:
             className = info['name']
 
-            if(info['data'] != None):
+            if(info['data'] is not None):
                 if not 'alpha' in info['data']:
                     alpha = 0.0
                 else: 
@@ -715,7 +715,7 @@ class OperatorTransferMatrix(_m.Tool()):
                 "type": "EXTENDED_TRANSIT_TRAVERSAL_ANALYSIS"
             }
         
-        if self.DemandMatrixId != None:
+        if self.DemandMatrixId is not None:
             spec['constraint'] = {
                                     "by_value": {
                                         "interval_min": 0,
@@ -729,7 +729,7 @@ class OperatorTransferMatrix(_m.Tool()):
             spec['constraint'] = None
         
         print "Running traversal analysis on class %s" %className
-        if className != None:
+        if className is not None:
             traversalAnalysisTool(spec, filepath, 
                                   scenario= self.Scenario,
                                   class_name= className)

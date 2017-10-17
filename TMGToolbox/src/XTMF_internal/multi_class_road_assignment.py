@@ -110,7 +110,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         
         #Old Demand Matrix Definition
         #mf10 = _MODELLER.emmebank.matrix('mf10')
-        #if mf10 != None:
+        #if mf10 is not None:
             #self.DemandMatrix = mf10
         
         self.PeakHourFactor = 0.43
@@ -141,7 +141,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                  RunTitle, LinkTollAttributeId, xtmf_NameString, ResultAttributes, xtmf_AggAttributes, xtmf_aggAttributesMatrixId):
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         #:List will be passed as follows: xtmf_Demand_String = "mf10,mf11,mf12", Will be parsed into a list
@@ -172,7 +172,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                     self.aggAttributesClassMatrix[i][j] = None # make mf0 matrices None for better use in spec
         self.DemandMatrixList = []
         for demandMatrix in self.Demand_List:
-            if _MODELLER.emmebank.matrix(demandMatrix) == None:
+            if _MODELLER.emmebank.matrix(demandMatrix) is None:
                 raise Exception('Matrix %s was not found!' % demandMatrix)
             else:
                 self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
@@ -270,7 +270,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             y = 0 # init assignment flag. if assignment done, then trip flag
                             x = 0 # init flag. if list has something defined, then trip flag
                             for i in range(len(self.CostMatrixId)): #check to see if any cost matrices defined
-                                if self.CostMatrixId[i] != None:
+                                if self.CostMatrixId[i] is not None:
                                     x = 1
                             if x == 1: # if something, then do the assignment
                                 #get cost matrix
@@ -283,7 +283,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 y = 1
                             x = 0
                             for i in range(len(self.TollsMatrixId)): #check to see if any toll matrices defined
-                                if self.TollsMatrixId[i] != None:
+                                if self.TollsMatrixId[i] is not None:
                                     x = 1
                             if x == 1: # if something, then do the assignment
                                 # get tolls matrix
@@ -294,7 +294,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             x = 0
                             for i in range(len(self.aggAttributesClass)): # check to see if any aggregation attributes defined
                                 for j in range(len(self.aggAttributesClass[i])):
-                                    if self.aggAttributesClass[i][j] != None:
+                                    if self.aggAttributesClass[i][j] is not None:
                                         x = 1
                             if x == 1: # if something is defined, then do the assignment
                                 # get the max number of aggregation attributes for all the classes
@@ -321,7 +321,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     y = 1
                             x = 0
                             for i in range(len(self.TimesMatrixId)): #check to see if any time matrices defined
-                                if self.TimesMatrixId[i] != None:
+                                if self.TimesMatrixId[i] is not None:
                                     x = 1
                             if x == 1: # if something, then do the assignment
                                 if y == 0:
@@ -362,16 +362,16 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 analysisAttributes.append([])
                                 analysisMatrices.append([])
                             for i in range(len(self.CostMatrixId)):
-                                if self.CostMatrixId[i] != None:
+                                if self.CostMatrixId[i] is not None:
                                     analysisAttributes[i].append(costAttribute[i].id)
                                     analysisMatrices[i].append(self.CostMatrixId[i])
                             for i in range(len(self.TollsMatrixId)):
-                                if self.TollsMatrixId[i] != None:
+                                if self.TollsMatrixId[i] is not None:
                                     analysisAttributes[i].append(self.LinkTollAttributeId[i])
                                     analysisMatrices[i].append(self.TollsMatrixId[i])
                             for i in range(len(self.aggAttributesClass)):
                                 for j in range(len(self.aggAttributesClass[i])):
-                                    if self.aggAttributesClass[i][j] != None:
+                                    if self.aggAttributesClass[i][j] is not None:
                                         analysisAttributes[i].append(self.aggAttributesClass[i][j])
                                         analysisMatrices[i].append(self.aggAttributesClassMatrix[i][j])
                             spec = self._getSOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split, \
@@ -379,7 +379,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
                             x = 0                            
                             for i in range(len(self.TimesMatrixId)):
-                                if self.TimesMatrixId[i] != None:
+                                if self.TimesMatrixId[i] is not None:
                                     analysisAttributes[i].append(self.TimesMatrixId[i]) 
                                     analysisMatrices[i].append(self.timeAttribute[i].id)
                                     x = 1
@@ -432,7 +432,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         
         tempScenarioNumber = _util.getAvailableScenarioNumber()
         
-        if tempScenarioNumber == None:
+        if tempScenarioNumber is None:
             raise Exception("No additional scenarios are available!")
         
         scenario = _MODELLER.emmebank.copy_scenario(self.Scenario.id, tempScenarioNumber, 
@@ -460,7 +460,7 @@ class MultiClassRoadAssignment(_m.Tool()):
             attributeCreated = False
             at = '@ltime'+str(i+1)
             timeAttribute = self.Scenario.extra_attribute(at)
-            if timeAttribute == None:
+            if timeAttribute is None:
                 #@ltime hasn't been defined
                 _m.logbook_write("Creating temporary link cost attribute '@ltime"+str(i+1)+"'.")
                 timeAttribute = self.Scenario.create_extra_attribute('LINK', at, default_value=0)
@@ -502,7 +502,7 @@ class MultiClassRoadAssignment(_m.Tool()):
             attributeCreated = False
             at = '@lkcst'+str(i+1)
             costAttribute = self.Scenario.extra_attribute(at)
-            if costAttribute == None:
+            if costAttribute is None:
                 #@lkcst hasn't been defined
                 _m.logbook_write("Creating temporary link cost attribute '@lkcst"+str(i+1)+"'.")
                 costAttribute = self.Scenario.create_extra_attribute('LINK', at, default_value=0)
@@ -541,7 +541,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         attributeCreated = False
         bgTrafficAttribute = self.Scenario.extra_attribute('@tvph')
         
-        if bgTrafficAttribute == None:
+        if bgTrafficAttribute is None:
             bgTrafficAttribute = self.Scenario.create_extra_attribute('LINK','@tvph', 0)
             attributeCreated = True
             _m.logbook_write("Created extra attribute '@tvph'")
@@ -607,7 +607,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                     _util.initializeMatrix(self.TollsMatrixId[i], name='atoll', description='AUTO TOLL FOR MODE: %s' %Mode[i])
             for i in range(len(self.aggAttributesClassMatrix)):
                 for j in range(len(self.aggAttributesClassMatrix[i])):
-                    if self.aggAttributesClassMatrix[i][j] != None:
+                    if self.aggAttributesClassMatrix[i][j] is not None:
                         _util.initializeMatrix(self.aggAttributesClassMatrix[i][j], name=self.aggAttributesClass[i][j], description='Aggregate Attribute %s Matrix' %self.aggAttributesClass[i][j])
     
     def _getLinkCostCalcSpec(self, costAttributeId, linkCost, linkTollAttributeId):
@@ -638,7 +638,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         
     def _calculateAppliedTollFactor(self):
         appliedTollFactor = []
-        if self.TollWeight != None:
+        if self.TollWeight is not None:
             for i in range(0,len(self.TollWeight)):
                 #Toll weight is in $/hr, needs to be converted to min/$
                 appliedTollFactor.append(60.0 / self.TollWeight[i]) 
@@ -685,7 +685,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         #defines the aggregator     
         SOLA_path_analysis = []
         for i in range(len(Mode_List)):
-            if attribute[i] == None:
+            if attribute[i] is None:
                 SOLA_path_analysis.append(None)
             else:
                 path = {
@@ -765,7 +765,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         for i in range(len(modeList)):
             SolaPathAnalysis = []
             for j in range(len(attributeList)):
-                if attributeList[i][j] != None:
+                if attributeList[i][j] is not None:
                     path = {
                             "link_component": attributeList[i][j],
                             "turn_component": None,
@@ -831,7 +831,7 @@ class MultiClassRoadAssignment(_m.Tool()):
     
     def _modifyFunctionForAoNAssignment(self):
         allOrNothingFunc = _MODELLER.emmebank.function('fd98')
-        if allOrNothingFunc == None:
+        if allOrNothingFunc is None:
             allOrNothingFunc = _MODELLER.emmebank.create_function('fd98', 'ul2')
         else:
             allOrNothingFunc.expression = 'ul2'

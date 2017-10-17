@@ -237,7 +237,7 @@ class ShptoEmmeMap(_m.Tool()):
             nearestNode = spatialIndex.nearestToPoint(convertedStops[stop][0], convertedStops[stop][1])
             if nearestNode[0] == "Nothing Found":
                 map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],-1,-1])
-            elif nearestNode[0] == None:
+            elif nearestNode[0] is None:
                 map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],0,0])
             else:
                 cleanedNumber = int(nearestNode[0])

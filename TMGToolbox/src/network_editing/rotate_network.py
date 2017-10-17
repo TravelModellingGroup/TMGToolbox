@@ -230,7 +230,7 @@ class RotateNetwork(_m.Tool()):
     def _GetRefLink(self, network):
         link = network.link(self.ReferenceLinkINode, self.ReferenceLinkJNode)
         
-        if link == None:
+        if link is None:
             raise Exception("Reference link '%s-%s' does not exist in the network!" 
                             %(self.ReferenceLinkINode, self.ReferenceLinkJNode))
         return link

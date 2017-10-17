@@ -138,11 +138,11 @@ class ExportAggregateAverageMatrix(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found." %xtmf_ScenarioNumber)
         
         self.Partition = _MODELLER.emmebank.partition(xtmf_PartitionId)
-        if self.Partition == None:
+        if self.Partition is None:
             raise Exception("Partition '%s' was not found." %xtmf_PartitionId)
         
         self.MatrixIdToAggregate = MatrixIdToAggregate

@@ -409,11 +409,11 @@ class Shapely2ESRI():
             self._canwrite = False
             self.invalidFeatureIDs = set()
         elif mode.lower().startswith("w"): #WRITE MODE
-            if projectionFile != None:
+            if projectionFile is not None:
                 self.setProjection(projectionFile)
             self._canread = False
             self._canwrite = True
-            if geometryType == None:
+            if geometryType is None:
                 _warn.warn("No geometryType specified. This will cause errors when writing to a shapefile.")
             
         elif mode.lower().startswith("a"): #APPEND MODE
@@ -497,7 +497,7 @@ class Shapely2ESRI():
         Reads a single record
         '''
         if not self._canread: raise IOError("Reading disabled on this object.")
-        if self._sf == None:
+        if self._sf is None:
             raise IOError("Shapefile hasn't been opened. Call [this].open() first.")
         
         feature = self._sf.read_object(fid)
@@ -545,7 +545,7 @@ class Shapely2ESRI():
         argument for not-attachcable-subclass shapely objects
         '''
         if not self._canwrite: raise IOError("Writing disabled on this object.")
-        if self._sf == None:
+        if self._sf is None:
             raise IOError("Shapefile hasn't been opened. Call [this].open() first.")
         if len(self.fields) == 0:
             self.addField('NULL', int, 5)
@@ -636,13 +636,13 @@ class Shapely2ESRI():
             klass = self._fieldTypeMap[fieldType]
         except KeyError, ke:
             raise KeyError("'%s' not recognized as valid field type" %fieldType)
-        if length == None and decimals == None and default == None: field = klass(name)
-        elif length == None and decimals== None: field = klass(name, default=default)
-        elif length== None and default == None: field = klass(name, decimals=decimals)
-        elif decimals == None and default == None: field = klass(name, length=length)
-        elif length == None: field = klass(name, decimals=decimals, default=default)
-        elif decimals == None: field = klass(name, length=length, default=default)
-        elif default == None: field = klass(name, length=length, decimals=decimals)
+        if length is None and decimals is None and default is None: field = klass(name)
+        elif length is None and decimals is None: field = klass(name, default=default)
+        elif length is None and default is None: field = klass(name, decimals=decimals)
+        elif decimals is None and default is None: field = klass(name, length=length)
+        elif length is None: field = klass(name, decimals=decimals, default=default)
+        elif decimals is None: field = klass(name, length=length, default=default)
+        elif default is None: field = klass(name, length=length, decimals=decimals)
         else: field = klass(name, length=length, decimals=decimals, default=default)
         
         self.fields[name] = field
@@ -664,7 +664,7 @@ class Shapely2ESRI():
         '''
         major, minor, release, beta = _util.getEmmeVersion(tuple)
         
-        if projectionFile != None:
+        if projectionFile is not None:
             #I have no way of checking that the existing file actually IS a projection
             #file. This will need to be used in good faith.
             if not _path.isfile(projectionFile):

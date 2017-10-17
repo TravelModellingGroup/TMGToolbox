@@ -202,7 +202,7 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         #---2 Pass in remaining args
