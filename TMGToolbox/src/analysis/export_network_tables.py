@@ -10,6 +10,16 @@ pdu = mm.module('tmg.common.pandas_utils')
 class ExportNetworkTables(m.Tool()):
     tool_run_msg = ""
 
+    scenario_id = m.Attribute(int)
+    target_folder = m.Attribute(str)
+    file_prefix = m.Attribute(str)
+
+    export_nodes = m.Attribute(bool)
+    export_links = m.Attribute(bool)
+    export_turns = m.Attribute(bool)
+    export_lines = m.Attribute(bool)
+    export_segments = m.Attribute(bool)
+    
     SourceScenario = m.Attribute(m.InstanceType)
     TargetFolder = m.Attribute(str)
     FilePrefix = m.Attribute(str)
