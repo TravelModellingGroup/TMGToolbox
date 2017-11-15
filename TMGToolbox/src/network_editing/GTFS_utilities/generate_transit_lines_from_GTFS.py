@@ -345,7 +345,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                 if cells[1] == '0':
                     self.TRACKER.completeSubtask()
                     continue #Assume no mapping exists for this stop
-                if network.node(cells[1]) == None:
+                if network.node(cells[1]) is None:
                     raise IOError("Mapping error: Node %s does not exist" %cells[1])
                 stops2nodes[cells[0]] = cells[1]
             self.TRACKER.completeTask()
@@ -430,7 +430,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             writer.write("emme_id,trip_depart,trip_arrive")
         
             # Setup the shortest-path algorithm
-            if self.LinkPriorityAttributeId != None:
+            if self.LinkPriorityAttributeId is not None:
                 def speed(link):
                     factor = link[self.LinkPriorityAttributeId]
                     if factor == 0:
@@ -454,7 +454,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             for route in routes.itervalues():
                 baseEmmeId = route.emme_id
                 vehicle = network.transit_vehicle(route.emme_vehicle)
-                if vehicle == None:
+                if vehicle is None:
                     raise Exception("Cannot find a vehicle with id=%s" %route.emme_vehicle)
                 if GtfsModeMap[vehicle.mode.id] != route.route_type:
                     print "Warning: Vehicle mode of route {0} ({1}) does not match suggested route type ({2})".\
@@ -603,7 +603,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
         modes = [mode for mode in network.modes() if mode.type == 'TRANSIT']
         
         for mode in modes:
-            if self.LinkPriorityAttributeId == None:
+            if self.LinkPriorityAttributeId is None:
                 func = ModeOnlyFilter(mode)
                 map[mode] = func
             else:
@@ -622,7 +622,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                 continue #skip this stop
             nodeId = stops2nodes[stopId]
             node = network.node(nodeId)
-            if node == None:
+            if node is None:
                 if stopId in skippedStopIds:
                     skippedStopIds[stopId] += 1
                 else:
