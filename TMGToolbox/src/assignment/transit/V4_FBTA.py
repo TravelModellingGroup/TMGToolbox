@@ -600,18 +600,18 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.TRACKER.reset()
         
         try:
-            if self.AssignmentPeriod == None: raise NullPointerException("Assignment period not specified")
-            if self.WaitPerception == None: raise NullPointerException("Waiting perception not specified")
-            if self.WalkPerceptionToronto == None: raise NullPointerException("Toronto walk perception not specified")
-            if self.WalkPerceptionNonToronto == None: raise NullPointerException("Non-Toronto walk perception not specified")
-            if self.BoardPerception == None: raise NullPointerException("Boarding perception not specified")
-            if self.CongestionExponentString == None: raise NullPointerException("Congestion parameters not specified")
-            if self.Iterations == None: raise NullPointerException("Maximum iterations not specified")
-            if self.NormGap == None: raise NullPointerException("Normalized gap not specified")
-            if self.RelGap == None: raise NullPointerException("Relative gap not specified")
-            if self.EffectiveHeadwaySlope == None: raise NullPointerException("Effective headway slope not specified")
-            if self.LinkFareAttributeId == None: raise NullPointerException("Link fare attribute not specified")
-            if self.SegmentFareAttributeId == None: raise NullPointerException("Segment fare attribute not specified")
+            if self.AssignmentPeriod is None: raise NullPointerException("Assignment period not specified")
+            if self.WaitPerception is None: raise NullPointerException("Waiting perception not specified")
+            if self.WalkPerceptionToronto is None: raise NullPointerException("Toronto walk perception not specified")
+            if self.WalkPerceptionNonToronto is None: raise NullPointerException("Non-Toronto walk perception not specified")
+            if self.BoardPerception is None: raise NullPointerException("Boarding perception not specified")
+            if self.CongestionExponentString is None: raise NullPointerException("Congestion parameters not specified")
+            if self.Iterations is None: raise NullPointerException("Maximum iterations not specified")
+            if self.NormGap is None: raise NullPointerException("Normalized gap not specified")
+            if self.RelGap is None: raise NullPointerException("Relative gap not specified")
+            if self.EffectiveHeadwaySlope is None: raise NullPointerException("Effective headway slope not specified")
+            if self.LinkFareAttributeId is None: raise NullPointerException("Link fare attribute not specified")
+            if self.SegmentFareAttributeId is None: raise NullPointerException("Segment fare attribute not specified")
             
             
             '''
@@ -624,13 +624,13 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                     yield att
                 finally:
                     pass
-            if self.HeadwayFractionAttributeId == None:
+            if self.HeadwayFractionAttributeId is None:
                 manager1 = _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', default= 0.5)
             else: manager1 = blank(self.Scenario.extra_attribute(self.HeadwayFractionAttributeId))
-            if self.WalkAttributeId == None:
+            if self.WalkAttributeId is None:
                 manager2 = _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', default= 1.0)
             else: manager2 = blank(self.Scenario.extra_attribute(self.WalkAttributeId))
-            if self.EffectiveHeadwayAttributeId == None:
+            if self.EffectiveHeadwayAttributeId is None:
                 manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default= 0.0)
             else: manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
             nest = nested(manager1, manager2, manager3)
@@ -701,7 +701,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
 
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         #---2 Set up demand matrix
@@ -711,23 +711,23 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             assignIdentityMatrix = True
         else:
             demandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
-            if demandMatrix == None:
+            if demandMatrix is None:
                 raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
             manager = blankManager(demandMatrix)
         
-        if self.Scenario.extra_attribute(self.WalkAttributeId) == None:
+        if self.Scenario.extra_attribute(self.WalkAttributeId) is None:
             raise Exception("Walk perception attribute %s does not exist" %self.WalkAttributeId)
         
-        if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) == None:
+        if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) is None:
             raise Exception("Headway fraction attribute %s does not exist" %self.HeadwayFractionAttributeId)
 
-        if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) == None:
+        if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) is None:
             raise Exception("Effective headway attribute %s does not exist" %self.EffectiveHeadwayAttributeId)
         
-        if self.Scenario.extra_attribute(self.LinkFareAttributeId) == None:
+        if self.Scenario.extra_attribute(self.LinkFareAttributeId) is None:
             raise Exception("Link fare attribute %s does not exist" %self.LinkFareAttributeId)
         
-        if self.Scenario.extra_attribute(self.SegmentFareAttributeId) == None:
+        if self.Scenario.extra_attribute(self.SegmentFareAttributeId) is None:
             raise Exception("Segment fare attribute %s does not exist" %self.SegmentFareAttributeId)
         
         #---3 Set up output matrices

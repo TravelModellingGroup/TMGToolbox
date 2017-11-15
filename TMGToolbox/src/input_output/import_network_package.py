@@ -319,7 +319,7 @@ class ImportNetworkPackage(_m.Tool()):
 
     @_m.logbook_trace("Reading turns")
     def _batchin_turns(self, scenario, temp_folder, zf):
-        if self._components.turns_file != None and (self._components.turns_file in zf.namelist()):
+        if self._components.turns_file is not None and (self._components.turns_file in zf.namelist()):
             zf.extract(self._components.turns_file, temp_folder)
             self.TRACKER.runTool(import_turns,
                              transaction_file=_path.join(temp_folder, self._components.turns_file),
@@ -477,14 +477,14 @@ class ImportNetworkPackage(_m.Tool()):
             self._components.turns_file = self._getZipOriginalString(processed, contents, 'turns.231')
             self._components.shape_file = self._getZipOriginalString(processed, contents, 'shapes.251')
             s = self._getZipOriginalString(processed, contents, 'version.txt')
-            if s != None:
+            if s is not None:
                  vf = package.open(s)
                  version = float(vf.readline())
                  if version >= 3:
                      self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
                  s = self._getZipOriginalString(processed, contents, 'link_results.csv')
                  s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
-                 if s != None and s2 != None:
+                 if s is not None and s2 is not None:
                      self._components.traffic_results_files = s, s2
                  self._components.transit_results_files = self._getZipOriginalString(processed, contents, 'segment_results.csv')
                  self._components.aux_transit_results_file = self._getZipOriginalString(processed, contents, 'aux_transit_results.csv')	     

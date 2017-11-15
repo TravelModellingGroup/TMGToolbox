@@ -90,7 +90,7 @@ class ExtractCostMatrix(_m.Tool()):
         
         # Get the scenario
         self.scenario = self.databank.scenario(ScenarioNumber)
-        if self.scenario == None:
+        if self.scenario is None:
             raise Exception("Could not find scenario %s!" %ScenarioNumber)
         
         # Prepare the result matrix

@@ -67,7 +67,7 @@ class LoadMatrix(_m.Tool()):
                 id = self._parseMatrixHeader(line)
                 
                 mtx = _m.Modeller().emmebank.matrix(id)
-                if mtx != None:
+                if mtx is not None:
                     _m.Modeller().emmebank.delete_matrix(id)
                 return
     

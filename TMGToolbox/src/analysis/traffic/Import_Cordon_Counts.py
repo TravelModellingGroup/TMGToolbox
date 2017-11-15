@@ -148,7 +148,7 @@ class ImportCordonCounts(_m.Tool()):
                     value = column[2].strip()
             #apply the values
                     ourLink = net.link(countpostlinkid[0],countpostlinkid[1])
-                    if ourLink != None:
+                    if ourLink is not None:
                         print value
                         ourLink["@cord"] = int(value)
                     else:                    

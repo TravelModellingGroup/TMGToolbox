@@ -85,7 +85,7 @@ class ReturnBoardings(_m.Tool()):
         #---1 Set up scenario
         scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         self.scenarioNumber = xtmf_ScenarioNumber
-        if (scenario == None):
+        if (scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         if not scenario.has_transit_results:
             raise Exception("Scenario %s does not have transit assignment results" %xtmf_ScenarioNumber)              
@@ -171,7 +171,7 @@ class ReturnBoardings(_m.Tool()):
         for info in config['strat_files']:
             className = info['name']
             print className
-            if(info['data'] != None):
+            if(info['data'] is not None):
                 classDemandMatrix[className] = info['data']['demand']
         '''
         if type(classDemandMatrixId) == type(dict()):

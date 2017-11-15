@@ -245,7 +245,7 @@ class LineSetConjoiner(_m.Tool()):
     def _GetNewId(self, originalId, network):
         if ord('0') <= ord(originalId[-1]) <= ord('9'): # eg like some Durham lines (D100, etc.)
             newId = originalId + 'c'
-            if network.transit_line(newId) == None:                
+            if network.transit_line(newId) is None:
                 return newId
             else:
                 raise Exception("Could not create a valid ID")
@@ -260,18 +260,18 @@ class LineSetConjoiner(_m.Tool()):
                     newId = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'c'
                     newIdA = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'a' #need to make sure there is not a similarly named line
                     newIdB = originalId[:-2] + unichr(ord(originalId[-2]) + count) + 'b'
-                    if network.transit_line(newId) == None and network.transit_line(newIdA) == None and network.transit_line(newIdB) == None:
+                    if network.transit_line(newId) is None and network.transit_line(newIdA) is None and network.transit_line(newIdB) is None:
                         return newId #if it's valid, use the name. Otherwise, keep advancing throught the alphabet
             else: # eg like some Durham lines (D100w, etc.)
                 newId = originalId[:-1] + 'c'
-                if network.transit_line(newId) == None:                
+                if network.transit_line(newId) is None:
                     return newId
         elif ord('A') <= ord(originalId[-1]) <= ord('Z'): # eg like Brampton (B001B, etc.)
             for count in range(1,26): #allows for a full alphabet cycle
                     if ord(originalId[-1]) + count > ord('Z'):
                         raise Exception("Could not create a valid ID") #fails if it needs to pass Z
                     newId = originalId[:-1] + unichr(ord(originalId[-1]) + count)
-                    if network.transit_line(newId) == None:                
+                    if network.transit_line(newId) is None:
                         return newId
         else:
             raise Exception("Could not create a valid ID")

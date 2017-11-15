@@ -177,14 +177,14 @@ class ExtractLinkTransfers(_m.Tool()):
 		print "Beginning to extract link transfer data" 
 
 		self.BaseScenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-		if (self.BaseScenario == None):
+		if (self.BaseScenario is None):
 			raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 		
 		if xtmf_DemandMatrixNumber == 0:
 			self.DemandMatrix = None
 		else:
 			self.DemandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
-			if self.DemandMatrix == None:
+			if self.DemandMatrix is None:
 				raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
 		
 		self.LinkSetString = LinkSetString

@@ -93,7 +93,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, xtmf_MatrixResultNumber):
         
         self.Scenario = _m.Modeller().emmebank.Scenario(xtmf_ScenarioNumber)
-        if self.Scenario == None:
+        if self.Scenario is None:
             raise Exception("Could not find Scenario %s!" %xtmf_ScenarioNumber)
     
         self.MatrixResultId = "mf%s" %xtmf_MatrixResultNumber

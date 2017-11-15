@@ -130,7 +130,7 @@ class Index(_m.Tool()):
         ns = attributes['namespace']
         parent = element['parent_id']
         
-        if parent == None:
+        if parent is None:
             return ns
         else:
             return self.build_element_namespace(toolbox, parent) + '.' + ns

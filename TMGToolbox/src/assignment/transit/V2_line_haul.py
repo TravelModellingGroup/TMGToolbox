@@ -197,7 +197,7 @@ class Station2StationAssignment(_m.Tool()):
         
         #---1 Set up scenario
         self.scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if (self.scenario == None):
+        if (self.scenario is None):
             raise Exception("Scenario %s was not found!" %ScenarioNumber)
         
         #---2 Set up the demand matrix
@@ -205,7 +205,7 @@ class Station2StationAssignment(_m.Tool()):
             self.demandMatrix = None
         else:
             self.demandMatrix = _m.Modeller().emmebank.matrix('mf%s' %DemandMatrixNumber)
-            if self.demandMatrix == None:
+            if self.demandMatrix is None:
                 raise Exception("Could not find matrix 'mf%s' in the databank!" %DemandMatrixNumber)
             
         #---3 Set up modes
@@ -295,7 +295,7 @@ class Station2StationAssignment(_m.Tool()):
         
         with _m.logbook_trace("Initializing temporary demand matrix"):
             id=None
-            if self.demandMatrix == None:
+            if self.demandMatrix is None:
                 
                 self.demandMatrix = _util.initializeMatrix(id,
                                                       matrix_type='SCALAR',

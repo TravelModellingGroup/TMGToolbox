@@ -101,7 +101,7 @@ class FlagPremiumBusLines(_m.Tool()):
                  FlagZum):
         
         self.scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if self.scenario == None:
+        if self.scenario is None:
             raise Exception("Could not find scenario %s!" %ScenarioNumber)
         
         self.FlagGO = FlagGO
@@ -163,7 +163,7 @@ class FlagPremiumBusLines(_m.Tool()):
             self.scenario.publish_network(network)
             
     def _initFlagAttribute(self):
-        if self.scenario.extra_attribute('@lflag') == None:
+        if self.scenario.extra_attribute('@lflag') is None:
             #@lflag hasn't been defined
             self.scenario.create_extra_attribute('TRANSIT_LINE', '@lflag', default_value=0)
         else:

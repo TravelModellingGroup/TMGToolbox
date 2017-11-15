@@ -515,16 +515,16 @@ if __name__ == "__main__":
     
     this_script_folder = pathlib.dirname(pathlib.abspath(__file__))
     
-    if args.src == None: source_folder = pathlib.join(this_script_folder, 'src')
+    if args.src is None: source_folder = pathlib.join(this_script_folder, 'src')
     else: source_folder = args.src
     
-    if args.title == None: title = "TMG Toolbox"
+    if args.title is None: title = "TMG Toolbox"
     else: title = args.title
     
-    if args.path == None: toolbox_file = pathlib.join(this_script_folder, 'TMG_Toolbox.mtbx')
+    if args.path is None: toolbox_file = pathlib.join(this_script_folder, 'TMG_Toolbox.mtbx')
     else: toolbox_file = args.path
     
-    if args.namespace == None: namespace = 'tmg'
+    if args.namespace is None: namespace = 'tmg'
     else: namespace = args.namespace
     
     consolidate_flag = args.consolidate

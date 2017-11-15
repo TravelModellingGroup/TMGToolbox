@@ -175,15 +175,15 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
             self._modeList.append(m.id)
         
         # Initialize blank matrices if needed.
-        if self.ivttMatrix == None:
+        if self.ivttMatrix is None:
             self._initIVTT(self.databank.available_matrix_identifier('FULL'))
-        if self.walkMatrix == None:
+        if self.walkMatrix is None:
             self._initWalk(self.databank.available_matrix_identifier('FULL'))
-        if self.waitMatrix == None:
+        if self.waitMatrix is None:
             self._initWait(self.databank.available_matrix_identifier('FULL'))
-        if self.boardingMatrix == None:
+        if self.boardingMatrix is None:
             self._initBoard(self.databank.available_matrix_identifier('FULL'))
-        if self.costMatrix == None:
+        if self.costMatrix is None:
             self._initCost(self.databank.available_matrix_identifier('FULL'))
         
         # Run the tool
@@ -202,7 +202,7 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
         
         # Get the scenario object
         self.scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if self.scenario == None:
+        if self.scenario is None:
             raise Exception("Could not find scenario %s!" %ScenarioNumber)
         
         # Convert the mode string to a list of characters

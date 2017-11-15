@@ -236,7 +236,7 @@ class GeoRenumberNodes(_m.Tool()):
                     if polygon.contains(p):
                         shape = polygon
                         break
-                if shape == None:
+                if shape is None:
                     raise IOError("Shapefile does not cover node")
                 
                 node.numberCategory = shape['County']
@@ -258,7 +258,7 @@ class GeoRenumberNodes(_m.Tool()):
         
         self.TRACKER.startProcess(network.element_totals['regular_nodes'])
         for node in network.regular_nodes():
-            if node.numberCategory == 'Rails' or node.numberCategory == None or node.numberCategory == 'HOV':
+            if node.numberCategory == 'Rails' or node.numberCategory is None or node.numberCategory == 'HOV':
                 fixedNodeIDs.add(node.number)
             else:
                 node.number += 100000 #100k
@@ -273,7 +273,7 @@ class GeoRenumberNodes(_m.Tool()):
         
         self.TRACKER.startProcess(network.element_totals['regular_nodes'])
         for node in network.regular_nodes():
-            if node.numberCategory == 'Rails' or node.numberCategory == None or node.numberCategory == 'HOV':
+            if node.numberCategory == 'Rails' or node.numberCategory is None or node.numberCategory == 'HOV':
                 pass
             else:
                 iter = iterartors[node.numberCategory]

@@ -83,11 +83,11 @@ class AttachCentriodsToNodes(_m.Tool()):
                                  network.mode('v')])
         for i in range(len(nodesToAttachTo)):
             nodeToAttachTo = self._get_node(network, nodesToAttachTo[i])
-            if nodeToAttachTo == None:
+            if nodeToAttachTo is None:
                 raise Exception("Unable to find a node with the ID " + nodesToAttachTo[i])
             #check to see if the centroid already exists
             centroidNode = self._get_node(network, centroidNumbers[i])
-            if centroidNode != None:
+            if centroidNode is not None:
                 network.delete_node(centroidNode.id, True)
             centroidNode = network.create_centroid(centroidNumbers[i])
             centroidNode.x = nodeToAttachTo.x

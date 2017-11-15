@@ -142,7 +142,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
         
         try:
             if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")
-            if self.PenaltyFilterString == None: raise NullPointerException("Penalties not specified")                
+            if self.PenaltyFilterString is None: raise NullPointerException("Penalties not specified")
             
             self._Execute()
         except Exception, e:
@@ -159,7 +159,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.Scenarios = []
         for number in xtmf_ScenarioNumbers.split(','):
             sc = _MODELLER.emmebank.scenario(number)
-            if (sc == None):
+            if (sc is None):
                 raise Exception("Scenarios %s was not found!" %number)
             self.Scenarios.append(sc)
         

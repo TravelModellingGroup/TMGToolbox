@@ -42,7 +42,7 @@ class ExportMatrix(_m.Tool()):
     def __call__(self, MatrixId, Filename, ScenarioNumber):        
         with _m.logbook_trace("Exporting matrix %s to XTMF" %MatrixId): 
             scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-            if (scenario == None):
+            if (scenario is None):
                 raise Exception("Scenario %s was not found!" %ScenarioNumber)
             
             try:
@@ -53,7 +53,7 @@ class ExportMatrix(_m.Tool()):
                     tool = _m.Modeller().tool('inro.emme.data.matrix.export_matrices')
                 
                 mtx = _m.Modeller().emmebank.matrix("mf%s" %MatrixId)
-                if mtx == None:
+                if mtx is None:
                     raise Exception("No matrix found with id '%s'" %MatrixId)
                 self._tracker.runTool(tool,
                                       export_file=Filename,
