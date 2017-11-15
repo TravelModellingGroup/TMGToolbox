@@ -22,6 +22,7 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+import os.path
 _util = _m.Modeller().module('tmg.common.utilities')
 
 ##########################################################################################################
@@ -130,6 +131,8 @@ class CleanGTFS(_m.Tool()):
         return idSet
     
     def _FilterTripsFile(self, routeIdSet, serviceIdSet):
+        exists = os.path.isfile(self.GTFSFolderName + "/shapes.txt")
+        shapeIdSet = set()
         tripIdSet = set()
         with nested(open(self.GTFSFolderName + "/trips.txt"), 
                     open(self.GTFSFolderName + "/trips.updated.csv", 'w')) as (reader, writer):
@@ -139,6 +142,8 @@ class CleanGTFS(_m.Tool()):
             routeIdCol = cells.index("route_id")
             serviceIdCol = cells.index("service_id")
             tripIdCol = cells.index("trip_id")
+            if exists == True:
+                shapeIdCol = cells.index("shape_id")
             
             for line in reader.readlines():
                 line = line.strip()
@@ -148,9 +153,29 @@ class CleanGTFS(_m.Tool()):
                 if not cells[serviceIdCol] in serviceIdSet:
                     continue
                 tripIdSet.add(cells[tripIdCol])
+                if exists == True:
+                    shapeIdSet.add(cells[shapeIdCol])
                 writer.write("\n %s" %line)
+        
+        if exists == True:
+            cleanedShapes = self._FilterShapesFile(shapeIdSet)
         return tripIdSet
     
+    def _FilterShapesFile(self, shapeIdSet):
+        with nested(open(self.GTFSFolderName + "/shapes.txt"),
+                    open(self.GTFSFolderName + "/shapes.updated.csv", 'w')) as (reader, writer):
+            header = reader.readline().strip()
+            cells = header.split(",")
+            writer.write(header)
+            shapeIdCol = cells.index("shape_id")
+            for line in reader.readlines():
+                line = line.strip()
+                cells = line.split(",")
+                if not cells[shapeIdCol] in shapeIdSet:
+                    continue
+                writer.write("\n %s" %line)
+
+
     def _FilterStopTimesFile(self, tripIdSet):
         servicedStopsSet = set()
         with nested(open(self.GTFSFolderName + "/stop_times.txt"),
@@ -184,6 +209,7 @@ class CleanGTFS(_m.Tool()):
                 if not cells[stopIdCol] in servicedStopsSet:
                     continue
                 writer.write("\n%s" %line)
+
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):

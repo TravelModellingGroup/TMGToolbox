@@ -568,7 +568,7 @@ class RemoveExtraNodes(_m.Tool()):
         for node in nodesToDelete:
             nid = node.number
             try:
-                _editing.mergeLinks(node, deleteStop= True, linkAggregators= self._linkAggregators, segmentAggregators= self._segmentAggregators)
+                _editing.mergeLinks(node, deleteStop= True, vertex = True, linkAggregators= self._linkAggregators, segmentAggregators= self._segmentAggregators)
                 deletedNodes += 1
             except ForceError, fe:
                 #User specified to keep these nodes

@@ -592,21 +592,28 @@ class MultiClassTransitAssignment(_m.Tool()):
             'od_results': {
                 'total_impedance': self.ImpedanceMatrixList[i]},
             'flow_distribution_between_lines': {
-                'consider_travel_time': self._considerTotalImpedance},
+                'consider_total_impedance': self._considerTotalImpedance},
             'save_strategies': True,
             'type': 'EXTENDED_TRANSIT_ASSIGNMENT'})
         for i in range(0, len(baseSpec)):
             if self._useLogitConnectorChoice:
-                baseSpec[i]['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
+                '''baseSpec[i]['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
                                                       'truncation': self._connectorLogitTruncation}},
-                 'by_fixed_proportions': None}
+                 'by_fixed_proportions': None}'''
+                baseSpec[i]['flow_distribution_at_origins'] = {'choices_at_origins': {
+                    'choice_points':'ALL_ORIGINS', 
+                    'choice_set': 'ALL_CONNECTORS',
+                    'logit_parameters': {
+                        'scale': self.xtmf_OriginDistributionLogitScale,
+                        'truncation': self._connectorLogitTruncation}},
+                 'fixed_proportions_on_connectors': None}
             if EMME_VERSION >= (4, 1):
                 baseSpec[i]['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
-                if self._useLogitAuxTrChoice:
-                    raise NotImplementedError()
-                    baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': 'ui1',
-                                                  'aux_transit_choice_set': 'BEST_LINK',
-                                                  'logit_parameters': {'scale': self.xtmf_WalkDistributionLogitScale,
+                '''if self._useLogitAuxTrChoice:
+                    raise NotImplementedError()'''
+                baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
+                                                  'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
+                                                  'logit_parameters': {'scale': 0.2,
                                                                        'truncation': 0.05}}}
             if EMME_VERSION >= (4,2,1):
                 modeList = []
@@ -679,20 +686,24 @@ class MultiClassTransitAssignment(_m.Tool()):
             'od_results': {
                 'total_impedance': self.ImpedanceMatrixList[index]},
             'flow_distribution_between_lines': {
-                'consider_travel_time': self._considerTotalImpedance},
+                'consider_total_impedance': self._considerTotalImpedance},
             'save_strategies': True,
             'type': 'EXTENDED_TRANSIT_ASSIGNMENT'}
         if self._useLogitConnectorChoice:
-            baseSpec['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
-                                                      'truncation': self._connectorLogitTruncation}},
-                 'by_fixed_proportions': None}
+            baseSpec['flow_distribution_at_origins'] = {'choices_at_origins': {
+                    'choice_points':'ALL_ORIGINS', 
+                    'choice_set': 'ALL_CONNECTORS',
+                    'logit_parameters': {
+                        'scale': self.xtmf_OriginDistributionLogitScale,
+                        'truncation': self._connectorLogitTruncation}},
+                 'fixed_proportions_on_connectors': None}
         if EMME_VERSION >= (4, 1):
             baseSpec['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
-            if self._useLogitAuxTrChoice:
-                raise NotImplementedError()
-                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': 'ui1',
-                                                  'aux_transit_choice_set': 'BEST_LINK',
-                                                  'logit_parameters': {'scale': self.xtmf_WalkDistributionLogitScale,
+            '''if self._useLogitAuxTrChoice:
+                raise NotImplementedError()'''
+            baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
+                                                  'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
+                                                  'logit_parameters': {'scale': 0.2,
                                                                        'truncation': 0.05}}}
         if EMME_VERSION >= (4,2,1):
             modeList = []

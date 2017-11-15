@@ -1150,20 +1150,28 @@ class FBTNFromSchema(_m.Tool()):
                     for connector in outgoingConnectors:
                         newLink = network.create_link(virtualNode.number, connector.j_node.number, connector.modes)
                         for att in network.attributes('LINK'): newLink[att] = connector[att]
+                        verticesList = connector.vertices
+                        newLink.vertices = verticesList
                     for connector in incomingConnectors:
                         newLink = network.create_link(connector.i_node.number, virtualNode.number, connector.modes)
                         for att in network.attributes('LINK'): newLink[att] = connector[att]
+                        verticesList = connector.vertices
+                        newLink.vertices = verticesList
                     
                 #Copy the base node's existing station connectors to the new virtual node
                 for connector in outgoingLinks:
                     newLink = network.create_link(virtualNode.number, connector.j_node.number, connector.modes)
                     for att in network.attributes('LINK'): newLink[att] = connector[att]
+                    verticesList = connector.vertices
+                    newLink.vertices = verticesList
                     
                     transferGrid[groupNumber, 0].add(newLink) #Index the new connector to the Grid
                     
                 for connector in incomingLinks:
                     newLink = network.create_link(connector.i_node.number, virtualNode.number, connector.modes)
                     for att in network.attributes('LINK'): newLink[att] = connector[att]
+                    verticesList = connector.vertices
+                    newLink.vertices = verticesList
                     
                     transferGrid[0, groupNumber].add(newLink) #Index the new connector to the Grid
                                  
@@ -1211,6 +1219,8 @@ class FBTNFromSchema(_m.Tool()):
                     
                     newLink = network.create_link(virtualNode1.number, virtualNode2.number, link.modes)
                     for att in network.attributes('LINK'): newLink[att] = link[att]
+                    verticesList = link.vertices
+                    newLink.vertices = verticesList
                     
                     #Only index if the group numbers are different. Otherwise, this is the only
                     #part of the code where intra-group transfers are identified, so DON'T do
@@ -1235,6 +1245,8 @@ class FBTNFromSchema(_m.Tool()):
             if vLink == None:
                 vLink = network.create_link(iv, jv, lineMode)
                 for att in network.attributes('LINK'): vLink[att] = baseLink[att]
+                verticesList = baseLink.vertices
+                vLink.vertices = verticesList
             else:
                 vLink.modes |= lineMode
                 
