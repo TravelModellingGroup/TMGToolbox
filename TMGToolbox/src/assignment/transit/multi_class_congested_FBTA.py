@@ -611,11 +611,15 @@ class MultiClassTransitAssignment(_m.Tool()):
                 baseSpec[i]['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
                 '''if self._useLogitAuxTrChoice:
                     raise NotImplementedError()'''
-                baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
+                if self.Scenario.extra_attribute("@node_logit") != None:
+                    baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
                                                   'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
                                                   'logit_parameters': {'scale': 0.2,
                                                                        'truncation': 0.05}}}
-            if EMME_VERSION >= (4,2,1):
+                else:
+                    baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                        'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
+                        }
                 modeList = []
 
                 partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
@@ -701,10 +705,15 @@ class MultiClassTransitAssignment(_m.Tool()):
             baseSpec['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
             '''if self._useLogitAuxTrChoice:
                 raise NotImplementedError()'''
-            baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
+            if self.Scenario.extra_attribute("@node_logit") is not None:
+                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
                                                   'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
                                                   'logit_parameters': {'scale': 0.2,
                                                                        'truncation': 0.05}}}
+            else:
+                 baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                        'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
+                        }
         if EMME_VERSION >= (4,2,1):
             modeList = []
             partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
