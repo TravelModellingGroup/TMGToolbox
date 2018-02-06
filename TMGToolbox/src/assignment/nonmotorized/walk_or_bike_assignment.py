@@ -21,7 +21,10 @@ class WalkOrBikeAssignment(m.Tool()):
     xtmf_ScenarioId = m.Attribute(int)
     xtmf_AssignmentModes = m.Attribute(str)
 
+    number_of_tasks = 3  # For progress reporting, enter the integer number of tasks here
+
     def __init__(self):
+        self.TRACKER = utils.ProgressTracker(self.number_of_tasks)  # init the ProgressTracker
         self.Scenario = mm.scenario
         self.AssignmentModes = [mode.id for mode in mm.scenario.modes() if mode.type == 'AUX_TRANSIT']
         self.NCpus = cpu_count()
@@ -112,6 +115,7 @@ class WalkOrBikeAssignment(m.Tool()):
 
     @m.logbook_trace(name="Walk or bike assignment")
     def _execute(self):
+        self.TRACKER.reset()
         assert self.Scenario is not None
         assert len(self.AssignmentModes) > 0, "No assignment modes were provided"
         assert all(self.Scenario.mode(mode).type == "AUX_TRANSIT" for mode in self.AssignmentModes), \
@@ -119,10 +123,12 @@ class WalkOrBikeAssignment(m.Tool()):
 
         with self._demand_manager() as demand_mid:
             self._do_assignment(demand_mid)
+            self.TRACKER.completeTask()
 
             if self.TimeSkimMatrixID is not None:
                 utils.initializeMatrix(self.TimeSkimMatrixID)
                 self._extract_time_skim()
+            self.TRACKER.completeTask()
 
             if self.VolumeAttribute:  # Deliberately allow None and '' to be false-y
 
@@ -135,6 +141,7 @@ class WalkOrBikeAssignment(m.Tool()):
                 attr.description = "Volumes from '%s' assignment" % self.ClassName
 
                 self._save_volumes(demand_mid)
+            self.TRACKER.completeTask()
 
     @contextmanager
     def _demand_manager(self):
@@ -236,6 +243,10 @@ class WalkOrBikeAssignment(m.Tool()):
         }
         mm.tool('inro.emme.transit_assignment.extended.network_results')(
             spec, self.Scenario, self.ClassName, self.NCpus)
+
+    @m.method(return_type=m.TupleType)
+    def percent_completed(self):
+        return self.TRACKER.getProgress()
 
     @m.method(return_type=unicode)
     def tool_run_msg_status(self):
