@@ -113,6 +113,8 @@ class WalkOrBikeAssignment(m.Tool()):
         self.ClassName = ClassName
         self.VolumeAttribute = VolumeAttribute
 
+        self._execute()
+
     @m.logbook_trace(name="Walk or bike assignment")
     def _execute(self):
         self.TRACKER.reset()
