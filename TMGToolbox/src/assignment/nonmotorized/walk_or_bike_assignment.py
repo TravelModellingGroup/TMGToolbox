@@ -20,6 +20,7 @@ class WalkOrBikeAssignment(m.Tool()):
 
     xtmf_ScenarioId = m.Attribute(int)
     xtmf_AssignmentModes = m.Attribute(str)
+    xtmf_DemandMatrixNumber = m.Attribute(int)
 
     number_of_tasks = 3  # For progress reporting, enter the integer number of tasks here
 
@@ -103,10 +104,10 @@ class WalkOrBikeAssignment(m.Tool()):
 
         self.tool_run_msg = m.PageBuilder.format_info("Script execution complete.")
 
-    def __call__(self, xtmf_AssignmentModes, DemandMatrixID, TimeSkimMatrixID, xtmf_ScenarioId, NCpus,
+    def __call__(self, xtmf_AssignmentModes, xtmf_DemandMatrixNumber, TimeSkimMatrixID, xtmf_ScenarioId, NCpus,
                  ClassName, VolumeAttribute):
         self.AssignmentModes = list(xtmf_AssignmentModes)
-        self.DemandMatrixID = DemandMatrixID if DemandMatrixID > 0 else None
+        self.DemandMatrixID = xtmf_DemandMatrixNumber if xtmf_DemandMatrixNumber > 0 else None
         self.TimeSkimMatrixID = TimeSkimMatrixID if TimeSkimMatrixID > 0 else None
         self.Scenario = mm.emmebank.scenario(xtmf_ScenarioId)
         self.NCpus = NCpus if NCpus > 0 else cpu_count()
