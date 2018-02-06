@@ -121,6 +121,7 @@ class WalkOrBikeAssignment(m.Tool()):
             self._do_assignment(demand_mid)
 
             if self.TimeSkimMatrixID is not None:
+                utils.initializeMatrix(self.TimeSkimMatrixID)
                 self._extract_time_skim()
 
             if self.VolumeAttribute:  # Deliberately allow None and '' to be false-y
