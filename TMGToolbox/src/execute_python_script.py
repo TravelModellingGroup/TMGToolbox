@@ -50,6 +50,7 @@ class ExecutePythonScript(_m.Tool()):
     
     #---Variable definitions
     filename = _m.Attribute(str)
+    xtmf_fileName = _m.Attribute(str)
     
     def page(self):
         pb = _m.ToolPageBuilder(self, title="Execute Python Script",
@@ -79,7 +80,8 @@ class ExecutePythonScript(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Script execution complete.")
     
-    def __call__(self):        
+    def __call__(self, xtmf_fileName):
+        self.filename = xtmf_fileName
         try:
             self._execute()
         except Exception, e:

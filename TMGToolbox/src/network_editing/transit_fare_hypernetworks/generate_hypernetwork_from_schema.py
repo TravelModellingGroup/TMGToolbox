@@ -383,7 +383,7 @@ class FBTNFromSchema(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-            
+            print "Starting Hyper Networking Generation"
             self._nextNodeId = self.VirtualNodeDomain
             
             root = _ET.parse(self.XMLSchemaFile).getroot()            
@@ -460,6 +460,7 @@ class FBTNFromSchema(_m.Tool()):
             newSc.publish_network(network, resolve_attributes= True)
             
             _MODELLER.desktop.refresh_needed(True) #Tell the desktop app that a data refresh is required
+            print "Finished Hyper Network Generation"
 
     ##########################################################################################################     
     
@@ -1211,22 +1212,14 @@ class FBTNFromSchema(_m.Tool()):
                 for groupNumber2 in baseNode2.stopping_groups:
                     virtualNode2 = baseNode2.to_hyper_node[groupNumber2]
                     
-                    if network.link(virtualNode1.number, virtualNode2.number) is not None:
-                        #Link already exists. Index it just in case
-                        if groupNumber1 != groupNumber2:
-                            transferGrid[groupNumber1, groupNumber2].add(network.link(virtualNode1.number, virtualNode2.number))
-                        continue 
-                    
-                    newLink = network.create_link(virtualNode1.number, virtualNode2.number, link.modes)
-                    for att in network.attributes('LINK'): newLink[att] = link[att]
-                    verticesList = link.vertices
-                    newLink.vertices = verticesList
-                    
-                    #Only index if the group numbers are different. Otherwise, this is the only
-                    #part of the code where intra-group transfers are identified, so DON'T do
-                    #it to have the matrix be consistent.
                     if groupNumber1 != groupNumber2:
-                        transferGrid[groupNumber1, groupNumber2].add(newLink)
+                        hyper_link = network.link(virtualNode1.number, virtualNode2.number)
+                        if hyper_link is None:
+                            #Link already exists. Index it just in case
+                            hyper_link = network.create_link(virtualNode1.number, virtualNode2.number, link.modes)
+                            for att in network.attributes('LINK'): hyper_link[att] = link[att]
+                        transferGrid[groupNumber1, groupNumber2].add(hyper_link)
+                            
     
     def _ProcessTransitLine(self, lineId, network, zoneTransferGrid, saveFunction):
         line = network.transit_line(lineId)
@@ -1312,7 +1305,7 @@ class FBTNFromSchema(_m.Tool()):
             if typ == 'initial_boarding':
                 self._ApplyInitialBoardingFare(fareElement, groupIds2Int, zoneId2sInt, groupTransferGrid)
             elif typ == 'transfer':
-                self._ApplyTransferBoardingFare(fareElement, groupIds2Int, groupTransferGrid)
+                self._ApplyTransferBoardingFare(fareElement, groupIds2Int, groupTransferGrid, zoneId2sInt)
             elif typ == 'distance_in_vehicle':
                 self._ApplyFareByDistance(fareElement, groupIds2Int, linesIdexedByGroup)
             elif typ == 'zone_crossing':
@@ -1348,20 +1341,24 @@ class FBTNFromSchema(_m.Tool()):
                 includeAll = True
             
             count = 0
+            links_changed = {}
             if includeAll:
                 for xIndex in xrange(transferGrid.x):
                     for link in transferGrid[xIndex, groupNumber]:
                         if checkLink(link): 
                             link[self.LinkFareAttributeId] += cost
+                            links_changed[str(link.id)] = str(link[self.LinkFareAttributeId])
                             count += 1
             else:
                 for link in transferGrid[0, groupNumber]:
                     if checkLink(link):
                         link[self.LinkFareAttributeId] += cost
-                        count += 1   
+                        count += 1
+                        links_changed[str(link.id)] = str(link[self.LinkFareAttributeId])
             _m.logbook_write("Applied to %s links." %count)
+            _m.logbook_write(name = "Links that have been changed", attributes = links_changed)
     
-    def _ApplyTransferBoardingFare(self, fareElement, groupIds2Int, transferGrid):
+    def _ApplyTransferBoardingFare(self, fareElement, groupIds2Int, transferGrid, zoneId2sInt):
         cost = float(fareElement.attrib['cost'])
         
         with _m.logbook_trace("Transfer Boarding Fare of %s" %cost):
@@ -1379,17 +1376,32 @@ class FBTNFromSchema(_m.Tool()):
                 _m.logbook_write("Bidirectional: %s" %bidirectional)
             else:
                 bidirectional = False
-            
+
+            inZoneElement = fareElement.find('in_zone')
+            if inZoneElement is not None:
+                zoneId = inZoneElement.text
+                zoneNumber = zoneId2sInt[zoneId]
+                _m.logbook_write("In zone: %s" %zoneId)
+                checkLink = lambda link: link.i_node.fare_zone == zoneNumber
+            else:
+                checkLink = lambda link: True
+
+            links_changed = {}
             count = 0
             for link in transferGrid[fromNumber, toNumber]:
-                link[self.LinkFareAttributeId] += cost
-                count += 1
+                if checkLink(link):
+                    link[self.LinkFareAttributeId] += cost
+                    count += 1
+                    links_changed[str(link.id)] = str(link[self.LinkFareAttributeId])
             
             if bidirectional:
                 for link in transferGrid[toNumber, fromNumber]:
-                    link[self.LinkFareAttributeId] += cost
-                    count += 1
+                    if checkLink(link):
+                        link[self.LinkFareAttributeId] += cost
+                        count += 1
+                        links_changed[str(link.id)] = str(link[self.LinkFareAttributeId])
             _m.logbook_write("Applied to %s links." %count)
+            _m.logbook_write(name = "Links that have been changed", attributes = links_changed)
     
     def _ApplyFareByDistance(self, fareElement, groupIds2Int, linesIdexedByGroup):
         cost = float(fareElement.attrib['cost'])
@@ -1400,11 +1412,14 @@ class FBTNFromSchema(_m.Tool()):
             _m.logbook_write("Group: %s" %groupId)
             
             count = 0
+            changed = {}
             for line in linesIdexedByGroup[groupNumber]:
                 for segment in line.segments(False):
                     segment[self.SegmentFareAttributeId] += segment.link.length * cost
+                    changed[str(segment.id)] = str(segment[self.SegmentFareAttributeId])
                     count += 1
             _m.logbook_write("Applied to %s segments." %count)
+            _m.logbook_write(name = "Segments that have been changed", attributes = changed)
     
     def _ApplyZoneCrossingFare(self, fareElement, groupIds2Int, zoneId2sInt, crossingGrid, network):
         cost = float(fareElement.attrib['cost'])
@@ -1430,10 +1445,12 @@ class FBTNFromSchema(_m.Tool()):
                 bidirectional = False
             
             count = 0
+            changed = {}
             for lineId, segmentNumber in crossingGrid[fromNumber, toNumber]:
                 line = network.transit_line(lineId)
                 if line.group != groupNumber: continue
                 line.segment(segmentNumber)[self.SegmentFareAttributeId] += cost
+                changed[str(line.segment(segmentNumber).id)] = str(line.segment(segmentNumber)[self.SegmentFareAttributeId])
                 count += 1
                 
             if bidirectional:
@@ -1441,10 +1458,11 @@ class FBTNFromSchema(_m.Tool()):
                     line = network.transit_line(lineId)
                     if line.group != groupNumber: continue
                     line.segment(segmentNumber)[self.SegmentFareAttributeId] += cost
+                    changed[str(line.segment(segmentNumber).id)] = str(line.segment(segmentNumber)[self.SegmentFareAttributeId])
                     count += 1
                     
             _m.logbook_write("Applied to %s segments." %count)
-        
+            _m.logbook_write(name = "Segments that have been changed", attributes = changed)
     def _CheckForNegativeFares(self, network):
         negativeLinks = []
         negativeSegments = []

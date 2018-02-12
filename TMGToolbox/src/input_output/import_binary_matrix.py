@@ -38,6 +38,8 @@ Import Binary Matrix
 import inro.modeller as _m
 import traceback as _traceback
 from inro.emme.matrix import MatrixData as _MatrixData
+import shutil
+import os
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -88,13 +90,13 @@ class ImportBinaryMatrix(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name= 'ImportFile',
                            window_type= 'file',
-                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx\nAll files (*.*)",
+                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx; *.mtx.gz\nAll files (*.*)",
                            title= "Import File")
         
         pb.add_select_matrix(tool_attribute_name= 'MatrixId',
                              id= True,
                              title= "Matrix",
-                             note= "Select an existinf matrix in which to save data.")
+                             note= "Select an existing matrix in which to save data.")
         
         pb.add_select_scenario(tool_attribute_name='Scenario',
                                title='Scenario:',
@@ -182,7 +184,14 @@ class ImportBinaryMatrix(_m.Tool()):
             matrix = _util.initializeMatrix(self.MatrixId)
             if self.MatrixDescription:
                 matrix.description = self.MatrixDescription
-            
+            if str(self.ImportFile)[-2:] == "gz":
+                zipped = True
+                with open(self.ImportFile, 'rb') as zip_file:
+                    directory = 'matrix.mtx'
+                    with open(directory, 'wb') as non_zip_file:
+                        shutil.copyfileobj(zip_file, non_zip_file)
+                        self.ImportFile = directory
+
             data = _MatrixData.load(self.ImportFile)
             
             origins, destinations = data.indices
@@ -218,6 +227,9 @@ class ImportBinaryMatrix(_m.Tool()):
                 
                 matrix.set_data(data)
             
+            if zipped == True:
+                os.remove(directory)
+
             self.TRACKER.completeTask()
     
     def _GetAtts(self):

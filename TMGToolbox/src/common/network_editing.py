@@ -104,10 +104,10 @@ def createSegmentAlightingsAttribute(network):
     for line in network.transit_lines():
         for i, segment in enumerate(line.segments(include_hidden=True)):
             if i > 0:
-                a = prevVolume + segment.transit_boardings - segment.transit_volume
+                a = prevVolume + float(segment.transit_boardings) - float(segment.transit_volume)
                 if a < 0: a = 0.0 #Alightings can be negative due to rounding error
                 segment.transit_alightings = a
-            prevVolume = segment.transit_volume 
+            prevVolume = float(segment.transit_volume) 
 
 #===========================================================================================
 
