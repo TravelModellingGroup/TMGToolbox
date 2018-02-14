@@ -40,7 +40,6 @@ networkResultsTool = _MODELLER.tool("inro.emme.transit_assignment.extended.netwo
 matrixResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix_results')
 strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
-surfaceTransitSpeedTool = _MODELLER.tool('tmg.assignment.transit.surface_transit_speed_update')
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple)
 
