@@ -184,6 +184,7 @@ class ImportBinaryMatrix(_m.Tool()):
             matrix = _util.initializeMatrix(self.MatrixId)
             if self.MatrixDescription:
                 matrix.description = self.MatrixDescription
+            zipped = False
             if str(self.ImportFile)[-2:] == "gz":
                 zipped = True
                 with open(self.ImportFile, 'rb') as zip_file:
