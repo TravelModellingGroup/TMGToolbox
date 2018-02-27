@@ -354,8 +354,8 @@ class TransitAssignmentTool(_m.Tool()):
                     _m.logbook_write('No problems were found')
             self._InitMatrices()
             self._ChangeWalkSpeed()
-            with _util.tempMatrixMANAGER('Temp impedances') as impedanceMatrix:
-                self.TRACKER.startProcess(3)
+            with self._getImpendenceMatrices():
+                self.TRACKER.startProcess(5)
                 self._AssignHeadwayFraction()
                 self.TRACKER.completeSubtask()
                 self._AssignEffectiveHeadway()
@@ -748,7 +748,7 @@ class TransitAssignmentTool(_m.Tool()):
                     },
                 'connector_to_connector_path_prohibition': None,
                 'od_results': {
-                    'total_impedance': self.ImpedanceMatrixList[index]
+                    'total_impedance': self.ImpedenceMatrices[index].id
                     },
                 'flow_distribution_between_lines': {
                     'consider_total_impedance': self._considerTotalImpedance
@@ -857,6 +857,18 @@ class TransitAssignmentTool(_m.Tool()):
             'TRANSIT_LINE': ['headway', str(stsu_att.id), 'data2'],
             'TRANSIT_SEGMENT': ['dwell_time', 'transit_volume', 'transit_time', 'transit_boardings', 'transit_time_func', '@tstop']
             }
+        if self.Scenario.extra_attribute('@tstop') is None:
+            if self.SurfaceTransitSpeed == False:
+                attributes_to_copy['TRANSIT_SEGMENT'].remove('@tstop')
+            else:
+                raise Exception("@tstop attribute needs to be defined. @tstop is an integer that shows how many transit stops are on each transit segment.")
+        if 'auto_time' not in self.Scenario.attributes('LINK'):
+            if self.SurfaceTransitSpeed == False:
+                attributes_to_copy['LINK'].remove('auto_time')
+            else:
+                raise Exception("An auto assignment needs to be present on the scenario")
+                
+          
         for type, atts in attributes_to_copy.iteritems():
             atts = list(atts)
             data = self.Scenario.get_attribute_values(type, atts)
@@ -880,7 +892,7 @@ class TransitAssignmentTool(_m.Tool()):
         for i in range(0, len(classAssignedDemand)):
             matrixCalcSpec = {
                 'type': 'MATRIX_CALCULATION',
-	            'expression': str(self.ImpedanceMatrixList[i])+'*'+str(self.DemandMatrixList[i])+'/'+str(classAssignedDemand[i]),
+	            'expression': str(self.ImpedenceMatrices[i].id)+'*'+str(self.DemandMatrixList[i])+'/'+str(classAssignedDemand[i]),
                 'aggregation': {
                     'origins':'+',
                     'destinations':'+'
@@ -1213,7 +1225,7 @@ class TransitAssignmentTool(_m.Tool()):
                 'perception_factor': farePerception[i]},
             'connector_to_connector_path_prohibition': None,
             'od_results': {
-                'total_impedance': self.ImpedanceMatrixList[i]},
+                'total_impedance': self.ImpedenceMatrices[i].id},
             'flow_distribution_between_lines': {
                 'consider_total_impedance': self._considerTotalImpedance},
             'save_strategies': True,
@@ -1311,7 +1323,7 @@ class TransitAssignmentTool(_m.Tool()):
                 'perception_factor': farePerception},
             'connector_to_connector_path_prohibition': None,
             'od_results': {
-                'total_impedance': self.ImpedanceMatrixList[index]},
+                'total_impedance': self.ImpedenceMatrices[index].id},
             'flow_distribution_between_lines': {
                 'consider_total_impedance': self._considerTotalImpedance},
             'save_strategies': True,
@@ -1656,6 +1668,28 @@ class TransitAssignmentTool(_m.Tool()):
             }
         return atts
 
+    @contextmanager
+    def _getImpendenceMatrices(self):
+        self.ImpedenceMatrices = []
+        created = {}
+        for i in range(0,len(self.DemandMatrixList)):
+            matrixCreated = False
+            if self.ImpedanceMatrixList[i] == None:
+                matrixCreated = True
+                _m.logbook_write("Creating temporary Impendence Matrix for class %s" %self.ClassNames[i])
+                mtx = _util.initializeMatrix(default=0.0, description= 'Temporary Impedence for class %s' %self.ClassNames[i], \
+                           matrix_type='FULL')
+                self.ImpedenceMatrices.append(mtx)
+            else:
+                mtx = _bank.matrix(self.ImpedanceMatrixList[i])
+                self.ImpedenceMatrices.append(mtx)
+            created[mtx.id] = matrixCreated
+        try:
+            yield self.ImpedenceMatrices
+        finally:
+            for key in created:
+                if created[key] == True:
+                    _bank.delete_matrix(key) 
 
     @_m.method(return_type=unicode)
     def get_scenario_node_attributes(self):
