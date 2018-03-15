@@ -550,7 +550,7 @@ class OperatorTransferMatrix(_m.Tool()):
         if not exists(configPath): return self.Scenario.transit_assignment_type
         
         with open(configPath) as reader:
-            config = _parsedict(reader.readline())
+            config = _parsedict(reader.read())
         
         data = config['data']
         return data['type']
@@ -564,7 +564,7 @@ class OperatorTransferMatrix(_m.Tool()):
         if not exists(configPath): return self.Scenario.transit_assignment_type
         
         with open(configPath) as reader:
-            config = _parsedict(reader.readline())
+            config = _parsedict(reader.read())
         
         data = config['data']
         if 'multi_class' in data:
@@ -582,7 +582,7 @@ class OperatorTransferMatrix(_m.Tool()):
         if not exists(configPath): return []
         
         with open(configPath) as reader:
-            config = _parsedict(reader.readline())
+            config = _parsedict(reader.read())
         
         classes = []
         for info in config['strat_files']:
@@ -607,7 +607,7 @@ class OperatorTransferMatrix(_m.Tool()):
         if not exists(configPath): return []
         
         with open(configPath) as reader:
-            config = _parsedict(reader.readline())
+            config = _parsedict(reader.read())
         
         classes = []
         if self._GetAssignmentType() == 'MULTICLASS_TRANSIT_ASSIGNMENT':
