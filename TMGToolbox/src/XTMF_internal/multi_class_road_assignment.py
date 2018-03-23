@@ -221,9 +221,17 @@ class MultiClassRoadAssignment(_m.Tool()):
 
         
         self.DemandMatrixList = []
-        for demandMatrix in self.Demand_List:
+        for i in range(0,len(self.Demand_List)):
+            demandMatrix = self.Demand_List[i]
             if _MODELLER.emmebank.matrix(demandMatrix) is None:
-                raise Exception('Matrix %s was not found!' % demandMatrix)
+                if str(demandMatrix).lower() == 'mf0':
+                    dm = _util.initializeMatrix(matrix_type='FULL')
+                    demandMatrix = dm.id
+                    print "Assigning a Zero Demand matrix for class '%s' on scenario %d" %(str(self.ClassNames[i]),int(self.Scenario.number))
+                    self.Demand_List[i] = dm.id
+                    self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
+                else:
+                    raise Exception('Matrix %s was not found!' % demandMatrix)
             else:
                 self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
         
