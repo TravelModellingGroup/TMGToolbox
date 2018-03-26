@@ -333,7 +333,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             lowerBounds = []
                             upperBounds = []
                             pathSelectors = []
-                            for i in range(len(self.CostMatrixId)): #check to see if any cost matrices defined
+                            for i in range(len(self.Demand_List)): #check to see if any cost matrices defined
                                 allAttributes.append([])
                                 allMatrices.append([])
                                 operators.append([])
@@ -341,6 +341,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 upperBounds.append([])
                                 pathSelectors.append([])
                                 if self.CostMatrixId[i] is not None:
+                                    _m.logbook_write("Cost matrix defined for class %s" %self.ClassNames[i])
                                     allAttributes[i].append(costAttribute[i].id)
                                     allMatrices[i].append(self.CostMatrixId[i])
                                     operators[i].append("+")
@@ -348,7 +349,10 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     upperBounds[i].append(None)
                                     pathSelectors[i].append("ALL")
                                     attributeDefined = True
+                                else:
+                                    allAttributes[i].append(None)
                                 if self.TollsMatrixId[i] is not None:
+                                    _m.logbook_write("Toll matrix defined for class %s" %self.ClassNames[i])
                                     allAttributes[i].append(self.LinkTollAttributeId[i])
                                     allMatrices[i].append(self.TollsMatrixId[i])
                                     operators[i].append("+")
@@ -356,8 +360,11 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     upperBounds[i].append(None)
                                     pathSelectors[i].append("ALL")
                                     attributeDefined = True
+                                else:
+                                    allAttributes[i].append(None)
                                 for j in range(len(self.ClassAnalysisAttributes[i])):
                                     if self.ClassAnalysisAttributes[i][j] is not None:
+                                        _m.logbook_write("Additional matrix for attribute %s defined for class %s" %(self.ClassAnalysisAttributes[i][j], self.ClassNames[i]))
                                         allAttributes[i].append(self.ClassAnalysisAttributes[i][j])
                                         allMatrices[i].append(self.ClassAnalysisAttributesMatrix[i][j])
                                         operators[i].append(self.ClassAnalysisOperators[i][j])
@@ -365,7 +372,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                                         upperBounds[i].append(self.ClassAnalysisUpperBounds[i][j])
                                         pathSelectors[i].append(self.ClassAnalysisSelectors[i][j])
                                         attributeDefined = True
-                            if attributeDefined == True:
+                                    else:
+                                        allAttributes[i].append(None)
+                            if attributeDefined is True:
                                 spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split,\
                                                             classVolumeAttributes, costAttribute, allAttributes, allMatrices, operators, lowerBounds, \
                                                             upperBounds,pathSelectors)
@@ -376,11 +385,11 @@ class MultiClassRoadAssignment(_m.Tool()):
                             for i in range(len(self.TimesMatrixId)): #check to see if any time matrices defined
                                 if self.TimesMatrixId[i] is not None:
                                     attributeDefined = True
-                            if attributeDefined == True: # if something, then do the assignment
-                                if assignmentComplete == False:
+                            if attributeDefined is True: # if something, then do the assignment
+                                if assignmentComplete is False:
                                     # need to do blank assignment in order to get auto times saved in timeau
                                     attributes = []
-                                    for i in range(len(self.Mode_List_Split)):
+                                    for i in range(len(self.Demand_List)):
                                         attributes.append(None)
                                     spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split,\
                                                             classVolumeAttributes, costAttribute, attributes, None, None, None, \
@@ -397,7 +406,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 lowerBounds = []
                                 upperBounds = []
                                 pathSelectors = []
-                                for i in range(len(self.Mode_List_Split)):
+                                for i in range(len(self.Demand_List)):
                                     attributes.append([])
                                     matrices.append([])
                                     operators.append([])
@@ -424,9 +433,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
                                 assignmentComplete = True
 
-                            if assignmentComplete == False: # if no assignment has been done, do an assignment
+                            if assignmentComplete is False: # if no assignment has been done, do an assignment
                                 attributes = []
-                                for i in range(len(self.Mode_List_Split)):
+                                for i in range(len(self.Demand_List)):
                                     attributes.append(None)
                                 spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.Mode_List_Split,\
                                                             classVolumeAttributes, costAttribute, attributes, None, None, None, \
@@ -524,7 +533,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         finally:
             # Code here is executed in all cases.
             for key in attributes:
-                if attributes[key] == True: 
+                if attributes[key] is True: 
                     _m.logbook_write("Deleting temporary link cost attribute.")
                     self.Scenario.delete_extra_attribute(key)
                     # Delete the extra cost attribute only if it didn't exist before.
@@ -567,7 +576,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         finally:
             # Code here is executed in all cases.
             for key in attributes:
-               if attributes[key] == True:
+               if attributes[key] is True:
                    _m.logbook_write("Deleting temporary link cost attribute.")
                    self.Scenario.delete_extra_attribute(key)
                    # Delete the extra cost attribute only if it didn't exist before.    
@@ -720,12 +729,16 @@ class MultiClassRoadAssignment(_m.Tool()):
             }
         #defines the aggregator     
         SOLA_path_analysis = []
-        for i in range(len(Mode_List)):
-            if attributes[i] == [] or attributes[i] == [None] or attributes[i] == None:
+        for i in range(0,len(self.Demand_List)):
+            if attributes[i] is None:
                 SOLA_path_analysis.append(None)
             else:
                 SOLA_path_analysis.append([])
+                allNone = True
                 for j in range(len(attributes[i])):
+                    if attributes[i][j] is None:
+                        continue
+                    allNone = False
                     path = {
                         "link_component": attributes[i][j],
                         "turn_component": None,
@@ -746,7 +759,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                         },
                         "analyzed_demand": None
                     }
-                SOLA_path_analysis[i].append(path)
+                    SOLA_path_analysis[i].append(path)
+                if allNone is True:
+                    SOLA_path_analysis[i] = None
         #Creates a list entry for each mode specified in the Mode List and its associated Demand Matrix
         SOLA_Class_Generator = [{
                     "mode": Mode_List[i],

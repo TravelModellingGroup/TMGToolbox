@@ -119,6 +119,7 @@ class TransitAssignmentTool(_m.Tool()):
     xtmf_WalkDistributionLogitScale = _m.Attribute(float)
 
     xtmf_SurfaceTransitSpeed = _m.Attribute(str)
+    xtmf_WalkAllWayFlag = _m.Attribute(str)
 
     if EMME_VERSION >= (4, 1):
         NumberOfProcessors = _m.Attribute(int)
@@ -253,7 +254,7 @@ class TransitAssignmentTool(_m.Tool()):
         EffectiveHeadwayAttributeId, EffectiveHeadwaySlope,  AssignmentPeriod, \
         Iterations, NormGap, RelGap, \
         xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, xtmf_ImpedanceMatrixString, \
-        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, xtmf_congestedAssignment, xtmf_CSVFile, xtmf_SurfaceTransitSpeed):
+        xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, xtmf_congestedAssignment, xtmf_CSVFile, xtmf_SurfaceTransitSpeed, xtmf_WalkAllWayFlag):
         
         if EMME_VERSION < (4, 1, 5):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
@@ -276,15 +277,21 @@ class TransitAssignmentTool(_m.Tool()):
         else:
             self.SurfaceTransitSpeed = [x for x in xtmf_SurfaceTransitSpeed.split(',')]
 
+        if str(xtmf_WalkAllWayFlag).lower() == "true":
+            self.WalkAllWayFlag = True
+        else:
+            self.WalkAllWayFlag = False
+   
         #class-specific inputs
-        self.ClassWaitPerceptionList = [float (x) for x in xtmf_ClassWaitPerceptionString.split(',')]
-        self.ClassBoardPerceptionList = [float (x) for x  in xtmf_ClassBoardPerceptionString.split(',')]
-        self.ClassFarePerceptionList = [float(x) for x in xtmf_ClassFarePerceptionString.split(',')]
+        self.ClassWaitPerceptionList = [float (x.strip("\'").strip('\"')) for x in xtmf_ClassWaitPerceptionString.split(',')]
+        self.ClassBoardPerceptionList = [float (x.strip("\'").strip('\"')) for x  in xtmf_ClassBoardPerceptionString.split(',')]
+        self.ClassFarePerceptionList = [float(x.strip("\'").strip('\"')) for x in xtmf_ClassFarePerceptionString.split(',')]
         
 
         self.LinkFareAttributeIdList = xtmf_LinkFareAttributeIdString.split(',')
         self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
 
+        xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.strip("\'").strip('\"')
 
         if xtmf_WalkPerceptionString is not None:
             xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.replace('::', '\n')
@@ -571,49 +578,6 @@ class TransitAssignmentTool(_m.Tool()):
             self.Scenario.create_extra_attribute("TRANSIT_SEGMENT", "@alightings")
         self.models = self._SetUpLineAttributes(stsu_att)
         network = self.Scenario.get_network()
-        
-        '''if self.Scenario.extra_attribute("@boardings") is None:
-            self.Scenario.create_extra_attribute("TRANSIT_SEGMENT", "@boardings")
-        if self.Scenario.extra_attribute("@alightings") is None:
-            self.Scenario.create_extra_attribute("TRANSIT_SEGMENT", "@alightings")
-        network = self.Scenario.get_partial_network(['LINK', 'TRANSIT_SEGMENT'], include_attributes = True)
-        for i,model in enumerate(self.SurfaceTransitSpeed):
-            model = model.split(":")
-            scenario = self.Scenario
-            boarding_duration = float(model[1])
-            alighting_duration  = float(model[2])
-            default_duration = float(model[3])
-            correlation = float(model[4])
-            mode_filter = str(model[5])
-            line_filter = str(model[6])
-            base_speed = True
-            #self.TRACKER.runTool(surfaceTransitSpeedTool, scenario, base_speed, self.AssignmentPeriod, boarding_duration, alighting_duration, default_duration, correlation, mode_filter, line_filter, 0)
-            ###### can maybe look into implementing transit speed in a way that uses timau in the ttf ???
-            filter = [x for x in mode_filter]
-            for segment in network.transit_segments():
-                if str(segment.line.mode.id) not in filter:
-                    continue
-                if segment.j_node is None:
-                    continue
-                if int(segment.transit_time_func) < 10:
-                    segment.transit_time_func += 10
-                
-                time = float(segment.link["auto_time"])
-                if time > 0.0:
-                    segment.data1 = time*correlation
-                if time <= 0.0:
-                    i = 0
-                    for seg in segment.line.segments():
-                        i += 1
-                    if int(segment.number) <= 2 or int(segment.number) >= (i-2):
-                        segment.data1 = float(segment.link.length)/20*60
-                    else:
-                        segment.data1 = float(segment.link.length)/50*60
-                if int(segment.number) == 0:
-                    segment.dwell_time = 0
-                    continue
-                segment.dwell_time = (float(segment["@tstop"])*default_duration)/60'''
-
         for segment in network.transit_segments():
             if segment.allow_alightings == True and segment.allow_boardings == True:
                 segment.dwell_time = 0.01
@@ -791,7 +755,7 @@ class TransitAssignmentTool(_m.Tool()):
             baseSpec["journey_levels"] = [
                     {
                         "description": "Walking",
-                        "destinations_reachable": False,
+                        "destinations_reachable": self.WalkAllWayFlag,
                         "transition_rules": modeList,
                         "boarding_time": None,
                         "boarding_cost": None,
@@ -965,45 +929,6 @@ class TransitAssignmentTool(_m.Tool()):
     def _SurfaceTransitSpeedUpdate(self, network, lambdaK, stsu_att):
         if 'transit_alightings' not in network.attributes('TRANSIT_SEGMENT'):
             network.create_attribute('TRANSIT_SEGMENT', 'transit_alightings', 0.0)
-        '''if 'transit_alightings' in network.attributes('TRANSIT_SEGMENT'):
-            network.delete_attribute('TRANSIT_SEGMENT', 'transit_alightings')
-        network.create_attribute('TRANSIT_SEGMENT', 'transit_alightings', 0.0)
-        for i, model in enumerate(self.SurfaceTransitSpeed):
-            model = model.split(":")
-            boarding_duration = float(model[1])
-            alighting_duration  = float(model[2])
-            default_duration = float(model[3])
-            correlation= float(model[4])
-            mode_filter = str(model[5])
-            line_filter = str(model[6])
-            base_speed = False
-            lambdaK = float(lambdaK)
-            #self.TRACKER.runTool(surfaceTransitSpeedTool, self.Scenario, base_speed, self.AssignmentPeriod, boarding_duration, alighting_duration, default_duration, correlation, mode_filter, line_filter, lambdaK)
-            filter = [x for x in mode_filter]
-            for line in network.transit_lines():
-                for segment in line.segments(include_hidden=True):
-                    if int(segment.number) > 0:
-                        a = prevVolume + float(segment.transit_boardings) - float(segment.transit_volume)
-                        if a < 0: a = 0.0
-                        segment.transit_alightings = a
-                    prevVolume = float(segment.transit_volume)
-                    if str(segment.line.mode.id) not in filter:
-                        continue
-                    if segment.j_node is None: 
-                        continue
-                    headway = float(segment.line.headway)
-                    number_of_trips = float(self.AssignmentPeriod)*60/headway
-
-                    boarding = float(segment.transit_boardings)/number_of_trips
-                    alighting = float(segment.transit_alightings)/number_of_trips
-
-                    old_dwell = segment.dwell_time
-
-                    segment_dwell_time =(boarding_duration*boarding + alighting_duration*alighting) + (int(segment["@tstop"])*default_duration) #seconds
-                    segment_dwell_time /= 60 #minutes
-                
-                    alpha = 1-lambdaK
-                    segment.dwell_time = old_dwell * alpha + segment_dwell_time * lambdaK'''
         for line in network.transit_lines():
             for segment in line.segments(include_hidden=True):
                 if int(segment.number) > 0:
@@ -1149,7 +1074,6 @@ class TransitAssignmentTool(_m.Tool()):
         averageImpedence = lambdaK * averageMinTripImpedence + (1 - lambdaK) * previousAverageMinTripImpedence + netCosts
         crgap = cngap / averageImpedence
         normGapDifference = (self.NormGap - cngap) * 100000.0
-        print cngap, crgap, normGapDifference
         return (averageImpedence,cngap,crgap,normGapDifference, netCosts)
 
 
@@ -1272,7 +1196,7 @@ class TransitAssignmentTool(_m.Tool()):
                 baseSpec[i]["journey_levels"] = [
                 {
                     "description": "Walking",
-                    "destinations_reachable": False,
+                    "destinations_reachable": self.WalkAllWayFlag,
                     "transition_rules": modeList,
                     "boarding_time": None,
                     "boarding_cost": None,
@@ -1287,6 +1211,7 @@ class TransitAssignmentTool(_m.Tool()):
                     "waiting_time": None
                 }
             ]
+            
         return baseSpec
     def _GetBaseAssignmentSpecUncongested(self, index):
         if self.ClassFarePerceptionList[index] == 0.0:
@@ -1360,7 +1285,7 @@ class TransitAssignmentTool(_m.Tool()):
             baseSpec["journey_levels"] = [
                     {
                         "description": "Walking",
-                        "destinations_reachable": False,
+                        "destinations_reachable": self.WalkAllWayFlag,
                         "transition_rules": modeList,
                         "boarding_time": None,
                         "boarding_cost": None,
@@ -1381,21 +1306,22 @@ class TransitAssignmentTool(_m.Tool()):
         for i, demand in enumerate(self.DemandMatrixList):
             if self.InVehicleTimeMatrixList[i] or self.WalkTimeMatrixList[i] or self.WaitTimeMatrixList[i] or self.PenaltyMatrixList[i]:
                 self._ExtractTimesMatrices(i)
-            if not self.CongestionMatrixList[i] and self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag:
-
-                def congestionMatrixManager():
-                    return _util.tempMatrixMANAGER()
-
-            else:
-
-                @contextmanager
-                def congestionMatrixManager():
-                    try:
-                        yield _bank.matrix(self.CongestionMatrixList[i])
-                    finally:
-                        pass
-
             if self.xtmf_congestedAssignment==True:
+                if not self.CongestionMatrixList[i] and self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag:
+
+                    def congestionMatrixManager():
+                        return _util.tempMatrixMANAGER()
+
+                else:
+
+                    @contextmanager
+                    def congestionMatrixManager():
+                        try:
+                            yield _bank.matrix(self.CongestionMatrixList[i])
+                        finally:
+                            pass
+
+            
                 if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag or self.CongestionMatrixList[i]:
                     with congestionMatrixManager() as congestionMatrix:
                         self._ExtractCongestionMatrix(congestionMatrix.id, i)
@@ -1438,7 +1364,7 @@ class TransitAssignmentTool(_m.Tool()):
 
     def _ParseExponentString(self):
         exponentList = {}
-        components = _regex_split('\n|,', self.CongestionExponentString)
+        components = self.CongestionExponentString.split(',')
         for component in components:
             if component.isspace():
                 continue
