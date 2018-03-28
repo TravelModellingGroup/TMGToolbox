@@ -97,7 +97,7 @@ class ExportBinaryMatrix(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name= 'ExportFile',
                            window_type= 'save_file',
-                           file_filter= '*.emxd',
+                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx ; *.mtx.gz\nAll files (*.*)",
                            title= "Export File")
         
         pb.add_select_scenario(tool_attribute_name='Scenario',
