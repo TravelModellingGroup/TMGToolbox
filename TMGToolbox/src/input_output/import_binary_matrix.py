@@ -40,6 +40,7 @@ import traceback as _traceback
 from inro.emme.matrix import MatrixData as _MatrixData
 import shutil
 import os
+import gzip
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -90,7 +91,7 @@ class ImportBinaryMatrix(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name= 'ImportFile',
                            window_type= 'file',
-                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx; *.mtx.gz\nAll files (*.*)",
+                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx ; *.mtx.gz\nAll files (*.*)",
                            title= "Import File")
         
         pb.add_select_matrix(tool_attribute_name= 'MatrixId',
@@ -184,16 +185,15 @@ class ImportBinaryMatrix(_m.Tool()):
             matrix = _util.initializeMatrix(self.MatrixId)
             if self.MatrixDescription:
                 matrix.description = self.MatrixDescription
-            zipped = False
-            if str(self.ImportFile)[-2:] == "gz":
-                zipped = True
-                with open(self.ImportFile, 'rb') as zip_file:
-                    directory = 'matrix.mtx'
-                    with open(directory, 'wb') as non_zip_file:
-                        shutil.copyfileobj(zip_file, non_zip_file)
-                        self.ImportFile = directory
 
-            data = _MatrixData.load(self.ImportFile)
+            if str(self.ImportFile)[-2:] == "gz":
+                new_file = 'matrix.mtx'
+                with gzip.open(self.ImportFile, 'rb') as zip_file, open (new_file, 'wb') as non_zip_file:
+                    shutil.copyfileobj(zip_file, non_zip_file)
+                data = _MatrixData.load(new_file)
+                os.remove(new_file)
+            else:
+                data = _MatrixData.load(self.ImportFile)
             
             origins, destinations = data.indices
             origins = set(origins)
@@ -228,8 +228,6 @@ class ImportBinaryMatrix(_m.Tool()):
                 
                 matrix.set_data(data)
             
-            if zipped == True:
-                os.remove(directory)
 
             self.TRACKER.completeTask()
     

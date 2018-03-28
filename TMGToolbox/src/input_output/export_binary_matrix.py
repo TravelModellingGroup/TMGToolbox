@@ -43,6 +43,9 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
+import gzip
+import shutil
+import os
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -97,7 +100,7 @@ class ExportBinaryMatrix(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name= 'ExportFile',
                            window_type= 'save_file',
-                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx ; *.mtx.gz\nAll files (*.*)",
+                           file_filter= "Emme matrix files | *.mdf ; *.emxd ; *.mtx ; *.mtx.gz \n All files (*.*)",
                            title= "Export File")
         
         pb.add_select_scenario(tool_attribute_name='Scenario',
@@ -192,8 +195,14 @@ class ExportBinaryMatrix(_m.Tool()):
                 data = matrix.get_data(self.Scenario)
             else:
                 data = matrix.get_data()
-            
-            data.save(self.ExportFile)
+            if self.ExportFile[-2:] == "gz":
+                new_file = self.ExportFile[:-3]
+                data.save(new_file)
+                with open (new_file, 'rb') as in_file, gzip.open(self.ExportFile, 'wb') as out_file:
+                    shutil.copyfileobj(in_file, out_file)
+                os.remove(new_file)
+            else:
+                data.save(self.ExportFile)
             
             self.TRACKER.completeTask()
 
