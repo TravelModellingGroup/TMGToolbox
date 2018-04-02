@@ -548,7 +548,7 @@ class Shapely2ESRI():
         if self._sf is None:
             raise IOError("Shapefile hasn't been opened. Call [this].open() first.")
         if len(self.fields) == 0:
-            self.addField('NULL', int, 5)
+            self.addField('NULL', 'INT', 5)
             _warn.warn("No attribute fields defined. 'NULL' field was added to the attribute table.")
         
         # Write the geometry to the .shp file
