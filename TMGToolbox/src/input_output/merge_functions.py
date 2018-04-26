@@ -125,9 +125,10 @@ class MergeFunctions(_m.Tool()):
         
          <button id="editFinish">Hello</button>
             <script type="text/javascript">
+            
             $(document).ready( function ()
             {
-                var tool = new inro.modeller.util.Proxy(%s) ;
+                var tool = new inro.modeller.util.Proxy(%s);
 
                 $('#editFinish').bind('click',function(evt) {
 

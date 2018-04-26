@@ -175,13 +175,7 @@ class ImportNetworkPackage(_m.Tool()):
     $(document).ready( function ()
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
-        
-        $('#editFinish').bind('click',function(evt) {
-        
-            alert("clicked");
-            tool.tool_exit_test();
-        });
-        
+
         $("#NetworkPackageFile").bind('change', function()
         {
             $(this).commit();
