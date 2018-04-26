@@ -164,7 +164,7 @@ class ImportNetworkPackage(_m.Tool()):
 
             </table>
             
-             <button id="editFinish" onclick="tool.tool_exit_test()">Hello</button>
+             
         </div>
 
         """)
