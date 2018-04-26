@@ -138,12 +138,49 @@ class ImportNetworkPackage(_m.Tool()):
                       note="Select an action to take if there are conflicts found \
                       between the package and the current Emmebank.")
 
+        # --- Merge / Edit, section previously displayed in a QTDialog
+        pb.add_html("""
+
+        <div class="t_element" id="MergeFunctionEditDiv">
+
+            <table id="MergeFunctionEditTable">
+                <thead>
+                    <tr>
+                        <th>
+                            FunctionID
+                        </th>
+                        <th>
+                            File
+                        </th>
+                        <th>
+                            Database
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                <!-- empty tbody initially, rows are added after processing -->
+
+                </tbody>
+
+            </table>
+            
+             <button id="editFinish" onclick="tool.tool_exit_test()">Hello</button>
+        </div>
+
+        """)
+
         # ---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
+        
+        $('#editFinish').bind('click',function(evt) {
+        
+            alert("clicked");
+            tool.tool_exit_test();
+        });
         
         $("#NetworkPackageFile").bind('change', function()
         {
