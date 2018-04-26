@@ -93,6 +93,9 @@ class MergeFunctions(_m.Tool()):
         self.RevertOnError = True
         
         self.ConflictOption = 'EDIT'
+
+        #--- event to block GUI / merge edit
+        self.event = None
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Merge Functions v%s" % self.version,
@@ -117,6 +120,19 @@ class MergeFunctions(_m.Tool()):
         
         pb.add_checkbox(tool_attribute_name='RevertOnError',
                         label="Revert on error?")
+
+        pb.add_html("""
+        
+       
+            <script type="text/javascript">
+            
+            $(document).ready( function ()
+            {
+                var tool = new inro.modeller.util.Proxy(%s);
+
+            
+            });
+        </script>""" % pb.tool_proxy_tag)
         
         return pb.render()
     
@@ -274,7 +290,11 @@ class MergeFunctions(_m.Tool()):
                             _m.logbook_write("Old expression: %s" %database_expression)
                             _m.logbook_write("New expresion: %s" %file_expression)
                 elif self.ConflictOption == self.EDIT_OPTION:
-                    self._LaunchGUI(conflicts, modifiedFunctions)
+                    import threading
+                    self.event = threading.Event()
+                    self.event.clear()
+                    self.event.wait()
+                    #self._LaunchGUI(conflicts, modifiedFunctions)
                 elif self.ConflictOption == self.RAISE_OPTION:
                     tup = len(conflicts), ', '.join([t[0] for t in conflicts])
                     msg = "The following %s functions have conflicting definitions: %s" %tup
@@ -307,7 +327,8 @@ class MergeFunctions(_m.Tool()):
     @_m.method(return_type=unicode)
     def tool_run_msg_status(self):
         return self.tool_run_msg
-    
+
+
 ##########################################################################################
 
 class FunctionConflictDialog(QtGui.QDialog):
