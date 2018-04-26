@@ -138,8 +138,9 @@ class MergeFunctions(_m.Tool()):
     
     ##########################################################################################################
         
-    def run(self):
+    def run(self,event=None):
         self.tool_run_msg = ""
+        self.event=event
         self.TRACKER.reset()
         
         if self.FunctionFile is None:
@@ -290,9 +291,9 @@ class MergeFunctions(_m.Tool()):
                             _m.logbook_write("Old expression: %s" %database_expression)
                             _m.logbook_write("New expresion: %s" %file_expression)
                 elif self.ConflictOption == self.EDIT_OPTION:
-                    import threading
-                    self.event = threading.Event()
-                    self.event.clear()
+                    #import threading
+                    #z4self.event = threading.Event()
+                    #self.event.clear()
                     self.event.wait()
                     #self._LaunchGUI(conflicts, modifiedFunctions)
                 elif self.ConflictOption == self.RAISE_OPTION:

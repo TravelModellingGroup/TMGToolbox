@@ -100,6 +100,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.OverwriteScenarioFlag = False
         self.ConflictOption = merge_functions.EDIT_OPTION
         self._components = ComponentContainer()
+        self.event = None
 
     def page(self):
         pb = _tmg_tpb.TmgToolPageBuilder(self, title="Import Network Package v%s" % self.version,
@@ -175,7 +176,6 @@ class ImportNetworkPackage(_m.Tool()):
     $(document).ready( function ()
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
-        
         
         $('#editFinish').bind('click',function(evt) {
 
@@ -398,7 +398,10 @@ class ImportNetworkPackage(_m.Tool()):
         zf.extract(self._components.functions_file, temp_folder)
         merge_functions.FunctionFile = _path.join(temp_folder, self._components.functions_file)
         merge_functions.ConflictOption = self.ConflictOption
-        merge_functions.run()
+        import threading
+        self.event = threading.Event()
+        self.event.clear()
+        merge_functions.run(event=self.event)
     
     def _getZipFileName(self, zipPath):
         try:
