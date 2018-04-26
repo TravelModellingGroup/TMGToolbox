@@ -139,37 +139,6 @@ class ImportNetworkPackage(_m.Tool()):
                       note="Select an action to take if there are conflicts found \
                       between the package and the current Emmebank.")
 
-        # --- Merge / Edit, section previously displayed in a QTDialog
-        pb.add_html("""
-
-        <div class="t_element" id="MergeFunctionEditDiv">
-
-            <table id="MergeFunctionEditTable">
-                <thead>
-                    <tr>
-                        <th>
-                            FunctionID
-                        </th>
-                        <th>
-                            File
-                        </th>
-                        <th>
-                            Database
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                <!-- empty tbody initially, rows are added after processing -->
-
-                </tbody>
-
-            </table>
-            
-               <button id="editFinish">Hello</button>
-        </div>
-
-        """)
-
         # ---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
@@ -179,9 +148,8 @@ class ImportNetworkPackage(_m.Tool()):
         
         $('#editFinish').bind('click',function(evt) {
 
-                    alert("clicked");
                     tool.tool_exit_test();
-            });
+        });
 
         $("#NetworkPackageFile").bind('change', function()
         {
@@ -329,6 +297,13 @@ class ImportNetworkPackage(_m.Tool()):
         self.event.set()
         return True
 
+    @_m.method(return_type=unicode)
+    def tool_get_conflicts(self):
+        print("test")
+        print(self.merge_functions.function_conflicts)
+        return self.merge_functions.function_conflicts
+        #return True
+
     @_m.logbook_trace("Reading modes")
     def _batchin_modes(self, scenario, temp_folder, zf):
         fileName = zf.extract(self._components.mode_file, temp_folder)
@@ -401,6 +376,7 @@ class ImportNetworkPackage(_m.Tool()):
         import threading
         self.event = threading.Event()
         self.event.clear()
+        self.merge_functions = merge_functions
         merge_functions.run(event=self.event)
     
     def _getZipFileName(self, zipPath):

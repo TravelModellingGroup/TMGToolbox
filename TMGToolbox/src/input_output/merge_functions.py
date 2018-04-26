@@ -96,6 +96,8 @@ class MergeFunctions(_m.Tool()):
 
         #--- event to block GUI / merge edit
         self.event = None
+
+        self.function_conflicts = None
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Merge Functions v%s" % self.version,
@@ -291,11 +293,12 @@ class MergeFunctions(_m.Tool()):
                             _m.logbook_write("Old expression: %s" %database_expression)
                             _m.logbook_write("New expresion: %s" %file_expression)
                 elif self.ConflictOption == self.EDIT_OPTION:
-                    #import threading
-                    #z4self.event = threading.Event()
                     #self.event.clear()
-                    self.event.wait()
-                    #self._LaunchGUI(conflicts, modifiedFunctions)
+                    self.function_conflicts = conflicts
+                    self._LaunchGUI(conflicts,modifiedFunctions)
+                    #self.event.wait()
+                    
+
                 elif self.ConflictOption == self.RAISE_OPTION:
                     tup = len(conflicts), ', '.join([t[0] for t in conflicts])
                     msg = "The following %s functions have conflicting definitions: %s" %tup
@@ -305,20 +308,25 @@ class MergeFunctions(_m.Tool()):
     
     
     def _LaunchGUI(self, conflicts, modifiedFunctions):
-        dialog = FunctionConflictDialog(conflicts)
+        dialog = FunctionConflictDialog(conflicts,self)
+        self.dialog = dialog
         result = dialog.exec_()
         
-        if result == dialog.Accepted:
-            acceptedChanges = dialog.getFunctionsToChange()
-            for fid, expression in acceptedChanges.iteritems():
-                func = _MODELLER.emmebank.function(fid)
-                oldExpression = func.expression
-                func.expression = expression
-                modifiedFunctions[fid] = oldExpression
+
+        self.event.wait()
+        
+        #if result == dialog.Accepted:
+        #    acceptedChanges = dialog.getFunctionsToChange()
+        #    for fid, expression in acceptedChanges.iteritems():
+        #        func = _MODELLER.emmebank.function(fid)
+        #        oldExpression = func.expression
+        #        func.expression = expression
+        #        modifiedFunctions[fid] = oldExpression
                 
-                with _m.logbook_trace("Modified function %s" %fid.upper()):
-                    _m.logbook_write("Old expression: %s" %oldExpression)
-                    _m.logbook_write("New expression: %s" %expression)
+        #        with _m.logbook_trace("Modified function %s" %fid.upper()):
+        #            _m.logbook_write("Old expression: %s" %oldExpression)
+        #            _m.logbook_write("New expression: %s" %expression)
+
         dialog.deleteLater()
     
     @_m.method(return_type=_m.TupleType)
@@ -329,12 +337,39 @@ class MergeFunctions(_m.Tool()):
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
+    def update_data(self):
+
+
+        dialog = self.dialog
+        acceptedChanges = dialog.getFunctionsToChange()
+        for fid, expression in acceptedChanges.iteritems():
+            func = _MODELLER.emmebank.function(fid)
+            oldExpression = func.expression
+            func.expression = expression
+            modifiedFunctions[fid] = oldExpression
+                
+            with _m.logbook_trace("Modified function %s" %fid.upper()):
+                _m.logbook_write("Old expression: %s" %oldExpression)
+                _m.logbook_write("New expression: %s" %expression)
+
 
 ##########################################################################################
 
 class FunctionConflictDialog(QtGui.QDialog):
+
+
+
+    def closeEvent(self, event):
+        # self.caller.event.clear()
+
+        if(event.isAccepted()):
+            self.caller.update_data()
+        self.caller.event.set()
+
+
+
     
-    def __init__(self, data):
+    def __init__(self, data, caller):
         super(FunctionConflictDialog, self).__init__()
         
         self.setWindowTitle("Function Conflict")
@@ -346,6 +381,8 @@ in the database.""")
         #infoText.setFrameShadow(infoText.Sunken)
         #infoText.setFrameStyle(infoText.StyledPanel)
         infoText.setMargin(5)
+
+        self.caller = caller
         
         self.dataRows = []
         
