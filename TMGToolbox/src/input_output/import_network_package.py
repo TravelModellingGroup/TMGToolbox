@@ -164,7 +164,7 @@ class ImportNetworkPackage(_m.Tool()):
 
             </table>
             
-             
+               <button id="editFinish">Hello</button>
         </div>
 
         """)
@@ -175,6 +175,13 @@ class ImportNetworkPackage(_m.Tool()):
     $(document).ready( function ()
     {
         var tool = new inro.modeller.util.Proxy(%s) ;
+        
+        
+        $('#editFinish').bind('click',function(evt) {
+
+                    alert("clicked");
+                    tool.tool_exit_test();
+            });
 
         $("#NetworkPackageFile").bind('change', function()
         {
@@ -316,6 +323,11 @@ class ImportNetworkPackage(_m.Tool()):
                 if self._components.functions_file is not None:
                     self._batchin_functions(temp_folder, zf)
                 self.TRACKER.completeTask()
+
+    @_m.method(return_type=bool)
+    def tool_exit_test(self):
+        self.event.set()
+        return True
 
     @_m.logbook_trace("Reading modes")
     def _batchin_modes(self, scenario, temp_folder, zf):

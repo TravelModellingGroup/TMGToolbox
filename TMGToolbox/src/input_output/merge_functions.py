@@ -123,18 +123,14 @@ class MergeFunctions(_m.Tool()):
 
         pb.add_html("""
         
-         <button id="editFinish">Hello</button>
+       
             <script type="text/javascript">
             
             $(document).ready( function ()
             {
                 var tool = new inro.modeller.util.Proxy(%s);
 
-                $('#editFinish').bind('click',function(evt) {
-
-                    alert("clicked");
-                    tool.tool_exit_test();
-                });
+            
             });
         </script>""" % pb.tool_proxy_tag)
         
@@ -332,11 +328,7 @@ class MergeFunctions(_m.Tool()):
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
-    @_m.method(return_type=bool)
-    def tool_exit_test(self):
-        self.event.set()
-        return True
-    
+
 ##########################################################################################
 
 class FunctionConflictDialog(QtGui.QDialog):
