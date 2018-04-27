@@ -338,8 +338,6 @@ class MergeFunctions(_m.Tool()):
         return self.tool_run_msg
 
     def update_data(self):
-
-
         dialog = self.dialog
         acceptedChanges = dialog.getFunctionsToChange()
         for fid, expression in acceptedChanges.iteritems():
@@ -357,18 +355,15 @@ class MergeFunctions(_m.Tool()):
 
 class FunctionConflictDialog(QtGui.QDialog):
 
-
-
     def closeEvent(self, event):
-        # self.caller.event.clear()
 
+        import time
         if(event.isAccepted()):
             self.caller.update_data()
+
+        time.sleep(0.5)
         self.caller.event.set()
 
-
-
-    
     def __init__(self, data, caller):
         super(FunctionConflictDialog, self).__init__()
         
@@ -383,6 +378,8 @@ in the database.""")
         infoText.setMargin(5)
 
         self.caller = caller
+
+        self.cancel = False
         
         self.dataRows = []
         
@@ -507,15 +504,19 @@ in the database.""")
             mainGrid.setColumnMinimumWidth(columnNumber, width)
             if columnNumber < 3: footerGrid.setColumnMinimumWidth(columnNumber + 1, width)
         headerGrid.setColumnStretch(6, 1.0)
-        footerGrid.setColumnStretch(4, 1.0)          
-    
+        footerGrid.setColumnStretch(4, 1.0)
+
+    def cancel(self):
+        self.cancel = True
+        self.close()
+
     def buildFooterButtons(self):
         hbox = QtGui.QHBoxLayout()
         
         saveButton = QtGui.QPushButton("Save")
         saveButton.clicked.connect(self.accept)
         cancelButton = QtGui.QPushButton("Cancel")
-        cancelButton.clicked.connect(self.close)
+        cancelButton.clicked.connect(self.cancel)
         
         hbox.addWidget(saveButton)
         hbox.addWidget(cancelButton)
