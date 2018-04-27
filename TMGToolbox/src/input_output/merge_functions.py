@@ -98,6 +98,9 @@ class MergeFunctions(_m.Tool()):
         self.event = None
 
         self.function_conflicts = None
+
+        # -- hold dialog reference
+        self.dialog = None
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Merge Functions v%s" % self.version,
@@ -308,9 +311,9 @@ class MergeFunctions(_m.Tool()):
     
     
     def _LaunchGUI(self, conflicts, modifiedFunctions):
-        dialog = FunctionConflictDialog(conflicts,self)
-        self.dialog = dialog
-        result = dialog.exec_()
+        self.dialog = FunctionConflictDialog(conflicts,self)
+        #self.dialog = dialog
+        result = self.dialog.exec_()
         
 
         self.event.wait()
@@ -327,7 +330,7 @@ class MergeFunctions(_m.Tool()):
         #            _m.logbook_write("Old expression: %s" %oldExpression)
         #            _m.logbook_write("New expression: %s" %expression)
 
-        dialog.deleteLater()
+        # self.dialog.deleteLater()
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
@@ -338,8 +341,8 @@ class MergeFunctions(_m.Tool()):
         return self.tool_run_msg
 
     def update_data(self):
-        dialog = self.dialog
-        acceptedChanges = dialog.getFunctionsToChange()
+        # dialog = self.dialog
+        acceptedChanges = self.dialog.getFunctionsToChange()
         for fid, expression in acceptedChanges.iteritems():
             func = _MODELLER.emmebank.function(fid)
             oldExpression = func.expression
@@ -357,12 +360,10 @@ class FunctionConflictDialog(QtGui.QDialog):
 
     def closeEvent(self, event):
 
-        import time
         if(event.isAccepted()):
             self.caller.update_data()
-
-        time.sleep(0.5)
         self.caller.event.set()
+        self.deleteLater()
 
     def __init__(self, data, caller):
         super(FunctionConflictDialog, self).__init__()
@@ -516,7 +517,7 @@ in the database.""")
         saveButton = QtGui.QPushButton("Save")
         saveButton.clicked.connect(self.accept)
         cancelButton = QtGui.QPushButton("Cancel")
-        cancelButton.clicked.connect(self.cancel)
+        cancelButton.clicked.connect(self.reject)
         
         hbox.addWidget(saveButton)
         hbox.addWidget(cancelButton)
