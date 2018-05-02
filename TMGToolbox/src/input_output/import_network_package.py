@@ -98,9 +98,10 @@ class ImportNetworkPackage(_m.Tool()):
         # ---Set the defaults of parameters used by Modeller
         self.ScenarioDescription = ""
         self.OverwriteScenarioFlag = False
-        self.ConflictOption = merge_functions.EDIT_OPTION
+        self.ConflictOption = merge_functions.PRESERVE_OPTION
         self._components = ComponentContainer()
         self.event = None
+        self.merge_functions = None
 
     def page(self):
         pb = _tmg_tpb.TmgToolPageBuilder(self, title="Import Network Package v%s" % self.version,
@@ -139,17 +140,187 @@ class ImportNetworkPackage(_m.Tool()):
                       note="Select an action to take if there are conflicts found \
                       between the package and the current Emmebank.")
 
+        pb.add_html("""
+
+       <div id="modal" class="modal">
+
+          <div class="modal-content">
+            <span id="modal-close" class="close">&times;</span>
+            <p>Conflicts detected between the database and the network package file for the following functions(s). Please resolve these conflicts
+            by indicating which version(s) to save in the database.</p>
+
+            <table id="conflicts-table">
+            <thead>
+            <tr>
+            <td>Id</td>
+            <td>Database</td>
+            <td>File</td>
+            <td>Other</td>
+            <td>Expression</td>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            </table>
+
+              <div class="footer">
+          <button id="modal-save-button">Save</button>
+          <button id="modal-cancel-button">Cancel</button>
+          </div>
+          </div>
+
+        
+
+        </div>
+
+        <style>
+            .modal thead td{
+
+                font-weight:bold;
+            }
+             .modal {
+                display: none; 
+                position: fixed; 
+                z-index: 10; 
+                padding-top: 30px; 
+                left: 0;
+                top: 0;
+                width: 100%; 
+                height: 100%; 
+                overflow: auto; 
+                background-color: rgb(0,0,0); 
+                background-color: rgba(0,0,0,0.4); 
+            }
+
+
+            .modal-content {
+                background-color: #fefefe;
+                margin: auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+            }
+
+            .close {
+                color: #aaaaaa;
+                float: right;
+                font-size: 28px;
+                font-weight: bold;
+            }
+
+            .close:hover,
+            .close:focus {
+                color: #000;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            td.radio, thead td
+            {
+                text-align:center;
+            }
+
+            #conflicts-table
+            {
+                width: 100%;
+            }
+            
+            .expression_input
+            {
+                width: 100%;
+            }
+        }
+        </style>
+
+        """)
+
         # ---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
     {
-        var tool = new inro.modeller.util.Proxy(%s) ;
-        
-        $('#editFinish').bind('click',function(evt) {
 
-                    tool.tool_exit_test();
+        var conflicts = [];
+
+            var modal = document.getElementById('modal');
+      
+            var tool = new inro.modeller.util.Proxy(%s) ;
+
+            window.con = [];
+
+            var dialogPollingInterval = setInterval(function() {
+
+
+            if(tool.should_show_merge_edit_dialog())
+            {
+               modal.style.display = "block";
+               clearInterval(dialogPollingInterval);
+
+               var conflictsString = tool.get_function_conflicts().replace(/'/g,'"');
+               window.con = JSON.parse(conflictsString);
+
+               
+               for(var i = 0; i < con.length; i++)
+               {
+                    window.con[i]['resolve'] = 'database';
+                  $('#conflicts-table tbody').append('<tr><td>'+con[i]['id'].toUpperCase()+'</td><td class="radio"><input type="radio" name="'+i+'" value="database" checked></td>' +
+                  '<td class="radio">'+
+                  '<input type="radio" name="'+i+'" value="file"></td><td class="radio">'+
+                  '<input type="radio" name="'+i+'" value="other"></td><td><input class="expression_input" type="text" id="exp_'+i+'" name="expression" value="'+con[i]['database_expression']+'"></td></tr>');
+               }
+
+
+               $('#conflicts-table input').on('change', function() {
+                    var idx = parseInt($(this)[0].name);
+
+
+                    if($(this)[0].value == 'database')
+                    {
+                        $('#exp_'+idx).val(window.con[idx]['database_expression']);
+                        window.con[idx]['resolve'] = 'database';
+                        window.con[idx]['expression'] = window.con[idx]['database_expression'];
+                    }
+                     else if($(this)[0].value == 'file')
+                     {
+                        $('#exp_'+idx).val(window.con[idx]['file_expression']);
+                        window.con[idx]['resolve'] = 'file';
+                        window.con[idx]['expression'] = window.con[idx]['file_expression'];
+                     }
+                     else if($(this)[0].value == 'other')
+                     {
+                        window.con[idx]['resolve'] = 'expression';
+                        window.con[idx]['expression'] = $('#exp_'+idx).val()
+                     }
+               });
+
+            };
+            
+        },100);
+
+        $('#modal-save-button').bind('click',function(evt) {
+
+            for(var i = 0; i < window.con.length; i++)
+            {
+                if(window.con[i]['resolve'] == 'expression')
+                {
+                    window.con[i]['expression'] = $('#exp_'+i).val()
+                }
+            }
+            
+            tool.set_function_conflict(JSON.stringify(window.con));
+             window.con = [];
+            $('#conflicts-table tbody').empty();
+            modal.style.display = "none";
         });
+        
+
+        $('#modal-close,#modal-cancel-button').bind('click',function(evt) {
+            window.con = [];
+            $('#conflicts-table tbody').empty();
+             modal.style.display = "none";
+        });
+        
+
 
         $("#NetworkPackageFile").bind('change', function()
         {
@@ -299,8 +470,6 @@ class ImportNetworkPackage(_m.Tool()):
 
     @_m.method(return_type=unicode)
     def tool_get_conflicts(self):
-        print("test")
-        print(self.merge_functions.function_conflicts)
         return self.merge_functions.function_conflicts
         #return True
 
@@ -377,7 +546,13 @@ class ImportNetworkPackage(_m.Tool()):
         self.event = threading.Event()
         self.event.clear()
         self.merge_functions = merge_functions
-        merge_functions.run(event=self.event)
+        self.merge_functions.show_edit_dialog = False
+        merge_functions.run(event=self.event,is_sub_call=True)
+
+        # if(self.ConflictOption ==  merge_functions.EDIT_OPTION):
+        #    # wait for event to be set
+        #    self.event.wait()
+
     
     def _getZipFileName(self, zipPath):
         try:
@@ -630,3 +805,18 @@ class ImportNetworkPackage(_m.Tool()):
     @_m.method(return_type=str)
     def get_existing_scenario_title(self):
         return _bank.scenario(self.ScenarioId).title
+
+    @_m.method(return_type=bool)
+    def should_show_merge_edit_dialog(self):
+        return False if self.merge_functions is None else self.merge_functions.show_edit_dialog
+
+    @_m.method(return_type=str)
+    def get_function_conflicts(self):
+        return self.merge_functions.function_conflicts
+
+    @_m.method(argument_types=[str])
+    def set_function_conflict(self,data):
+        import json
+        data_eval = json.loads(data)
+        self.merge_functions.merge_changes(data_eval)
+        

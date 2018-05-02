@@ -99,8 +99,15 @@ class MergeFunctions(_m.Tool()):
 
         self.function_conflicts = None
 
+        self.function_changes = []
+
         # -- hold dialog reference
         self.dialog = None
+
+        # -- showing dialog
+        self.show_edit_dialog = False
+
+        self.is_sub_call = False
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Merge Functions v%s" % self.version,
@@ -143,7 +150,7 @@ class MergeFunctions(_m.Tool()):
     
     ##########################################################################################################
         
-    def run(self,event=None):
+    def run(self,event=None,is_sub_call=False):
         self.tool_run_msg = ""
         self.event=event
         self.TRACKER.reset()
@@ -275,11 +282,13 @@ class MergeFunctions(_m.Tool()):
                 newFunctions.append(id)
             
             conflicts = []
+            conflicts_obj = []
             for id in (fileIds & databaseIds): #Functions in both sources
                 database_expression = databaseFunctions[id]
                 file_expression = fileFunctions[id]
                 if file_expression != database_expression:
                     conflicts.append((id, database_expression, file_expression))
+                    conflicts_obj.append({'id':id,'database_expression':database_expression,'file_expression':file_expression})
             
             if len(conflicts) > 0:
                 conflicts.sort()
@@ -297,9 +306,16 @@ class MergeFunctions(_m.Tool()):
                             _m.logbook_write("New expresion: %s" %file_expression)
                 elif self.ConflictOption == self.EDIT_OPTION:
                     #self.event.clear()
-                    self.function_conflicts = conflicts
-                    self._LaunchGUI(conflicts,modifiedFunctions)
-                    #self.event.wait()
+                    conflicts_obj.sort(key=lambda x: x['id'])
+                    self.function_conflicts = conflicts_obj
+
+                    # self._LaunchGUI(conflicts,modifiedFunctions)
+                    if not self.is_sub_call:
+                        self.show_edit_dialog = True
+                    else:
+                        self._LaunchGUI(conflicts,modifiedFunctions)
+
+                    # self.event.wait()
                     
 
                 elif self.ConflictOption == self.RAISE_OPTION:
@@ -308,6 +324,10 @@ class MergeFunctions(_m.Tool()):
                     raise Exception(msg)
                         
         return len(newFunctions), len(modifiedFunctions)
+
+    def save_modified_functions(functions):
+
+        return
     
     
     def _LaunchGUI(self, conflicts, modifiedFunctions):
@@ -316,7 +336,7 @@ class MergeFunctions(_m.Tool()):
         result = self.dialog.exec_()
         
 
-        self.event.wait()
+        # self.event.wait()
         
         #if result == dialog.Accepted:
         #    acceptedChanges = dialog.getFunctionsToChange()
@@ -331,6 +351,26 @@ class MergeFunctions(_m.Tool()):
         #            _m.logbook_write("New expression: %s" %expression)
 
         # self.dialog.deleteLater()
+
+    def merge_changes(self,changes):
+
+        for change in changes:
+            if change['resolve'] == 'file' or change['resolve'] == 'expression':
+
+                print(change)
+                func = _MODELLER.emmebank.function(change['id'])
+                oldExpression = func.expression
+                func.expression = change['expression']
+                # modifiedFunctions[change['id']] = oldExpression
+
+                with _m.logbook_trace("Modified function %s" %change['id'].upper()):
+                    _m.logbook_write("Old expression: %s" %oldExpression)
+                    _m.logbook_write("New expression: %s" %change['expression'])
+
+
+
+
+
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
@@ -366,7 +406,7 @@ class FunctionConflictDialog(QtGui.QDialog):
         self.deleteLater()
 
     def __init__(self, data, caller):
-        super(FunctionConflictDialog, self).__init__()
+        super(FunctionConflictDialog, self).__init__(parent=None)
         
         self.setWindowTitle("Function Conflict")
         infoText = QtGui.QLabel("""Conflicts detected between the database and the network package \
