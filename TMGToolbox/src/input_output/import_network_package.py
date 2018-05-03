@@ -92,6 +92,8 @@ class ImportNetworkPackage(_m.Tool()):
     ScenarioName = _m.Attribute(str)
 
     def __init__(self):
+
+
         # ---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)  # init the ProgressTracker
 
@@ -102,6 +104,8 @@ class ImportNetworkPackage(_m.Tool()):
         self._components = ComponentContainer()
         self.event = None
         self.merge_functions = None
+        self.has_exception = False
+
 
     def page(self):
         pb = _tmg_tpb.TmgToolPageBuilder(self, title="Import Network Package v%s" % self.version,
@@ -162,7 +166,11 @@ class ImportNetworkPackage(_m.Tool()):
             <tbody>
             </tbody>
             </table>
-
+            <div class="all-select">
+          <input id="typeselectdatabase" type="radio" name="typeselect" value="alldatabase" checked><label for="typeselectdatabase">Database</label>
+            
+            <input id="typeselectfile" type="radio" name="typeselect" value="allfile"><label for="typeselectdatabase">File</label>
+            </div>
               <div class="footer">
           <button id="modal-save-button">Save</button>
           <button id="modal-cancel-button">Cancel</button>
@@ -174,6 +182,14 @@ class ImportNetworkPackage(_m.Tool()):
         </div>
 
         <style>
+
+            .all-select
+            {
+                padding-left:15px;
+                padding-top:10px;
+                padding-bottom:10px;
+            }
+
             .modal thead td{
 
                 font-weight:bold;
@@ -224,6 +240,11 @@ class ImportNetworkPackage(_m.Tool()):
             {
                 width: 100%;
             }
+
+            #conflicts-table tbody tr:nth-child(odd)
+            {
+                background-color:#eaeae8;
+            }
             
             .expression_input
             {
@@ -240,18 +261,55 @@ class ImportNetworkPackage(_m.Tool()):
     $(document).ready( function ()
     {
 
-        var conflicts = [];
+            var conflicts = [];
 
             var modal = document.getElementById('modal');
       
             var tool = new inro.modeller.util.Proxy(%s) ;
 
+            window.inp_tool = tool;
+
             window.con = [];
 
-            var dialogPollingInterval = setInterval(function() {
+            $('#typeselectfile').on('change',function() {
 
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="file"]').prop('checked',true).change();
+                }
+            });
 
-            if(tool.should_show_merge_edit_dialog())
+            $('#typeselectfile').on('click',function() {
+
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="file"]').prop('checked',true).change();
+                }
+            });
+
+            $('#typeselectdatabase').on('change',function() {
+
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="database"]').prop('checked',true).change();
+                }
+            });
+
+            $('#typeselectdatabase').on('click',function() {
+
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="database"]').prop('checked',true).change();
+                }
+            });
+
+            var intervalFunction = function() {
+
+              if(tool.should_show_merge_edit_dialog())
             {
                modal.style.display = "block";
                clearInterval(dialogPollingInterval);
@@ -262,7 +320,7 @@ class ImportNetworkPackage(_m.Tool()):
                
                for(var i = 0; i < con.length; i++)
                {
-                    window.con[i]['resolve'] = 'database';
+                   window.con[i]['resolve'] = 'database';
                   $('#conflicts-table tbody').append('<tr><td>'+con[i]['id'].toUpperCase()+'</td><td class="radio"><input type="radio" name="'+i+'" value="database" checked></td>' +
                   '<td class="radio">'+
                   '<input type="radio" name="'+i+'" value="file"></td><td class="radio">'+
@@ -294,8 +352,10 @@ class ImportNetworkPackage(_m.Tool()):
                });
 
             };
-            
-        },100);
+
+            }
+
+            var dialogPollingInterval = setInterval(intervalFunction,200);
 
         $('#modal-save-button').bind('click',function(evt) {
 
@@ -311,6 +371,7 @@ class ImportNetworkPackage(_m.Tool()):
              window.con = [];
             $('#conflicts-table tbody').empty();
             modal.style.display = "none";
+            tool.reset_tool();
         });
         
 
@@ -318,6 +379,7 @@ class ImportNetworkPackage(_m.Tool()):
             window.con = [];
             $('#conflicts-table tbody').empty();
              modal.style.display = "none";
+             tool.reset_tool();
         });
         
 
@@ -421,6 +483,7 @@ class ImportNetworkPackage(_m.Tool()):
                 attributes=self._get_logbook_attributes()):
 
             if _bank.scenario(self.ScenarioId) is not None and not self.OverwriteScenarioFlag:
+                self.has_exception = True
                 raise IOError("Scenario %s exists and overwrite flag is set to false." % self.ScenarioId)
 
             self._components.reset()  # Clear any held-over contents from previous run
@@ -808,7 +871,7 @@ class ImportNetworkPackage(_m.Tool()):
 
     @_m.method(return_type=bool)
     def should_show_merge_edit_dialog(self):
-        return False if self.merge_functions is None else self.merge_functions.show_edit_dialog
+        return False if self.merge_functions is None or self.exception else self.merge_functions.show_edit_dialog
 
     @_m.method(return_type=str)
     def get_function_conflicts(self):
@@ -819,4 +882,9 @@ class ImportNetworkPackage(_m.Tool()):
         import json
         data_eval = json.loads(data)
         self.merge_functions.merge_changes(data_eval)
+
+    @_m.method()
+    def reset_tool(self):
+        self.OverwriteScenarioFlag = False
+        self.has_exception = False
         
