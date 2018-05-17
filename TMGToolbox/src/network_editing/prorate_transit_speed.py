@@ -144,7 +144,7 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
                     self.TRACKER.runTool(networkCalculationTool, 
                                          self._GetNetCalcSpec(flagAttributeId), self.Scenario)
                 
-                
+                network = self.Scenario.get_network()
                 flaggedLines = [line for line in network.transit_lines() if line[flagAttributeId] == 1]
                 self.TRACKER.startProcess(len(flaggedLines))
                 for line in flaggedLines:
