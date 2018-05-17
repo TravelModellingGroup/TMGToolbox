@@ -132,13 +132,18 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
                 networkCalculationTool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
             except Exception, e:
                 networkCalculationTool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
-            
+            network = self.Scenario.get_network()
+            i = 0
+            for transit_line in network.transit_lines():
+                i += 1
+            if i == 0:
+                return 0
+
             with self._lineAttributeMANAGER() as flagAttributeId:
                 with _m.logbook_trace("Flagging slected lines"):
                     self.TRACKER.runTool(networkCalculationTool, 
                                          self._GetNetCalcSpec(flagAttributeId), self.Scenario)
                 
-                network = self.Scenario.get_network()
                 
                 flaggedLines = [line for line in network.transit_lines() if line[flagAttributeId] == 1]
                 self.TRACKER.startProcess(len(flaggedLines))
