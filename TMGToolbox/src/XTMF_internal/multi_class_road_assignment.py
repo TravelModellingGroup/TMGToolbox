@@ -101,6 +101,8 @@ class MultiClassRoadAssignment(_m.Tool()):
     xtmf_UpperBound = _m.Attribute(str)
     xtmf_PathSelection = _m.Attribute(str)
 
+    xtmf_BackgroundTransit = _m.Attribute(str)
+
 
     #ClassAnalysisAttributes = _m.Attribute(str)
     #ClassAnalysisAttributesMatrix = _m.Attribute(str)
@@ -146,7 +148,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                  CostMatrixId, TollsMatrixId, PeakHourFactor, LinkCost,
                  TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
                  RunTitle, LinkTollAttributeId, xtmf_NameString, ResultAttributes, xtmf_AnalysisAttributes, xtmf_AnalysisAttributesMatrixId, xtmf_AggregationOperator, xtmf_LowerBound,
-                 xtmf_UpperBound, xtmf_PathSelection):
+                 xtmf_UpperBound, xtmf_PathSelection, xtmf_BackgroundTransit):
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario is None):
@@ -242,7 +244,10 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.brGap = brGap
         self.normGap = normGap      
         self.RunTitle = RunTitle[:25]
-
+        if str(xtmf_BackgroundTransit).lower() == "true":
+            self.BackgroundTransit = True
+        else:
+            self.BackgroundTransit = False
         #---3. Run
         try:          
                 print "Starting assignment."
@@ -300,10 +305,11 @@ class MultiClassRoadAssignment(_m.Tool()):
                 
                 with nested (*(_util.tempMatrixMANAGER(description="Peak hour matrix") \
                                for Demand in self.Demand_List)) as peakHourMatrix:                
-                                         
-                        with _m.logbook_trace("Calculating transit background traffic"): #Do Once
-                            networkCalculationTool(self._getTransitBGSpec(), scenario=self.Scenario)
-                            self._tracker.completeSubtask()
+                        if self.BackgroundTransit == True: # only do if you want background transit
+                            if int(self.Scenario.element_totals['transit_lines']) > 0: # only do if there are actually transit lines present in the network
+                                with _m.logbook_trace("Calculating transit background traffic"): #Do Once
+                                    networkCalculationTool(self._getTransitBGSpec(), scenario=self.Scenario)
+                                    self._tracker.completeSubtask()
                             
                         with _m.logbook_trace("Calculating link costs"): #Do for each class
                             for i in range(len(self.Mode_List_Split)):
@@ -598,8 +604,8 @@ class MultiClassRoadAssignment(_m.Tool()):
             extraParameterTool = _MODELLER.tool('inro.emme.traffic_assignment.set_extra_function_parameters')
         else:
             extraParameterTool = _MODELLER.tool('inro.emme.standard.traffic_assignment.set_extra_function_parameters')
-        
-        extraParameterTool(el1 = '@tvph')
+        if self.BackgroundTransit is True:
+            extraParameterTool(el1 = '@tvph')
         
         try:
             yield

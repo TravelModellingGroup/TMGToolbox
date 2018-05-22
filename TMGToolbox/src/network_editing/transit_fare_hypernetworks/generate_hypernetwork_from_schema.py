@@ -383,6 +383,9 @@ class FBTNFromSchema(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
+            if int(self.BaseScenario.element_totals['transit_lines']) == 0:
+                raise Exception("There are no Transit Lines defined in this scenario!")
+
             print "Starting Hyper Networking Generation"
             self._nextNodeId = self.VirtualNodeDomain
             

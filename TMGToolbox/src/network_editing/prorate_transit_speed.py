@@ -132,11 +132,7 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
                 networkCalculationTool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
             except Exception, e:
                 networkCalculationTool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
-            network = self.Scenario.get_network()
-            i = 0
-            for transit_line in network.transit_lines():
-                i += 1
-            if i == 0:
+            if int(self.Scenario.element_totals['transit_lines']) == 0:
                 return 0
 
             with self._lineAttributeMANAGER() as flagAttributeId:
