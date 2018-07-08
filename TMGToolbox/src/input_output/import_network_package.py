@@ -29,7 +29,6 @@ _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _bank = _MODELLER.emmebank
 _util = _MODELLER.module('tmg.common.utilities')
 _tmg_tpb = _MODELLER.module('tmg.common.TMG_tool_page_builder')
-merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
 import_modes = _MODELLER.tool('inro.emme.data.network.mode.mode_transaction')
 import_vehicles = _MODELLER.tool('inro.emme.data.network.transit.vehicle_transaction')
 import_base = _MODELLER.tool('inro.emme.data.network.base.base_network_transaction')
@@ -74,7 +73,7 @@ class ComponentContainer(object):
 
 
 class ImportNetworkPackage(_m.Tool()):
-    version = '1.2.1'
+    version = '1.2.2'
     tool_run_msg = ""
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
 
@@ -100,7 +99,7 @@ class ImportNetworkPackage(_m.Tool()):
         # ---Set the defaults of parameters used by Modeller
         self.ScenarioDescription = ""
         self.OverwriteScenarioFlag = False
-        self.ConflictOption = merge_functions.PRESERVE_OPTION
+        self.ConflictOption = "PRESERVE"
         self._components = ComponentContainer()
         self.event = None
         self.merge_functions = None
@@ -108,6 +107,7 @@ class ImportNetworkPackage(_m.Tool()):
 
 
     def page(self):
+        merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
         pb = _tmg_tpb.TmgToolPageBuilder(self, title="Import Network Package v%s" % self.version,
                                          description="Imports a new scenario from a compressed network package \
                              (*.nwp) file.",
@@ -603,19 +603,63 @@ class ImportNetworkPackage(_m.Tool()):
 
     def _batchin_functions(self, temp_folder, zf):
         zf.extract(self._components.functions_file, temp_folder)
-        merge_functions.FunctionFile = _path.join(temp_folder, self._components.functions_file)
-        merge_functions.ConflictOption = self.ConflictOption
-        import threading
-        self.event = threading.Event()
-        self.event.clear()
-        self.merge_functions = merge_functions
-        self.merge_functions.show_edit_dialog = False
-        merge_functions.run(event=self.event,is_sub_call=True)
+        extracted_function_file_name = _path.join(temp_folder, self._components.functions_file)
+        if self.ConflictOption == 'OVERWRITE':
+            # Replicate Overwrite here so that consoles won't crash with references to a GUI
+            functions = self._LoadFunctionFile(extracted_function_file_name)
+            emmebank = _MODELLER.emmebank
+            for (id, expression) in functions.iteritems():
+                func = emmebank.function(id)
+                if func is None:
+                    emmebank.create_function(id, expression)
+                else:
+                    func.expression = expression
+        else:
+            merge_functions.FunctionFile = extracted_function_file_name
+            merge_functions.ConflictOption = self.ConflictOption
+            import threading
+            self.event = threading.Event()
+            self.event.clear()
+            self.merge_functions = merge_functions
+            self.merge_functions.show_edit_dialog = False
+            merge_functions.run(event=self.event,is_sub_call=True)
 
-        # if(self.ConflictOption ==  merge_functions.EDIT_OPTION):
-        #    # wait for event to be set
-        #    self.event.wait()
-
+    def _LoadFunctionFile(self, file_name):
+        functions = {}
+        with open(file_name) as reader:
+            expressionBuffer = ""
+            trecord = False
+            currentId = None
+            
+            for line in reader:
+                line = line.rstrip()
+                linecode = line[0]
+                record = line[2:]
+                
+                if linecode == 'c':
+                    pass
+                elif linecode == 't':
+                    if not record.startswith("functions"):
+                        raise IOError("Wrong t record!")
+                    trecord = True
+                elif linecode == 'a':
+                    if not trecord: raise IOError("A before T")
+                    index = record.index('=')
+                    currentId = record[:index].strip()
+                    expressionBuffer = record[(index + 1):].replace(' ', '')
+                    if currentId is not None:
+                        functions[currentId] = expressionBuffer
+                elif linecode == ' ':
+                    if currentId is not None and trecord:
+                        s = record.strip().replace(' ', '')
+                        expressionBuffer += s
+                        functions[currentId] = expressionBuffer
+                elif linecode == 'd' or linecode == 'm':
+                    currentId = None
+                    expressionBuffer = ""
+                else: raise KeyError(linecode)
+                    
+        return functions
     
     def _getZipFileName(self, zipPath):
         try:

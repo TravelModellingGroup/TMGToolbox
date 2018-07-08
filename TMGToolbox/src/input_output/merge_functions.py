@@ -44,6 +44,8 @@ Merge Functions
     
     1.0.0 Switched versioning system to start at 1.0.0. Additionally, added flag options
         to automate the tool.
+
+    1.1.0 Removed QT functionaility in order to avoid crashing in a console only environment
     
 '''
 

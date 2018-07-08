@@ -529,11 +529,23 @@ def _getVersionNew(app, returnType):
     
     version_tuple = app.version_info
     
-    if returnType == tuple: return version_tuple
+    if returnType == tuple:
+       # Test for a beta-version of EMME
+       if version_tuple[0] <= 2:
+            return (9,9,9,0)
+       return version_tuple
     
-    if returnType == float: return version_tuple[0] + version_tuple[1] * 0.1
+    if returnType == float: 
+        # Test for a beta-version of EMME
+        if version_tuple[0] <= 2:
+            return 9.0
+        return version_tuple[0] + version_tuple[1] * 0.1
     
-    if returnType == int: return version_tuple[0]
+    if returnType == int: 
+        # Test for a beta-version of EMME
+        if version_tuple[0] <= 2:
+            return 9
+        return version_tuple[0]
     
     raise TypeError("Type %s not accepted for getting Emme version" %returnType)
 
