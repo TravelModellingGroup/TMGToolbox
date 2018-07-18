@@ -29,7 +29,6 @@ _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _bank = _MODELLER.emmebank
 _util = _MODELLER.module('tmg.common.utilities')
 _tmg_tpb = _MODELLER.module('tmg.common.TMG_tool_page_builder')
-merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
 import_modes = _MODELLER.tool('inro.emme.data.network.mode.mode_transaction')
 import_vehicles = _MODELLER.tool('inro.emme.data.network.transit.vehicle_transaction')
 import_base = _MODELLER.tool('inro.emme.data.network.base.base_network_transaction')
@@ -74,7 +73,7 @@ class ComponentContainer(object):
 
 
 class ImportNetworkPackage(_m.Tool()):
-    version = '1.2.1'
+    version = '1.2.2'
     tool_run_msg = ""
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
 
@@ -92,16 +91,23 @@ class ImportNetworkPackage(_m.Tool()):
     ScenarioName = _m.Attribute(str)
 
     def __init__(self):
+
+
         # ---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)  # init the ProgressTracker
 
         # ---Set the defaults of parameters used by Modeller
         self.ScenarioDescription = ""
         self.OverwriteScenarioFlag = False
-        self.ConflictOption = merge_functions.EDIT_OPTION
+        self.ConflictOption = "PRESERVE"
         self._components = ComponentContainer()
+        self.event = None
+        self.merge_functions = None
+        self.has_exception = False
+
 
     def page(self):
+        merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
         pb = _tmg_tpb.TmgToolPageBuilder(self, title="Import Network Package v%s" % self.version,
                                          description="Imports a new scenario from a compressed network package \
                              (*.nwp) file.",
@@ -138,13 +144,246 @@ class ImportNetworkPackage(_m.Tool()):
                       note="Select an action to take if there are conflicts found \
                       between the package and the current Emmebank.")
 
+        pb.add_html("""
+
+       <div id="modal" class="modal">
+
+          <div class="modal-content">
+            <span id="modal-close" class="close">&times;</span>
+            <p>Conflicts detected between the database and the network package file for the following functions(s). Please resolve these conflicts
+            by indicating which version(s) to save in the database.</p>
+
+            <table id="conflicts-table">
+            <thead>
+            <tr>
+            <td>Id</td>
+            <td>Database</td>
+            <td>File</td>
+            <td>Other</td>
+            <td>Expression</td>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            </table>
+            <div class="all-select">
+          <input id="typeselectdatabase" type="radio" name="typeselect" value="alldatabase" checked><label for="typeselectdatabase">Database</label>
+            
+            <input id="typeselectfile" type="radio" name="typeselect" value="allfile"><label for="typeselectdatabase">File</label>
+            </div>
+              <div class="footer">
+          <button id="modal-save-button">Save</button>
+          <button id="modal-cancel-button">Cancel</button>
+          </div>
+          </div>
+
+        
+
+        </div>
+
+        <style>
+
+            .all-select
+            {
+                padding-left:15px;
+                padding-top:10px;
+                padding-bottom:10px;
+            }
+
+            .modal thead td{
+
+                font-weight:bold;
+            }
+             .modal {
+                display: none; 
+                position: fixed; 
+                z-index: 10; 
+                padding-top: 30px; 
+                left: 0;
+                top: 0;
+                width: 100%; 
+                height: 100%; 
+                overflow: auto; 
+                background-color: rgb(0,0,0); 
+                background-color: rgba(0,0,0,0.4); 
+            }
+
+
+            .modal-content {
+                background-color: #fefefe;
+                margin: auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+            }
+
+            .close {
+                color: #aaaaaa;
+                float: right;
+                font-size: 28px;
+                font-weight: bold;
+            }
+
+            .close:hover,
+            .close:focus {
+                color: #000;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            td.radio, thead td
+            {
+                text-align:center;
+            }
+
+            #conflicts-table
+            {
+                width: 100%;
+            }
+
+            #conflicts-table tbody tr:nth-child(odd)
+            {
+                background-color:#eaeae8;
+            }
+            
+            .expression_input
+            {
+                width: 100%;
+            }
+        }
+        </style>
+
+        """)
+
         # ---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
     {
-        var tool = new inro.modeller.util.Proxy(%s) ;
+
+            var conflicts = [];
+
+            var modal = document.getElementById('modal');
+      
+            var tool = new inro.modeller.util.Proxy(%s) ;
+
+            window.inp_tool = tool;
+
+            window.con = [];
+
+            $('#typeselectfile').on('change',function() {
+
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="file"]').prop('checked',true).change();
+                }
+            });
+
+            $('#typeselectfile').on('click',function() {
+
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="file"]').prop('checked',true).change();
+                }
+            });
+
+            $('#typeselectdatabase').on('change',function() {
+
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="database"]').prop('checked',true).change();
+                }
+            });
+
+            $('#typeselectdatabase').on('click',function() {
+
+               
+                if($(this).prop('checked'))
+                {
+                  $('input[value="database"]').prop('checked',true).change();
+                }
+            });
+
+            var intervalFunction = function() {
+
+              if(tool.should_show_merge_edit_dialog())
+            {
+               modal.style.display = "block";
+               clearInterval(dialogPollingInterval);
+
+               var conflictsString = tool.get_function_conflicts().replace(/'/g,'"');
+               window.con = JSON.parse(conflictsString);
+
+               
+               for(var i = 0; i < con.length; i++)
+               {
+                   window.con[i]['resolve'] = 'database';
+                  $('#conflicts-table tbody').append('<tr><td>'+con[i]['id'].toUpperCase()+'</td><td class="radio"><input type="radio" name="'+i+'" value="database" checked></td>' +
+                  '<td class="radio">'+
+                  '<input type="radio" name="'+i+'" value="file"></td><td class="radio">'+
+                  '<input type="radio" name="'+i+'" value="other"></td><td><input class="expression_input" type="text" id="exp_'+i+'" name="expression" value="'+con[i]['database_expression']+'"></td></tr>');
+               }
+
+
+               $('#conflicts-table input').on('change', function() {
+                    var idx = parseInt($(this)[0].name);
+
+
+                    if($(this)[0].value == 'database')
+                    {
+                        $('#exp_'+idx).val(window.con[idx]['database_expression']);
+                        window.con[idx]['resolve'] = 'database';
+                        window.con[idx]['expression'] = window.con[idx]['database_expression'];
+                    }
+                     else if($(this)[0].value == 'file')
+                     {
+                        $('#exp_'+idx).val(window.con[idx]['file_expression']);
+                        window.con[idx]['resolve'] = 'file';
+                        window.con[idx]['expression'] = window.con[idx]['file_expression'];
+                     }
+                     else if($(this)[0].value == 'other')
+                     {
+                        window.con[idx]['resolve'] = 'expression';
+                        window.con[idx]['expression'] = $('#exp_'+idx).val()
+                     }
+               });
+
+            };
+
+            }
+
+            var dialogPollingInterval = setInterval(intervalFunction,200);
+
+        $('#modal-save-button').bind('click',function(evt) {
+
+            for(var i = 0; i < window.con.length; i++)
+            {
+                if(window.con[i]['resolve'] == 'expression')
+                {
+                    window.con[i]['expression'] = $('#exp_'+i).val()
+                }
+            }
+            
+            tool.set_function_conflict(JSON.stringify(window.con));
+             window.con = [];
+            $('#conflicts-table tbody').empty();
+            modal.style.display = "none";
+            tool.reset_tool();
+        });
         
+
+        $('#modal-close,#modal-cancel-button').bind('click',function(evt) {
+            window.con = [];
+            $('#conflicts-table tbody').empty();
+             modal.style.display = "none";
+             tool.reset_tool();
+        });
+        
+
+
         $("#NetworkPackageFile").bind('change', function()
         {
             $(this).commit();
@@ -244,6 +483,7 @@ class ImportNetworkPackage(_m.Tool()):
                 attributes=self._get_logbook_attributes()):
 
             if _bank.scenario(self.ScenarioId) is not None and not self.OverwriteScenarioFlag:
+                self.has_exception = True
                 raise IOError("Scenario %s exists and overwrite flag is set to false." % self.ScenarioId)
 
             self._components.reset()  # Clear any held-over contents from previous run
@@ -285,6 +525,16 @@ class ImportNetworkPackage(_m.Tool()):
                 if self._components.functions_file is not None:
                     self._batchin_functions(temp_folder, zf)
                 self.TRACKER.completeTask()
+
+    @_m.method(return_type=bool)
+    def tool_exit_test(self):
+        self.event.set()
+        return True
+
+    @_m.method(return_type=unicode)
+    def tool_get_conflicts(self):
+        return self.merge_functions.function_conflicts
+        #return True
 
     @_m.logbook_trace("Reading modes")
     def _batchin_modes(self, scenario, temp_folder, zf):
@@ -353,9 +603,63 @@ class ImportNetworkPackage(_m.Tool()):
 
     def _batchin_functions(self, temp_folder, zf):
         zf.extract(self._components.functions_file, temp_folder)
-        merge_functions.FunctionFile = _path.join(temp_folder, self._components.functions_file)
-        merge_functions.ConflictOption = self.ConflictOption
-        merge_functions.run()
+        extracted_function_file_name = _path.join(temp_folder, self._components.functions_file)
+        if self.ConflictOption == 'OVERWRITE':
+            # Replicate Overwrite here so that consoles won't crash with references to a GUI
+            functions = self._LoadFunctionFile(extracted_function_file_name)
+            emmebank = _MODELLER.emmebank
+            for (id, expression) in functions.iteritems():
+                func = emmebank.function(id)
+                if func is None:
+                    emmebank.create_function(id, expression)
+                else:
+                    func.expression = expression
+        else:
+            merge_functions.FunctionFile = extracted_function_file_name
+            merge_functions.ConflictOption = self.ConflictOption
+            import threading
+            self.event = threading.Event()
+            self.event.clear()
+            self.merge_functions = merge_functions
+            self.merge_functions.show_edit_dialog = False
+            merge_functions.run(event=self.event,is_sub_call=True)
+
+    def _LoadFunctionFile(self, file_name):
+        functions = {}
+        with open(file_name) as reader:
+            expressionBuffer = ""
+            trecord = False
+            currentId = None
+            
+            for line in reader:
+                line = line.rstrip()
+                linecode = line[0]
+                record = line[2:]
+                
+                if linecode == 'c':
+                    pass
+                elif linecode == 't':
+                    if not record.startswith("functions"):
+                        raise IOError("Wrong t record!")
+                    trecord = True
+                elif linecode == 'a':
+                    if not trecord: raise IOError("A before T")
+                    index = record.index('=')
+                    currentId = record[:index].strip()
+                    expressionBuffer = record[(index + 1):].replace(' ', '')
+                    if currentId is not None:
+                        functions[currentId] = expressionBuffer
+                elif linecode == ' ':
+                    if currentId is not None and trecord:
+                        s = record.strip().replace(' ', '')
+                        expressionBuffer += s
+                        functions[currentId] = expressionBuffer
+                elif linecode == 'd' or linecode == 'm':
+                    currentId = None
+                    expressionBuffer = ""
+                else: raise KeyError(linecode)
+                    
+        return functions
     
     def _getZipFileName(self, zipPath):
         try:
@@ -608,3 +912,23 @@ class ImportNetworkPackage(_m.Tool()):
     @_m.method(return_type=str)
     def get_existing_scenario_title(self):
         return _bank.scenario(self.ScenarioId).title
+
+    @_m.method(return_type=bool)
+    def should_show_merge_edit_dialog(self):
+        return False if self.merge_functions is None or self.exception else self.merge_functions.show_edit_dialog
+
+    @_m.method(return_type=str)
+    def get_function_conflicts(self):
+        return self.merge_functions.function_conflicts
+
+    @_m.method(argument_types=[str])
+    def set_function_conflict(self,data):
+        import json
+        data_eval = json.loads(data)
+        self.merge_functions.merge_changes(data_eval)
+
+    @_m.method()
+    def reset_tool(self):
+        self.OverwriteScenarioFlag = False
+        self.has_exception = False
+        

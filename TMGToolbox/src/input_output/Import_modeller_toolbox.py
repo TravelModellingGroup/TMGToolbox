@@ -22,7 +22,9 @@ from contextlib import contextmanager
 from contextlib import nested
 import inro.modeller as _m
 import os
-
+_MODELLER = _m.Modeller() #Instantiate Modeller once.
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 class ExportSubareaTool(_m.Tool()):
     version = '1.1.1'
