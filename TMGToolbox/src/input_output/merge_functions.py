@@ -44,6 +44,8 @@ Merge Functions
     
     1.0.0 Switched versioning system to start at 1.0.0. Additionally, added flag options
         to automate the tool.
+
+    1.1.0 Removed QT functionaility in order to avoid crashing in a console only environment
     
 '''
 
@@ -93,6 +95,21 @@ class MergeFunctions(_m.Tool()):
         self.RevertOnError = True
         
         self.ConflictOption = 'EDIT'
+
+        #--- event to block GUI / merge edit
+        self.event = None
+
+        self.function_conflicts = None
+
+        self.function_changes = []
+
+        # -- hold dialog reference
+        self.dialog = None
+
+        # -- showing dialog
+        self.show_edit_dialog = False
+
+        self.is_sub_call = False
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Merge Functions v%s" % self.version,
@@ -117,13 +134,27 @@ class MergeFunctions(_m.Tool()):
         
         pb.add_checkbox(tool_attribute_name='RevertOnError',
                         label="Revert on error?")
+
+        pb.add_html("""
+        
+       
+            <script type="text/javascript">
+            
+            $(document).ready( function ()
+            {
+                var tool = new inro.modeller.util.Proxy(%s);
+
+            
+            });
+        </script>""" % pb.tool_proxy_tag)
         
         return pb.render()
     
     ##########################################################################################################
         
-    def run(self):
+    def run(self,event=None,is_sub_call=False):
         self.tool_run_msg = ""
+        self.event=event
         self.TRACKER.reset()
         
         if self.FunctionFile is None:
@@ -253,11 +284,13 @@ class MergeFunctions(_m.Tool()):
                 newFunctions.append(id)
             
             conflicts = []
+            conflicts_obj = []
             for id in (fileIds & databaseIds): #Functions in both sources
                 database_expression = databaseFunctions[id]
                 file_expression = fileFunctions[id]
                 if file_expression != database_expression:
                     conflicts.append((id, database_expression, file_expression))
+                    conflicts_obj.append({'id':id,'database_expression':database_expression,'file_expression':file_expression})
             
             if len(conflicts) > 0:
                 conflicts.sort()
@@ -274,31 +307,72 @@ class MergeFunctions(_m.Tool()):
                             _m.logbook_write("Old expression: %s" %database_expression)
                             _m.logbook_write("New expresion: %s" %file_expression)
                 elif self.ConflictOption == self.EDIT_OPTION:
-                    self._LaunchGUI(conflicts, modifiedFunctions)
+                    #self.event.clear()
+                    conflicts_obj.sort(key=lambda x: x['id'])
+                    self.function_conflicts = conflicts_obj
+
+                    # self._LaunchGUI(conflicts,modifiedFunctions)
+                    if not self.is_sub_call:
+                        self.show_edit_dialog = True
+                    else:
+                        self._LaunchGUI(conflicts,modifiedFunctions)
+
+                    # self.event.wait()
+                    
+
                 elif self.ConflictOption == self.RAISE_OPTION:
                     tup = len(conflicts), ', '.join([t[0] for t in conflicts])
                     msg = "The following %s functions have conflicting definitions: %s" %tup
                     raise Exception(msg)
                         
         return len(newFunctions), len(modifiedFunctions)
+
+    def save_modified_functions(functions):
+
+        return
     
     
     def _LaunchGUI(self, conflicts, modifiedFunctions):
-        dialog = FunctionConflictDialog(conflicts)
-        result = dialog.exec_()
+        self.dialog = FunctionConflictDialog(conflicts,self)
+        #self.dialog = dialog
+        result = self.dialog.exec_()
         
-        if result == dialog.Accepted:
-            acceptedChanges = dialog.getFunctionsToChange()
-            for fid, expression in acceptedChanges.iteritems():
-                func = _MODELLER.emmebank.function(fid)
-                oldExpression = func.expression
-                func.expression = expression
-                modifiedFunctions[fid] = oldExpression
+
+        # self.event.wait()
+        
+        #if result == dialog.Accepted:
+        #    acceptedChanges = dialog.getFunctionsToChange()
+        #    for fid, expression in acceptedChanges.iteritems():
+        #        func = _MODELLER.emmebank.function(fid)
+        #        oldExpression = func.expression
+        #        func.expression = expression
+        #        modifiedFunctions[fid] = oldExpression
                 
-                with _m.logbook_trace("Modified function %s" %fid.upper()):
+        #        with _m.logbook_trace("Modified function %s" %fid.upper()):
+        #            _m.logbook_write("Old expression: %s" %oldExpression)
+        #            _m.logbook_write("New expression: %s" %expression)
+
+        # self.dialog.deleteLater()
+
+    def merge_changes(self,changes):
+
+        for change in changes:
+            if change['resolve'] == 'file' or change['resolve'] == 'expression':
+
+                print(change)
+                func = _MODELLER.emmebank.function(change['id'])
+                oldExpression = func.expression
+                func.expression = change['expression']
+                # modifiedFunctions[change['id']] = oldExpression
+
+                with _m.logbook_trace("Modified function %s" %change['id'].upper()):
                     _m.logbook_write("Old expression: %s" %oldExpression)
-                    _m.logbook_write("New expression: %s" %expression)
-        dialog.deleteLater()
+                    _m.logbook_write("New expression: %s" %change['expression'])
+
+
+
+
+
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
@@ -307,13 +381,34 @@ class MergeFunctions(_m.Tool()):
     @_m.method(return_type=unicode)
     def tool_run_msg_status(self):
         return self.tool_run_msg
-    
+
+    def update_data(self):
+        # dialog = self.dialog
+        acceptedChanges = self.dialog.getFunctionsToChange()
+        for fid, expression in acceptedChanges.iteritems():
+            func = _MODELLER.emmebank.function(fid)
+            oldExpression = func.expression
+            func.expression = expression
+            modifiedFunctions[fid] = oldExpression
+                
+            with _m.logbook_trace("Modified function %s" %fid.upper()):
+                _m.logbook_write("Old expression: %s" %oldExpression)
+                _m.logbook_write("New expression: %s" %expression)
+
+
 ##########################################################################################
 
 class FunctionConflictDialog(QtGui.QDialog):
-    
-    def __init__(self, data):
-        super(FunctionConflictDialog, self).__init__()
+
+    def closeEvent(self, event):
+
+        if(event.isAccepted()):
+            self.caller.update_data()
+        self.caller.event.set()
+        self.deleteLater()
+
+    def __init__(self, data, caller):
+        super(FunctionConflictDialog, self).__init__(parent=None)
         
         self.setWindowTitle("Function Conflict")
         infoText = QtGui.QLabel("""Conflicts detected between the database and the network package \
@@ -324,6 +419,10 @@ in the database.""")
         #infoText.setFrameShadow(infoText.Sunken)
         #infoText.setFrameStyle(infoText.StyledPanel)
         infoText.setMargin(5)
+
+        self.caller = caller
+
+        self.cancel = False
         
         self.dataRows = []
         
@@ -448,15 +547,19 @@ in the database.""")
             mainGrid.setColumnMinimumWidth(columnNumber, width)
             if columnNumber < 3: footerGrid.setColumnMinimumWidth(columnNumber + 1, width)
         headerGrid.setColumnStretch(6, 1.0)
-        footerGrid.setColumnStretch(4, 1.0)          
-    
+        footerGrid.setColumnStretch(4, 1.0)
+
+    def cancel(self):
+        self.cancel = True
+        self.close()
+
     def buildFooterButtons(self):
         hbox = QtGui.QHBoxLayout()
         
         saveButton = QtGui.QPushButton("Save")
         saveButton.clicked.connect(self.accept)
         cancelButton = QtGui.QPushButton("Cancel")
-        cancelButton.clicked.connect(self.close)
+        cancelButton.clicked.connect(self.reject)
         
         hbox.addWidget(saveButton)
         hbox.addWidget(cancelButton)

@@ -1,14 +1,18 @@
 """
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+
     This file is part of the TMG Toolbox.
+
     The TMG Toolbox is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
+
     The TMG Toolbox is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 """
@@ -141,11 +145,14 @@ class ImportNetworkPackage(_m.Tool()):
                       between the package and the current Emmebank.")
 
         pb.add_html("""
+
        <div id="modal" class="modal">
+
           <div class="modal-content">
             <span id="modal-close" class="close">&times;</span>
             <p>Conflicts detected between the database and the network package file for the following functions(s). Please resolve these conflicts
             by indicating which version(s) to save in the database.</p>
+
             <table id="conflicts-table">
             <thead>
             <tr>
@@ -169,16 +176,22 @@ class ImportNetworkPackage(_m.Tool()):
           <button id="modal-cancel-button">Cancel</button>
           </div>
           </div>
+
         
+
         </div>
+
         <style>
+
             .all-select
             {
                 padding-left:15px;
                 padding-top:10px;
                 padding-bottom:10px;
             }
+
             .modal thead td{
+
                 font-weight:bold;
             }
              .modal {
@@ -194,6 +207,8 @@ class ImportNetworkPackage(_m.Tool()):
                 background-color: rgb(0,0,0); 
                 background-color: rgba(0,0,0,0.4); 
             }
+
+
             .modal-content {
                 background-color: #fefefe;
                 margin: auto;
@@ -201,26 +216,31 @@ class ImportNetworkPackage(_m.Tool()):
                 border: 1px solid #888;
                 width: 80%;
             }
+
             .close {
                 color: #aaaaaa;
                 float: right;
                 font-size: 28px;
                 font-weight: bold;
             }
+
             .close:hover,
             .close:focus {
                 color: #000;
                 text-decoration: none;
                 cursor: pointer;
             }
+
             td.radio, thead td
             {
                 text-align:center;
             }
+
             #conflicts-table
             {
                 width: 100%;
             }
+
             #conflicts-table tbody tr:nth-child(odd)
             {
                 background-color:#eaeae8;
@@ -232,6 +252,7 @@ class ImportNetworkPackage(_m.Tool()):
             }
         }
         </style>
+
         """)
 
         # ---JAVASCRIPT
@@ -239,47 +260,63 @@ class ImportNetworkPackage(_m.Tool()):
 <script type="text/javascript">
     $(document).ready( function ()
     {
+
             var conflicts = [];
+
             var modal = document.getElementById('modal');
       
             var tool = new inro.modeller.util.Proxy(%s) ;
+
             window.inp_tool = tool;
+
             window.con = [];
+
             $('#typeselectfile').on('change',function() {
+
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="file"]').prop('checked',true).change();
                 }
             });
+
             $('#typeselectfile').on('click',function() {
+
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="file"]').prop('checked',true).change();
                 }
             });
+
             $('#typeselectdatabase').on('change',function() {
+
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="database"]').prop('checked',true).change();
                 }
             });
+
             $('#typeselectdatabase').on('click',function() {
+
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="database"]').prop('checked',true).change();
                 }
             });
+
             var intervalFunction = function() {
+
               if(tool.should_show_merge_edit_dialog())
             {
                modal.style.display = "block";
                clearInterval(dialogPollingInterval);
+
                var conflictsString = tool.get_function_conflicts().replace(/'/g,'"');
                window.con = JSON.parse(conflictsString);
+
                
                for(var i = 0; i < con.length; i++)
                {
@@ -289,8 +326,12 @@ class ImportNetworkPackage(_m.Tool()):
                   '<input type="radio" name="'+i+'" value="file"></td><td class="radio">'+
                   '<input type="radio" name="'+i+'" value="other"></td><td><input class="expression_input" type="text" id="exp_'+i+'" name="expression" value="'+con[i]['database_expression']+'"></td></tr>');
                }
+
+
                $('#conflicts-table input').on('change', function() {
                     var idx = parseInt($(this)[0].name);
+
+
                     if($(this)[0].value == 'database')
                     {
                         $('#exp_'+idx).val(window.con[idx]['database_expression']);
@@ -309,10 +350,15 @@ class ImportNetworkPackage(_m.Tool()):
                         window.con[idx]['expression'] = $('#exp_'+idx).val()
                      }
                });
+
             };
+
             }
+
             var dialogPollingInterval = setInterval(intervalFunction,200);
+
         $('#modal-save-button').bind('click',function(evt) {
+
             for(var i = 0; i < window.con.length; i++)
             {
                 if(window.con[i]['resolve'] == 'expression')
@@ -328,6 +374,7 @@ class ImportNetworkPackage(_m.Tool()):
             tool.reset_tool();
         });
         
+
         $('#modal-close,#modal-cancel-button').bind('click',function(evt) {
             window.con = [];
             $('#conflicts-table tbody').empty();
@@ -335,6 +382,8 @@ class ImportNetworkPackage(_m.Tool()):
              tool.reset_tool();
         });
         
+
+
         $("#NetworkPackageFile").bind('change', function()
         {
             $(this).commit();
@@ -566,7 +615,6 @@ class ImportNetworkPackage(_m.Tool()):
                 else:
                     func.expression = expression
         else:
-            merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
             merge_functions.FunctionFile = extracted_function_file_name
             merge_functions.ConflictOption = self.ConflictOption
             import threading
