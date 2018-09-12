@@ -353,6 +353,7 @@ class ImportNetworkPackage(_m.Tool()):
 
     def _batchin_functions(self, temp_folder, zf):
         zf.extract(self._components.functions_file, temp_folder)
+        merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
         merge_functions.FunctionFile = _path.join(temp_folder, self._components.functions_file)
         merge_functions.ConflictOption = self.ConflictOption
         merge_functions.run()
