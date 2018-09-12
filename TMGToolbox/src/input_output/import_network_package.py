@@ -614,7 +614,8 @@ class ImportNetworkPackage(_m.Tool()):
                     emmebank.create_function(id, expression)
                 else:
                     func.expression = expression
-        else:
+        elif self.ConflictOption == 'EDIT' or self.ConflictOption == 'RAISE':
+            merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
             merge_functions.FunctionFile = extracted_function_file_name
             merge_functions.ConflictOption = self.ConflictOption
             import threading
