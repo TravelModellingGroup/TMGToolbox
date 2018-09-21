@@ -340,7 +340,7 @@ class CCGEN(_m.Tool()):
         
     @_m.method(return_type= bool)
     def has_shapefile_loaded(self):
-        return self.ZoneShapeFile != None
+        return self.ZoneShapeFile is not None
     
     @_m.method(return_type= unicode)
     def preload_shapefile_fields(self):
@@ -392,7 +392,7 @@ class CCGEN(_m.Tool()):
                 
                 #---1. Load the zones file
                 zonesToProcess = None #nodes
-                if self.ZonesFile == None or self.ZonesFile == "":
+                if self.ZonesFile is None or self.ZonesFile == "":
                     zonesToProcess = self._getUnconnectedZones(network)
                     _m.logbook_write("Selected %s unconnected zones already in the network" %len(zonesToProcess))
                 else:
@@ -410,7 +410,7 @@ class CCGEN(_m.Tool()):
                 
                 #---3. Load the boundary and zones files 
                 self._tracker.startProcess(2)
-                if self.BoundaryFile != None and self.BoundaryFile != "":
+                if self.BoundaryFile is not None and self.BoundaryFile != "":
                     self._loadBoundaryFile(self.BoundaryFile)
                 else:
                     self._Boundaries = None
@@ -554,7 +554,7 @@ class CCGEN(_m.Tool()):
             
             for poly in reader.readThrough():
                 zone = network.node(poly[idLabel])
-                if zone != None:
+                if zone is not None:
                     if not zone.is_centroid:
                         _m.logbook_write("Corresponding network node for zone shape '%s' is not a zone!" %poly[idLabel])
                     else:
@@ -823,7 +823,7 @@ class CCGEN(_m.Tool()):
             if node.id =="":
                 #get node number
                 testNode = network.node(next_node)
-                while testNode != None:
+                while testNode is not None:
                     next_node += 1
                     testNode = network.node(next_node)
                 node.id = str(next_node)
@@ -876,7 +876,7 @@ class CCGEN(_m.Tool()):
     #----Filters and Exclusions----------------------------------------------------------------------------
 
     def _applyInfeasibleLinkFilter(self, attributeId): #---TASK 1
-        if self.InfeasibleLinkSelector == "" or self.InfeasibleLinkSelector == None:
+        if self.InfeasibleLinkSelector == "" or self.InfeasibleLinkSelector is None:
             self._tracker.completeTask() 
             return
         else:
@@ -1017,7 +1017,7 @@ class CCGEN(_m.Tool()):
     #----Candidate Node Functions--------------------------------------------------------------------
     
     def _getCandidateNodes(self, zone, feasibleNodes):
-        if zone._geometry != None:
+        if zone._geometry is not None:
             self._searchByPoly(zone, feasibleNodes)
         else:
             _m.logbook_write("No zone shape found for zone %s." %zone.id)
@@ -1061,7 +1061,7 @@ class CCGEN(_m.Tool()):
         except IndexError: #Expected if the zone is outside the bounds of the feasible node set
             pass 
         #if no nodes are found within the search radius, select closest node
-        if len(candidateNodes) == 0 and closestNode != None:
+        if len(candidateNodes) == 0 and closestNode is not None:
             candidateNodes[closestNode] = minDistance
         
         zone._candidateNodes = candidateNodes 
@@ -1071,7 +1071,7 @@ class CCGEN(_m.Tool()):
         Removes from the set of candidate nodes those which cross boundaries.
         '''
         
-        if self._Boundaries == None: #If no boundaries have been loaded, skip this step.
+        if self._Boundaries is None: #If no boundaries have been loaded, skip this step.
             return 
         
         # Filters the zone's candidate nodes
@@ -1227,7 +1227,7 @@ class CCGEN(_m.Tool()):
     #----Miscellaneous Functions
     
     def _getNodeMass(self, node):
-        if self.MassAttribute:# != None:
+        if self.MassAttribute:# is not None:
             try:
                 return node[self.MassAttribute.id]
             #if node doesn't have a mass attribute, it is a virtual node

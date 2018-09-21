@@ -215,7 +215,7 @@ class CheckNetworkIntegrity(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         try:
@@ -245,13 +245,13 @@ class CheckNetworkIntegrity(_m.Tool()):
             issues = []
             errCount = 0
             
-            if self.LinkFlagAttributeId != None:
+            if self.LinkFlagAttributeId is not None:
                 for link in network.links(): link[self.LinkFlagAttributeId] = 0
                 print "Reset link extra attribute '%s' to 0" %self.LinkFlagAttributeId
-            if self.LineFlagAttributeId != None:
+            if self.LineFlagAttributeId is not None:
                 for line in network.transit_lines(): link[self.LineFlagAttributeId] = 0
                 print "Reset transit line extra attribute '%s' to 0" %self.LineFlagAttributeId
-            if self.SegmentFlagAttributeId != None:
+            if self.SegmentFlagAttributeId is not None:
                 for seg in network.transit_segments(): seg[self.SegmentFlagAttributeId] = 0
                 print "Reset transit segment extra attribute '%s' to 0" %self.SegmentFlagAttributeId
             
@@ -284,7 +284,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                     tup = ('LINK', str(link), errors)
                     issues.append(tup)
                     
-                    if self.LinkFlagAttributeId != None:
+                    if self.LinkFlagAttributeId is not None:
                         link[self.LinkFlagAttributeId] = 1
                     
                 self.TRACKER.completeSubtask()
@@ -298,7 +298,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                     issues.append(tup)
                     errCount += 1
                     
-                    if self.LineFlagAttributeId != None:
+                    if self.LineFlagAttributeId is not None:
                         line[self.LineFlagAttributeId] = 1
                     
                 self.TRACKER.completeSubtask()
@@ -322,7 +322,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                     tup = ('TRANSIT_SEGMENT', str(segment), errors)
                     issues.append(tup)
                     
-                    if self.SegmentFlagAttributeId != None:
+                    if self.SegmentFlagAttributeId is not None:
                         segment[self.SegmentFlagAttributeId] = 1
                     
                 self.TRACKER.completeSubtask()
@@ -343,8 +343,8 @@ class CheckNetworkIntegrity(_m.Tool()):
             if errCount > 0:
                 self._WriteReport(issues, errCount)
             
-                if self.LineFlagAttributeId != None or self.LinkFlagAttributeId != None \
-                        or self.SegmentFlagAttributeId != None:
+                if self.LineFlagAttributeId is not None or self.LinkFlagAttributeId is not None \
+                        or self.SegmentFlagAttributeId is not None:
                     self.Scenario.publish_network(network)
                     print "Saved network flags"
                 

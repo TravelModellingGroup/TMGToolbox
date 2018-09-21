@@ -175,17 +175,17 @@ class EstimateHyperNetworkSize(_m.Tool()):
         
         #Check the top-level of the file
         versionElem = root.find('version')
-        if versionElem == None:
+        if versionElem is None:
             raise XmlValidationError("Fare schema must specify a 'version' element.")
         
         groupsElement = root.find('groups')
-        if groupsElement == None:
+        if groupsElement is None:
             raise XmlValidationError("Fare schema must specify a 'groups' element.")
         
         zonesElement = root.find('zones')
         
         fareRulesElement = root.find('fare_rules')
-        if fareRulesElement == None:
+        if fareRulesElement is None:
             raise XmlValidationError("Fare schema must specify a 'fare_rules' element.")
     
         #Validate version
@@ -213,7 +213,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
             
         #Validate zones, if required
         validZoneIds = set()
-        if zonesElement != None:
+        if zonesElement is not None:
             shapeFileElements = zonesElement.findall('shapefile')
             zoneElements = zonesElement.findall('zone')
             
@@ -253,7 +253,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
                         raise XmlValidationError("Zone type 'node_selection' for zone '%s' must specify at least one 'node_selector' element." %id)
                 elif zoneType == 'from_shapefile':
                     childElement = zoneElement.find('from_shapefile')
-                    if childElement == None:
+                    if childElement is None:
                         raise XmlValidationError("Zone type 'from_shapefile' for zone '%s' must specify exactly one 'from_shapefile' element." %id)
                     
                     if not 'id' in childElement.attrib:
@@ -321,7 +321,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
             #Check required children
             for name, checkFunc in requiredChildren.iteritems():
                 child = fareElement.find(name)
-                if child == None:
+                if child is None:
                     raise XmlValidationError("Fare element #%s of type '%s' must specify a '%s' element" %(i, ruleType, name))
                 
                 text = child.text
@@ -330,7 +330,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
             #Check optional children
             for name, checkFunc in optionalChildren.iteritems():
                 child = fareElement.find(name)
-                if child == None: continue
+                if child is None: continue
                 
                 text = child.text
                 checkFunc(text, name)

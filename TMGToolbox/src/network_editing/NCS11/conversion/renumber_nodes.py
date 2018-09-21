@@ -70,11 +70,11 @@ class RenumberNonZoneNodes(_m.Tool()):
                     # must be shifted down by 10,000.
                     # Cycling through them from bottom-up, to ensure no id conflicts occur.
                     n = network.node(i)
-                    if n == None:
+                    if n is None:
                         continue
                     newNumber = n.number - 10000
                     nn = network.node(newNumber)
-                    if nn != None:
+                    if nn is not None:
                         raise Exception("Renumbering of node " + str(n.number) + " failed! New number " + str(newNumber) +" already exists!")
                     
                     n.number -= 10000
@@ -84,12 +84,12 @@ class RenumberNonZoneNodes(_m.Tool()):
                     n = network.node(91999 - i) 
                     # GO Rail nodes need to be shifted up by 7,000
                     # Cycling through them top to bottom to prevent id conflicts.
-                    if n == None:
+                    if n is None:
                         continue
                     
                     newNumber = n.number + 7000
                     nn = network.node(newNumber)
-                    if nn != None:
+                    if nn is not None:
                         raise Exception("Renumbering of node " + str(n.number) + " failed! New number " + str(newNumber) +" already exists!")
                     
                     n.number += 7000
@@ -99,12 +99,12 @@ class RenumberNonZoneNodes(_m.Tool()):
                     n = network.node(90999 - i) 
                     # Subway nodes need to be shifted up by 7,000
                     # Cycling through them top to bottom to prevent id conflicts.
-                    if n == None:
+                    if n is None:
                         continue
                     
                     newNumber = n.number + 7000
                     nn = network.node(newNumber)
-                    if nn != None:
+                    if nn is not None:
                         raise Exception("Renumbering of node " + str(n.number) + " failed! New number " + str(newNumber) +" already exists!")
                     
                     n.number += 7000

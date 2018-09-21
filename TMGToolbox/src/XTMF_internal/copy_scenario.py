@@ -69,11 +69,11 @@ class CopyScenario(_m.Tool()):
             return
         project = _MODELLER.emmebank
         original = project.scenario(str(FromScenario))
-        if original == None:
+        if original is None:
             raise Exception("The base scenario '"+str(FromScenario)+"' does not exist in order to copy to scenario '" \
                             + str(ToScenario)+"'!")
         dest = project.scenario(str(ToScenario))
-        if dest != None:
+        if dest is not None:
             project.delete_scenario(dest.id)
         if CopyStrategy == True:
             project.copy_scenario(original.id, str(ToScenario), True, True, True)

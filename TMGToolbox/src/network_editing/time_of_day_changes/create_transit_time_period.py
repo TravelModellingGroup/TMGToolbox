@@ -207,7 +207,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         self.AggTypeSelectionFile = aggFile
         self.AlternativeDataFile = altFile
         # Process the additional files, if it is the string None then there are no additional files otherwise they are ; separated
-        if additionalAltFiles == None or additionalAltFiles == "None":
+        if additionalAltFiles is None or additionalAltFiles == "None":
             self.InputFiles = []
         else:
             self.InputFiles = additionalAltFiles.split(';', 1)
@@ -232,7 +232,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
-        if self.AlternativeDataFile == None:
+        if self.AlternativeDataFile is None:
             self.InputFiles = []
         else:
             self.InputFiles = [self.AlternativeDataFile]
@@ -359,7 +359,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     id = cells[emmeIdCol]
                     transitLine = network.transit_line(id)
                 
-                    if transitLine == None:
+                    if transitLine is None:
                         badIds.add(id)
                         continue #Skip and report
                 
@@ -373,7 +373,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     if not departure in bounds: continue #Skip departures not in the time period
                 
                     trip = (departure, arrival)
-                    if transitLine.trips == None: transitLine.trips = [trip]
+                    if transitLine.trips is None: transitLine.trips = [trip]
                     else: transitLine.trips.append(trip)
         
         return badIds
@@ -396,7 +396,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     id = cells[emmeIdCol]
                     transitLine = network.transit_line(id)
                 
-                    if transitLine == None:
+                    if transitLine is None:
                         badIds.add(id)
                         continue #Skip and report
                     
@@ -406,7 +406,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                         print "Line " + num + " skipped: " + str(e)
                         continue
                                 
-                    if transitLine.aggtype == None: transitLine.aggtype = aggregation
+                    if transitLine.aggtype is None: transitLine.aggtype = aggregation
         
         return badIds
 
@@ -454,7 +454,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         bounds = _util.FloatRange(0.01, 1000.0)
         
         toDelete = set()
-        if altData != None:
+        if altData is not None:
             for k, v in altData.items(): #check if any headways or speeds are zero. Allow those lines to be deletable
                 if v[0] == 0 or v[1] == 0:
                     del altData[k]
@@ -517,11 +517,10 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 if data[0] == 9999: #a headway of 9999 indicates an unused line
                     network.delete_transit_line(line.id)
                     continue
-                elif data[0] == 0:
+                elif data[0] == 0: #a headway of 0 allows for a line to be in the alt data file without changing existing headway
                     print "%s: %s" %(line.id, data[0])
                     _m.logbook_write("Headway = 0 in alt file. Headway remains as in base.  %s" %line.id)
-                    continue
-                elif not data[0] in bounds: #a headway of 0 allows for a line to be in the alt data file without affecting anything
+                elif not data[0] in bounds: 
                     print "%s: %s" %(line.id, data[0])
                     _m.logbook_write("Headway out of bounds line %s: %s minutes. Line removed from network." %(line.id, data[0]))
                     network.delete_transit_line(line.id)

@@ -62,6 +62,7 @@ Generate Transit Lines from GTFS
 
 import inro.modeller as _m
 import traceback as _traceback
+import csv
 from contextlib import contextmanager
 from contextlib import nested
 from os import path as _path
@@ -107,7 +108,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     
     LineServiceTableFile = _m.Attribute(str)
     PublishFlag = _m.Attribute(bool)
-    
+    MappingFileName = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -188,6 +189,11 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                            window_type='save_file',
                            file_filter='*.csv',
                            title="Transit Service Table")
+
+        pb.add_select_file(tool_attribute_name='MappingFileName',
+                           window_type='save_file',
+                           file_filter='*.csv',
+                           title="Mapping file to map between EMME ID and GTFS Trip ID")
         
         pb.add_checkbox(tool_attribute_name='PublishFlag',
                         label="Publish network? Leave unchecked for debugging.")
@@ -256,7 +262,6 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-            
             routes = self._LoadCheckGtfsRoutesFile()
             self.TRACKER.completeTask()
             
@@ -272,7 +277,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             
             with open(self.LineServiceTableFile, 'w') as writer:
                 self._GenerateLines(routes, stops2nodes, network, writer)
-            
+
             if self.PublishFlag:
                 copy = _MODELLER.emmebank.copy_scenario(self.Scenario.id, self.NewScenarioId)
                 copy.title = self.NewScenarioTitle
@@ -297,12 +302,13 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             routesPath = self.GtfsFolder + "/routes.txt"
             if not _path.exists(routesPath):
                 raise IOError("Folder does not contain a routes file")
+
         
         with _util.CSVReader(routesPath) as reader:
             for label in ['emme_id', 'emme_vehicle', 'route_id', 'route_long_name']:
                 if label not in reader.header:
                     raise IOError("Routes file does not define column '%s'" %label)
-            
+
             useLineNames = False
             if 'emme_descr' in reader.header:
                 useLineNames = True
@@ -312,6 +318,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             
             for record in reader.readlines():
                 emmeId = record['emme_id'][:5]
+                print emmeId
                 if emmeId in emIdSet:
                     raise IOError("Route file contains duplicate id '%s'" %emmeId)
                 
@@ -321,7 +328,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                     route = Route(record, description= descr[:17])
                 else:
                     route = Route(record)
-                routes[route.route_id] = route      
+                routes[route.route_id] = route
         msg = "%s routes loaded from transit feed" %len(routes)
         print msg
         _m.logbook_write(msg)
@@ -338,7 +345,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                 if cells[1] == '0':
                     self.TRACKER.completeSubtask()
                     continue #Assume no mapping exists for this stop
-                if network.node(cells[1]) == None:
+                if network.node(cells[1]) is None:
                     raise IOError("Mapping error: Node %s does not exist" %cells[1])
                 stops2nodes[cells[0]] = cells[1]
             self.TRACKER.completeTask()
@@ -412,145 +419,152 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     
     def _GenerateLines(self, routes, stops2nodes, network, writer):
         #This is the main method
-        linesToCheck = []
-        failedSequences = []
-        skippedStopIds = {}
+        with open (self.MappingFileName, 'wb') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow(["tripId", "emmeId"])
+
+            linesToCheck = []
+            failedSequences = []
+            skippedStopIds = {}
         
-        writer.write("emme_id,trip_depart,trip_arrive")
+            writer.write("emme_id,trip_depart,trip_arrive")
         
-        # Setup the shortest-path algorithm
-        if self.LinkPriorityAttributeId != None:
-            def speed(link):
-                factor = link[self.LinkPriorityAttributeId]
-                if factor == 0:
-                    return 0
-                if link.data2 == 0:
-                    return 30.0 * factor
-                return link.data2 * factor
-        else:
-            def speed(link):
-                if link.data2 == 0:
-                    return 30.0 * factor
-                return link.data2 * factor
-        algo = _editing.AStarLinks(network, link_speed_func=speed)
-        algo.max_degrees = self.MaxNonStopNodes
-        functionBank = self._GetModeFilterMap(network)
+            # Setup the shortest-path algorithm
+            if self.LinkPriorityAttributeId is not None:
+                def speed(link):
+                    factor = link[self.LinkPriorityAttributeId]
+                    if factor == 0:
+                        return 0
+                    if link.data2 == 0:
+                        return 30.0 * factor
+                    return link.data2 * factor
+            else:
+                factor = 1
+                def speed(link):
+                    if link.data2 == 0:
+                        return 30.0 * factor
+                    return link.data2 * factor
+            algo = _editing.AStarLinks(network, link_speed_func=speed)
+            algo.max_degrees = self.MaxNonStopNodes
+            functionBank = self._GetModeFilterMap(network)
         
-        self.TRACKER.startProcess(len(routes))
-        lineCount = 0
-        print "Starting line itinerary generation"
-        for route in routes.itervalues():
-            baseEmmeId = route.emme_id
-            vehicle = network.transit_vehicle(route.emme_vehicle)
-            if vehicle == None:
-                raise Exception("Cannot find a vehicle with id=%s" %route.emme_vehicle)
-            if GtfsModeMap[vehicle.mode.id] != route.route_type:
-                print "Warning: Vehicle mode of route {0} ({1}) does not match suggested route type ({2})".\
-                    format(route.route_id, vehicle.mode.id, route.route_type)
-            filter = functionBank[vehicle.mode]
-            algo.link_filter = filter
+            self.TRACKER.startProcess(len(routes))
+            lineCount = 0
+            print "Starting line itinerary generation"
+            for route in routes.itervalues():
+                baseEmmeId = route.emme_id
+                vehicle = network.transit_vehicle(route.emme_vehicle)
+                if vehicle is None:
+                    raise Exception("Cannot find a vehicle with id=%s" %route.emme_vehicle)
+                if GtfsModeMap[vehicle.mode.id] != route.route_type:
+                    print "Warning: Vehicle mode of route {0} ({1}) does not match suggested route type ({2})".\
+                        format(route.route_id, vehicle.mode.id, route.route_type)
+                filter = functionBank[vehicle.mode]
+                algo.link_filter = filter
             
-            #Collect all trips with the same stop sequence
-            tripSet = self._GetOrganizedTrips(route)         
+                #Collect all trips with the same stop sequence
+                tripSet = self._GetOrganizedTrips(route)         
             
-            #Create route profile
-            branchNumber = 0
-            seqCount = 1
-            for seq, trips in tripSet.iteritems():
-                stop_itin = seq.split(';')
+                #Create route profile
+                branchNumber = 0
+                seqCount = 1
+                for seq, trips in tripSet.iteritems():
+                    stop_itin = seq.split(';')
                 
-                #Get node itinerary
-                node_itin = self._GetNodeItinerary(stop_itin, stops2nodes, network, skippedStopIds)
+                    #Get node itinerary
+                    node_itin = self._GetNodeItinerary(stop_itin, stops2nodes, network, skippedStopIds)
             
-                if len(node_itin) < 2: #Must have at least two nodes to build a route
-                    #routeId, branchNum, error, seq
-                    failedSequences.append((baseEmmeId, seqCount, "too few nodes", seq))
-                    seqCount += 1
-                    continue
-                
-                #Generate full, mode-constrained path
-                iter = node_itin.__iter__()
-                prevNode = iter.next()
-                full_itin = [prevNode]
-                seg_stops = []
-                breakFlag = False
-                longRoute = False
-                for node in iter:
-                    path = algo.calcPath(prevNode, node)
-                    #path = _editing.calcShortestPath2(prevNode, node, filter, self.MaxNonStopNodes, calc)
-                    #path = _util.calcShortestPath(network, vehicle.mode, prevNode, node, self.MaxNonStopNodes, calc=calc)
-                    if not path:
+                    if len(node_itin) < 2: #Must have at least two nodes to build a route
                         #routeId, branchNum, error, seq
-                        msg = "no path between %s and %s by mode %s" %(prevNode, node, vehicle.mode)
-                        failedSequences.append((baseEmmeId, seqCount, msg, seq))
-                        breakFlag = True
+                        failedSequences.append((baseEmmeId, seqCount, "too few nodes", seq))
                         seqCount += 1
-                        break
-                    flag = True
-                    if len(path) > 5:
-                        longRoute = True
-                    for link in path:
-                        full_itin.append(link.j_node)
-                        seg_stops.append(flag)
-                        flag = False
-                    prevNode = node
+                        continue
                 
-                seg_stops.append(True) #Last segment should always be a stop.
-                if breakFlag:
+                    #Generate full, mode-constrained path
+                    iter = node_itin.__iter__()
+                    prevNode = iter.next()
+                    full_itin = [prevNode]
+                    seg_stops = []
+                    breakFlag = False
+                    longRoute = False
+                    for node in iter:
+                        path = algo.calcPath(prevNode, node)
+                        #path = _editing.calcShortestPath2(prevNode, node, filter, self.MaxNonStopNodes, calc)
+                        #path = _util.calcShortestPath(network, vehicle.mode, prevNode, node, self.MaxNonStopNodes, calc=calc)
+                        if not path:
+                            #routeId, branchNum, error, seq
+                            msg = "no path between %s and %s by mode %s" %(prevNode, node, vehicle.mode)
+                            failedSequences.append((baseEmmeId, seqCount, msg, seq))
+                            breakFlag = True
+                            seqCount += 1
+                            break
+                        flag = True
+                        if len(path) > 5:
+                            longRoute = True
+                        for link in path:
+                            full_itin.append(link.j_node)
+                            seg_stops.append(flag)
+                            flag = False
+                        prevNode = node
+                
+                    seg_stops.append(True) #Last segment should always be a stop.
+                    if breakFlag:
+                        seqCount += 1
+                        continue
+                
+                
+                    #Try to create the line
+                    id = baseEmmeId + chr(branchNumber + 65)
+                    if trips[0].direction == '0':
+                        id += 'a'
+                    elif trips[0].direction == '1':
+                        id += 'b'
+                
+                    d = ""
+                    if route.description:
+                        d = "%s %s" %(route.description, chr(branchNumber + 65))
+                        for trip in trips:
+                            csvwriter.writerow([trip.id, id])
+                    try:
+                        line = network.create_transit_line(id, vehicle, full_itin)
+                        line.description = d
+                        #Ensure that nodes which aren't stops are flagged as such.
+                        for i, stopFlag in enumerate(seg_stops):
+                            seg = line.segment(i)
+                            seg.allow_alightings = stopFlag
+                            seg.allow_boardings = stopFlag
+                            seg.dwell_time = 0.01 * float(stopFlag) # No dwell time if there is no stop, 0.01 minutes if there is a stop
+                        branchNumber += 1
+                        lineCount += 1
+                    except Exception, e:
+                        print "Exception for line %s: %s" %(id, e)
+                        #routeId, branchNum, error, seq
+                        failedSequences.append((baseEmmeId, seqCount, str(e), seq))
+                        seqCount += 1
+                        continue
                     seqCount += 1
-                    continue
                 
+                    if longRoute:
+                        linesToCheck.append((id, "Possible express route: more than 5 links in-between one or more stops."))
                 
-                #Try to create the line
-                id = baseEmmeId + chr(branchNumber + 65)
-                if trips[0].direction == '0':
-                    id += 'a'
-                elif trips[0].direction == '1':
-                    id += 'b'
+                    #Check for looped routes
+                    nodeSet = set(full_itin)
+                    for node in nodeSet:
+                        count = full_itin.count(node)
+                        if count > 1:
+                            linesToCheck.append((id, "Loop detected. Possible map matching error."))
+                            break
                 
-                d = ""
-                if route.description:
-                    d = "%s %s" %(route.description, chr(branchNumber + 65))
+                    if len(node_itin) <5:
+                        linesToCheck.append((id, "Short route: less than 4 total links in path"))
                 
-                try:
-                    line = network.create_transit_line(id, vehicle, full_itin)
-                    line.description = d
-                    #Ensure that nodes which aren't stops are flagged as such.
-                    for i, stopFlag in enumerate(seg_stops):
-                        seg = line.segment(i)
-                        seg.allow_alightings = stopFlag
-                        seg.allow_boardings = stopFlag
-                        seg.dwell_time = 0.01 * float(stopFlag) # No dwell time if there is no stop, 0.01 minutes if there is a stop
-                    branchNumber += 1
-                    lineCount += 1
-                except Exception, e:
-                    print "Exception for line %s: %s" %(id, e)
-                    #routeId, branchNum, error, seq
-                    failedSequences.append((baseEmmeId, seqCount, str(e), seq))
-                    seqCount += 1
-                    continue
-                seqCount += 1
+                    #Write to service table
+                    for trip in trips:
+                        writer.write("\n%s,%s,%s" %(id, trip.stopTimes[0][1].departure_time, trip.lastStopTime()[1].arrival_time))
+                        csvwriter.writerow([trip.id, id])
+                print "Added route %s" %route.emme_id
                 
-                if longRoute:
-                    linesToCheck.append((id, "Possible express route: more than 5 links in-between one or more stops."))
-                
-                #Check for looped routes
-                nodeSet = set(full_itin)
-                for node in nodeSet:
-                    count = full_itin.count(node)
-                    if count > 1:
-                        linesToCheck.append((id, "Loop detected. Possible map matching error."))
-                        break
-                
-                if len(node_itin) <5:
-                    linesToCheck.append((id, "Short route: less than 4 total links in path"))
-                
-                #Write to service table
-                for trip in trips:
-                    writer.write("\n%s,%s,%s" %(id, trip.stopTimes[0][1].departure_time, trip.lastStopTime()[1].arrival_time))
-            print "Added route %s" %route.emme_id
-                
-            self.TRACKER.completeSubtask()
+                self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
         
         msg = "Done. %s lines were successfully created." %lineCount
@@ -589,7 +603,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
         modes = [mode for mode in network.modes() if mode.type == 'TRANSIT']
         
         for mode in modes:
-            if self.LinkPriorityAttributeId == None:
+            if self.LinkPriorityAttributeId is None:
                 func = ModeOnlyFilter(mode)
                 map[mode] = func
             else:
@@ -608,7 +622,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                 continue #skip this stop
             nodeId = stops2nodes[stopId]
             node = network.node(nodeId)
-            if node == None:
+            if node is None:
                 if stopId in skippedStopIds:
                     skippedStopIds[stopId] += 1
                 else:
@@ -735,35 +749,3 @@ class ModeAndAttributeFilter():
     
     def __call__(self, link):
         return self.__mode in link.modes and link[self.__att] != 0
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    

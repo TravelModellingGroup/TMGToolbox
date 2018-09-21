@@ -105,13 +105,13 @@ class ExtractTravelTimeMatrices(_m.Tool()):
         self.isRunningFromXTMF = False
         
         # Initialize blank matrices if needed.
-        if self.ivttMatrix == None:
+        if self.ivttMatrix is None:
             self._initIVTT(self.databank.available_matrix_identifier('FULL'))
-        if self.walkMatrix == None:
+        if self.walkMatrix is None:
             self._initWalk(self.databank.available_matrix_identifier('FULL'))
-        if self.waitMatrix == None:
+        if self.waitMatrix is None:
             self._initWait(self.databank.available_matrix_identifier('FULL'))
-        if self.boardingMatrix == None:
+        if self.boardingMatrix is None:
             self._initBoard(self.databank.available_matrix_identifier('FULL'))
         
         # Convert the list of mode objects to a list of mode characters
@@ -135,7 +135,7 @@ class ExtractTravelTimeMatrices(_m.Tool()):
                  WalkTimeMatrixNumber, WaitTimeMatrixNumber, BoardingTimeMatrixNumber):
         
         self.scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if self.scenario == None:
+        if self.scenario is None:
             raise Exception("Could not find scenario %s!" %ScenarioNumber)
         
         # Initialize the result matrices

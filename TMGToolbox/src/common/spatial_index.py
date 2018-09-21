@@ -368,93 +368,108 @@ class GridIndex():
             for row in xrange(row0, row1 + 1):
                 retval.add((col, row))
         return retval
-    
+
     def _index_circle(self, center_x, center_y, radius):
         center_x, center_y, radius = float(center_x), float(center_y), float(radius)
-        
+
         x0, x1 = center_x - radius, center_x + radius
-        
+
         col0 = max(1, self._transform_x(x0))
         col1 = min(self._transform_x(x1), self.maxCol)
-        
+
         retval = set()
-        
+
         if col0 == col1:
             y0, y1 = center_y - radius, center_y + radius
             row0, row1 = self._transform_y(y0), self._transform_y(y1)
-            
+
             for row in xrange(row0, row1 + 1):
                 retval.add((col0, row))
-                
+
             return retval
-            
+
         rad2 = radius ** 2
-        
+
         for col in xrange(col0, col1):
             columnBoundary = self._deltaX * col + self.minX
             # y = center_y +/- sqrt(radius^2 - (x - center_x)^2 )
             root = (rad2 - (columnBoundary - center_x)**2) ** 0.5
-            
+
             upper_yIntercept = center_y + root
             lower_yIntercept = center_y - root
-            
+
             row0 = max(1, self._transform_y(lower_yIntercept))
             row1 = min(self.maxRow, self._transform_y(upper_yIntercept) )
-            
+
             for row in xrange(row0, row1 + 1):
                 retval.add((col, row))
                 retval.add((col + 1, row))
-        
+
         return retval
-    
-    #------------------------------------------------------------------------------        
+
+    def _index_circle2(self,center_x,center_y,radius):
+        s_x = max(1, int((center_x - self.minX) / self._deltaX)+1)
+        s_y = max(1, int((center_y - self.minY) / self._deltaY)+1)
+        s_r = max(1, int(radius / self._deltaX))
+
+        #s_x, s_y is grid coordinate of cx /cy
+        #sr is max index distance from s_x _sy
+
+        retval = set()
+        for x in nrange(s_x-s_r,s_x+s_r+1):
+            for y in nrange(s_y - s_r, s_y + s_r+1):
+                if x > 0 and y > 0 and x <= self.maxCol and y <= self.maxRow:
+                    retval.add((x,y))
+
+        return retval
+    #------------------------------------------------------------------------------
     #---INSERTION
-    
+
     def insertxy(self, obj, x, y):
         '''
         Low-level insertion. Insert ANY hashable object using given coordinates.
-        
+
         Args:
             - obj: The object to insert. Must be hashable (e.g. no lists)
             - x: The x-coordinate into where the object will be inserted
             - y: The y-coordinate into where the object will be inserted
         '''
-        
+
         self._check_x(x)
         self._check_y(y)
-        
+
         col, row = self._index_point(x, y)
         self._grid[col, row].add(obj)
         self._addressbook[obj] = [(col, row)]
-        
-    
+
+
     def insertpline(self, obj, coordinates):
         '''
         Low-level insertion. Insert ANY hashable object using given coordinates.
-        
+
         Args:
             - obj: The object to insert. Must be hashable (e.g. no lists)
             - coordinates: List of (x,y) tuples corresponding to the vertices of the line
         '''
-        
+
         for p0, p1 in _util.iterpairs(coordinates):
             x0, y0 = p0
             x1, y1 = p1
-            
+
             self._check_x(x0)
             self._check_x(x1)
             self._check_y(y0)
             self._check_y(y1)
-            
+
             addresses = self._index_line_segment(x0, y0, x1, y1)
             for col, row in addresses:
                 self._grid[col, row].add(obj)
             self._addressbook[obj] = addresses
-    
+
     def insertbox(self, obj, minx, miny, maxx, maxy):
         '''
         Low-level insertion. Insert ANY hashable object using a given bounding box.
-        
+
         Args:
             - obj: The object to insert. Must be hashable (e.g. no lists)
             - minx: The minimum x-coordinate of the bounding box
@@ -462,63 +477,63 @@ class GridIndex():
             - maxx: The maximum x-coordinate of the bounding box
             - maxy: The maximum y-coordinate of the bounding box
         '''
-        
+
         self._check_x(minx)
         self._check_x(maxx)
         self._check_y(miny)
         self._check_y(maxy)
-        
+
         addresses = self._index_box(minx, miny, maxx, maxy)
         for col, row in addresses:
             self._grid[col, row].add(obj)
         self._addressbook[obj] = addresses
-    
+
     def insertPoint(self, pointOrNode):
         '''
         Inserts a Shapely Point or Emme Node object.
         '''
-        
+
         self.insertxy(pointOrNode, pointOrNode.x, pointOrNode.y)
-    
+
     def insertLineString(self, linestring):
         '''
         Inserts a Shapely LineString object.
         '''
-        
+
         self.insertpline(linestring, linestring.coords)
-    
+
     def insertLink(self, link):
         '''
         Inserts an Emme Link object
         '''
-        
+
         self.insertpline(link, self.__link2coords(link))
-    
+
     def insertTransitLine(self, line):
         '''
         Inserts an Emme Transit Line object
         '''
-        
+
         self.insertpline(line, self.__line2coords(line))
-    
+
     def insertTransitSegment(self, segment):
         '''
         Inserts an Emme Transit Segment object
         '''
-        
+
         self.insertpline(segment, self.__link2coords(segment.link))
-    
+
     def insertPolygon(self, polygon):
         '''
         Inserts a Shapely Polygon object (or any object with a 'bounds'
         property).
         '''
-        
+
         self.insertbox(polygon, *polygon.bounds)
-    
+
     #------------------------------------------------------------------------------
     #---REMOVAL
-    
+
     def remove(self, obj):
         '''
         Removes an object from the spatial index. The object must have been
@@ -526,23 +541,23 @@ class GridIndex():
         '''
         if not obj in self._addressbook:
             raise KeyError(str(obj))
-        
+
         for col, row in self._addressbook[obj]:
             self._grid[col, row].remove(obj)
-            
+
         self._addressbook.pop(obj)
-    
+
     #------------------------------------------------------------------------------
     #---QUERY
-    
+
     def querycell(self, col, row):
         '''
-        Queries a single cell. 
-        
+        Queries a single cell.
+
         Args:
             - col: the column number
             - row: the row number
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
@@ -557,71 +572,71 @@ class GridIndex():
     def queryxy(self, x, y):
         '''
         Queries a single point. The point does not have to overlap the grid.
-        
+
         Args:
             - x: The x-coordinate
             - y: The y-coordinate
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         address = self._index_point(x, y)
         if address in self._grid:
             return set(self._grid[address]) #Return a copy of the set
         return set()
-    
+
     def querypline(self, coordinates):
         '''
         Queries a polyline / linestring. The line's points do not need to overlap
         the grid.
-        
+
         Args:
             - coordinates: A list of (x,y) tuples.
-            
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         retval = set()
-        
+
         for p0, p1 in _util.iterpairs(coordinates):
             x0, y0 = p0
             x1, y1 = p1
             for address in self._index_line_segment(x0, y0, x1, y1):
                 if address in self._grid:
                     retval |= self._grid[address]
-        
+
         return retval
-    
+
     def querybox(self, minx, miny, maxx, maxy):
         '''
         Queries a rectangular box. The box does not need to overlap the grid.
-        
+
         Args:
             minx: The minimum x coordinate
             miny: The minimum y coordinate
             maxx: The maximum x coordinate
             maxy: The maximum y coordinate
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         retval = set()
         for address in self._index_box(minx, miny, maxx, maxy):
             if address in self._grid:
                 retval |= self._grid[address]
-        
+
         '''
         col0 = max(1, self._transform_x(minx))
         col1 = min(self.maxCol, self._transform_x(maxx))
@@ -633,73 +648,73 @@ class GridIndex():
             for row in xrange(row0, row1):
                 retval |= self._grid[col, row]
         '''
-        
+
         return retval
-    
+
     def queryPoint(self, pointOrNode):
         '''
         Queries a single point. The point does not need to overlap the grid.
-        
+
         Args:
             - pointOrNode: A Shapely Point or Emme Node object,
                     with x and y properties.
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         x = pointOrNode.x
         y = pointOrNode.y
-        
+
         return self.queryxy(x, y)
-    
+
     def queryLineString(self, linestring):
         '''
         Queries a polyline / linestring. The line does not need to overlap the grid.
-        
+
         Args:
             - linestring: A Shapely LineString object
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         coordinates = linestring.coords
-        
+
         return self.querypline(coordinates)
-    
+
     def queryLink(self, link):
         '''
         Queries an Emme Link object. The link does not need to overlap the grid.
-        
+
         Args:
             - link: An Emme Link object
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         coordinates = self.__link2coords(link)
-        
+
         return self.querypline(coordinates)
-    
+
     def queryTransitLine(self, line):
         '''
-        Queries an Emme Transit Line object. The line does not need to overlap the 
+        Queries an Emme Transit Line object. The line does not need to overlap the
         grid.
-        
+
         Args:
             - line: An Emme Transit Line object
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
@@ -707,15 +722,15 @@ class GridIndex():
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
         return self.querypline(self.__line2coords(line))
-    
+
     def queryTransitSegment(self, segment):
         '''
-        Queries an Emme Transit Segment object. The segment does not need to overlap the 
+        Queries an Emme Transit Segment object. The segment does not need to overlap the
         grid.
-        
+
         Args:
             - segment: An Emme Transit Segment object
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
@@ -723,120 +738,135 @@ class GridIndex():
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
         return self.querypline(self.__link2coords(segment.link))
-    
+
     def queryPolygon(self, polygon):
         '''
         Queries a rectangular box.
-        
+
         Args:
             polygon: A Shapely Geometry object (anything which
                 implements the 'bounds' property).
-            
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         minx, miny, maxx, maxy = polygon.bounds
         return self.querybox(minx, miny, maxx, maxy)
-    
+
     def queryRectangle(self, rectangle):
         '''
         Queries a rectangular box. The rectangle does not need to overlap the grid.
-        
+
         Args:
             rectangle: A Rectangle object (in this module).
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         minx = rectangle.rangeX.min
         maxx = rectangle.rangeX.max
         miny = rectangle.rangeY.min
         maxy = rectangle.rangeY.max
-        
+
         return self.querybox(minx, miny, maxx, maxy)
-    
+
     def queryCircle(self, x, y, radius):
         '''
         Queries a circle. The circle does not need to overlap the grid.
-        
+
         Args:
             - x: The x-coordinate of the circle's center
             - y: The y-coordinate of the circle's center
             - radius: The radius of the circle
-        
+
         All 'query' functions check the grid for the contents of all of the cells
         intersected by the given geometry. THERE IS NO GURANATEE that the returned
         contents intersect the given geometry, merely that they intersect the CELLS
         that intersect the given geometry. Tests for containment, intersection,
         overlap, etc. (i.e. DE-9IM relations) must be done separately.
         '''
-        
+
         retval = set()
-        
-        for address in self._index_circle(x, y, radius):
+
+        for address in self._index_circle2(x, y, radius):
             if address in self._grid:
                 retval |= self._grid[address]
         return retval
-    
+
+    def queryCircle2(self, x, y, radius):
+        '''
+        Queries a circle. returns just the grid coordinates of the everything the circle touches.
+        It does not return contents
+
+        Args:
+            - x: The x-coordinate of the circle's center
+            - y: The y-coordinate of the circle's center
+            - radius: The radius of the circle
+
+        All 'query' functions check the grid for the contents of all of the cells
+        intersected by the given geometry. THERE IS NO GURANATEE that the returned
+        contents intersect the given geometry, merely that they intersect the CELLS
+        that intersect the given geometry. Tests for containment, intersection,
+        overlap, etc. (i.e. DE-9IM relations) must be done separately.
+        '''
+
+        retval = set()
+
+        #for address in self._index_circle(x, y, radius):
+            #if address in self._grid:
+                #retval |= self._grid[address]
+        return self._index_circle2(x, y, radius)
     #------------------------------------------------------------------------------
     #---NEAREST
-    
+
     def nearestToPoint(self, x, y):
         '''
         A special query to find the nearest element to a given point.
         The grid is queried in rings around the point, stopping once
         the return set is non-empty, or the grid is fully searched.
-        
+
         Args:
             -x, y: the coordinates of interest. This point MUST overlap
                 the grid.
-        
+
         Returns:
-            A set of the nearest object in the grid. 
+            A set of the nearest object in the grid.
         '''
         self._check_x(x)
         self._check_y(y)
-        
-        originCol, originRow = self._index_point(x, y)
-        # if the first grid cell returns points, find the nearest one.
-        candidates = self.queryxy(x,y)
-        if len(candidates) > 0: 
-            nearest, minDistance = find_nearest(candidates, x, y)
-            candidates = self.queryCircle(x,y,minDistance)
-            nearest, minDistance = find_nearest(candidates, x, y)
-            return [nearest]
-        else:
-            i = 1
-            checked = set()
-            candidates = set()
-            while ((originCol-i)>0) and ((originRow-i)>0) and ((originCol+i)<=self.maxCol) and ((originRow+i)<=self.maxRow): 
-                for j in nrange(originCol-i, originCol+i+1):
-                    for k in nrange(originRow-i, originRow+i+1):
-                        #candidates.update(self.querycell(j,k))
-                        if (j,k) not in checked:
-                            candidates.update(self.querycell(j,k))
-                            checked.add((j,k))
-                if len(candidates) > 0:
-                    nearest, minDistance = find_nearest(candidates, x, y)
-                    candidates = self.queryCircle(x,y,minDistance)
-                    nearest, minDistance = find_nearest(candidates, x, y)
-                    if nearest==None:
-                        i+=1
-                    else:
-                        return [nearest]
-                else:
-                    i+=1
-            return ["Nothing Found"]
 
-def find_nearest( candidates, x, y ):
+        originCol, originRow = self._index_point(x, y)
+
+        i = 1
+        checked = set()
+        candidates = set()
+        while ((originCol-i) > 0) and ((originRow-i) > 0) and ((originCol+i) <= self.maxCol) and ((originRow+i) <= self.maxRow):
+            for j in nrange(originCol-i, originCol+i+1):
+                for k in nrange(originRow-i, originRow+i+1):
+                    if (j,k) not in checked:
+                        candidates.update(self.querycell(j,k))
+                        checked.add((j,k))
+            if len(candidates) > 0:
+                nearest, minDistance = find_nearest(candidates, x, y)
+                cells =  self.queryCircle2(x,y,minDistance)
+                for cell in cells:
+                    candidates.update(self.querycell(cell[0],cell[1]))
+                nearest, minDistance = find_nearest(candidates, x, y)
+                return [nearest]
+            else:
+                i+=1
+        return ["Nothing Found"]
+
+
+def find_nearest(candidates, x, y ):
     nearest = None
     minDistance = float('inf')
     for candidate in candidates:

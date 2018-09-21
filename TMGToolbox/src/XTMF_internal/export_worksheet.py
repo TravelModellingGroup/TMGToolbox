@@ -104,7 +104,7 @@ class ExportWorksheet(_m.Tool()):
         
         try:
             scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-            if scenario == None:
+            if scenario is None:
                 raise Exception("Emme scenario %s not found." %xtmf_ScenarioNumber)
             
             worksheet = emme_desktop.open_worksheet(xtmf_WorksheetPath)

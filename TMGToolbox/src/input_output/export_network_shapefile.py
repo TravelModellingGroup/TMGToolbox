@@ -71,7 +71,7 @@ class ExportNetworkAsShapefile(_m.Tool()):
             raise Exception(_util.formatReverseStack())
 
     def _execute(self):
-        if self.transit_shapes == '' or self.transit_shapes == None or self.transit_shapes == ' ':
+        if self.transit_shapes == '' or self.transit_shapes is None or self.transit_shapes == ' ':
             self.transit_shapes = 'SEGMENTS'
 
         _exportShapefile(export_path = self.export_path, transit_shapes = self.transit_shapes, scenario = self.scenario)

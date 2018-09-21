@@ -68,6 +68,7 @@ class GTFStoEmmeMap(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name="MappingFileName",
                            window_type='save_file',
+                           file_filter='*.csv',
                            title="Map file to export")
 
         return pb.render()
@@ -75,6 +76,7 @@ class GTFStoEmmeMap(_m.Tool()):
     def __call__(self, StopFileName, MappingFileName):
         self.FileName = StopFileName
         self.MappingFileName = MappingFileName
+        self.scenarioNumber = ScenarioNumber
         
         self.tool_run_msg = ""
         self.TRACKER.reset()
@@ -236,7 +238,7 @@ class GTFStoEmmeMap(_m.Tool()):
             nearestNode = spatialIndex.nearestToPoint(convertedStops[stop][0], convertedStops[stop][1])
             if nearestNode[0] == "Nothing Found":
                 map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],-1,-1])
-            elif nearestNode[0] == None:
+            elif nearestNode[0] is None:
                 map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],0,0])
             else:
                 cleanedNumber = int(nearestNode[0])

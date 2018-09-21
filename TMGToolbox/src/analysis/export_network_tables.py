@@ -93,17 +93,34 @@ class ExportNetworkTables(m.Tool()):
     def __call__(self, scenario_id, target_folder, file_prefix, export_nodes, export_links, export_turns, export_lines,
                  export_segments):
         try:
+            print "Exporting Network Tables"
             self.SourceScenario = mm.emmebank.scenario(scenario_id)
             assert self.SourceScenario is not None, "Scenario %s does not exist" % scenario_id
 
             self.TargetFolder = target_folder
             self.FilePrefix = file_prefix
-            self.NodeTableFlag = export_nodes
-            self.LinkTableFlag = export_links
-            self.TurnTableFlag = export_turns
-            self.LineTableFlag = export_lines
-            self.SegmentTableFlag = export_segments
-
+            if export_nodes == "True":
+                self.NodeTableFlag = True
+            else:
+                self.NodeTableFlag = False
+            if export_links == "True":
+                self.LinkTableFlag = True
+            else:
+                self.LinkTableFlag = False
+            if export_turns == "True":
+                self.TurnTableFlag = True
+            else:
+                self.TurnTableFlag = False
+            if export_lines == "True":
+                self.LineTableFlag = True
+            else:
+                self.LineTableFlag = False
+            if export_segments == "True":
+                self.SegmentTableFlag = True
+            else:
+                self.SegmentTableFlag = False
+            self._execute()
+            print "Export Network Tables Complete"
         except Exception as e:
             msg = str(e) + "\n" + tb.format_exc(e)
             raise Exception(msg)
@@ -120,7 +137,7 @@ class ExportNetworkTables(m.Tool()):
                 self._to_csv(df, 'nodes')
             self.tracker.completeTask()
 
-            if self.LineTableFlag:
+            if self.LinkTableFlag:
                 df = pdu.load_link_dataframe(self.SourceScenario)
                 self._to_csv(df, 'links')
             self.tracker.completeTask()
@@ -144,6 +161,7 @@ class ExportNetworkTables(m.Tool()):
 
     def _to_csv(self, df, file_name):
         fn = "{}_{}.csv".format(self.FilePrefix, file_name) if self.FilePrefix else "%s.csv" % file_name
+        print fn
         fp = path.join(self.TargetFolder, fn)
         df.to_csv(fp, header=True, index=True)
 

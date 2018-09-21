@@ -138,7 +138,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
         
         # Get the scenario
         self.scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if self.scenario == None:
+        if self.scenario is None:
             raise Exception("Could not find scenario %s!" %ScenarioNumber)
         
         self.matrixResult = _util.initializeMatrix(MatrixResultNumber, matrix_type='FULL', name='trfeas',

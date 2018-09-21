@@ -286,7 +286,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         linkAtts = set([att.id for att in self.Scenario.extra_attributes() if att.type == 'LINK'])

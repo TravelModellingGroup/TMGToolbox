@@ -159,14 +159,14 @@ class ExtractTransitODVectors(_m.Tool()):
         self.TRACKER.reset()
         
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         self.LineFilterExpression = LineFilterExpression
 
         self.AutoODMatrixId = "mf%s" %xtmf_AutoODMatrixId
 
-        if _MODELLER.emmebank.matrix(self.AutoODMatrixId) == None:
+        if _MODELLER.emmebank.matrix(self.AutoODMatrixId) is None:
             raise Exception("Matrix %s was not found!" %self.AutoODMatrixId)
 
         self.LineODMatrixId = "mf"+str(xtmf_LineODMatrixNumber)
@@ -221,9 +221,9 @@ class ExtractTransitODVectors(_m.Tool()):
             self.AccessStationRangeSplit = self.AccessStationRange.split('-')
             self.ZoneCentroidRangeSplit = self.ZoneCentroidRange.split('-')
             if len(self.ZoneCentroidRangeSplit) == 1:
-                self.ZoneCentroidRangeSplit = (int(self.ZoneCentroidRangeSplit[0]),int(self.ZoneCentroidRangeSplit[0]))
+                self.ZoneCentroidRangeSplit = [int(self.ZoneCentroidRangeSplit[0]),int(self.ZoneCentroidRangeSplit[0])]
             if len(self.AccessStationRangeSplit) == 1:
-                self.AccessStationRangeSplit = (int(self.AccessStationRangeSplit[0]),int(self.AccessStationRangeSplit[0]))
+                self.AccessStationRangeSplit = [int(self.AccessStationRangeSplit[0]),int(self.AccessStationRangeSplit[0])]
             with nested(_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= 'Line Flag'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes'),
                         _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes'),
@@ -240,45 +240,55 @@ class ExtractTransitODVectors(_m.Tool()):
                     as (lineFlag, auxTransitVolumes, transitVolumes, auxTransitVolumesSecondary, transitVolumesSecondary, origProbMatrix,  
                         destProbMatrix, tempDatOrig, tempDatDest,autoOrigMatrix, autoDestMatrix, tempDatDemand, tempDatDemandSecondary): 
                 demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
-                configPath = dirname(_MODELLER.desktop.project_file_name()) \
-                    + "/Database/STRATS_s%s/config" %self.Scenario 
+                configPath = dirname(_MODELLER.desktop.project_file_name()) + "/Database/STRATS_s%s/config" %self.Scenario.id 
                 with open(configPath) as reader:
-                    config = _parsedict(reader.readline())
-                    data = deepcopy(config['data'])
-                    strat  = deepcopy(config['strat_files'])
+                    config = _parsedict(reader.read())
+                    data = config['data']
                     if 'multi_class' in data:
-                        multiclass = "yes"
+                        if data['multi_class'] == True:
+                            multiclass = True
+                        else:
+                            multiclass = False
                     else:
-                        multiclass = "no"
+                        multiclass = False
+                    strat = config['strat_files']
+                    if data['type'] == "MULTICLASS_TRANSIT_ASSIGNMENT":
+                        multiclass = True
+                        className = strat[0]["name"]
+                    elif multiclass == True:
+                        className = data["classes"][0]["name"]
                     dataType = data['type']
-                    className = strat[0]["name"]
                 with _m.logbook_trace("Flagging chosen lines"):
                     networkCalculation(self._BuildNetCalcSpec(lineFlag.id), scenario=self.Scenario)
+
                 with _m.logbook_trace("Running strategy analysis"):
 
-                    if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                    if  multiclass == True:
                         report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId[className], self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario, class_name=className)
                     else:
                         report = stratAnalysis(self._BuildStratSpec(lineFlag.id, demandMatrixId, self.ZoneCentroidRangeSplit[0], self.ZoneCentroidRangeSplit[1]), scenario=self.Scenario)
 
+                with _m.logbook_trace("Calculating DAT demand"):
+                    if self.AccessStationRangeSplit[1] != 0:
+                        if multiclass == True:
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRangeSplit, self.AccessStationRangeSplit, transitVolumes.id, 
+                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId[className]), scenario=self.Scenario, class_name=className)
+ 
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRangeSplit, self.ZoneCentroidRangeSplit, transitVolumesSecondary.id, 
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId[className]), scenario=self.Scenario,class_name=className)
+                        else:
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRangeSplit, self.AccessStationRangeSplit, transitVolumes.id, 
+                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)
+                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRangeSplit, self.ZoneCentroidRangeSplit, transitVolumesSecondary.id, 
+                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario)
 
                 with _m.logbook_trace("Calculating WAT demand"):  
-                    if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
+                    if multiclass == True:
                         matrixCalc(self._ExpandStratFractions(demandMatrixId[className]), scenario=self.Scenario)
                     else:
                         matrixCalc(self._ExpandStratFractions(demandMatrixId), scenario=self.Scenario)
-                with _m.logbook_trace("Calculating DAT demand"):
-                    if self.AccessStationRangeSplit[1] != 0:
-                        if dataType == "MULTICLASS_TRANSIT_ASSIGNMENT" or multiclass == "yes":
-                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
-                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId[className]), scenario=self.Scenario, class_name=className)
-                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
-                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId[className]), scenario=self.Scenario,class_name=className)
-                        else:
-                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.ZoneCentroidRange, self.AccessStationRange, transitVolumes.id, 
-                                                     auxTransitVolumes.id, tempDatDemand.id, demandMatrixId), scenario=self.Scenario)
-                            pathAnalysis(self._BuildPathSpec(lineFlag.id, self.AccessStationRange, self.ZoneCentroidRange, transitVolumesSecondary.id, 
-                                                     auxTransitVolumesSecondary.id, tempDatDemandSecondary.id, demandMatrixId), scenario=self.Scenario)
+
+
 
                 with _m.logbook_trace("Sum transit demands"):
                     matrixCalc(self._BuildSimpleMatrixCalcSpec(self.LineODMatrixId, " + ", tempDatDemand.id, self.LineODMatrixId), scenario=self.Scenario)

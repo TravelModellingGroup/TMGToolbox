@@ -187,7 +187,7 @@ class LegacyFBTA(_m.Tool()):
         self.isRunningFromXTMF = False
         
         # Fix the checkbox problem
-        if self.UseAdditiveDemand == None: #If the checkbox hasn't been clicked, this variable will be set to None by Modeller
+        if self.UseAdditiveDemand is None: #If the checkbox hasn't been clicked, this variable will be set to None by Modeller
             self.UseAdditiveDemand = False
         
         # Convert the list of mode objects to a list of mode characters
@@ -210,7 +210,7 @@ class LegacyFBTA(_m.Tool()):
         
         #---1 Set up scenario
         self.scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if (self.scenario == None):
+        if (self.scenario is None):
             raise Exception("Scenario %s was not found!" %ScenarioNumber)
         
         #---2 Set up Demand matrix
@@ -218,7 +218,7 @@ class LegacyFBTA(_m.Tool()):
             self.demandMatrix = None
         else:
             self.demandMatrix = self.databank.matrix("mf%s" %DemandMatrixNumber)
-            if self.demandMatrix == None:
+            if self.demandMatrix is None:
                 raise Exception("Matrix %s does not exist!" %DemandMatrixNumber)
         
         #---3 Set up modes
@@ -273,12 +273,12 @@ class LegacyFBTA(_m.Tool()):
         #Code here is executed upon entry
         
         usingScalar = False
-        if self.demandMatrix == None:
+        if self.demandMatrix is None:
             _m.logbook_write("Initializing temporary scalar demand matrix.")
             
             self.demandMatrix = _util.initializeMatrix(matrix_type='SCALAR', name='trscal', description="Scalar matrix to get transit times")
             
-            if self.demandMatrix == None:
+            if self.demandMatrix is None:
                 raise Exception("Could not create temporary scalar demand matrix!")
             
             usingScalar = True
@@ -384,7 +384,7 @@ class LegacyFBTA(_m.Tool()):
                 "Is running from XTMF?" : str(self.isRunningFromXTMF),
                 "self": self.__MODELLER_NAMESPACE__}
         
-        if self.demandMatrix == None:
+        if self.demandMatrix is None:
             atts['Demand Matrix'] = "SCALAR"
         else:
             atts['Demand Matrix'] = "FULL: %s" %self.demandMatrix.id

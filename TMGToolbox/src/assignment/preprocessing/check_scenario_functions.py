@@ -101,7 +101,7 @@ class CheckScenarioFunctions(_m.Tool()):
         
         #---1 Set up scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         try:

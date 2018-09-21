@@ -346,22 +346,22 @@ class CopyTransitLines(_m.Tool()):
         
         self.squaredSearchRadius = self.NodeCorrespondenceRadius * self.NodeCorrespondenceRadius
         
-        if self.ErrorShapefileReport == None: raise NullPointerException("Error shapefile report not specified.")
-        if self.TransitVehicleCorrespondenceFile == None: 
+        if self.ErrorShapefileReport is None: raise NullPointerException("Error shapefile report not specified.")
+        if self.TransitVehicleCorrespondenceFile is None:
             raise NullPointerException("Transit vehicle correspondence file not specified.")
-        if self.NodeCorrespondenceRadius == None: 
+        if self.NodeCorrespondenceRadius is None:
             raise NullPointerException("Node correspondence radius not specified.")
-        if self.LineBufferRadius == None: 
+        if self.LineBufferRadius is None:
             raise NullPointerException("Line buffer not specified.")
-        if self.MaxSkippedStartingStops == None: 
+        if self.MaxSkippedStartingStops is None:
             raise NullPointerException("Maximum number of skipped starting stops not specified.")
-        if self.MaxSkippedEndingStops == None: 
+        if self.MaxSkippedEndingStops is None:
             raise NullPointerException("Maximum number of skipped ending stops not specified.")
-        if self.MaxTotalNewNodes == None: 
+        if self.MaxTotalNewNodes is None:
             raise NullPointerException("Maximum number of new nodes not specified.")
-        if self.MaxTotalSkippedStops == None: 
+        if self.MaxTotalSkippedStops is None:
             raise NullPointerException("Maximum number of total skipped stops not specified.")
-        if self.MaxSymmetricDifferece == None: 
+        if self.MaxSymmetricDifferece is None:
             raise NullPointerException("Maximum area of symmetric difference not specified.")
         
         try:
@@ -462,11 +462,11 @@ class CopyTransitLines(_m.Tool()):
             
             for sourceVehicleId, targetVehicleId in self._cachedCorrespondence.iteritems():
                 sourceVehicle = sourceScenario.transit_vehicle(sourceVehicleId)
-                if sourceVehicle == None:
+                if sourceVehicle is None:
                     return "Vehicle %s does not exist in the source scenario" %sourceVehicleId
                 
                 targetVehicle = self.TargetScenario.transit_vehicle(targetVehicleId)
-                if targetVehicle == None:
+                if targetVehicle is None:
                     return "Vehicle %s does not exist in the target scenario" %targetVehicleId
                 
                 if sourceVehicle.mode.id != targetVehicle.mode.id:
@@ -546,7 +546,7 @@ class CopyTransitLines(_m.Tool()):
         if self.SourceEmmebankPath == _MODELLER.emmebank.path:
             scenario = _MODELLER.emmebank.scenario(self.SourceScenarioId)
             
-            if scenario == None:
+            if scenario is None:
                 raise Exception("Scenario '%s' does not exist in database at "%self.SourceScenarioId\
                                  + self.SourceEmmebankPath)
             
@@ -558,7 +558,7 @@ class CopyTransitLines(_m.Tool()):
             with Emmebank(self.SourceEmmebankPath) as emmebank:
                 scenario = emmebank.scenario(self.SourceScenarioId)
                 
-                if scenario == None:
+                if scenario is None:
                     raise Exception("Scenario '%s' does not exist in database at "%self.SourceScenarioId\
                                      + self.SourceEmmebankPath)
                 network = scenario.get_network()
@@ -577,11 +577,11 @@ class CopyTransitLines(_m.Tool()):
                 targetVehicleId = cells[1]
                 
                 sourceVehicle = sourceNetwork.transit_vehicle(sourceVehicleId)
-                if sourceVehicle == None:
+                if sourceVehicle is None:
                     raise IOError("A transit vehicle with ID '%s' does not exist in the source scenario" %sourceVehicleId)
                 
                 targetVehicle = targetNetwork.transit_vehicle(targetVehicleId)
-                if targetVehicle == None:
+                if targetVehicle is None:
                     raise IOError("A transit vehicle with ID '%s' does not exist in the target scenario" %sourceVehicleId)
                 
                 if sourceVehicle.mode.id != targetVehicle.mode.id:
@@ -680,7 +680,7 @@ class CopyTransitLines(_m.Tool()):
             twinnedTargetNodes = set()
             for sourceNode in sourceNetwork.regular_nodes():
                 writer.write("\n%s,%s" %(sourceNode, sourceNode.twin))
-                if sourceNode.twin != None:
+                if sourceNode.twin is not None:
                     twinnedTargetNodes.add(sourceNode.twin.number)
             for targetNode in targetNetwork.regular_nodes():
                 if targetNode.number in twinnedTargetNodes: continue
@@ -691,7 +691,7 @@ class CopyTransitLines(_m.Tool()):
     #---Core execution
     def _PrepareNetwork(self, network):
         
-        if self.SourceLineFilterAttributeId == None:
+        if self.SourceLineFilterAttributeId is None:
             filter = lambda line: True
         else:
             filter = lambda line: line[self.SourceLineFilterAttributeId]
@@ -724,13 +724,13 @@ class CopyTransitLines(_m.Tool()):
             #All: stops on all new nodes
             def segmentIsStop(segment, sourceIsStop):
                 if sourceIsStop: return True
-                return segment.i_node.twin != None
+                return segment.i_node.twin is not None
         else:
             #Attribute: stops on flagged nodes
             def segmentIsStop(segment, sourceIsStop):
                 if sourceIsStop: return True
                 inode = segment.i_node
-                isTwinned = inode.twin != None
+                isTwinned = inode.twin is not None
                 return isTwinned and inode[self.TargetNewStopOptionId]
         
         errorTable = []
@@ -753,7 +753,7 @@ class CopyTransitLines(_m.Tool()):
         self.TRACKER.startProcess(len(linesToProcess))
         for sourceLine in linesToProcess:
             
-            if targetNetwork.transit_line(sourceLine.id) != None:
+            if targetNetwork.transit_line(sourceLine.id) is not None:
                 if not self.OverwriteLinesFlag:
                     logException(sourceLine.id, "Line with ID already exists.", "")
                     continue
@@ -811,7 +811,7 @@ class CopyTransitLines(_m.Tool()):
             index = segment.stop_index
             sourceNode = segment.i_node
             targetNode = sourceNode.twin
-            isMatched = targetNode != None
+            isMatched = targetNode is not None
             
             if isMatched and isStop:
                 tup = prevStop, buffer, sourceNode
@@ -843,11 +843,11 @@ class CopyTransitLines(_m.Tool()):
                 
                 #Check if a link already exists, and permits the targeted mode
                 candidateLink = targetNetwork.link(i.id, j.id)
-                if candidateLink != None and targetMode in candidateLink.modes:
+                if candidateLink is not None and targetMode in candidateLink.modes:
                     path.append(j)
                 else: #Indirect path exists
                     nodeIDs = pathBuilder.find_path(i, j) #contains node IDs except for the first node
-                    if nodeIDs == None:
+                    if nodeIDs is None:
                         path = []
                         break #Exit the loop, as no path exists for the selected mode
                     for id in nodeIDs: path.append(targetNetwork.node(id))
@@ -857,7 +857,7 @@ class CopyTransitLines(_m.Tool()):
             if len(path) == 0:
                 path = []
                 nodeIDs = pathBuilder.find_path(fromSourceStop.twin, toSourceStop.twin)
-                if nodeIDs == None: #Path does not exist, return with error
+                if nodeIDs is None: #Path does not exist, return with error
                     details = "i=%s, j=%s, mode=%s" %(fromSourceStop.twin, toSourceStop.twin, line.mode)
                     id = ItineraryData(False, [], skippedStops, "Could not construct path for mode.", \
                                        details)
@@ -867,7 +867,7 @@ class CopyTransitLines(_m.Tool()):
             
             #Add the subsequent segment(s) to the path_data
             for i, waypointNode in enumerate(path):
-                if waypointNode == None:
+                if waypointNode is None:
                     print "Found None at index %s for line %s" %(i, line)
                 path_data.append((waypointNode, False))
             path_data.append((protopath[-1], True))
@@ -894,7 +894,7 @@ class CopyTransitLines(_m.Tool()):
                 errorDetail = skippedStops[-1][1] + 1
                 return False, errorMsg, errorDetail
         
-        nNewNodes = sum([1 for node, isStop in pathData if node.twin == None])
+        nNewNodes = sum([1 for node, isStop in pathData if node.twin is None])
         if nNewNodes > self.MaxTotalNewNodes:
             errorMsg = "Exceeded the max number of new nodes in the path."
             errorDetail = nNewNodes
