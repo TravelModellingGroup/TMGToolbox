@@ -166,7 +166,7 @@ class CreateZoneAdjacencyMatrix(_m.Tool()):
             for feature in reader.readThrough():
                 zoneId = feature[self.ZoneIdFiledName]
                 zone = network.node(zoneId)
-                if zone == None or not zone.is_centroid:
+                if zone is None or not zone.is_centroid:
                     _m.logbook_write("Could not find a valid zone '%s' in network" %zoneId)
                     self.TRACKER.completeSubtask()
                     continue
@@ -184,7 +184,7 @@ class CreateZoneAdjacencyMatrix(_m.Tool()):
         def flagPQ(p, q):
             if p == q:
                 return True
-            elif p.geometry != None and q.geometry != None:
+            elif p.geometry is not None and q.geometry is not None:
                 return p.geometry.intersects(q.geometry)
             return False
         

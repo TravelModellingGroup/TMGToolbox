@@ -789,27 +789,27 @@ class FullNetworkSetGenerator(_m.Tool()):
 
         #---1 Set up scenario
         self.BaseScenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.BaseScenario == None):
+        if (self.BaseScenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         #---2 Set up attributes
         if NodeFilterAttributeId.lower() == "none":
             self.NodeFilterAttributeId = None
         else:
-            if self.BaseScenario.extra_attribute(NodeFilterAttributeId) == None:
+            if self.BaseScenario.extra_attribute(NodeFilterAttributeId) is None:
                 raise Exception("Node filter attribute %s does not exist" %NodeFilterAttributeId)
             self.NodeFilterAttributeId = NodeFilterAttributeId
 
         if StopFilterAttributeId.lower() == "none":
             self.StopFilterAttributeId = None
         else:
-            if self.BaseScenario.extra_attribute(StopFilterAttributeId) == None:
+            if self.BaseScenario.extra_attribute(StopFilterAttributeId) is None:
                 raise Exception("Stop filter attribute %s does not exist" %StopFilterAttributeId)
             self.StopFilterAttributeId = StopFilterAttributeId
         if ConnectorFilterAttributeId.lower() == "none":
             self.ConnectorFilterAttributeId = None
         else:
-            if self.BaseScenario.extra_attribute(ConnectorFilterAttributeId) == None:
+            if self.BaseScenario.extra_attribute(ConnectorFilterAttributeId) is None:
                 raise Exception("Connector filter attribute %s does not exist" %ConnectorFilterAttributeId)
             self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
         
@@ -932,7 +932,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                 createTimePeriod(self.BaseScenario, scenarios[0], scenarios[2], self.TransitServiceTableFile,
                                  self.AggTypeSelectionFile, self.AlternativeDataFile,
                                  self.DefaultAgg, scenarios[4], scenarios[5], self.AdditionalAlternativeDataFiles)
-                if not (scenarios[6] == None or scenarios[6].lower() == "none"):
+                if not (scenarios[6] is None or scenarios[6].lower() == "none"):
                     applyNetUpdate(str(scenarios[0]),scenarios[6])                
 
             print "Created uncleaned time period networks and applied network updates"

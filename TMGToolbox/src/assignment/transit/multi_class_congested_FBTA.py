@@ -183,23 +183,23 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.tool_run_msg = ''
         self.TRACKER.reset()
         try:
-            if self.AssignmentPeriod == None:
+            if self.AssignmentPeriod is None:
                 raise NullPointerException('Assignment period not specified')
-            if self.WalkPerception == None:
+            if self.WalkPerception is None:
                 raise NullPointerException('Walk perception not specified')
-            if self.CongestionExponentString == None:
+            if self.CongestionExponentString is None:
                 raise NullPointerException('Congestion parameters not specified')
-            if self.Iterations == None:
+            if self.Iterations is None:
                 raise NullPointerException('Maximum iterations not specified')
-            if self.NormGap == None:
+            if self.NormGap is None:
                 raise NullPointerException('Normalized gap not specified')
-            if self.RelGap == None:
+            if self.RelGap is None:
                 raise NullPointerException('Relative gap not specified')
-            if self.EffectiveHeadwaySlope == None:
+            if self.EffectiveHeadwaySlope is None:
                 raise NullPointerException('Effective headway slope not specified')
-            if self.LinkFareAttributeIdList == None:
+            if self.LinkFareAttributeIdList is None:
                 raise NullPointerException('Link fare attribute not specified')
-            if self.SegmentFareAttributeIdList == None:
+            if self.SegmentFareAttributeIdList is None:
                 raise NullPointerException('Segment fare attribute not specified')
 
             @contextmanager
@@ -209,15 +209,15 @@ class MultiClassTransitAssignment(_m.Tool()):
                 finally:
                     pass
 
-            if self.HeadwayFractionAttributeId == None:
+            if self.HeadwayFractionAttributeId is None:
                 manager1 = _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', default=0.5)
             else:
                 manager1 = blank(self.Scenario.extra_attribute(self.HeadwayFractionAttributeId))
-            if self.WalkAttributeIdList == None:
+            if self.WalkAttributeIdList is None:
                 manager2 = _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', default=1.0)
             else:
                 manager2 = blank(self.Scenario.extra_attribute(self.WalkAttributeIdList))
-            if self.EffectiveHeadwayAttributeId == None:
+            if self.EffectiveHeadwayAttributeId is None:
                 manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default=0.0)
             else:
                 manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
@@ -271,14 +271,14 @@ class MultiClassTransitAssignment(_m.Tool()):
         self.SegmentFareAttributeIdList = xtmf_SegmentFareAttributeIdString.split(',')
 
 
-        if xtmf_WalkPerceptionString != None:
+        if xtmf_WalkPerceptionString is not None:
             xtmf_WalkPerceptionString = xtmf_WalkPerceptionString.replace('::', '\n')
             self.WalkPerceptionList = xtmf_WalkPerceptionString.split(';')
-        if xtmf_WalkPerceptionAttributeIdString != None:
+        if xtmf_WalkPerceptionAttributeIdString is not None:
             self.WalkAttributeIdList = xtmf_WalkPerceptionAttributeIdString.split(',')
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if self.Scenario == None:
+        if self.Scenario is None:
             raise Exception('Scenario %s was not found!' % xtmf_ScenarioNumber)
 
         aux_mode_chars = ''
@@ -290,23 +290,23 @@ class MultiClassTransitAssignment(_m.Tool()):
 
         self.DemandMatrixList = []
         for demandMatrix in xtmf_DemandMatrixString.split(','):
-            if _MODELLER.emmebank.matrix(demandMatrix) == None:
+            if _MODELLER.emmebank.matrix(demandMatrix) is None:
                 raise Exception('Matrix %s was not found!' % demandMatrix)
             else:
                 self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
 
         for walk in self.WalkAttributeIdList:
-            if self.Scenario.extra_attribute(walk) == None:
+            if self.Scenario.extra_attribute(walk) is None:
                 raise Exception('Walk perception attribute %s does not exist' % walk)
-        if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) == None:
+        if self.Scenario.extra_attribute(self.HeadwayFractionAttributeId) is None:
             raise Exception('Headway fraction attribute %s does not exist' % self.HeadwayFractionAttributeId)
-        if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) == None:
+        if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) is None:
             raise Exception('Effective headway attribute %s does not exist' % self.EffectiveHeadwayAttributeId)
         for id in self.LinkFareAttributeIdList:
-            if  self.Scenario.extra_attribute(id) == None:
+            if  self.Scenario.extra_attribute(id) is None:
                 raise Exception('Link fare attribute %s does not exist' % id)
         for id in self.SegmentFareAttributeIdList:
-           if self.Scenario.extra_attribute(id) == None:
+           if self.Scenario.extra_attribute(id) is None:
                 raise Exception('Segment fare attribute %s does not exist' % id)
         if xtmf_InVehicleTimeMatrixString:
             self.InVehicleTimeMatrixList = xtmf_InVehicleTimeMatrixString.split(',')
@@ -592,23 +592,34 @@ class MultiClassTransitAssignment(_m.Tool()):
             'od_results': {
                 'total_impedance': self.ImpedanceMatrixList[i]},
             'flow_distribution_between_lines': {
-                'consider_travel_time': self._considerTotalImpedance},
+                'consider_total_impedance': self._considerTotalImpedance},
             'save_strategies': True,
             'type': 'EXTENDED_TRANSIT_ASSIGNMENT'})
         for i in range(0, len(baseSpec)):
             if self._useLogitConnectorChoice:
-                baseSpec[i]['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
+                '''baseSpec[i]['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
                                                       'truncation': self._connectorLogitTruncation}},
-                 'by_fixed_proportions': None}
+                 'by_fixed_proportions': None}'''
+                baseSpec[i]['flow_distribution_at_origins'] = {'choices_at_origins': {
+                    'choice_points':'ALL_ORIGINS', 
+                    'choice_set': 'ALL_CONNECTORS',
+                    'logit_parameters': {
+                        'scale': self.xtmf_OriginDistributionLogitScale,
+                        'truncation': self._connectorLogitTruncation}},
+                 'fixed_proportions_on_connectors': None}
             if EMME_VERSION >= (4, 1):
                 baseSpec[i]['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
-                if self._useLogitAuxTrChoice:
-                    raise NotImplementedError()
-                    baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': 'ui1',
-                                                  'aux_transit_choice_set': 'BEST_LINK',
-                                                  'logit_parameters': {'scale': self.xtmf_WalkDistributionLogitScale,
+                '''if self._useLogitAuxTrChoice:
+                    raise NotImplementedError()'''
+                if self.Scenario.extra_attribute("@node_logit") != None:
+                    baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
+                                                  'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
+                                                  'logit_parameters': {'scale': 0.2,
                                                                        'truncation': 0.05}}}
-            if EMME_VERSION >= (4,2,1):
+                else:
+                    baseSpec[i]['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                        'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
+                        }
                 modeList = []
 
                 partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
@@ -679,21 +690,30 @@ class MultiClassTransitAssignment(_m.Tool()):
             'od_results': {
                 'total_impedance': self.ImpedanceMatrixList[index]},
             'flow_distribution_between_lines': {
-                'consider_travel_time': self._considerTotalImpedance},
+                'consider_total_impedance': self._considerTotalImpedance},
             'save_strategies': True,
             'type': 'EXTENDED_TRANSIT_ASSIGNMENT'}
         if self._useLogitConnectorChoice:
-            baseSpec['flow_distribution_at_origins'] = {'by_time_to_destination': {'logit': {'scale': self.xtmf_OriginDistributionLogitScale,
-                                                      'truncation': self._connectorLogitTruncation}},
-                 'by_fixed_proportions': None}
+            baseSpec['flow_distribution_at_origins'] = {'choices_at_origins': {
+                    'choice_points':'ALL_ORIGINS', 
+                    'choice_set': 'ALL_CONNECTORS',
+                    'logit_parameters': {
+                        'scale': self.xtmf_OriginDistributionLogitScale,
+                        'truncation': self._connectorLogitTruncation}},
+                 'fixed_proportions_on_connectors': None}
         if EMME_VERSION >= (4, 1):
             baseSpec['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
-            if self._useLogitAuxTrChoice:
-                raise NotImplementedError()
-                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': 'ui1',
-                                                  'aux_transit_choice_set': 'BEST_LINK',
-                                                  'logit_parameters': {'scale': self.xtmf_WalkDistributionLogitScale,
+            '''if self._useLogitAuxTrChoice:
+                raise NotImplementedError()'''
+            if self.Scenario.extra_attribute("@node_logit") is not None:
+                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
+                                                  'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
+                                                  'logit_parameters': {'scale': 0.2,
                                                                        'truncation': 0.05}}}
+            else:
+                 baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                        'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
+                        }
         if EMME_VERSION >= (4,2,1):
             modeList = []
             partialNetwork = self.Scenario.get_partial_network(['MODE'], True)

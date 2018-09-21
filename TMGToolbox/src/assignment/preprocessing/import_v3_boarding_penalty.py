@@ -80,7 +80,7 @@ class ImportBoardingPenalties(_m.Tool()):
     
     def __call__(self, ScenarioNumber, BoardingsFile):
         self.Scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if self.Scenario == None:
+        if self.Scenario is None:
             raise Exception("Could not find scenario '%s' in emmebank!" %ScenarioNumber)
         
         #Execute the tool

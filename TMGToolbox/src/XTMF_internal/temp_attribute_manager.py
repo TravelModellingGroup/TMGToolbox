@@ -75,19 +75,19 @@ class TempAttributeManager(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, xtmf_AttributeId, xtmf_AttributeDomain, 
                  xtmf_AttributeDefault, xtmf_DeleteFlag, xtmf_ResetToDefault):
         scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
-        if (scenario == None):
+        if (scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         exatt = scenario.extra_attribute(xtmf_AttributeId)
-        if xtmf_DeleteFlag and exatt != None:
+        if xtmf_DeleteFlag and exatt is not None:
             scenario.delete_extra_attribute(xtmf_AttributeId)
         else:
             if xtmf_ResetToDefault:
-                if exatt != None:
+                if exatt is not None:
                     scenario.delete_extra_attribute(xtmf_AttributeId)
                 scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
             else:
-                if exatt == None:
+                if exatt is None:
                     scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
     
     

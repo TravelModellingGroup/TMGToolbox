@@ -124,7 +124,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.Scenario = _MODELLER.scenario
         
         mf10 = _MODELLER.emmebank.matrix('mf10')
-        if mf10 != None:
+        if mf10 is not None:
             self.DemandMatrix = mf10
         
         self.PeakHourFactor = 0.43
@@ -315,16 +315,16 @@ class TollBasedRoadAssignment(_m.Tool()):
         '''Run is called from Modeller.'''
         self.isRunningFromXTMF = False
         
-        if self.DemandMatrix == None: raise NullPointerException("Demand matrix not specified")
-        if self.LinkTollAttributeId == None: raise NullPointerException("Link toll attribute not specified")
-        if self.PeakHourFactor == None: raise NullPointerException("Peak hour factor not specified")
-        if self.LinkCost == None: raise NullPointerException("Link unit cost not specified")
-        if self.TollCost == None: raise NullPointerException("Toll unit cost not specified")
-        if self.TollWeight == None: raise NullPointerException("Toll perception not specified")
-        if self.Iterations == None: raise NullPointerException("Max iterations not specified")
-        if self.rGap == None: raise NullPointerException("Relative gap not specified")
-        if self.brGap == None: raise NullPointerException("Best relative gap not specified")
-        if self.normGap == None: raise NullPointerException("Normalized gap not specified")
+        if self.DemandMatrix is None: raise NullPointerException("Demand matrix not specified")
+        if self.LinkTollAttributeId is None: raise NullPointerException("Link toll attribute not specified")
+        if self.PeakHourFactor is None: raise NullPointerException("Peak hour factor not specified")
+        if self.LinkCost is None: raise NullPointerException("Link unit cost not specified")
+        if self.TollCost is None: raise NullPointerException("Toll unit cost not specified")
+        if self.TollWeight is None: raise NullPointerException("Toll perception not specified")
+        if self.Iterations is None: raise NullPointerException("Max iterations not specified")
+        if self.rGap is None: raise NullPointerException("Relative gap not specified")
+        if self.brGap is None: raise NullPointerException("Best relative gap not specified")
+        if self.normGap is None: raise NullPointerException("Normalized gap not specified")
         
         try:
             self._execute()
@@ -341,14 +341,14 @@ class TollBasedRoadAssignment(_m.Tool()):
         print "STARTING"
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
-        if (self.Scenario == None):
+        if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
         
         if xtmf_DemandMatrixNumber == 0:
             manager = _util.tempMatrixMANAGER(matrix_type= 'SCALAR')
         else:
             demandMatrix = _MODELLER.emmebank.matrix("mf%s" %xtmf_DemandMatrixNumber)
-            if demandMatrix == None:
+            if demandMatrix is None:
                 raise Exception("Matrix %s was not found!" %xtmf_DemandMatrixNumber)
             manager = blankManager(demandMatrix)
         
@@ -501,7 +501,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         tempScenarioNumber = _util.getAvailableScenarioNumber()
         
-        if tempScenarioNumber == None:
+        if tempScenarioNumber is None:
             raise Exception("No additional scenarios are available!")
         
         scenario = _MODELLER.emmebank.copy_scenario(self.Scenario.id, tempScenarioNumber, 
@@ -527,7 +527,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         attributeCreated = False
         
         costAttribute = self.Scenario.extra_attribute('@lkcst')
-        if costAttribute == None:
+        if costAttribute is None:
             #@lkcst hasn't been defined
             _m.logbook_write("Creating temporary link cost attribute '@lkcst'.")
             costAttribute = self.Scenario.create_extra_attribute('LINK', '@lkcst', default_value=0)
@@ -757,7 +757,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     def _modifyFunctionForAoNAssignment(self):
         allOrNothingFunc = _MODELLER.emmebank.function('fd98')
-        if allOrNothingFunc == None:
+        if allOrNothingFunc is None:
             allOrNothingFunc = _MODELLER.emmebank.create_function('fd98', 'ul2')
         else:
             allOrNothingFunc.expression = 'ul2'

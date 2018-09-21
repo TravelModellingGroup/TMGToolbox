@@ -189,7 +189,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         self.isRunningFromXTMF = False
                     
         #---2 Fix the checkbox problem
-        if self.UseAdditiveDemand == None: #If the checkbox hasn't been clicked, this variable will be set to None by Modeller
+        if self.UseAdditiveDemand is None: #If the checkbox hasn't been clicked, this variable will be set to None by Modeller
             self.UseAdditiveDemand = False
         
         #---3 Initialize output matrices, if needed
@@ -213,7 +213,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         
         #---1 Set up scenario
         self.scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
-        if (self.scenario == None):
+        if (self.scenario is None):
             raise Exception("Scenario %s was not found!" %ScenarioNumber)
         
         #---2 Set up Demand matrix
@@ -221,7 +221,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
             self.demandMatrix = None
         else:
             self.demandMatrix = self.databank.matrix("mf%s" %self.DemandMatrixNumber)
-            if self.demandMatrix == None:
+            if self.demandMatrix is None:
                 raise Exception("Could not load or create demand matrix! Either matrix %s does not exist\
                                 or a temporary matrix could not be created." %self.DemandMatrixNumber)
         
@@ -286,11 +286,11 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         #Code here is executed upon entry
         
         usingScalar = False
-        if self.demandMatrix == None:
+        if self.demandMatrix is None:
             _m.logbook_write("Initializing temporary scalar demand matrix.")
             self.demandMatrix = _util.initializeMatrix(matrix_type='SCALAR', name='trscal', description= 'Scalar matrix to get transit times')
             
-            if self.demandMatrix == None:
+            if self.demandMatrix is None:
                 raise Exception("Could not create temporary scalar demand matrix!")
             
             usingScalar = True
@@ -333,7 +333,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
                 "Is running from XTMF?" : str(self.isRunningFromXTMF),
                 "self": self.__MODELLER_NAMESPACE__}
         
-        if self.demandMatrix == None:
+        if self.demandMatrix is None:
             atts['Demand Matrix'] = "SCALAR"
         else:
             atts['Demand Matrix'] = "FULL: %s" %self.demandMatrix.id
