@@ -349,9 +349,9 @@ class TransitAssignmentTool(_m.Tool()):
             self.CSVFile = None
         else:
             self.CSVFile = xtmf_CSVFile
-        print 'Running Multi-Class Transit Assignment'
+        print 'Starting Transit Assignment'
         self._Execute()
-        print 'Done running transit assignment'
+        print 'Finished Transit Assignment'
 
     def _Execute(self):
         with _trace(name='{classname} v{version}'.format(classname=self.__class__.__name__, version=self.version), attributes=self._GetAtts()):
@@ -371,7 +371,6 @@ class TransitAssignmentTool(_m.Tool()):
                     WalkPerceptionArray = self._ParsePerceptionString(i)
                     self._AssignWalkPerception(WalkPerceptionArray, self.WalkAttributeIdList[i])
                 self.TRACKER.completeSubtask()
-                print "Starting Assignment"
                 with _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE') as stsu_att:
                     if self.SurfaceTransitSpeed != False:
                         self._GenerateBaseSpeed(stsu_att)
@@ -416,7 +415,7 @@ class TransitAssignmentTool(_m.Tool()):
                                                 #self.log_iteration_report(step, averageImpedence_prev_iter, ex_pass_km, averageMinTripImpedence, cngap, crgap, clambda, m_steps, norm_gap_diff, num_congestedLines)
                                                 if crgap < self.RelGap or normGapDifference >= 0:
                                                     break
-                            self._SaveResults(network)
+                            self._SaveResults(network, stsu_att)
                             trace.write(name="TMG Congested Transit Assignment", attributes={'assign_end_time': self.Scenario.transit_assignment_timestamp})
                     else:
                         if self.SurfaceTransitSpeed is False:
@@ -429,7 +428,7 @@ class TransitAssignmentTool(_m.Tool()):
                                     specUncongested = self._GetBaseAssignmentSpecUncongested(i)
                                     self.TRACKER.runTool(extendedAssignmentTool, specification=specUncongested, class_name=self.ClassNames[i], scenario=self.Scenario, add_volumes=(i!=0))
                                 network = self.Scenario.get_network()
-                                network = self._SurfaceTransitSpeedUpdate(network, 0, stsu_att)
+                                network = self._SurfaceTransitSpeedUpdate(network, 1, stsu_att)
 
                 self._ExtractOutputMatrices()
                 _MODELLER.desktop.refresh_needed(True)
@@ -572,6 +571,8 @@ class TransitAssignmentTool(_m.Tool()):
         return attributes
 
     def _GenerateBaseSpeed(self, stsu_att):
+        if self.Scenario.network_field('TRANSIT_VEHICLE', '#doors') is None:
+            print "No Transit Vehicle door information is present in the network. Default assumption will be 2 doors per surface vehicle."
         if self.Scenario.extra_attribute("@boardings") is None:
             self.Scenario.create_extra_attribute("TRANSIT_SEGMENT", "@boardings")
         if self.Scenario.extra_attribute("@alightings") is None:
@@ -597,23 +598,33 @@ class TransitAssignmentTool(_m.Tool()):
             default_duration = float(self.models[index]['default_duration'])
             correlation = float(self.models[index]['correlation'])
             mode_filter = str(self.models[index]['mode_filter'])
-            erow_speed = float(self.models[index]['erow_speed'])
-           
+            erow_speed_global = float(self.models[index]['erow_speed'])
+
             if int(segment.transit_time_func) < 10:
                 segment.transit_time_func += 10
                 
             time = float(segment.link["auto_time"])
 
             if time > 0.0:
-                segment.data1 = time*correlation
-            if time <= 0.0:
-                i = 0
-                for seg in segment.line.segments():
-                    i += 1
-                if int(segment.number) <= 2 or int(segment.number) >= (i-2):
-                    segment.data1 = float(segment.link.length)/20*60
+                if int(segment.transit_time_func) == 12:
+                    if float(segment["@erow_speed"]) > 0.0:
+                        segment.data1 = segment["@erow_speed"]
+                    else:
+                        segment.data1 = erow_speed_global
                 else:
-                    segment.data1 = float(segment.link.length)/erow_speed*60
+                    segment.data1 = (float(segment.link.length)*float(60.0))/(float(time)*float(correlation))
+
+            if time <= 0.0:
+                if float(segment["@erow_speed"]) > 0.0:
+                    segment.data1 = segment["@erow_speed"]
+                else:
+                    i = 0
+                    for seg in segment.line.segments():
+                        i += 1
+                    if int(segment.number) <= 1 or int(segment.number) >= (i-1):
+                        segment.data1 = 20
+                    else:
+                        segment.data1 = erow_speed_global
 
             if int(segment.number) == 0:
                 continue
@@ -813,9 +824,9 @@ class TransitAssignmentTool(_m.Tool()):
 
     def _PrepareNetwork(self, stsu_att):
         #network = self.Scenario.get_network()
-        network = self.Scenario.get_partial_network(['LINK', 'TRANSIT_SEGMENT', 'TRANSIT_LINE'], include_attributes=False)
+        network = self.Scenario.get_partial_network(['LINK', 'TRANSIT_SEGMENT', 'TRANSIT_LINE','TRANSIT_VEHICLE'], include_attributes=False)
         attributes_to_copy = {
-            'TRANSIT_VEHICLE': ['total_capacity'],
+            'TRANSIT_VEHICLE': ['total_capacity', '#doors'],
             'NODE': ['initial_boardings', 'final_alightings'],
             'LINK': ['length', 'aux_transit_volume', 'auto_time'],
             'TRANSIT_LINE': ['headway', str(stsu_att.id), 'data2'],
@@ -831,8 +842,9 @@ class TransitAssignmentTool(_m.Tool()):
                 attributes_to_copy['LINK'].remove('auto_time')
             else:
                 raise Exception("An auto assignment needs to be present on the scenario")
-                
-          
+        if self.Scenario.network_field('TRANSIT_VEHICLE', '#doors') is None:
+            attributes_to_copy['TRANSIT_VEHICLE'].remove('#doors') 
+
         for type, atts in attributes_to_copy.iteritems():
             atts = list(atts)
             data = self.Scenario.get_attribute_values(type, atts)
@@ -956,13 +968,20 @@ class TransitAssignmentTool(_m.Tool()):
 
                 headway = float(segment.line.headway)
                 number_of_trips = float(self.AssignmentPeriod)*60/headway
-
-                boarding = float(segment.transit_boardings)/number_of_trips
-                alighting = float(segment.transit_alightings)/number_of_trips
+                try:
+                    doors = int(segment.line.vehicle["#doors"])
+                    if doors == 0:
+                        number_of_door_pairs = 1
+                    else:
+                        number_of_door_pairs = int(segment.line.vehicle["#doors"])/2.0
+                except:
+                    number_of_door_pairs = 1
+                boarding = float(segment.transit_boardings)/number_of_trips/number_of_door_pairs
+                alighting = float(segment.transit_alightings)/number_of_trips/number_of_door_pairs
 
                 old_dwell = segment.dwell_time
 
-                segment_dwell_time =(boarding_duration*boarding + alighting_duration*alighting) + (int(segment["@tstop"])*default_duration) #seconds
+                segment_dwell_time =(boarding_duration*boarding) + (alighting_duration*alighting) + (int(segment["@tstop"])*default_duration) #seconds
                 segment_dwell_time /= 60 #minutes
                 
                 alpha = 1-lambdaK
@@ -1078,7 +1097,7 @@ class TransitAssignmentTool(_m.Tool()):
 
 
 
-    def _SaveResults(self, network):
+    def _SaveResults(self, network, stsu_att):
         if self.Scenario.extra_attribute('@ccost') is not None:
             ccost = self.Scenario.extra_attribute('@ccost')
             self.Scenario.delete_extra_attribute('@ccost')
@@ -1105,6 +1124,7 @@ class TransitAssignmentTool(_m.Tool()):
             data = self.Scenario.get_attribute_values('TRANSIT_SEGMENT', ['transit_volume', 'transit_boardings'])
             network.set_attribute_values('TRANSIT_SEGMENT', ['transit_volume', 'transit_boardings'], data)
             _netEdit.createSegmentAlightingsAttribute(network)
+            network = self._SurfaceTransitSpeedUpdate(network, 1, stsu_att)
             data = network.get_attribute_values('TRANSIT_SEGMENT', ['transit_boardings','transit_alightings'])
             self.Scenario.set_attribute_values('TRANSIT_SEGMENT', ['@boardings', '@alightings'], data)
         self.strategies.data['alphas'] = self.alphas
