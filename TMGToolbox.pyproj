@@ -173,6 +173,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\XTMF_internal\return_boardings_multiclass.py" />
+    <Compile Include="src\XTMF_internal\tmg_transit_assignment_tool.py" />
     <Compile Include="src\XTMF_internal\xtmf_network_calculator.py">
       <SubType>Code</SubType>
     </Compile>
