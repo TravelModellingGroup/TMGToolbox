@@ -102,7 +102,7 @@ class AuxTransitDistance(m.Tool()):
         self.tool_run_msg = m.PageBuilder.format_info("Script execution complete.")
 
 
-    def __call__(self, xtmf_AssignmentModes, DistanceSkimMatrixID, xtmf_ScenarioId, ClassName, VolumeAttribute):
+    def __call__(self, xtmf_AssignmentModes, DistanceSkimMatrixID, xtmf_ScenarioId, ClassName):
         self.AssignmentModes = list(xtmf_AssignmentModes)
         self.DemandMatrixID = xtmf_DemandMatrixNumber if xtmf_DemandMatrixNumber > 0 else None
         self.DistanceSkimMatrixID = DistanceSkimMatrixID if DistanceSkimMatrixID > 0 else None
