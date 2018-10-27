@@ -54,11 +54,11 @@ class AuxTransitDistance(m.Tool()):
             pb.tool_run_status(self.tool_run_msg_status)
 
         pb.add_select_scenario("Scenario", title="Scenario", note="Scenario in which to run the assignment")
-        pb.add_select_matrix("DemandMatrixID", allow_none=False, id=True,
+        pb.add_select_matrix("DemandMatrixID", allow_none=True, id=True,
                              title="Demand matrix", note="Can be blank, in which case a demand of 0 is used")
         pb.add_select("AssignmentModes", keyvalues=self.populate_mode_list(), title="Assignment modes")
         with pb.section("Outputs"):
-            pb.add_select_matrix("DistanceSkimMatrixID", allow_none=True, id=True,
+            pb.add_select_matrix("DistanceSkimMatrixID", allow_none=False, id=True,
                                  title="Distance skim matrix", note="If left blank, no skim matrix will be generated")
         pb.add_text_box("ClassName", title="Class name", size=50)
         pb.add_html("""
@@ -104,8 +104,8 @@ class AuxTransitDistance(m.Tool()):
 
     def __call__(self, xtmf_AssignmentModes, DistanceSkimMatrixID, xtmf_ScenarioId, ClassName):
         self.AssignmentModes = list(xtmf_AssignmentModes)
-        self.DemandMatrixID = xtmf_DemandMatrixNumber if xtmf_DemandMatrixNumber > 0 else None
-        self.DistanceSkimMatrixID = DistanceSkimMatrixID if DistanceSkimMatrixID > 0 else None
+        self.DemandMatrixID = None
+        self.DistanceSkimMatrixID = 'mf' + str(DistanceSkimMatrixID)
         self.Scenario = mm.emmebank.scenario(xtmf_ScenarioId)
         self.NCpus = cpu_count()
         self.ClassName = ClassName
@@ -199,7 +199,7 @@ class AuxTransitDistance(m.Tool()):
         if ts.strat_file(self.ClassName) is not None:
             ts.delete_strat_file(self.ClassName)
 
-        print "Running walk-all-way assignment"
+        print "Running auxiliary-transit-all-way assignment"
         mm.tool('inro.emme.transit_assignment.extended_transit_assignment'
                 )(spec, scenario=self.Scenario, add_volumes=False, save_strategies=True, class_name=self.ClassName)
 
@@ -211,8 +211,7 @@ class AuxTransitDistance(m.Tool()):
             },
             "type": "EXTENDED_TRANSIT_MATRIX_RESULTS"
         }
-
-        print "Extracting walk time matrix"
+        print "Extracting distance matrix"
         mm.tool('inro.emme.transit_assignment.extended.matrix_results'
                 )(spec, self.Scenario, self.ClassName, self.NCpus)
 
