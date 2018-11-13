@@ -22,8 +22,12 @@
   <ItemGroup>
     <Compile Include="build_toolbox.py" />
     <Compile Include="src\analysis\create_zone_adjacency_matrix.py" />
+    <Compile Include="src\analysis\export_network_tables.py" />
     <Compile Include="src\analysis\export_partition_average_matrix.py" />
     <Compile Include="src\analysis\matrix_statistics.py" />
+    <Compile Include="src\analysis\transit\extract_transit_matrix_results.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\analysis\transit\strategy_analysis\extract_link_transfers.py" />
     <Compile Include="src\analysis\xtmf_network_calculator.py">
       <SubType>Code</SubType>
@@ -86,6 +90,12 @@
     <Compile Include="src\input_output\export_network_shapefile.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\input_output\export_subarea_tool.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\input_output\Import_modeller_toolbox.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\license.py" />
     <Compile Include="src\network_editing\calculate_station_frequencies.py" />
     <Compile Include="src\network_editing\centroid_connectors\CCGEN.py" />
@@ -99,15 +109,13 @@
     <Compile Include="src\network_editing\GTFS_utilities\GTFS_EMME_node_map.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\network_editing\GTFS_utilities\node_mapping.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="src\network_editing\GTFS_utilities\shp_emme_map.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="src\network_editing\attribute_changer.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\network_editing\module1.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\network_editing\NCS11\conversion\convert_ncs16_ncs11.py" />
     <Compile Include="src\network_editing\remove_extra_links.py">
       <SubType>Code</SubType>
     </Compile>
@@ -172,7 +180,9 @@
     <Compile Include="src\XTMF_internal\export_worksheet_table.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\XTMF_internal\module1.py" />
     <Compile Include="src\XTMF_internal\return_boardings_multiclass.py" />
+    <Compile Include="src\XTMF_internal\tmg_transit_assignment_tool.py" />
     <Compile Include="src\XTMF_internal\xtmf_network_calculator.py">
       <SubType>Code</SubType>
     </Compile>
