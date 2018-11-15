@@ -68,7 +68,7 @@ class XTMFNetworkCalculator(_m.Tool()):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
         self.expression = expression
-        self.domain = domain
+        self.domain = str(domain)
         if result is not None and result != "None":
             self.result = result
         else:
@@ -109,9 +109,9 @@ class XTMFNetworkCalculator(_m.Tool()):
         selections = {}
         if self.node_selection is not None:
             selections["node"] = self.node_selection
-        elif self.link_selection is not None:
+        if self.link_selection is not None:
             selections["link"] = self.link_selection
-        elif self.transit_line_selection is not None:
+        if self.transit_line_selection is not None:
             selections["transit_line"] = self.transit_line_selection
         if len(selections) == 0:
             selections["node"] = "all"
