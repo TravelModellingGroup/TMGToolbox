@@ -25,6 +25,7 @@
     <Compile Include="src\analysis\export_network_tables.py" />
     <Compile Include="src\analysis\export_partition_average_matrix.py" />
     <Compile Include="src\analysis\matrix_statistics.py" />
+    <Compile Include="src\analysis\traffic\export_countpost_results_multiclass.py" />
     <Compile Include="src\analysis\transit\extract_transit_matrix_results.py">
       <SubType>Code</SubType>
     </Compile>
@@ -115,9 +116,6 @@
     <Compile Include="src\network_editing\attribute_changer.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\network_editing\module1.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="src\network_editing\NCS11\conversion\convert_ncs16_ncs11.py" />
     <Compile Include="src\network_editing\remove_extra_links.py">
       <SubType>Code</SubType>
@@ -183,9 +181,9 @@
     <Compile Include="src\XTMF_internal\export_worksheet_table.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\XTMF_internal\module1.py" />
     <Compile Include="src\XTMF_internal\return_boardings_multiclass.py" />
     <Compile Include="src\XTMF_internal\tmg_transit_assignment_tool.py" />
+    <Compile Include="src\XTMF_internal\xtmf_matrix_calculator.py" />
     <Compile Include="src\XTMF_internal\xtmf_network_calculator.py">
       <SubType>Code</SubType>
     </Compile>

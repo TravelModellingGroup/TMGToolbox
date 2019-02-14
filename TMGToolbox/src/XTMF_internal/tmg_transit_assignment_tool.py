@@ -122,6 +122,7 @@ class TransitAssignmentTool(_m.Tool()):
     xtmf_WalkAllWayFlag = _m.Attribute(str)
 
     xtmf_XRowTTFRange = _m.Attribute(str)
+    xtmf_NodeLogitScale = _m.Attribute(float)
 
     if EMME_VERSION >= (4, 1):
         NumberOfProcessors = _m.Attribute(int)
@@ -257,7 +258,7 @@ class TransitAssignmentTool(_m.Tool()):
         Iterations, NormGap, RelGap, \
         xtmf_InVehicleTimeMatrixString, xtmf_WaitTimeMatrixString, xtmf_WalkTimeMatrixString, xtmf_FareMatrixString, xtmf_CongestionMatrixString, xtmf_PenaltyMatrixString, xtmf_ImpedanceMatrixString, \
         xtmf_OriginDistributionLogitScale, CalculateCongestedIvttFlag, CongestionExponentString, xtmf_congestedAssignment, xtmf_CSVFile, xtmf_SurfaceTransitSpeed, xtmf_WalkAllWayFlag, \
-        xtmf_XRowTTFRange):
+        xtmf_XRowTTFRange, xtmf_NodeLogitScale):
         
         if EMME_VERSION < (4, 1, 5):
             raise Exception('Tool not compatible. Please upgrade to version 4.1.5+')
@@ -357,6 +358,11 @@ class TransitAssignmentTool(_m.Tool()):
         if xtmf_ImpedanceMatrixString:
             self.ImpedanceMatrixList = xtmf_ImpedanceMatrixString.split(',')
 
+        if float(xtmf_NodeLogitScale) == 1:
+            self.NodeLogitScale = False
+        else:
+            self.NodeLogitScale = float(xtmf_NodeLogitScale)
+
         if xtmf_CSVFile.lower() == 'none':
             self.CSVFile = None
         else:
@@ -386,6 +392,33 @@ class TransitAssignmentTool(_m.Tool()):
                     WalkPerceptionArray = self._ParsePerceptionString(i)
                     self._AssignWalkPerception(WalkPerceptionArray, self.WalkAttributeIdList[i])
                 self.TRACKER.completeSubtask()
+                if self.NodeLogitScale is not False:
+                    network = self.Scenario.get_network()
+                    for node in network.regular_nodes():
+                        node.data1 = 0
+                        agency_counter = 0
+                        agencies = set()
+                        if node.number > 99999:
+                            continue
+                        for link in node.incoming_links():
+                            if link.i_node.is_centroid is True:
+                                node.data1 = -1
+                            if link.i_node.number > 99999:
+                                agency_counter += 1
+                        for link in node.outgoing_links():
+                            if link.j_node.is_centroid is True:
+                                node.data1 = -1
+                            '''if link.j_node.number > 99999:
+                                agency_counter += 1'''
+                        if agency_counter > 1:
+                            node.data1 = -1
+                            for link in node.incoming_links():
+                                if link.i_node.number > 99999:
+                                    link.i_node.data1 = -1
+                            for link in node.outgoing_links():
+                                if link.j_node.number > 99999:
+                                    link.j_node.data1 =-1
+                    self.Scenario.publish_network(network)
                 with _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE') as stsu_att, self._tempStsuTTFs() as ttf_map:
                     if self.SurfaceTransitSpeed != False:
                         self._GenerateBaseSpeed(stsu_att)
@@ -774,22 +807,23 @@ class TransitAssignmentTool(_m.Tool()):
                         'scale': self.xtmf_OriginDistributionLogitScale,
                         'truncation': self._connectorLogitTruncation}},
                  'fixed_proportions_on_connectors': None}
+        
         if EMME_VERSION >= (4, 1):
             baseSpec['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
-            if self.Scenario.extra_attribute("@node_logit") is not None:
-                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
-                    'choices_at_regular_nodes': {
-                        'choice_points': '@node_logit',
-                        'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
-                        'logit_parameters': {
-                            'scale': 0.2,
-                            'truncation': 0.05}
-                        }
+        if self.NodeLogitScale is not False:
+            baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                'choices_at_regular_nodes': {
+                    'choice_points': 'ui1',
+                    'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
+                    'logit_parameters': {
+                        'scale': self.NodeLogitScale,
+                        'truncation': self._connectorLogitTruncation}
                     }
-            else:
-                 baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
-                        'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
-                        }
+                }
+        else:
+            baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
+                }
         if EMME_VERSION >= (4,2,1):
             modeList = []
             partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
@@ -1020,6 +1054,8 @@ class TransitAssignmentTool(_m.Tool()):
 
                 segment_dwell_time =(boarding_duration*boarding) + (alighting_duration*alighting) + (int(segment["@tstop"])*default_duration) #seconds
                 segment_dwell_time /= 60 #minutes
+                if segment_dwell_time >= 99.99:
+                    segment_dwell_time = 99.98
                 
                 alpha = 1-lambdaK
                 segment.dwell_time = old_dwell * alpha + segment_dwell_time * lambdaK
@@ -1324,15 +1360,20 @@ class TransitAssignmentTool(_m.Tool()):
             baseSpec['performance_settings'] = {'number_of_processors': self.NumberOfProcessors}
             '''if self._useLogitAuxTrChoice:
                 raise NotImplementedError()'''
-            if self.Scenario.extra_attribute("@node_logit") is not None:
-                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {'choices_at_regular_nodes': {'choice_points': '@node_logit',
-                                                  'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
-                                                  'logit_parameters': {'scale': 0.2,
-                                                                       'truncation': 0.05}}}
-            else:
-                 baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
-                        'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
-                        }
+        if self.NodeLogitScale is not False:
+            baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                'choices_at_regular_nodes': {
+                    'choice_points': 'ui1',
+                    'aux_transit_choice_set': 'ALL_POSSIBLE_LINKS',
+                    'logit_parameters': {
+                        'scale': self.NodeLogitScale,
+                        'truncation': self._connectorLogitTruncation}
+                    }
+                }
+        else:
+                baseSpec['flow_distribution_at_regular_nodes_with_aux_transit_choices'] = {
+                    'choices_at_regular_nodes':'OPTIMAL_STRATEGY'
+                    }
         if EMME_VERSION >= (4,2,1):
             modeList = []
             partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
