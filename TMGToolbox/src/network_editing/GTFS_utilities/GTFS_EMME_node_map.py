@@ -19,6 +19,8 @@
 
 import inro.modeller as _m
 import csv
+from math import sqrt as sqrt
+from math import pow as pow
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
@@ -44,6 +46,9 @@ class GTFStoEmmeMap(_m.Tool()):
     #Tool Parameters
     FileName = _m.Attribute(str)
     MappingFileName = _m.Attribute(str)
+    NodeRangeSet = _m.Attribute(str)
+    scenarioId = _m.Attribute(str)
+
 
     def __init__(self):
         #---Init internal variables
@@ -54,8 +59,7 @@ class GTFStoEmmeMap(_m.Tool()):
 
         pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
                      description = "Takes the <b>stops.txt</b> file and creates a mapping file that shows \
-                             the node in the EMME network which it corresponds to. \
-                             EXPERIMENTAL",
+                             the node in the EMME network which it corresponds to.",
                      branding_text = "- TMG Toolbox")
                 
         if self.tool_run_msg != "": # to display messages in the page
@@ -64,28 +68,46 @@ class GTFStoEmmeMap(_m.Tool()):
         pb.add_select_file(tool_attribute_name="FileName",
                            window_type='file',
                            file_filter="*.txt *.shp",
-                           title="stops.txt file from the GTFS folder or stops file in shp format")
+                           title="The shp or stops.txt file that contains the stops information. Please note that the stops.txt file format should \
+                           follow GTFS rules. The shp files also needs to contain the DBF field 'StopID'")
+
+        pb.add_text_box(tool_attribute_name='NodeRangeSet',
+                        size=200, title="Node Range",
+                        note="Comma-separated list of allowed node number ranges to map to. Input 'all' to map to any node. Example '1-5,10-15'",
+                        multi_line=True)
         
         pb.add_select_file(tool_attribute_name="MappingFileName",
                            window_type='save_file',
                            file_filter='*.csv',
                            title="Map file to export")
 
+        pb.add_text_box(tool_attribute_name='scenarioId',
+                        size=4, title="scenarioId",
+                        note="Id for the scenario")
+
+
         return pb.render()
 
-    def __call__(self, StopFileName, MappingFileName):
+    def __call__(self, StopFileName, NodeRangeSet, MappingFileName, scenarioId):
         self.FileName = StopFileName
         self.MappingFileName = MappingFileName
-        self.scenarioNumber = ScenarioNumber
-        
         self.tool_run_msg = ""
         self.TRACKER.reset()
+        self.scenarioId = int(scenarioId)
+        if NodeRangeSet.lower() == 'all':
+            self.FullRange = 'all'
+        else:
+            NodeRangeSet = NodeRangeSet.strip().split(',')
+            self.FullRange = []
+            for ranges in NodeRangeSet:
+                r = ranges.split('-')
+                self.FullRange = self.FullRange + (range(int(r[0]),int(r[1])+1))
+
 
         try:
             self._Execute()
         except Exception, e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc(e))
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -93,7 +115,14 @@ class GTFStoEmmeMap(_m.Tool()):
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
-        
+        if self.NodeRangeSet.lower() == 'all':
+            self.FullRange = 'all'
+        else:
+            self.RangeSets = self.NodeRangeSet.split(',')
+            self.FullRange = []
+            for ranges in self.RangeSets:
+                r = ranges.split('-')
+                self.FullRange = self.FullRange + (range(int(r[0]),int(r[1])+1))
         try:
             self._Execute()
         except Exception, e:
@@ -116,11 +145,16 @@ class GTFStoEmmeMap(_m.Tool()):
             #need to convert stops from lat lon to UTM
             convertedStops = self._ConvertStops(stops)
             #load nodes from network
-            allnodes = _MODELLER.scenario.get_network().regular_nodes()
+            self.network =  _MODELLER.emmebank.scenario(int(self.scenarioId)).get_network()
+            allnodes = self.network.regular_nodes()
             #create node dictionary like converted stops?
             nodes = {}
             for n in allnodes:
-                nodes[int(n.id)] = (float(n.x),float(n.y))
+                if self.FullRange == 'all':
+                    nodes[int(n.id)] = (float(n.x),float(n.y))
+                else:
+                    if int(n.id) in self.FullRange:
+                        nodes[int(n.id)] = (float(n.x),float(n.y))
             #find extents
             extents = self._FindExtents(convertedStops,nodes)
             #load and find nearest point
@@ -130,7 +164,7 @@ class GTFStoEmmeMap(_m.Tool()):
     def _GetAtts(self):
         atts = {
                 "Version": self.version, 
-                "self": self.__MODELLER_NAMESPACE__}
+                }
             
         return atts 
 
@@ -138,25 +172,48 @@ class GTFStoEmmeMap(_m.Tool()):
     
     def _LoadStopsTxt(self):
         stops = {}
+        self.fullStops = {}
         with open(self.FileName) as reader:
+            stopsfile = csv.reader(reader)
+            header = stopsfile.next()
             #stop_lat,zone_id,stop_lon,stop_id,stop_desc,stop_name,location_type
-            header = reader.readline().strip().split(',')
+            #header = reader.readline().strip().split(',')
             latCol = header.index('stop_lat')
             lonCol = header.index('stop_lon')
             idCol = header.index('stop_id')
             nameCol = header.index('stop_name')
-            descCol = header.index('stop_desc')
-            
-            for line in reader.readlines():
+            if 'stop_desc' in header:
+                descCol = header.index('stop_desc')
+            else:
+                descCol = None
+            for row in stopsfile:
+                id = row[idCol]
+                if descCol != None:
+                    desc = row[descCol]
+                else:
+                    desc = None
+                stop = GtfsStop(id,
+                                row[lonCol],
+                                row[latCol],
+                                row[nameCol],
+                                desc)
+                stops[id] = [float(row[lonCol]),float(row[latCol])]
+                self.fullStops[stop.id] = stop
+            '''for line in reader.readlines():
                 cells = line.strip().split(',')
                 id = cells[idCol]
+                if descCol != None:
+                    desc = cells[descCol]
+                else:
+                    desc = None
                 stop = GtfsStop(id,
                                 cells[lonCol],
                                 cells[latCol],
                                 cells[nameCol],
-                                cells[descCol])
+                                desc)
                 stops[id] = [float(cells[lonCol]),float(cells[latCol])]
-        return stops 
+                self.fullStops[stop.id] = stop'''
+        return stops
 
     def _LoadStopsShp(self):
         stops = {}
@@ -198,6 +255,8 @@ class GTFStoEmmeMap(_m.Tool()):
             x, y = p(templons, templats)
             convertedStops[stop] = x+y
             convertedStops[stop] = (float(convertedStops[stop][0]),float(convertedStops[stop][1]))
+            self.fullStops[stop].x = convertedStops[stop][0]
+            self.fullStops[stop].y = convertedStops[stop][1]
         return convertedStops
 
 
@@ -230,26 +289,32 @@ class GTFStoEmmeMap(_m.Tool()):
 
     def _FindNearest(self, extents, convertedStops, nodes):
         map = []
-        spatialIndex = _spindex.GridIndex(extents, 1000, 1000)
-        network = _MODELLER.scenario.get_network()
-        for node in network.regular_nodes():
-            spatialIndex.insertPoint(node)
+        spatialIndex = _spindex.GridIndex(extents, 500, 500)
+        for node in self.network.regular_nodes():
+            if self.FullRange == 'all':
+                spatialIndex.insertPoint(node)
+            else:
+                if int(node.id) in self.FullRange:
+                    spatialIndex.insertPoint(node)
+
         for stop in convertedStops:
             nearestNode = spatialIndex.nearestToPoint(convertedStops[stop][0], convertedStops[stop][1])
             if nearestNode[0] == "Nothing Found":
-                map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],-1,-1])
-            elif nearestNode[0] is None:
-                map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],0,0])
+                map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],-1,-1, self.fullStops[stop].name])
+            elif nearestNode[0] == None:
+                map.append([stop, nearestNode[0],convertedStops[stop][0],convertedStops[stop][1],0,0, self.fullStops[stop].name])
             else:
                 cleanedNumber = int(nearestNode[0])
-                map.append([stop, cleanedNumber,convertedStops[stop][0],convertedStops[stop][1],nodes[cleanedNumber][0],nodes[cleanedNumber][1]])
-
+                map.append([stop, cleanedNumber,convertedStops[stop][0],convertedStops[stop][1],nodes[cleanedNumber][0],nodes[cleanedNumber][1], \
+                            self.fullStops[stop].name])
         with open(self.MappingFileName, 'wb') as csvfile:
             mapFile = csv.writer(csvfile, delimiter=',')
-            header = ["stopID","emmeID","stop x", "stop y", "node x", "node y"]
+            header = ["stopID","emmeID","stop x", "stop y", "node x", "node y", "distance", "stop_name"]
             mapFile.writerow(header)
             for row in map:
-                mapFile.writerow([row[0],row[1], row[2], row[3], row[4], row[5]])
+                distanceToNode = sqrt(abs(float(row[2])-float(row[4]))**2 + abs(float(row[3])-float(row[5]))**2)
+                mapFile.writerow([row[0],row[1], row[2], row[3], row[4], row[5], distanceToNode, row[6]])
+
 
         
     @_m.method(return_type=_m.TupleType)
@@ -263,11 +328,18 @@ class GTFStoEmmeMap(_m.Tool()):
     
 class GtfsStop():
     
-    def __init__(self, id, lon, lat, name, description):
+    def __init__(self, id, lon, lat, name, description, x = 0, y = 0):
         self.id = id
         self.lat = float(lat)
         self.lon = float(lon)
         self.name= name
         self.description = description
         self.modes = set()
-    
+        self.x = float(x)
+        self.y = float(y)
+
+'''x = GTFStoEmmeMap()
+#self, StopFileName, NodeRangeSet, MappingFileName, scenarioId
+x("C:\Users\Bilal Yusuf\Documents\TMG\TTC\gtfs-ttc-18oct\cleaned bus\stops.txt", "10000-90000",\
+  "C:\Users\Bilal Yusuf\Documents\TMG\TTC\gtfs-ttc-18oct\cleaned bus\m3 100x100.csv", 5)
+print "done"'''

@@ -1,5 +1,5 @@
 '''
-    Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+    Copyright 2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
 
@@ -22,8 +22,25 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
-import os.path
-_util = _m.Modeller().module('tmg.common.utilities')
+import os
+from copy import deepcopy
+import csv
+from math import sqrt as sqrt
+from math import pow as pow
+from pyproj import Proj
+from osgeo import ogr
+import osgeo.ogr
+import shutil
+
+
+_MODELLER = _m.Modeller() #Instantiate Modeller once.
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+_geo = _MODELLER.module('tmg.common.geometry')
+_spindex = _MODELLER.module('tmg.common.spatial_index')
+networkExportTool = _MODELLER.tool('inro.emme.data.network.export_network_as_shapefile')
+gtfsExportTool = _MODELLER.tool('tmg.network_editing.GTFS_utilities.export_GTFS_stops_as_shapefile')
+EMME_VERSION = _util.getEmmeVersion(tuple)
 
 ##########################################################################################################
 
@@ -41,6 +58,8 @@ class CleanGTFS(_m.Tool()):
     GTFSFolderName = _m.Attribute(str)
     ServiceIdSet = _m.Attribute(str)
     UpdatedRoutesFile = _m.Attribute(str)
+    MappingFileName = _m.Attribute(str)
+    StopDistance = _m.Attribute(str)
     
     def __init__(self):
         #---Init internal variables
@@ -50,7 +69,8 @@ class CleanGTFS(_m.Tool()):
     def page(self):
         pb = _m.ToolPageBuilder(self, title="Clean GTFS Folder v%s" %self.version,
                      description="Cleans a set of GTFS files by service ID. Filters all \
-                         GTFS files except for routes, calendar, and shapes.",
+                         GTFS files except for routes, calendar, and shapes. Creates a new folder in the GTFS folder called 'cleaned'.\
+                         This folder then contains all the cleaned GTFS files",
                      branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
@@ -66,6 +86,7 @@ class CleanGTFS(_m.Tool()):
         
         pb.add_select_file(tool_attribute_name='UpdatedRoutesFile', 
                            window_type='file', title="Optional Filtered Routes")
+
         
         return pb.render()
     
@@ -88,13 +109,41 @@ class CleanGTFS(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info(msg)
     
-    ##########################################################################################################    
+    ##########################################################################################################
     
+    def __call__(self, GTFSFolderName, ServiceIdSet, UpdatedRoutesFile, MappingFileName, StopDistance):
+        self.GTFSFolderName = GTFSFolderName
+        '''self.MappingFileName = MappingFileName
+        if StopDistance.lower() == 'none':
+            self.StopDistance = 'none'
+        else:
+            self.StopDistance = float(StopDistance)'''
+        
+        self.tool_run_msg = ""
+        self.TRACKER.reset()
+
+        try:
+            self._Execute()
+        except Exception, e:
+            self.tool_run_msg = _m.PageBuilder.format_exception(
+                e, _traceback.format_exc(e))
+            raise
+        msg = "Tool complete."
+        if not not self._warning:
+            msg += "<br>" + self._warning 
+        
+        self.tool_run_msg = _m.PageBuilder.format_info(msg)   
+
+    ##########################################################################################################    
     
     def _Execute(self):
         cells = self.ServiceIdSet.split(",")
         serviceIdSet = set(cells)
-        
+
+        self.cleanedFolderPath = self.GTFSFolderName+"/cleaned"
+        if not os.path.exists(self.cleanedFolderPath):
+            os.makedirs(self.cleanedFolderPath)
+        self._TransferFiles(self.cleanedFolderPath)
         routesFile = ""
         if not self.UpdatedRoutesFile:
             routesFile = self.GTFSFolderName + "/routes.txt"
@@ -104,6 +153,7 @@ class CleanGTFS(_m.Tool()):
         self.TRACKER.completeTask()
         
         tripIdSet = self._FilterTripsFile(routeIdSet, serviceIdSet)
+        self._GetNewRoutesFile(routesFile)
         if len(tripIdSet) == 0:
             self._warning = "Warning: No trips were selected."
         self.TRACKER.completeTask()
@@ -118,11 +168,17 @@ class CleanGTFS(_m.Tool()):
     
     
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
-    
+    def _TransferFiles(self, cleanedFolderPath):
+        gtfsFilesStatic = ["/agency.txt","/calendar.txt","/calendar_dates.txt","/fare_attributes.txt","/fare_rules.txt","/frequencies.txt","/transfers.txt","/feed_info.txt"]
+        for file in gtfsFilesStatic:
+            if os.path.isfile(self.GTFSFolderName + file) == True:
+                shutil.copy2(self.GTFSFolderName + file, cleanedFolderPath + file)
+
     def _GetRouteIdSet(self, routesFile):
         idSet = set()
         with open(routesFile) as reader:
             header = reader.readline().split(",")
+            print header
             idCol = header.index("route_id")
             
             for line in reader.readlines():
@@ -134,8 +190,9 @@ class CleanGTFS(_m.Tool()):
         exists = os.path.isfile(self.GTFSFolderName + "/shapes.txt")
         shapeIdSet = set()
         tripIdSet = set()
+        self.routes = set()
         with nested(open(self.GTFSFolderName + "/trips.txt"), 
-                    open(self.GTFSFolderName + "/trips.updated.csv", 'w')) as (reader, writer):
+                    open(self.cleanedFolderPath + "/trips.txt", 'w')) as (reader, writer):
             header = reader.readline().strip()
             cells = header.split(",")
             writer.write(header)
@@ -153,6 +210,7 @@ class CleanGTFS(_m.Tool()):
                 if not cells[serviceIdCol] in serviceIdSet:
                     continue
                 tripIdSet.add(cells[tripIdCol])
+                self.routes.add(cells[routeIdCol])
                 if exists == True:
                     shapeIdSet.add(cells[shapeIdCol])
                 writer.write("\n %s" %line)
@@ -161,9 +219,24 @@ class CleanGTFS(_m.Tool()):
             cleanedShapes = self._FilterShapesFile(shapeIdSet)
         return tripIdSet
     
+    def _GetNewRoutesFile(self, routesFile):
+        with nested(open(routesFile), 
+                    open(self.cleanedFolderPath + "/routes.txt", 'w')) as (reader, writer):
+            header = reader.readline().strip()
+            cells = header.split(",")
+            writer.write(header)
+            routeIdCol = cells.index("route_id")
+            for line in reader.readlines():
+                line = line.strip()
+                cells = line.split(",")
+                if not cells[routeIdCol] in self.routes:
+                    continue
+                writer.write("\n %s" %line)
+
+
     def _FilterShapesFile(self, shapeIdSet):
         with nested(open(self.GTFSFolderName + "/shapes.txt"),
-                    open(self.GTFSFolderName + "/shapes.updated.csv", 'w')) as (reader, writer):
+                    open(self.cleanedFolderPath + "/shapes.txt", 'w')) as (reader, writer):
             header = reader.readline().strip()
             cells = header.split(",")
             writer.write(header)
@@ -179,7 +252,7 @@ class CleanGTFS(_m.Tool()):
     def _FilterStopTimesFile(self, tripIdSet):
         servicedStopsSet = set()
         with nested(open(self.GTFSFolderName + "/stop_times.txt"),
-                    open(self.GTFSFolderName + "/stop_times.updated.csv", 'w')) as (reader, writer):
+                    open(self.cleanedFolderPath + "/stop_times.txt", 'w')) as (reader, writer):
             header = reader.readline().strip()
             writer.write(header)
             cells = header.split(",")
@@ -197,7 +270,7 @@ class CleanGTFS(_m.Tool()):
 
     def _FilterStopsFile(self, servicedStopsSet):
         with nested(open(self.GTFSFolderName + "/stops.txt"),
-                    open(self.GTFSFolderName + "/stops.updated.csv", 'w')) as (reader, writer):
+                    open(self.cleanedFolderPath + "/stops.txt", 'w')) as (reader, writer):
             header = reader.readline().strip()
             writer.write(header)
             cells = header.split(",")
@@ -219,51 +292,14 @@ class CleanGTFS(_m.Tool()):
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
+class GtfsStop():
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    def __init__(self, id, lon, lat, name, description, x = 0, y = 0):
+        self.id = id
+        self.lat = float(lat)
+        self.lon = float(lon)
+        self.name= name
+        self.description = description
+        self.modes = set()
+        self.x = float(x)
+        self.y = float(y)
