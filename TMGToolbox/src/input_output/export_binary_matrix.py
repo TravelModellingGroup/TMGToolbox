@@ -164,6 +164,7 @@ class ExportBinaryMatrix(_m.Tool()):
                           "4 for full matrices.")
         
         self.MatrixId = self.MATRIX_TYPES[xtmf_MatrixType] + str(xtmf_MatrixNumber)
+        self.ExportFile = ExportFile
         if _bank.matrix(self.MatrixId) is None:
             raise IOError("Matrix %s does not exist." %self.MatrixId)
         
