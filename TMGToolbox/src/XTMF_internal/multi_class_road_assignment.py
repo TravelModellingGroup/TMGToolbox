@@ -825,7 +825,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                     }
                     SOLA_path_analysis[i].append(path)
                 if allNone is True:
-                    SOLA_path_analysis[i] = None
+                    SOLA_path_analysis[i] = []
         #Creates a list entry for each mode specified in the Mode List and its associated Demand Matrix
         #"mf"+str(int(int(self.TimesMatrixId[0][2:])+3))
         SOLA_Class_Generator = [{
