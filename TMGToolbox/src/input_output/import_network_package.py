@@ -89,6 +89,7 @@ class ImportNetworkPackage(_m.Tool()):
     ConflictOption = _m.Attribute(str)
     AddFunction = _m.Attribute(bool)
     ScenarioName = _m.Attribute(str)
+    SkipMergingFunctions = _m.Attribute(bool)
 
     def __init__(self):
 
@@ -104,7 +105,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.event = None
         self.merge_functions = None
         self.has_exception = False
-
+        self.SkipMergingFunctions = False
 
     def page(self):
         merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
@@ -137,12 +138,17 @@ class ImportNetworkPackage(_m.Tool()):
         pb.add_text_box(tool_attribute_name='ScenarioDescription',
                         size=60,
                         title="Scenario description")
+        
+        pb.add_checkbox(tool_attribute_name='SkipMergingFunctions',
+                        label="Skip the merging of functions?",
+                        note="Set as TRUE to unchange the functional definitions in current Emmebank.")
 
         pb.add_select(tool_attribute_name='ConflictOption',
                       keyvalues=merge_functions.OPTIONS_LIST,
-                      title="Function Conflict Option",
+                      title="(Optional) Function Conflict Option",
                       note="Select an action to take if there are conflicts found \
-                      between the package and the current Emmebank.")
+                      between the package and the current Emmebank. \
+                      Ignore if 'SkipMergingFunctions' is checked.")
 
         pb.add_html("""
 
@@ -522,7 +528,7 @@ class ImportNetworkPackage(_m.Tool()):
                     self._batchin_extra_attributes(scenario, temp_folder, zf)
                 self.TRACKER.completeTask()
 
-                if self._components.functions_file is not None:
+                if self._components.functions_file is not None and not self.SkipMergingFunctions:
                     self._batchin_functions(temp_folder, zf)
                 self.TRACKER.completeTask()
 
@@ -601,9 +607,11 @@ class ImportNetworkPackage(_m.Tool()):
                               scenario=scenario)
             self.TRACKER.completeSubtask()
 
+    @_m.logbook_trace("Reading functions")
     def _batchin_functions(self, temp_folder, zf):
         zf.extract(self._components.functions_file, temp_folder)
         extracted_function_file_name = _path.join(temp_folder, self._components.functions_file)
+
         if self.ConflictOption == 'OVERWRITE':
             # Replicate Overwrite here so that consoles won't crash with references to a GUI
             functions = self._LoadFunctionFile(extracted_function_file_name)
@@ -614,7 +622,7 @@ class ImportNetworkPackage(_m.Tool()):
                     emmebank.create_function(id, expression)
                 else:
                     func.expression = expression
-        elif self.ConflictOption == 'EDIT' or self.ConflictOption == 'RAISE':
+        elif self.ConflictOption == 'EDIT' or self.ConflictOption == 'RAISE' or self.ConflictOption == 'PRESERVE':
             merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
             merge_functions.FunctionFile = extracted_function_file_name
             merge_functions.ConflictOption = self.ConflictOption
