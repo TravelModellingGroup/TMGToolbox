@@ -74,7 +74,7 @@ class FlagPremiumBusLines(_m.Tool()):
         
         pb.add_checkbox(tool_attribute_name='FlagVIVA',
                         title="Flag VIVA bus lines?",
-                        note="Assumes NCS11 line ids.")
+                        note="Assumes NCS11 or later line ids.")
         
         pb.add_checkbox(tool_attribute_name='FlagZum',
                         title="Flag ZUM bus lines?",
