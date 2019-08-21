@@ -40,6 +40,7 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 from os import path as _path
+
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -77,11 +78,11 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
             
         pb.add_select_file(tool_attribute_name="GtfsFolderName",
                            window_type='directory',
-                           title="GTFS Folder")
+                           title="GTFS Folder Directory")
         
         pb.add_select_file(tool_attribute_name="ShapefileName",
                            window_type='save_file',
-                           title="Shapefile to export")
+                           title="Shapefile Name for Export")
         
         return pb.render()
     
@@ -163,7 +164,10 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
             lonCol = header.index('stop_lon')
             idCol = header.index('stop_id')
             nameCol = header.index('stop_name')
-            descCol = header.index('stop_desc')
+            if 'stop_desc' in header:
+                descCol = header.index('stop_desc')
+            else:
+                descCol = header.index('stop_name')
             
             for line in reader.readlines():
                 cells = line.strip().split(',')
@@ -183,7 +187,7 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
                             2: 'r',
                             3: 'b',
                             4: 'f',
-                            5:'c',
+                            5: 'c',
                             6: 'g',
                             7: 'x'}
         

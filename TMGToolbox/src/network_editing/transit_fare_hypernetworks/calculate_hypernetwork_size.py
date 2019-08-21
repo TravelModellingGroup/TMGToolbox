@@ -39,6 +39,9 @@ ESTIMATE NETWORK SIZE
     
     1.0.1 Fixed a bug in PrepareNetwork which only considers segments that permit alightings as 
         'stops.' We want to catch both boardings AND alightings 
+
+    1.0.2 Fixed a bug in checking the references of the fare schema file. Allows to read other files
+        in the same folder as called by the fare schema file.
     
 '''
 
@@ -48,7 +51,7 @@ from contextlib import contextmanager
 from contextlib import nested
 from math import factorial
 from xml.etree import ElementTree as _ET
-from os import path
+from os import path as _PATH
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -64,7 +67,7 @@ class XmlValidationError(Exception):
 
 class EstimateHyperNetworkSize(_m.Tool()):
     
-    version = '1.0.1'
+    version = '1.0.2'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -230,9 +233,11 @@ class EstimateHyperNetworkSize(_m.Tool()):
                 if not 'path' in shapefileElement.attrib:
                     raise XmlValidationError("Sahpefile '%s' must specify a 'path' attribute" %id)
                 p = shapefileElement.attrib['path']
-                
-                if not path.exists(p):
-                    raise XmlValidationError("File not found for id '%s' at %s" %(id, p))
+
+                if not _PATH.exists(p):
+                    pf = _PATH.join(_PATH.dirname(self.XMLSchemaFile),p)
+                    if not _PATH.exists(pf):
+                        raise XmlValidationError("File not found for id '%s' at %s" %(id, p))                       
             
             for i, zoneElement in enumerate(zoneElements):
                 if not 'id' in zoneElement.attrib:
