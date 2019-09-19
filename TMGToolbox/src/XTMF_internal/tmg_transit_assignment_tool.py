@@ -937,7 +937,7 @@ class TransitAssignmentTool(_m.Tool()):
         for i in range(0, len(classAssignedDemand)):
             matrixCalcSpec = {
                 'type': 'MATRIX_CALCULATION',
-	            'expression': str(self.ImpedenceMatrices[i].id)+'*'+str(self.DemandMatrixList[i])+'/'+str(classAssignedDemand[i]),
+                'expression': str(self.ImpedenceMatrices[i].id)+'*'+str(self.DemandMatrixList[i])+'/'+str(classAssignedDemand[i]),
                 'aggregation': {
                     'origins':'+',
                     'destinations':'+'
