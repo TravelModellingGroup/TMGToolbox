@@ -643,11 +643,12 @@ class TransitAssignmentTool(_m.Tool()):
             if segment.j_node is None:
                 continue
 
-            if float(segment.line[str(stsu_att.id)]) == 0.0:
+            if segment.line[stsu_att.id] == 0.0:
                 continue
             else:
                 index = int(segment.line[str(stsu_att.id)])-1
 
+            segment_number = segment.number
             boarding_duration = float(self.models[index]['boarding_duration'])
             alighting_duration  = float(self.models[index]['alighting_duration'])
             default_duration = float(self.models[index]['default_duration'])
@@ -659,62 +660,48 @@ class TransitAssignmentTool(_m.Tool()):
             segment.transit_time_func = self.stsu_ttf_map[segment.transit_time_func]
             
                 
-            time = float(segment.link["auto_time"])
+            time = segment.link["auto_time"]
 
             if time > 0.0:
-                if int(segment.transit_time_func) in self.ttfs_xrow:
-                    if erow_defined == True:
-                        if float(segment["@erow_speed"]) > 0.0:
+                if segment.transit_time_func in self.ttfs_xrow:
+                    if erow_defined == True and segment["@erow_speed"] > 0.0:
                             segment.data1 = segment["@erow_speed"]
-                        else:
-                            segment.data1 = erow_speed_global
                     else:
                         segment.data1 = erow_speed_global
                 else:
-                    segment.data1 = (float(segment.link.length)*float(60.0))/(float(time)*float(correlation))
+                    segment.data1 = (segment.link.length * 60.0)/(time*correlation)
 
             if time <= 0.0:
-                if erow_defined == True:
-                    if float(segment["@erow_speed"]) > 0.0:
-                        segment.data1 = segment["@erow_speed"]
-                    else:
-                        i = 0
-                        for seg in segment.line.segments():
-                            i += 1
-                        if int(segment.number) <= 1 or int(segment.number) >= (i-1):
-                            segment.data1 = 20
-                        else:
-                            segment.data1 = erow_speed_global
+                if erow_defined == True and segment["@erow_speed"] > 0.0:
+                    segment.data1 = segment["@erow_speed"]
                 else:
                     i = 0
                     for seg in segment.line.segments():
                         i += 1
-                    if int(segment.number) <= 1 or int(segment.number) >= (i-1):
+                    if segment_number <= 1 or segment_number >= (i-1):
                         segment.data1 = 20
                     else:
                         segment.data1 = erow_speed_global
-            if int(segment.number) == 0:
+            if segment_number == 0:
                 continue
-            segment.dwell_time = (float(segment["@tstop"])*default_duration)/60
+            segment.dwell_time = (segment["@tstop"]*default_duration)/60
         data = network.get_attribute_values('TRANSIT_SEGMENT', ['dwell_time', 'transit_time_func', 'data1'])
         self.Scenario.set_attribute_values('TRANSIT_SEGMENT', ['dwell_time', 'transit_time_func', 'data1'], data)
         self.ttfs_changed = True
 
     def _AddCongTermToFunc(self):
         usedFunctions = set()
-        i = 0
-        j = 0
+        anyNonZero = False
         for segment in self.Scenario.get_network().transit_segments():
-            i+=1
-            if segment.transit_time_func == 0:
-                j+=1
-                continue
-            usedFunctions.add('ft'+str(segment.transit_time_func))
-        if i == j:
+            if segment.transit_time_func != 0:
+                usedFunctions.add('ft'+str(segment.transit_time_func))    
+                anyNonZero = True
+        if not anyNonZero:
             raise Exception("All segments have a TTF of 0!")
         return list(usedFunctions)
 
     def _PrepStrategyFiles(self):
+        # TODO: Investigate this code
         strategies = self.Scenario.transit_strategies
         strategies.clear()
         _time.sleep(0.05)
@@ -1013,46 +1000,45 @@ class TransitAssignmentTool(_m.Tool()):
         if 'transit_alightings' not in network.attributes('TRANSIT_SEGMENT'):
             network.create_attribute('TRANSIT_SEGMENT', 'transit_alightings', 0.0)
         for line in network.transit_lines():
-            for segment in line.segments(include_hidden=True):
-                if int(segment.number) > 0:
-                    a = prevVolume + float(segment.transit_boardings) - float(segment.transit_volume)
-                    if a < 0: a = 0.0
-                    segment.transit_alightings = a
-                prevVolume = float(segment.transit_volume)
+            prevVolume = 0.0
+            headway = line.headway
+            number_of_trips = self.AssignmentPeriod*60.0/headway
 
-                if int(segment.number) == 0:
-                    continue
+            # Get the STSU model to use
+            if line[str(stsu_att.id)] != 0.0:
+                model = self.models[int(line[str(stsu_att.id)])-1]
+            else:
+                continue
 
-                if float(segment.line[str(stsu_att.id)]) == 0.0:
-                    continue
+            boarding_duration = model['boarding_duration']
+            alighting_duration  = model['alighting_duration']
+            default_duration = model['default_duration']
+            correlation = model['correlation']
+            mode_filter = model['mode_filter']
+
+            try:
+                doors = segment.line["@doors"]
+                if doors == 0.0:
+                    number_of_door_pairs = 1.0
                 else:
-                    index = int(segment.line[str(stsu_att.id)])-1
+                    number_of_door_pairs = doors/2.0
+            except:
+                number_of_door_pairs = 1.0
 
-                boarding_duration = self.models[index]['boarding_duration']
-                alighting_duration  = self.models[index]['alighting_duration']
-                default_duration = self.models[index]['default_duration']
-                correlation = self.models[index]['correlation']
-                mode_filter = str(self.models[index]['mode_filter'])
-
-                if segment.j_node is None: 
+            for segment in line.segments(include_hidden=True):
+                segment_number = segment.number
+                if segment_number > 0 and segment.j_node is not None:
+                    segment.transit_alightings = max(prevVolume + segment.transit_boardings - segment.transit_volume, 0.0)
+                else:
                     continue
-
-                headway = float(segment.line.headway)
-                number_of_trips = float(self.AssignmentPeriod)*60/headway
-                try:
-                    doors = int(segment.line["@doors"])
-                    if doors == 0:
-                        number_of_door_pairs = 1
-                    else:
-                        number_of_door_pairs = int(segment.line["@doors"])/2.0
-                except:
-                    number_of_door_pairs = 1
-                boarding = float(segment.transit_boardings)/number_of_trips/number_of_door_pairs
-                alighting = float(segment.transit_alightings)/number_of_trips/number_of_door_pairs
+                # prevVolume is used above for the previous segments volume, the first segment is always ignored.
+                prevVolume = segment.transit_volume
+                
+                boarding = segment.transit_boardings/number_of_trips/number_of_door_pairs
+                alighting = segment.transit_alightings/number_of_trips/number_of_door_pairs
 
                 old_dwell = segment.dwell_time
-
-                segment_dwell_time =(boarding_duration*boarding) + (alighting_duration*alighting) + (int(segment["@tstop"])*default_duration) #seconds
+                segment_dwell_time =(boarding_duration*boarding) + (alighting_duration*alighting) + (segment["@tstop"]*default_duration) #seconds
                 segment_dwell_time /= 60 #minutes
                 if segment_dwell_time >= 99.99:
                     segment_dwell_time = 99.98
