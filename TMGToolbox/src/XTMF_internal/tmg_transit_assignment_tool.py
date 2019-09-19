@@ -26,6 +26,7 @@ from re import split as _regex_split
 from json import loads as _parsedict
 import inro.modeller as _m
 import csv
+
 _trace = _m.logbook_trace
 _MODELLER = _m.Modeller()
 _bank = _MODELLER.emmebank
@@ -427,6 +428,7 @@ class TransitAssignmentTool(_m.Tool()):
                         with _trace(name = "TMG Congested Transit Assignment", attributes = self._GetAttsCongested()) as trace:
                             with _dbUtils.congested_transit_temp_funcs(self.Scenario, self.usedFunctions, False, 'us3'):
                                 with _dbUtils.backup_and_restore(self.Scenario, {'TRANSIT_SEGMENT': ['data3']}):
+                                    self.ttfDict = self._ParseExponentString()
                                     for iteration in range(0, self.Iterations + 1):
                                         with _trace("Iteration %d" %iteration):
                                             print "Starting Iteration %d" %iteration
@@ -454,13 +456,11 @@ class TransitAssignmentTool(_m.Tool()):
                                                 lambdaK = self._FindStepSize(network, averageMinTripImpedence, averageImpedence, assignedTotalDemand)
                                                 if self.SurfaceTransitSpeed != False:
                                                     network = self._SurfaceTransitSpeedUpdate(network, lambdaK, stsu_att, False)
-                                                maxLoad, congestedLines = self._UpdateVolumes(network, lambdaK)
+                                                self._UpdateVolumes(network, lambdaK)
                                                 averageImpedence, cngap, crgap, normGapDifference, netCosts = self._ComputeGaps(assignedTotalDemand, lambdaK, averageMinTripImpedence, averageImpedence, network)
-                                                num_congestedLines = len(congestedLines)
                                                 previousAverageMinTripImpedence = averageImpedence
                                                 if self.CSVFile is not None:
                                                     self._WriteCSVFiles(iteration, network, cngap, crgap, normGapDifference)
-                                                #self.log_iteration_report(step, averageImpedence_prev_iter, ex_pass_km, averageMinTripImpedence, cngap, crgap, clambda, m_steps, norm_gap_diff, num_congestedLines)
                                                 if crgap < self.RelGap or normGapDifference >= 0:
                                                     break
                             self._SaveResults(network, stsu_att)
@@ -904,7 +904,7 @@ class TransitAssignmentTool(_m.Tool()):
         network.copy_attribute('TRANSIT_SEGMENT', 'transit_time', 'uncongested_time')
         network.copy_attribute('TRANSIT_SEGMENT', 'dwell_time', 'base_dwell_time')
         for line in network.transit_lines():
-            line.total_capacity = 60*float(self.AssignmentPeriod)*float(line.vehicle.total_capacity)/float(line.headway)
+            line.total_capacity = 60.0*self.AssignmentPeriod*line.vehicle.total_capacity/line.headway
         return network
 
 
@@ -1043,14 +1043,14 @@ class TransitAssignmentTool(_m.Tool()):
     def _ComputeSegmentCosts(self, network):
         excessKM = 0.0
         for line in network.transit_lines():
-            capacity = float(line.total_capacity)
+            capacity = line.total_capacity
             for segment in line.segments():
-                volume = segment.current_voltr = float(segment.voltr)
-                length = float(segment.link.length)
+                volume = segment.current_voltr = segment.voltr
+                length = segment.link.length
                 if volume >= capacity:
                     excess = volume-capacity
                     excessKM += excess*length
-                segment.cost = self._CalculateSegmentCost(float(segment.voltr),capacity,segment)
+                segment.cost = self._CalculateSegmentCost(segment.voltr,capacity,segment)
 
         values = network.get_attribute_values('TRANSIT_SEGMENT', ['cost'])
         self.Scenario.set_attribute_values('TRANSIT_SEGMENT', ['data3'], values)
@@ -1119,22 +1119,13 @@ class TransitAssignmentTool(_m.Tool()):
                 node.fiali = node.fiali * alpha + node.final_alightings * lambdaK
         for link in network.links():
             link.volax = link.volax * alpha + link.aux_transit_volume * lambdaK
-        maxLoad = float("-inf")
-        congestedLines = []
         for line in network.transit_lines():
             capacity = float(line.total_capacity)
             congested = False
             for segment in line.segments():
                 segment.voltr = segment.voltr * alpha + segment.transit_volume * lambdaK
                 segment.board = segment.board * alpha + segment.transit_boardings * lambdaK
-                load = segment.voltr / capacity
-                if load > maxLoad:
-                    maxLoad = load
-                if load > 1.0:
-                    congested = True
-            if congested:
-                congestedLines.append(line)
-        return (maxLoad, congestedLines)
+        return
 
     def _ComputeGaps(self, assignedTotalDemand, lambdaK, averageMinTripImpedence, previousAverageMinTripImpedence, network):
         cngap = previousAverageMinTripImpedence - averageMinTripImpedence
@@ -1479,6 +1470,9 @@ class TransitAssignmentTool(_m.Tool()):
                 msg = 'Exponent value must be a number'
                 msg += '. [%s]' % component
                 raise SyntaxError(msg)
+            strippedParts[0] = int(strippedParts[0])
+            strippedParts[1] = float(strippedParts[1])
+            strippedParts[2] = float(strippedParts[2])
             exponentList[strippedParts[0]] = strippedParts[0:3]
         return exponentList
 
@@ -1487,14 +1481,15 @@ class TransitAssignmentTool(_m.Tool()):
         partialSpec = 'import math \ndef calc_segment_cost(transit_volume, capacity, segment):\n    cap_period = '+str(self.AssignmentPeriod)
         i = 0
         for ttf, item in parameterList.iteritems():
+            ttf = str(ttf)
             alpha = float(item[2])
             beta = (2 * alpha - 1) / (2 * alpha - 2)
             alphaSquare = alpha ** 2
             betaSquare = beta ** 2
             if i == 0:
-                partialSpec += '\n    if segment.transit_time_func == ' + item[0] + ': \n        return max(0,(' + item[1] + ' * (1 + math.sqrt(' + str(alphaSquare) + ' * \n            (1 - transit_volume / capacity) ** 2 + ' + str(betaSquare) + ') - ' + str(alpha) + ' \n            * (1 - transit_volume / capacity) - ' + str(beta) + ')))'
+                partialSpec += '\n    if segment.transit_time_func == ' + ttf + ': \n        return max(0,(' + str(item[1]) + ' * (1 + math.sqrt(' + str(alphaSquare) + ' * \n            (1 - transit_volume / capacity) ** 2 + ' + str(betaSquare) + ') - ' + str(alpha) + ' \n            * (1 - transit_volume / capacity) - ' + str(beta) + ')))'
             else:
-                partialSpec += '\n    elif segment.transit_time_func == ' + item[0] + ': \n        return max(0,(' + item[1] + ' * (1 + math.sqrt(' + str(alphaSquare) + ' *  \n            (1 - transit_volume / capacity) ** 2 + ' + str(betaSquare) + ') - ' + str(alpha) + ' \n            * (1 - transit_volume / capacity) - ' + str(beta) + ')))'
+                partialSpec += '\n    elif segment.transit_time_func == ' + ttf + ': \n        return max(0,(' + str(item[1]) + ' * (1 + math.sqrt(' + str(alphaSquare) + ' *  \n            (1 - transit_volume / capacity) ** 2 + ' + str(betaSquare) + ') - ' + str(alpha) + ' \n            * (1 - transit_volume / capacity) - ' + str(beta) + ')))'
             i += 1
         partialSpec += '\n    else: \n        raise Exception("ttf=%s congestion values not defined in input" %segment.transit_time_func)'
         funcSpec = {'type': 'CUSTOM',
@@ -1540,13 +1535,13 @@ class TransitAssignmentTool(_m.Tool()):
 
 
     def _CalculateSegmentCost(self, transit_volume, capacity, segment):
-        ttfDict = self._ParseExponentString()
-        ttf = str(segment.transit_time_func)
-        alpha = float(ttfDict[ttf][2])
+        ttf = segment.transit_time_func
+        entry = self.ttfDict[ttf]
+        alpha = entry[2]
         beta = (2 * alpha - 1) / (2 * alpha - 2)
         alphaSquare = alpha ** 2
         betaSquare = beta ** 2
-        cost = float(int(ttfDict[ttf][1]) * (1 + math.sqrt(alphaSquare * (1 - transit_volume / capacity) ** 2 + betaSquare) - alpha * (1 - transit_volume / capacity) - beta))
+        cost = entry[1] * (1 + math.sqrt(alphaSquare * (1 - transit_volume / capacity) ** 2 + betaSquare) - alpha * (1 - transit_volume / capacity) - beta)
         return max(0,cost)
 
     def _GetStopSpec(self):
