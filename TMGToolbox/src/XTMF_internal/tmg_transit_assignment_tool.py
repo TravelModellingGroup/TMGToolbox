@@ -632,59 +632,49 @@ class TransitAssignmentTool(_m.Tool()):
             erow_defined = True
         self.models = self._SetUpLineAttributes(stsu_att)
         network = self.Scenario.get_network()
-        #self.segment_ttf_map = {}
-        i = 0
-        for segment in network.transit_segments():
-            if segment.allow_alightings == True and segment.allow_boardings == True:
-                segment.dwell_time = 0.01
+        for line in network.transit_lines():
+            if line[stsu_att.id] != 0.0:
+                index = int(line[str(stsu_att.id)])-1
+                default_duration = self.models[index]['default_duration']
+                correlation = self.models[index]['correlation']
+                erow_speed_global = self.models[index]['erow_speed']
             else:
-                segment.dwell_time = 0.0
-
-            if segment.j_node is None:
                 continue
+            segments = line.segments()
+            number_of_segments = segments.__length_hint__()
+            for segment in segments:
+                if segment.allow_alightings == True and segment.allow_boardings == True:
+                    segment.dwell_time = 0.01
+                else:
+                    segment.dwell_time = 0.0
 
-            if segment.line[stsu_att.id] == 0.0:
-                continue
-            else:
-                index = int(segment.line[str(stsu_att.id)])-1
+                if segment.j_node is None:
+                    continue
 
-            segment_number = segment.number
-            boarding_duration = float(self.models[index]['boarding_duration'])
-            alighting_duration  = float(self.models[index]['alighting_duration'])
-            default_duration = float(self.models[index]['default_duration'])
-            correlation = float(self.models[index]['correlation'])
-            mode_filter = str(self.models[index]['mode_filter'])
-            erow_speed_global = float(self.models[index]['erow_speed'])
+                segment_number = segment.number
+                segment.transit_time_func = self.stsu_ttf_map[segment.transit_time_func]                    
+                time = segment.link["auto_time"]
 
+                if time > 0.0:
+                    if segment.transit_time_func in self.ttfs_xrow:
+                        if erow_defined == True and segment["@erow_speed"] > 0.0:
+                                segment.data1 = segment["@erow_speed"]
+                        else:
+                            segment.data1 = erow_speed_global
+                    else:
+                        segment.data1 = (segment.link.length * 60.0)/(time*correlation)
 
-            segment.transit_time_func = self.stsu_ttf_map[segment.transit_time_func]
-            
-                
-            time = segment.link["auto_time"]
-
-            if time > 0.0:
-                if segment.transit_time_func in self.ttfs_xrow:
+                if time <= 0.0:
                     if erow_defined == True and segment["@erow_speed"] > 0.0:
-                            segment.data1 = segment["@erow_speed"]
+                        segment.data1 = segment["@erow_speed"]
                     else:
-                        segment.data1 = erow_speed_global
-                else:
-                    segment.data1 = (segment.link.length * 60.0)/(time*correlation)
-
-            if time <= 0.0:
-                if erow_defined == True and segment["@erow_speed"] > 0.0:
-                    segment.data1 = segment["@erow_speed"]
-                else:
-                    i = 0
-                    for seg in segment.line.segments():
-                        i += 1
-                    if segment_number <= 1 or segment_number >= (i-1):
-                        segment.data1 = 20
-                    else:
-                        segment.data1 = erow_speed_global
-            if segment_number == 0:
-                continue
-            segment.dwell_time = (segment["@tstop"]*default_duration)/60
+                        if segment_number <= 1 or segment_number >= (number_of_segments-1):
+                            segment.data1 = 20
+                        else:
+                            segment.data1 = erow_speed_global
+                if segment_number == 0:
+                    continue
+                segment.dwell_time = (segment["@tstop"]*default_duration)/60
         data = network.get_attribute_values('TRANSIT_SEGMENT', ['dwell_time', 'transit_time_func', 'data1'])
         self.Scenario.set_attribute_values('TRANSIT_SEGMENT', ['dwell_time', 'transit_time_func', 'data1'], data)
         self.ttfs_changed = True
