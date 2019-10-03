@@ -125,7 +125,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
         
         try:
             self._Execute(True)
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -150,7 +150,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
         
         try:
             return self._Execute(False)
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     
@@ -170,7 +170,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
                     partitionAggTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_partition_aggregation')
                     matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
                     exportMatrixTool = _MODELLER.tool('inro.emme.data.matrix.export_matrices')
-                except Exception, e:
+                except Exception as e:
                     partitionAggTool = _MODELLER.tool('inro.emme.standard.matrix_calculation.matrix_partition_aggregation')
                     matrixCalcTool = _MODELLER.tool('inro.emme.standard.matrix_calculation.matrix_calculator')
                     exportMatrixTool = _MODELLER.tool('inro.emme.standard.data.matrix.export_matrices')

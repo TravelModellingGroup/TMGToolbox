@@ -146,7 +146,7 @@ class ExportSubareaTool(_m.Tool()):
             print "Exporting Subarea"
             self._execute()
             print "Subarea Exported"
-        except Exception, e:
+        except Exception as e:
             raise Exception(_util.formatReverseStack())
 
     def _execute(self):

@@ -194,7 +194,7 @@ class CheckNetworkIntegrity(_m.Tool()):
         
         try:
             errCount = self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -225,7 +225,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                 raise Exception("%s elements were flagged with problems. See Modeller" %errCount +
                                 " logbook for details.")
             
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     

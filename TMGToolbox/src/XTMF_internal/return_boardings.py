@@ -94,7 +94,7 @@ class ReturnBoardings(_m.Tool()):
         
         try:
             return self._Execute(scenario)
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     

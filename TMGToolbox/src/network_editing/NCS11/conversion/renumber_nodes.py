@@ -49,7 +49,7 @@ class RenumberNonZoneNodes(_m.Tool()):
         self.tool_run_msg = ""
         try:
            self._exectue()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise

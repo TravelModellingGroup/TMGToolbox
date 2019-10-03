@@ -204,7 +204,7 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
         #If the matrix id is given as an integer
         try:
             id = "%s%s" %(_mtxNames[matrix_type],id)
-        except KeyError, ke:
+        except KeyError:
             raise TypeError("Matrix type '%s' is not a valid matrix type." %matrix_type)
     elif 'type' in dir(id):
         #If the matrix id is given as a matrix object
@@ -840,7 +840,7 @@ class CSVReader():
                 atts[column_label] = cells[i]
             return Record(atts)
             
-        except Exception, e:
+        except Exception as e:
             raise IOError("Error reading line %s: %s" %(self.__lincount, e))
     
     def readlines(self):
@@ -855,7 +855,7 @@ class CSVReader():
                     cells.append('')
                 
                 yield Record(self.header, cells)
-        except Exception, e:
+        except Exception as e:
             raise IOError("Error reading line %s: %s" %(self.__lincount, e))
 
 class Record():

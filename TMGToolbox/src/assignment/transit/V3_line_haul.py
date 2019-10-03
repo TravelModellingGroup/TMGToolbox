@@ -105,7 +105,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
                 self.transitAssignmentTool = _m.Modeller().tool("inro.emme.standard.transit_assignment.extended_transit_assignment")
                 self.matrixAnalysisTool = _m.Modeller().tool('inro.emme.standard.transit_assignment.extended.matrix_results')
                 self.strategyAnalysisTool = _m.Modeller().tool('inro.emme.standard.transit_assignment.extended.strategy_based_analysis')
-            except Exception, e:
+            except Exception as e:
                 self.matrixCalcTool = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
                 self.transitAssignmentTool = _m.Modeller().tool("inro.emme.transit_assignment.extended_transit_assignment")
                 self.matrixAnalysisTool = _m.Modeller().tool('inro.emme.transit_assignment.extended.matrix_results')
@@ -201,7 +201,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -242,7 +242,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         #---5 Execute the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
     
     ##########################################################################################################    

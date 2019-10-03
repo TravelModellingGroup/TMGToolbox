@@ -101,7 +101,7 @@ class ReverseTransitLines(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -179,7 +179,7 @@ class ReverseTransitLines(_m.Tool()):
             try:
                 newId = self._ReverseLine(line, network, attNames)
                 reversedLines.append((line.id, newId))
-            except Exception, e:
+            except Exception as e:
                 t = line.id, e.__class__.__name__, str(e)
                 errorLines.append(t)
             self.TRACKER.completeSubtask()

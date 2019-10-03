@@ -188,7 +188,7 @@ def checkSegmentIntersection(coordA1, coordA2, coordB1, coordB2):
     try:           
         s = (-deltaY1 * (coordA1[0] - coordB1[0]) + deltaX1 * (coordA1[1] - coordB1[1])) / (-deltaX2 * deltaY1 + deltaX1 * deltaY2)
         t = ( deltaX2 * (coordA1[1] - coordB1[1]) - deltaY2 * (coordA1[0] - coordB1[0])) / (-deltaX2 * deltaY1 + deltaX1 * deltaY2)
-    except ZeroDivisionError, e:
+    except ZeroDivisionError:
         return False
         
     return (s >= 0 and s <= 1 and t >= 0 and t <= 1)

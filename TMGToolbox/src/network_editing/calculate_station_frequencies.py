@@ -67,7 +67,7 @@ class CalculateStationFrequency(_m.Tool()):
         try:
             s = self(self.Scenario.id, self.ModeType.id, self.FileName)
             self.tool_run_msg = _m.PageBuilder.format_info(s)
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise

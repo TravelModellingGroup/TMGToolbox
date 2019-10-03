@@ -373,7 +373,7 @@ class CCGEN(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -461,7 +461,7 @@ class CCGEN(_m.Tool()):
                         if self.DoFullReport:
                             fullReport.addZoneData(zone, atts)
                         #}
-                    except ObjectProcessingError, ope:
+                    except ObjectProcessingError as ope:
                         if self.ErrorHandlingOption == 2:
                             errors += 1
                             if self.DoSummaryReport:
@@ -581,7 +581,7 @@ class CCGEN(_m.Tool()):
         
         try:
             return opener[ext](filename, network)
-        except KeyError, ke:
+        except KeyError as ke:
             raise IOError("File format '*.%s' is unsupported!" %ext)
     
     def _openTabDelimitedFile(self, filename, network):
@@ -629,7 +629,7 @@ class CCGEN(_m.Tool()):
                             zone.label = lab
                                 
                             addedZones.append(zone)
-                        except Exception, e:
+                        except Exception as e:
                             if self.ErrorHandlingOption == 2:
                                 _m.logbook_write("Error processing record {0}: {1}".format(currentLine, str(e)))
                             else:
@@ -642,7 +642,7 @@ class CCGEN(_m.Tool()):
                             if len(cells) >= 8:
                                 zone.label = cells[7]
                             addedZones.append(zone)
-                        except Exception, e:
+                        except Exception as e:
                             if self.ErrorHandlingOption == 2:
                                 _m.logbook_write("Error processing record {0}: {1}".format(currentLine, str(e)))
                             else:
@@ -659,21 +659,21 @@ class CCGEN(_m.Tool()):
             cells = header.split(delimiter)
             try:
                 zi = cells.index('zone')
-            except ValueError, ve:
+            except ValueError as ve:
                 raise IOError("Delimited file must have a column labeled 'zone'")
             try:
                 xi = cells.index('x')
-            except ValueError, ve:
+            except ValueError as ve:
                 raise IOError("Delimited file must have a column labeled 'x'")
             
             try:
                 yi = cells.index('y')
-            except ValueError, ve:
+            except ValueError as ve:
                 raise IOError("Delimited file must have a column labeled 'y'")
             
             try:
                 li = cells.index('label')
-            except ValueError, ve:
+            except ValueError as ve:
                 li = -1
             
             while True:
@@ -692,7 +692,7 @@ class CCGEN(_m.Tool()):
                         zone.label = cells[li]
                     
                     addedZones.append(zone)
-                except Exception, e:
+                except Exception as e:
                     if self.ErrorHandlingOption == 2:
                         _m.logbook_write("Error processing record {0}: {1}".format(currentLine, str(e)))
                     else:
@@ -892,7 +892,7 @@ class CCGEN(_m.Tool()):
         tool = None
         try:
             tool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
-        except Exception, e:
+        except Exception as e:
             tool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
         
         self._tracker.runTool(tool, spec, scenario=self.Scenario)
@@ -1263,23 +1263,23 @@ class SummaryReport():
         
         try:    
             self.connectorHistogramData[atts['connectors']] += 1
-        except KeyError, ke:
+        except KeyError:
             self.connectorHistogramData[atts['connectors']] = 1
             self.connectorHistogramData[atts['connectors'] + 1] = 0
 
         try:    
             self.initSetHistogrmDara[atts['initialSet']] += 1
-        except KeyError, ke:
+        except KeyError:
             self.initSetHistogrmDara[atts['initialSet']] = 1
             
         try:    
             self.boundSetHistogramData[atts['boundSet']] += 1
-        except KeyError, ke:
+        except KeyError:
             self.boundSetHistogramData[atts['boundSet']] = 1
             
         try:    
             self.finalSetHistogramData[atts['finalSet']] += 1
-        except KeyError, ke:
+        except KeyError:
             self.finalSetHistogramData[atts['finalSet']] = 1
     
     def addError(self):

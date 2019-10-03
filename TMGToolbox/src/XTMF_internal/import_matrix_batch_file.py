@@ -41,7 +41,7 @@ class LoadMatrix(_m.Tool()):
             batch_matrix = None
             try:
                 batch_matrix = _m.Modeller().tool("inro.emme.standard.data.matrix.matrix_transaction")
-            except Exception, e:
+            except Exception as e:
                 batch_matrix = _m.Modeller().tool("inro.emme.data.matrix.matrix_transaction")
             
             scenario = _m.Modeller().emmebank.scenario(ScenarioId)
@@ -54,7 +54,7 @@ class LoadMatrix(_m.Tool()):
             batch_matrix(transaction_file = MatrixFile,
                             throw_on_error = True,
                             scenario=scenario)
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
         
         self.XTMFBridge.ReportProgress(1.0)

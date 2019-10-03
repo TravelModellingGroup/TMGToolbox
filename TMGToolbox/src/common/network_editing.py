@@ -266,7 +266,7 @@ def splitLink(newNodes, link, twoWay=True, onLink=True, coordFactor= COORD_FACTO
                 network.delete_transit_line(lineProxy.id)
                 newLines.append(lineProxy.copyToNetwork(network))
         
-    except Exception, e:
+    except Exception as e:
         for newLink in (newLinksF + newLinksR):
             network.delete_link(newLink.j_node.number, newLink.i_node.number)
         for line in newLines:
@@ -384,7 +384,7 @@ def renumberTransitVehicle(oldVehicle, newId):
             line.vehicle = newVehicle
             changedLines.append(line)
         net.delete_transit_vehicle(oldVehicle.number)
-    except Exception, e:
+    except Exception as e:
         if created:
             net.delete_transit_vehicle(newId)
         for line in changedLines:

@@ -273,7 +273,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                 print "Starting assignment."
                 self._execute()
                 print "Assignment complete."  
-        except Exception, e:
+        except Exception as e:
             raise Exception(_util.formatReverseStack())
     
     ##########################################################################################################    

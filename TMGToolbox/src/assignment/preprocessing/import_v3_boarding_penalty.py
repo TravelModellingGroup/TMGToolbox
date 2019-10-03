@@ -31,7 +31,7 @@ class ImportBoardingPenalties(_m.Tool()):
     def __init__(self):
         try:
             self.netCalcTool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
-        except Exception, e:
+        except Exception as e:
             self.netCalcTool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
 
     def page(self):      
@@ -47,7 +47,7 @@ class ImportBoardingPenalties(_m.Tool()):
         
         try:
             root = os.path.dirname(_m.Modeller().desktop.project_filename())
-        except Exception, e:
+        except Exception as e:
             root = os.path.dirname(_m.Modeller().desktop.project_file_name())
         pb.add_select_file(tool_attribute_name="BoardingsFile",
                             window_type="file",
@@ -71,7 +71,7 @@ class ImportBoardingPenalties(_m.Tool()):
     def run(self):
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -86,7 +86,7 @@ class ImportBoardingPenalties(_m.Tool()):
         #Execute the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))    
     
     def _execute(self):

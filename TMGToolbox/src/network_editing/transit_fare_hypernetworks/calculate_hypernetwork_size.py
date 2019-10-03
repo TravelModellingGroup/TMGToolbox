@@ -129,7 +129,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
             retval = self._Execute()
             msg = "The hyper network will contain exactly %s nodes and approximately %s links." %retval
             self.tool_run_msg = _m.PageBuilder.format_info(msg)
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise

@@ -366,7 +366,7 @@ class CopyTransitLines(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -474,7 +474,7 @@ class CopyTransitLines(_m.Tool()):
                     return "Source vehicle % mode '%s' does not match target vehicle %s mode '%s'" %tup
             return None
             
-        except Exception, e: return str(e)
+        except Exception as e: return str(e)
     
     ##########################################################################################################    
     
@@ -774,7 +774,7 @@ class CopyTransitLines(_m.Tool()):
                     logError(lineId, itineraryData.error_msg, itineraryData.error_detail)
                     self.TRACKER.completeSubtask()
                     continue
-            except Exception, e: #Some unexpected error
+            except Exception as e: #Some unexpected error
                 logException(lineId, e)
                 self.TRACKER.completeSubtask()
                 continue

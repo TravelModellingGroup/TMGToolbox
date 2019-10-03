@@ -67,7 +67,7 @@ class ExportSubareaTool(_m.Tool()):
             print "Adding Toolbox"
             self._execute()
             print "Toolbox added"
-        except Exception, e:
+        except Exception as e:
             raise Exception(_util.formatReverseStack())
 
     def _execute(self):

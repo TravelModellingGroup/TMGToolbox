@@ -175,7 +175,7 @@ class ElementTree():
     def add_tool(self, title, namespace, script_path, consolidate):
         try:
             node = ToolNode(self.next_id(), title, namespace, script_path, consolidate)
-        except Exception, e:
+        except Exception as e:
             print type(e), str(e)
             return None
         
@@ -209,7 +209,7 @@ class FolderNode():
     def add_tool(self, title, namespace, script_path, consolidate):
         try:
             node = ToolNode(self.root.next_id(), title, namespace, script_path, consolidate)
-        except Exception, e:
+        except Exception as e:
             print type(e), str(e)
             return None
         

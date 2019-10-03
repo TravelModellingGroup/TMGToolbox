@@ -479,7 +479,7 @@ class ImportNetworkPackage(_m.Tool()):
 
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
 

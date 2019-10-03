@@ -184,7 +184,7 @@ class Station2StationAssignment(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -226,7 +226,7 @@ class Station2StationAssignment(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
     
     ##########################################################################################################    
@@ -241,7 +241,7 @@ class Station2StationAssignment(_m.Tool()):
                 transitAssignmentTool = _m.Modeller().tool("inro.emme.standard.transit_assignment.extended_transit_assignment")
                 matrixResultsTool = _m.Modeller().tool('inro.emme.standard.transit_assignment.extended.matrix_results')
                 matrixCalcTool = _m.Modeller().tool("inro.emme.standard.matrix_calculation.matrix_calculator")
-            except Exception, e:
+            except Exception as e:
                 transitAssignmentTool = _m.Modeller().tool("inro.emme.transit_assignment.extended_transit_assignment")
                 matrixResultsTool = _m.Modeller().tool('inro.emme.transit_assignment.extended.matrix_results')
                 matrixCalcTool = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
@@ -311,7 +311,7 @@ class Station2StationAssignment(_m.Tool()):
                 
                 try:
                     matrixCalcTool = _m.Modeller().tool("inro.emme.standard.matrix_calculation.matrix_calculator")
-                except Exception, e:
+                except Exception as e:
                     matrixCalcTool = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
                 
                 self._tracker.runTool(matrixCalcTool,
@@ -419,7 +419,7 @@ class Station2StationAssignment(_m.Tool()):
     def percent_completed(self):
         try:
             return self._tracker.getProgress()
-        except Exception, e:
+        except Exception as e:
             print "Exception occurred during progress reporting."
             print "Tracker progress = %s" %self._tracker._progress
             print  _traceback.format_exc(e)

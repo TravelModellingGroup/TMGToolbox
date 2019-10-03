@@ -184,7 +184,7 @@ class MatrixSummary(_m.Tool()):
             destinationFilter = self._GetDestinationFilterFunction()
             
             self._Execute(originFilter, destinationFilter)
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -224,7 +224,7 @@ class MatrixSummary(_m.Tool()):
         
         try:
             self._Execute(originFilter, destinationFilter)
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     
@@ -461,7 +461,7 @@ class MatrixSummary(_m.Tool()):
                                         }
                                     }
                           })
-        except Exception, e:
+        except Exception as e:
             print cds
             raise
         

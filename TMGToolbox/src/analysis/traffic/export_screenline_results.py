@@ -168,7 +168,7 @@ class ExportScreenlineResults(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -214,7 +214,7 @@ class ExportScreenlineResults(_m.Tool()):
                         screenlines[screenlineID] = set([countpostID])
                     else:
                         screenlines[screenlineID].add(countpostID)
-            except Exception, e:
+            except Exception as e:
                 return "Error while parsing screenline defintion file: %s" %e
                     
         for screenlineID, stations in screenlines.iteritems():
@@ -259,7 +259,7 @@ class ExportScreenlineResults(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
         return

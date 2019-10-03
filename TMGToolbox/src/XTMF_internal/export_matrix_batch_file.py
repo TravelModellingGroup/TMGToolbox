@@ -49,7 +49,7 @@ class ExportMatrix(_m.Tool()):
                 tool = None
                 try:
                     tool = _m.Modeller().tool('inro.emme.standard.data.matrix.export_matrices')
-                except Exception, e:
+                except Exception as e:
                     tool = _m.Modeller().tool('inro.emme.data.matrix.export_matrices')
                 
                 mtx = _m.Modeller().emmebank.matrix("mf%s" %MatrixId)
@@ -64,7 +64,7 @@ class ExportMatrix(_m.Tool()):
                                       scenario=scenario,
                                       skip_default_values=False)
                 
-            except Exception, e:
+            except Exception as e:
                 raise Exception(_traceback.format_exc(e))
 
     @_m.method(return_type=_m.TupleType)

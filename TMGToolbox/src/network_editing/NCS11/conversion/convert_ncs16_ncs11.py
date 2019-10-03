@@ -219,7 +219,7 @@ class ConvertNCS16toNCS11(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc(e))
             raise
         

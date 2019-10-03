@@ -90,7 +90,7 @@ class FlagPremiumBusLines(_m.Tool()):
         # Run the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -114,7 +114,7 @@ class FlagPremiumBusLines(_m.Tool()):
         #Execute the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
         
     def _execute(self):
@@ -132,7 +132,7 @@ class FlagPremiumBusLines(_m.Tool()):
             try:
                 self.netWorkCalculationTool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
                 _m.logbook_write(name="Emme 3.4.2 Tool Names used")
-            except Exception, e:
+            except Exception as e:
                 self.netWorkCalculationTool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
                 _m.logbook_write(name="Emme 4.0.3 Tool Names used")
             

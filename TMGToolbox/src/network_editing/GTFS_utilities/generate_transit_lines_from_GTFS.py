@@ -249,7 +249,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -392,7 +392,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             for record in reader.readlines():
                 try:
                     trip = trips[record['trip_id']]
-                except KeyError, ke:
+                except KeyError:
                     continue
                 index = int(record['stop_sequence'])
                 stopId = record['stop_id']
@@ -536,7 +536,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                             seg.dwell_time = 0.01 * float(stopFlag) # No dwell time if there is no stop, 0.01 minutes if there is a stop
                         branchNumber += 1
                         lineCount += 1
-                    except Exception, e:
+                    except Exception as e:
                         print "Exception for line %s: %s" %(id, e)
                         #routeId, branchNum, error, seq
                         failedSequences.append((baseEmmeId, seqCount, str(e), seq))

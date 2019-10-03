@@ -371,7 +371,7 @@ class TransitAssignmentTool(_m.Tool()):
         print 'Starting Transit Assignment'
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_util.formatReverseStack())
         print 'Finished Transit Assignment'
 

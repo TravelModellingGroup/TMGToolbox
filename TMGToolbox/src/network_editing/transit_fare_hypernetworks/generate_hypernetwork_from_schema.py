@@ -327,7 +327,7 @@ class FBTNFromSchema(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -373,7 +373,7 @@ class FBTNFromSchema(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     
@@ -838,7 +838,7 @@ class FBTNFromSchema(_m.Tool()):
             
             try:
                 tool(spec, scenario= self.BaseScenario)
-            except ModuleError, me:
+            except ModuleError as me:
                 raise IOError("Error loading zone '%s': %s" %(id, me))
         
         #Update the list of proxy nodes with the network's newly-loaded zones attribute

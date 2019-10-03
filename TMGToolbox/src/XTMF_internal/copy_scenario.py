@@ -59,7 +59,7 @@ class CopyScenario(_m.Tool()):
     def __call__(self, FromScenario, ToScenario, CopyStrategy):  
         try:
             self._execute(FromScenario, ToScenario, CopyStrategy)
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
 
     def _execute(self, FromScenario, ToScenario, CopyStrategy):

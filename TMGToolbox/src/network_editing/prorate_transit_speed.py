@@ -99,7 +99,7 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
         try:
            
             linesModified = self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -114,7 +114,7 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
         
         try:
             linesModified = self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -130,7 +130,7 @@ class ProrateSegmentSpeedsByLine(_m.Tool()):
             
             try:
                 networkCalculationTool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
-            except Exception, e:
+            except Exception as e:
                 networkCalculationTool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
             if int(self.Scenario.element_totals['transit_lines']) == 0:
                 return 0

@@ -127,7 +127,7 @@ class ValidateConnectors(_m.Tool()):
                      
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -232,7 +232,7 @@ class ValidateConnectors(_m.Tool()):
         tool = None
         try:
             tool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
-        except Exception, e:
+        except Exception as e:
             tool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
         
         self._tracker.runTool(tool, spec, scenario=self.Scenario)
@@ -256,7 +256,7 @@ class ValidateConnectors(_m.Tool()):
         tool = None
         try:
             tool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
-        except Exception, e:
+        except Exception as e:
             tool = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
         
         self._tracker.runTool(tool, spec, scenario=self.Scenario)

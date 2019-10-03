@@ -61,7 +61,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
         try:
             self.matrixResultTool = _m.Modeller().tool('inro.emme.standard.transit_assignment.extended.matrix_results')
             self.matrixCalcTool = _m.Modeller().tool('inro.emme.standard.matrix_calculation.matrix_calculator')
-        except Exception, e:
+        except Exception as e:
             self.matrixResultTool = _m.Modeller().tool('inro.emme.transit_assignment.extended.matrix_results')
             self.matrixCalcTool = _m.Modeller().tool('inro.emme.matrix_calculation.matrix_calculator')
     
@@ -124,7 +124,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
         # Run the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             self._cleanup()
@@ -159,7 +159,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
         #Execute the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self._cleanup()
             raise Exception(_traceback.format_exc(e))    
         
@@ -243,7 +243,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
             self.databank.delete_matrix(self.walkMatrix.id)
             self.databank.delete_matrix(self.waitMatrix.id)
             self.databank.delete_matrix(self.ivttMatrix.id)
-        except Exception, e:
+        except Exception as e:
             pass
     
     @_m.method(return_type=unicode)

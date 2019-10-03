@@ -43,13 +43,13 @@ class RunMacro(_m.Tool()):
             tool = None
             try:
                 tool = _m.Modeller().tool('inro.emme.standard.prompt.run_macro') #Emme 3.4.2 namespace
-            except Exception, e:
+            except Exception as e:
                 tool = _m.Modeller().tool('inro.emme.prompt.run_macro') #Emme 4.0.3 namespace
                 
             tool(macro_name=MacroFile,
                  macro_arguments=Args,
                  scenario=ScenarioNumber)
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
         
         self.XTMFBridge.ReportProgress(1.0)

@@ -184,14 +184,14 @@ class ExportCountpostResults(_m.Tool()):
             
             if self.CountpostAttributeId is None: raise NullPointerException("Countpost Attribute not specified")
             if self.ExportFile is None: raise NullPointerException("Export File not specified")
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise    
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -222,7 +222,7 @@ class ExportCountpostResults(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     

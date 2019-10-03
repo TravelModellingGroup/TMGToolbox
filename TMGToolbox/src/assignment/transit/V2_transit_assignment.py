@@ -153,7 +153,7 @@ class BasicTransitAssignment(_m.Tool()):
         # Execute
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -195,7 +195,7 @@ class BasicTransitAssignment(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
     
     ##########################################################################################################    
@@ -209,7 +209,7 @@ class BasicTransitAssignment(_m.Tool()):
             
             try:
                 transitAssignmentTool = _m.Modeller().tool("inro.emme.standard.transit_assignment.extended_transit_assignment")
-            except Exception, e:
+            except Exception as e:
                 transitAssignmentTool = _m.Modeller().tool("inro.emme.transit_assignment.extended_transit_assignment")
             
             with self._demandMatrixMANAGER():

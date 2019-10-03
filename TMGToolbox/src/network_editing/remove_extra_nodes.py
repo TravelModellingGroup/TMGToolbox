@@ -269,7 +269,7 @@ class RemoveExtraNodes(_m.Tool()):
         try:
             
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -284,7 +284,7 @@ class RemoveExtraNodes(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -570,12 +570,12 @@ class RemoveExtraNodes(_m.Tool()):
             try:
                 _editing.mergeLinks(node, deleteStop= True, vertex = True, linkAggregators= self._linkAggregators, segmentAggregators= self._segmentAggregators)
                 deletedNodes += 1
-            except ForceError, fe:
+            except ForceError as fe:
                 #User specified to keep these nodes
                 log.append("Node %s not deleted. User-specified aggregator for '%s' detected changes." %(nid, fe))
-            except InvalidNetworkOperationError, inee:
+            except InvalidNetworkOperationError as inee:
                 log.append(str(inee))
-            except Exception, e:
+            except Exception as e:
                 log.append("Deep error processing node %s: %s" %(nid, e))
                 deepErrors.append(_traceback.format_exc(e))
             

@@ -304,7 +304,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -349,7 +349,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         #---3. Run
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_util.formatReverseStack())
     
     ##########################################################################################################    
@@ -394,7 +394,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                             try:
                                 networkCalculationTool(self._getLinkTollCalcSpec(tollAttribute.id), scenario=self.Scenario)
                                 self._tracker.completeSubtask()
-                            except Exception, e:
+                            except Exception as e:
                                 raise Exception("Error applying toll link selector expression: %s" %e)
                     
                     with _m.logbook_trace("Calculating peak hour matrix"):

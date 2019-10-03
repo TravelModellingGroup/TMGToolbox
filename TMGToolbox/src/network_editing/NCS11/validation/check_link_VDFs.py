@@ -44,7 +44,7 @@ class CheckVDFs(_m.Tool()):
         
         try:
             root = os.path.dirname(_m.Modeller().desktop.project_filename())
-        except Exception, e:
+        except Exception as e:
             root = os.path.dirname(_m.Modeller().desktop.project_file_name())
         pb.add_select_file(tool_attribute_name="WorksheetFile",
                            window_type="file",
@@ -59,7 +59,7 @@ class CheckVDFs(_m.Tool()):
         self.tool_run_msg = ""
         try:
            self()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise

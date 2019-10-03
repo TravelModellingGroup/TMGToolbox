@@ -67,7 +67,7 @@ class ExportNetworkAsShapefile(_m.Tool()):
                 print "Starting export."
                 self._execute()
                 print "Export complete."  
-        except Exception, e:
+        except Exception as e:
             raise Exception(_util.formatReverseStack())
 
     def _execute(self):

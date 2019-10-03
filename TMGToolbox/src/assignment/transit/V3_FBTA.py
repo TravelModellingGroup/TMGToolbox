@@ -102,7 +102,7 @@ class LegacyFBTA(_m.Tool()):
             self.databank = _m.Modeller().emmebank
             try:
                 self.transitAssignmentTool = _m.Modeller().tool("inro.emme.standard.transit_assignment.extended_transit_assignment")
-            except Exception, e:
+            except Exception as e:
                 self.transitAssignmentTool = _m.Modeller().tool("inro.emme.transit_assignment.extended_transit_assignment")
     
     def page(self):
@@ -197,7 +197,7 @@ class LegacyFBTA(_m.Tool()):
         # Execute
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -241,7 +241,7 @@ class LegacyFBTA(_m.Tool()):
         #---5 Execute the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
     
     ##########################################################################################################
@@ -344,7 +344,7 @@ class LegacyFBTA(_m.Tool()):
         functionChanger = None #Use the standard tools; it is faster and more verbose.
         try:
             functionChanger = _m.Modeller().tool("inro.emme.data.function.change_function")
-        except Exception, e:
+        except Exception as e:
             functionChanger = _m.Modeller().tool("inro.emme.standard.data.function.change_function")
         
         expressionArchive = {}
@@ -406,7 +406,7 @@ class LegacyFBTA(_m.Tool()):
         networkCalculator = None #Use the standard tools; it is faster and more verbose.
         try:
             networkCalculator = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
-        except Exception, e:
+        except Exception as e:
             networkCalculator = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
         
         # link.data1 = 60 / link.length + self._appliedFareFactor * link.__getattribute__('@tfare') / self.WalkPerception

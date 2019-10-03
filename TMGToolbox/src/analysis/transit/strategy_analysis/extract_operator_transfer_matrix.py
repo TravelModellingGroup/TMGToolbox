@@ -386,7 +386,7 @@ class OperatorTransferMatrix(_m.Tool()):
                     
                 self._Execute()
                 _MODELLER.desktop.refresh_needed(False)
-        except Exception, e:
+        except Exception as e:
             _MODELLER.desktop.refresh_needed(False)
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
@@ -419,7 +419,7 @@ class OperatorTransferMatrix(_m.Tool()):
                     
                 self._Execute()     
                                                            
-        except Exception, e:                        
+        except Exception as e:                        
             raise
     
     @_m.method(return_type=_m.TupleType)

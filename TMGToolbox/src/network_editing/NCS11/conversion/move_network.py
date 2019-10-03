@@ -53,7 +53,7 @@ class MoveNetowrks(_m.Tool()):
                 calculator = None
                 try:
                     calculator = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
-                except Exception, e:
+                except Exception as e:
                     calculator = _m.Modeller().tool("inro.emme.standard.network_calculation.network_calculator")
                 
                 spec = {
@@ -72,7 +72,7 @@ class MoveNetowrks(_m.Tool()):
                 
                 self.tool_run_msg = _m.PageBuilder.format_info("Tool complete.")
            
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise

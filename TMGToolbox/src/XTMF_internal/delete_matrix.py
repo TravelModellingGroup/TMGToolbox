@@ -57,7 +57,7 @@ class DeleteMatrix(_m.Tool()):
     def __call__(self, Scenario):  
         try:
             self._execute(Scenario)
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
 
     def _execute(self, Scenario):

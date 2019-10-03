@@ -83,7 +83,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -101,7 +101,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
         #Execute the tool
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
         
     def _execute(self):
@@ -116,7 +116,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
             
             try:
                 strategyAnalysisTool = _m.Modeller().tool('inro.emme.standard.transit_assignment.extended.strategy_based_analysis')
-            except Exception, e:
+            except Exception as e:
                 strategyAnalysisTool = _m.Modeller().tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
             
             self.TRACKER.runTool(strategyAnalysisTool,

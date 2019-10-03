@@ -220,7 +220,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
         try:            
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -238,7 +238,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             self.InputFiles = [self.AlternativeDataFile]
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -313,7 +313,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             minutes = i % 100
         
             return hours * 3600.0 + minutes * 60.0
-        except Exception, e:
+        except Exception as e:
             raise IOError("Error parsing time %s: %s" %(i, e)) 
     
     def _ParseStringTime(self, s):
@@ -326,7 +326,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             seconds = int(hms[2])
             
             return hours * 3600.0 + minutes * 60.0 + float(seconds)
-        except Exception, e:
+        except Exception as e:
             raise IOError("Error parsing time %s: %s" %(s, e)) 
 
     def _ParseAggType(self, a):
@@ -335,7 +335,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             agg = a[0].lower()
             if agg not in choiceSet: raise IOError()
             else : return agg
-        except Exception, e:
+        except Exception as e:
             raise IOError("You must select either naive or average as an aggregation type %s: %s" %(a, e))                    
             
     def _LoadServiceTable(self, network, start, end):
@@ -366,7 +366,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     try:
                         departure = self._ParseStringTime(cells[departureCol])
                         arrival = self._ParseStringTime(cells[arrivalCol])
-                    except Exception, e:
+                    except Exception as e:
                         print "Line " + str(num) + " skipped: " + str(e)
                         continue
                 
@@ -402,7 +402,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     
                     try:
                         aggregation = self._ParseAggType(cells[aggCol])
-                    except Exception, e:
+                    except Exception as e:
                         print "Line " + num + " skipped: " + str(e)
                         continue
                                 
@@ -422,13 +422,13 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 speedTitle = "{:0>4.0f}".format(self.TimePeriodStart) + '_spd'
                 try:
                     headwayCol = cells.index(headwayTitle)
-                except Exception, e:
+                except Exception as e:
                     msg = "Error. No headway match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
                     _m.logbook_write(msg)
                     print msg
                 try:
                     speedCol = cells.index(speedTitle)
-                except Exception, e:
+                except Exception as e:
                     msg = "Error. No speed match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
                     _m.logbook_write(msg)
                     print msg

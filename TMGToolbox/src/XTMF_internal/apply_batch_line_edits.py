@@ -116,7 +116,7 @@ class ApplyBatchLineEdits(_m.Tool()):
         self.InputFiles.insert(0, self.InstructionFile)
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
 
@@ -160,14 +160,14 @@ class ApplyBatchLineEdits(_m.Tool()):
             speedTitle = self.Scenario.id + '_spdchange'
             try:
                 headwayCol = cells.index(headwayTitle)
-            except Exception, e:
+            except Exception as e:
                 msg = "Error. No headway match for specified scenario: '%s'." %self.Scenario.id
                 _m.logbook_write(msg)
                 print msg
                 return
             try:
                 speedCol = cells.index(speedTitle)
-            except Exception, e:
+            except Exception as e:
                 msg = "Error. No speed match for specified scenario: '%s'." %self.Scenario.id
                 _m.logbook_write(msg)
                 print msg

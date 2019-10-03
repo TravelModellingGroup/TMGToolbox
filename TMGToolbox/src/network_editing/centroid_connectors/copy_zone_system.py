@@ -278,7 +278,7 @@ class CopyZoneSystem2(_m.Tool()):
             if self.ClearTargetZonesFlag is None: self.ClearTargetZonesFlag = False
             
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -519,7 +519,7 @@ class CopyZoneSystem2(_m.Tool()):
                 try:
                     self._copyConnector(connector, targetNetwork, zone.number, target_jNode.number, atts)
                     count += 1
-                except Exception, e:
+                except Exception as e:
                     uncopiedConnectors.append((connector, str(e)))                
                 
             self.TRACKER.completeSubtask()

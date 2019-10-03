@@ -83,7 +83,7 @@ class ConvertVehicles(_m.Tool()):
         
         try:
             self._execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -221,7 +221,7 @@ class ConvertVehicles(_m.Tool()):
         for line in network.transit_lines():
             try:
                 self.vm[line.vehicle].append(line)
-            except KeyError, ke:
+            except KeyError:
                 self.vm[line.vehicle] = [line]
     
     def _checkFixScenario(self, network):

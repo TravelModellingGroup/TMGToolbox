@@ -60,7 +60,7 @@ class AttachCentriodsToNodes(_m.Tool()):
     def __call__(self, ScenarioNumber, Nodes, Centroids):  
         try:
             self._execute(ScenarioNumber, Nodes, Centroids)
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
 
     def _execute(self, ScenarioNumber, Nodes, Centroids):

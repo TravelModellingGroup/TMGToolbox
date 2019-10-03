@@ -77,7 +77,7 @@ class ExportNetworkBatchFile(_m.Tool()):
         
         try:
             self._Execute(scenario, xtmf_FileName)
-        except Exception, e:
+        except Exception as e:
             msg = str(e) + "\n" + _traceback.format_exc(e)
             raise Exception(msg)
     

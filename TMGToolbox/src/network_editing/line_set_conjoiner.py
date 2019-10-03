@@ -150,7 +150,7 @@ class LineSetConjoiner(_m.Tool()):
                 msg = "Tool complete with errors. Please see logbook for details."
             else:
                 msg = "Done."
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise        
@@ -211,7 +211,7 @@ class LineSetConjoiner(_m.Tool()):
             seconds = int(hms[2])
             
             return hours * 3600.0 + minutes * 60.0 + float(seconds)
-        except Exception, e:
+        except Exception as e:
             raise IOError("Error parsing time %s: %s" %(s, e)) 
 
     def _RevertToString(self, f):
@@ -223,7 +223,7 @@ class LineSetConjoiner(_m.Tool()):
             secondsNum = minuteRemain
 
             return "{:.0f}".format(hoursNum) + self.COLON + "{:0>2,.0f}".format(minutesNum) + self.COLON + "{:0>2,.0f}".format(secondsNum)
-        except Exception, e:
+        except Exception as e:
             raise IOError("Error parsing time %s: %s" %(f, e)) 
         
     def _ReadSetFile(self):

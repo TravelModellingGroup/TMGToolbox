@@ -137,7 +137,7 @@ class GetStationAccessFile(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
                 e, _traceback.format_exc(e))
             raise
@@ -157,7 +157,7 @@ class GetStationAccessFile(_m.Tool()):
         
         try:
             self._Execute()
-        except Exception, e:
+        except Exception as e:
             raise Exception(_traceback.format_exc(e))
     
     ##########################################################################################################    
@@ -172,7 +172,7 @@ class GetStationAccessFile(_m.Tool()):
             with self._FlagAttributeMANAGER():
                 try:
                     netCalcTool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
-                except Exception, e:
+                except Exception as e:
                     netCalcTool = _MODELLER.tool('inro.emme.standard.network_calculation.network_calculator')
                 
                 if self.GoStationSelectorExpression:
