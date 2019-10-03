@@ -860,7 +860,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
         self.AdditionalAlternativeDataFiles = None
-        self.TransferModeList = ""
+        self.TransferModesString = ""
 
         if self.TransferModeList:
             for mode in self.TransferModeList:
