@@ -25,6 +25,7 @@ from datetime import datetime as _dt
 import shutil as _shutil
 import zipfile as _zipfile
 import tempfile as _tf
+from inro.emme.desktop import app as _app
 
 _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -180,8 +181,11 @@ class ExportNetworkPackage(_m.Tool()):
             self._check_attributes()
             with _zipfile.ZipFile(self.ExportFile, 'w', _zipfile.ZIP_DEFLATED) as zf, self._temp_file() as temp_folder:
                 version_file = _path.join(temp_folder, "version.txt")
+                desktop = _app.connect()
+                desktop_ver_tuples = desktop.version_info
+                desktop_ver = ''.join(str(desktop_ver_tuples))
                 with open(version_file, 'w') as writer:
-                    writer.write("4.0")
+                    writer.write(desktop_ver)
                 zf.write(version_file, arcname="version.txt")
 
                 info_path = _path.join(temp_folder, "info.txt")
