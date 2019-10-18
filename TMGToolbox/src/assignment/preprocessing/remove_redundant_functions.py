@@ -62,7 +62,7 @@ class RemoveRedundantFunctions(_m.Tool()):
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
-    ExportFile = _m.Attribute(str)
+    DeletedFunctionsFile = _m.Attribute(str)
 
 
     def __init__(self):
@@ -75,21 +75,17 @@ class RemoveRedundantFunctions(_m.Tool()):
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Remove Redundant Functions from Database v%s" %self.version,
                      description="Compare the functions used in the networks with those stored in the database. All \
-                     redundant functions (i.e., not used in any scenario) will be exported as an individual file \
-                     and will be removed from the database.",
+                     redundant functions (i.e., not used in any scenario) will be removed from the database \
+                     and can be exported as an individual file.",
                      branding_text="- TMG Toolbox")
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
             
-#        pb.add_select_scenario(tool_attribute_name='Scenario',
-#                               title='Scenario:',
-#                               allow_none=False)
-
-        pb.add_select_file(tool_attribute_name= 'ExportFile',
+        pb.add_select_file(tool_attribute_name= 'DeletedFunctionsFile',
                            window_type= 'save_file',
                            file_filter= "*.txt \n All files (*.*)",
-                           title= "Export Redundant Functions")
+                           title= "(Optional) Save redundant functions as..")
 
         return pb.render()
     
@@ -108,9 +104,9 @@ class RemoveRedundantFunctions(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Run complete.")
     
-    def __call__(self, ExportFile):
+    def __call__(self, DeletedFunctionsFile):
         
-        self.ExportFile = ExportFile
+        self.DeletedFunctionsFile = DeletedFunctionsFile
 
         try:
             self._Execute()
@@ -131,7 +127,7 @@ class RemoveRedundantFunctions(_m.Tool()):
             fd_network, ft_network, fp_network = self._CheckNetworks()
 
             # compare the functions between networks and the database, export and remove the redundant ones
-            self._CompareFunctions(self.ExportFile, fd_database, ft_database, fp_database, fd_network, ft_network, fp_network)
+            self._CompareFunctions(self.DeletedFunctionsFile, fd_database, ft_database, fp_database, fd_network, ft_network, fp_network)
 
             self.TRACKER.completeTask()
 
@@ -142,15 +138,11 @@ class RemoveRedundantFunctions(_m.Tool()):
     def _GetAtts(self):
         atts = {
                 "Scenario" : str(self.Scenario.id),
-                "Export File": self.ExportFile,
+                "Export File": self.DeletedFunctionsFile,
                 "Version": self.version, 
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts 
-
-    def unique_append(self, function_list, function_number):
-        if (function_number > 0) and (function_number not in function_list):
-            function_list.append(function_number)
 
     # check functions in the Emme database
     def _CheckDatabase(self):
@@ -208,8 +200,12 @@ class RemoveRedundantFunctions(_m.Tool()):
 
         return contained_fd, contained_ft, contained_fp
 
+    def unique_append(self, function_list, function_number):
+        if (function_number > 0) and (function_number not in function_list):
+            function_list.append(function_number)
+
     # compare the functions between networks and the database, export and remove the redundant ones
-    def _CompareFunctions(self, ExportFile, database_fd, database_ft, database_fp, contained_fd, contained_ft, contained_fp):
+    def _CompareFunctions(self, DeletedFunctionsFile, database_fd, database_ft, database_fp, contained_fd, contained_ft, contained_fp):
 
         Redun_functions = []
 
@@ -220,8 +216,10 @@ class RemoveRedundantFunctions(_m.Tool()):
         ## export redundant functions
         if len(Redun_functions) == 0:
             print "No redundant function is found."
+        elif DeletedFunctionsFile is not None:
+            _ExportFunctions(functions = Redun_functions, export_file = DeletedFunctionsFile, append_to_file = False)
         else:
-            _ExportFunctions(functions = Redun_functions, export_file = self.ExportFile, append_to_file = False)
+            pass
 
         # delete redundant functions from database
         for redun_i in Redun_functions:
@@ -231,10 +229,7 @@ class RemoveRedundantFunctions(_m.Tool()):
         print "Removed %s functions from the database." %(len(Redun_functions))
 
     def compare_append(self, type, functionlist, database_functions, contained_functions):
-        unused_functions = list(set(database_functions) - set(contained_functions))
-        for i in unused_functions:
-            functionlist.append(_M.emmebank.function(type + str(i)))
-
+        functionlist += map(lambda f: type + str(f), list(set(database_functions) - set(contained_functions)))
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
