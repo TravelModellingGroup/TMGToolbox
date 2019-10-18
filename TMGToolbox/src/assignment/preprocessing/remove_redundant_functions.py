@@ -42,8 +42,8 @@ import traceback as _traceback
 from contextlib import contextmanager
 from contextlib import nested
 _M = _m.Modeller() 
-_exportFcns = _M.tool('inro.emme.data.function.export_functions')
-_deleteFcns = _M.tool('inro.emme.data.function.delete_function')
+_ExportFunctions = _M.tool('inro.emme.data.function.export_functions')
+_DeleteFunctions = _M.tool('inro.emme.data.function.delete_function')
 _util = _M.module('tmg.common.utilities')
 _tmgTPB = _M.module('tmg.common.TMG_tool_page_builder')
 
@@ -125,13 +125,13 @@ class RemoveRedundantFunctions(_m.Tool()):
                                      attributes=self._GetAtts()):
 
             # check the functions in the emme database
-            fdlist_db, ftlist_db, fplist_db, folist_db = self._CheckDatabase()
+            fd_database, ft_database, fp_database, fo_database = self._CheckDatabase()
 
             # check functions used in all scenarios/networks
-            fdlist_nt, ftlist_nt, fplist_nt = self._CheckNetworks()
+            fd_network, ft_network, fp_network = self._CheckNetworks()
 
             # compare the functions between networks and the database, export and remove the redundant ones
-            self._CompareFcns(self.ExportFile, fdlist_db, ftlist_db, fplist_db, fdlist_nt, ftlist_nt, fplist_nt)
+            self._CompareFunctions(self.ExportFile, fd_database, ft_database, fp_database, fd_network, ft_network, fp_network)
 
             self.TRACKER.completeTask()
 
@@ -151,13 +151,13 @@ class RemoveRedundantFunctions(_m.Tool()):
 
     # check functions in the Emme database
     def _CheckDatabase(self):
-        fcns = _M.emmebank.functions()
+        functions = _M.emmebank.functions()
         fdlist = []
         ftlist = []
         fplist = []
         folist = []
 
-        for f in fcns:
+        for f in functions:
             f_type = str(f)[0:2]
             if f_type == "fd":
                 fdlist.append(str(f)[2:])
@@ -189,24 +189,24 @@ class RemoveRedundantFunctions(_m.Tool()):
 
         for scen_id in scens:
             _net = _M.emmebank.scenario(scen_id).get_network()
-            lks = _net.links()
-            segs = _net.transit_segments()
-            trns = _net.turns()
+            links = _net.links()
+            segments = _net.transit_segments()
+            turns = _net.turns()
                 
-        for l in lks:
-            l_fcn = l.volume_delay_func 
-            if (l_fcn > 0) and (l_fcn not in fdlist_net):
-                fdlist_net.append(l_fcn)
+            for l in links:
+                link_function = l.volume_delay_func 
+                if (link_function > 0) and (link_function not in fdlist_net):
+                    fdlist_net.append(link_function)
                         
-        for sg in segs:
-            sg_fcn = sg.transit_time_func 
-            if (sg_fcn > 0) and (sg_fcn not in ftlist_net):
-                ftlist_net.append(sg_fcn)
+            for sg in segments:
+                segment_function = sg.transit_time_func 
+                if (segment_function > 0) and (segment_function not in ftlist_net):
+                    ftlist_net.append(segment_function)
                         
-        for r in trns:
-            r_fcn = r.penalty_func 
-            if (r_fcn > 0) and (r_fcn not in fplist_net):
-                fplist_net.append(r_fcn)
+            for r in turns:
+                turn_function = r.penalty_func 
+                if (turn_function > 0) and (turn_function not in fplist_net):
+                    fplist_net.append(turn_function)
                         
         print "There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(fdlist_net)
         print "There are %s Transit Time (ft) functions used in all scenarios/networks." %len(ftlist_net)
@@ -215,37 +215,37 @@ class RemoveRedundantFunctions(_m.Tool()):
         return fdlist_net, ftlist_net, fplist_net
 
     # compare the functions between networks and the database, export and remove the redundant ones
-    def _CompareFcns(self, ExportFile, fdlist_database, ftlist_database, fplist_database, fdlist_net, ftlist_net, fplist_net):
+    def _CompareFunctions(self, ExportFile, fdlist_database, ftlist_database, fplist_database, fdlist_net, ftlist_net, fplist_net):
         fdlist_diff = list(set(fdlist_database) - set(fdlist_net))
         ftlist_diff = list(set(ftlist_database) - set(ftlist_net))
         fplist_diff = list(set(fplist_database) - set(fplist_net))
             
-        Redun_fcns = []
+        Redun_functions = []
             
         for fd_i in fdlist_diff:
             fd_id = "fd%s" %fd_i
-            Redun_fcns.append(_M.emmebank.function(fd_id))
+            Redun_functions.append(_M.emmebank.function(fd_id))
                 
         for ft_i in ftlist_diff:
             ft_id = "ft%s" %ft_i
-            Redun_fcns.append(_M.emmebank.function(ft_id))
+            Redun_functions.append(_M.emmebank.function(ft_id))
                 
         for fp_i in fplist_diff:
             fp_id = "fp%s" %fp_i
-            Redun_fcns.append(_M.emmebank.function(fp_id))
+            Redun_functions.append(_M.emmebank.function(fp_id))
 
             ## export redundant functions
-        if len(Redun_fcns) == 0:
+        if len(Redun_functions) == 0:
             print "No redundant function is found."
         else:
-            _exportFcns(functions = Redun_fcns, export_file = self.ExportFile, append_to_file = False)
+            _ExportFunctions(functions = Redun_functions, export_file = self.ExportFile, append_to_file = False)
 
             # delete redundant functions from database
-        for redun_i in Redun_fcns:
+        for redun_i in Redun_functions:
             if redun_i is not None:
-                _deleteFcns(redun_i)
+                _DeleteFunctions(redun_i)
 
-        print "Removed %s functions from the database." %(len(Redun_fcns))
+        print "Removed %s functions from the database." %(len(Redun_functions))
 
 
     @_m.method(return_type=_m.TupleType)
