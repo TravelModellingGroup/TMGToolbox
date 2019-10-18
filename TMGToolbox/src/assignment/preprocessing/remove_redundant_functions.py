@@ -148,44 +148,47 @@ class RemoveRedundantFunctions(_m.Tool()):
             
         return atts 
 
+    def unique_append(function_list, function_number):
+        if (function_number > 0) and (function_number not in function_list):
+            function_list.append(function_number)
 
     # check functions in the Emme database
     def _CheckDatabase(self):
         functions = _M.emmebank.functions()
-        fdlist = []
-        ftlist = []
-        fplist = []
-        folist = []
+        database_fd_str = []
+        database_ft_str = []
+        database_fp_str = []
+        database_fo_str = []
 
         for f in functions:
             f_type = str(f)[0:2]
             if f_type == "fd":
-                fdlist.append(str(f)[2:])
+                database_fd_str.append(str(f)[2:])
             elif f_type == "ft":
-                ftlist.append(str(f)[2:])
+                database_ft_str.append(str(f)[2:])
             elif f_type == "fp":
-                fplist.append(str(f)[2:])
+                database_fp_str.append(str(f)[2:])
             else:
-                folist.append(str(f)[2:])
+                database_fo_str.append(str(f)[2:])
                     
-        fdlist_database = list(map(int, fdlist))
-        ftlist_database = list(map(int, ftlist))
-        fplist_database = list(map(int, fplist))
-        folist_database = list(map(int, folist))
+        database_fd = list(map(int, database_fd_str))
+        database_ft = list(map(int, database_ft_str))
+        database_fp = list(map(int, database_fp_str))
+        database_fo = list(map(int, database_fo_str))
 
-        print "There are %s Auto Volume Delay (fd) functions in the database." %len(fdlist_database)
-        print "There are %s Transit Time (ft) functions in the database." %len(ftlist_database)
-        print "There are %s Turn Penalty (fp) functions in the database." %len(fplist_database)
-        print "There are %s other types of functions in the database." %len(folist_database)
+        print "There are %s Auto Volume Delay (fd) functions in the database." %len(database_fd)
+        print "There are %s Transit Time (ft) functions in the database." %len(database_ft)
+        print "There are %s Turn Penalty (fp) functions in the database." %len(database_fp)
+        print "There are %s other types of functions in the database." %len(database_fo)
 
-        return fdlist_database, ftlist_database, fplist_database, folist_database
+        return database_fd, database_ft, database_fp, database_fo
 
     # check functions used in all scenarios/networks
     def _CheckNetworks(self):
         scens = _M.emmebank.scenarios()
-        fdlist_net =[]
-        ftlist_net =[]
-        fplist_net =[]
+        contained_fd =[]
+        contained_ft =[]
+        contained_fp =[]
 
         for scen_id in scens:
             network = _M.emmebank.scenario(scen_id).get_network()
@@ -194,43 +197,40 @@ class RemoveRedundantFunctions(_m.Tool()):
             turns = network.turns()
                 
             for l in links:
-                link_function = l.volume_delay_func 
-                if (link_function > 0) and (link_function not in fdlist_net):
-                    fdlist_net.append(link_function)
+                link_function_number = l.volume_delay_func
+                unique_append(contained_fd, link_function_number)
                         
             for sg in segments:
-                segment_function = sg.transit_time_func 
-                if (segment_function > 0) and (segment_function not in ftlist_net):
-                    ftlist_net.append(segment_function)
+                segment_function_number = sg.transit_time_func 
+                unique_append(contained_ft, segment_function_number)
                         
             for r in turns:
-                turn_function = r.penalty_func 
-                if (turn_function > 0) and (turn_function not in fplist_net):
-                    fplist_net.append(turn_function)
+                turn_function_number = r.penalty_func 
+                unique_append(contained_fp, turn_function_number)
                         
-        print "There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(fdlist_net)
-        print "There are %s Transit Time (ft) functions used in all scenarios/networks." %len(ftlist_net)
-        print "There are %s Turn Penalty (fp) functions used in all scenarios/networks." %len(fplist_net)
+        print "There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(contained_fd)
+        print "There are %s Transit Time (ft) functions used in all scenarios/networks." %len(contained_ft)
+        print "There are %s Turn Penalty (fp) functions used in all scenarios/networks." %len(contained_fp)
 
-        return fdlist_net, ftlist_net, fplist_net
+        return contained_fd, contained_ft, contained_fp
 
     # compare the functions between networks and the database, export and remove the redundant ones
-    def _CompareFunctions(self, ExportFile, fdlist_database, ftlist_database, fplist_database, fdlist_net, ftlist_net, fplist_net):
-        fdlist_diff = list(set(fdlist_database) - set(fdlist_net))
-        ftlist_diff = list(set(ftlist_database) - set(ftlist_net))
-        fplist_diff = list(set(fplist_database) - set(fplist_net))
+    def _CompareFunctions(self, ExportFile, database_fd, database_ft, database_fp, contained_fd, contained_ft, contained_fp):
+        unused_fd = list(set(database_fd) - set(contained_fd))
+        unused_ft = list(set(database_ft) - set(contained_ft))
+        unused_fp = list(set(database_fp) - set(contained_fp))
             
         Redun_functions = []
             
-        for fd_i in fdlist_diff:
+        for fd_i in unused_fd:
             fd_id = "fd%s" %fd_i
             Redun_functions.append(_M.emmebank.function(fd_id))
                 
-        for ft_i in ftlist_diff:
+        for ft_i in unused_ft:
             ft_id = "ft%s" %ft_i
             Redun_functions.append(_M.emmebank.function(ft_id))
                 
-        for fp_i in fplist_diff:
+        for fp_i in unused_fp:
             fp_id = "fp%s" %fp_i
             Redun_functions.append(_M.emmebank.function(fp_id))
 
