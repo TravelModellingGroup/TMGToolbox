@@ -148,7 +148,7 @@ class RemoveRedundantFunctions(_m.Tool()):
             
         return atts 
 
-    def unique_append(function_list, function_number):
+    def unique_append(self, function_list, function_number):
         if (function_number > 0) and (function_number not in function_list):
             function_list.append(function_number)
 
@@ -192,21 +192,15 @@ class RemoveRedundantFunctions(_m.Tool()):
 
         for scen_id in scens:
             network = _M.emmebank.scenario(scen_id).get_network()
-            links = network.links()
-            segments = network.transit_segments()
-            turns = network.turns()
                 
-            for l in links:
-                link_function_number = l.volume_delay_func
-                unique_append(contained_fd, link_function_number)
+            for l in network.links():
+                self.unique_append(contained_fd, l.volume_delay_func)
                         
-            for sg in segments:
-                segment_function_number = sg.transit_time_func 
-                unique_append(contained_ft, segment_function_number)
+            for sg in network.transit_segments():
+                self.unique_append(contained_ft, sg.transit_time_func)
                         
-            for r in turns:
-                turn_function_number = r.penalty_func 
-                unique_append(contained_fp, turn_function_number)
+            for r in network.turns():
+                self.unique_append(contained_fp, r.penalty_func)
                         
         print "There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(contained_fd)
         print "There are %s Transit Time (ft) functions used in all scenarios/networks." %len(contained_ft)
@@ -216,36 +210,30 @@ class RemoveRedundantFunctions(_m.Tool()):
 
     # compare the functions between networks and the database, export and remove the redundant ones
     def _CompareFunctions(self, ExportFile, database_fd, database_ft, database_fp, contained_fd, contained_ft, contained_fp):
-        unused_fd = list(set(database_fd) - set(contained_fd))
-        unused_ft = list(set(database_ft) - set(contained_ft))
-        unused_fp = list(set(database_fp) - set(contained_fp))
-            
-        Redun_functions = []
-            
-        for fd_i in unused_fd:
-            fd_id = "fd%s" %fd_i
-            Redun_functions.append(_M.emmebank.function(fd_id))
-                
-        for ft_i in unused_ft:
-            ft_id = "ft%s" %ft_i
-            Redun_functions.append(_M.emmebank.function(ft_id))
-                
-        for fp_i in unused_fp:
-            fp_id = "fp%s" %fp_i
-            Redun_functions.append(_M.emmebank.function(fp_id))
 
-            ## export redundant functions
+        Redun_functions = []
+
+        self.compare_append("fd", Redun_functions, database_fd, contained_fd)
+        self.compare_append("ft", Redun_functions, database_ft, contained_ft)
+        self.compare_append("fp", Redun_functions, database_fp, contained_fp)
+
+        ## export redundant functions
         if len(Redun_functions) == 0:
             print "No redundant function is found."
         else:
             _ExportFunctions(functions = Redun_functions, export_file = self.ExportFile, append_to_file = False)
 
-            # delete redundant functions from database
+        # delete redundant functions from database
         for redun_i in Redun_functions:
             if redun_i is not None:
                 _DeleteFunctions(redun_i)
 
         print "Removed %s functions from the database." %(len(Redun_functions))
+
+    def compare_append(self, type, functionlist, database_functions, contained_functions):
+        unused_functions = list(set(database_functions) - set(contained_functions))
+        for i in unused_functions:
+            functionlist.append(_M.emmebank.function(type + str(i)))
 
 
     @_m.method(return_type=_m.TupleType)
