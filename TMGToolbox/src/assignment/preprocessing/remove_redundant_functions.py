@@ -108,14 +108,10 @@ class RemoveRedundantFunctions(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Run complete.")
     
-    def __call__(self, xtmf_ScenarioNumber, ExportFile):
+    def __call__(self, ExportFile):
         
-        self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         self.ExportFile = ExportFile
 
-        if (self.Scenario is None):
-            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
-        
         try:
             self._Execute()
         except Exception as e:
@@ -124,104 +120,18 @@ class RemoveRedundantFunctions(_m.Tool()):
     
     ##########################################################################################################    
     
-    
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
 
-            # check functions in the Emme database
-            fcns = _M.emmebank.functions()
-            fdlist = []
-            ftlist = []
-            fplist = []
-            folist = []
-
-            for f in fcns:
-                f_type = str(f)[0:2]
-                if f_type == "fd":
-                    fdlist.append(str(f)[2:])
-                elif f_type == "ft":
-                    ftlist.append(str(f)[2:])
-                elif f_type == "fp":
-                    fplist.append(str(f)[2:])
-                else:
-                    folist.append(str(f)[2:])
-                    
-            fdlist_database = list(map(int, fdlist))
-            ftlist_database = list(map(int, ftlist))
-            fplist_database = list(map(int, fplist))
-            folist_database = list(map(int, folist))
-
-            print "There are %s Auto Volume Delay (fd) functions in the database." %len(fdlist_database)
-            print "There are %s Transit Time (ft) functions in the database." %len(ftlist_database)
-            print "There are %s Turn Penalty (fp) functions in the database." %len(fplist_database)
-            print "There are %s other types of functions in the database." %len(folist_database)
-
+            # check the functions in the emme database
+            fdlist_db, ftlist_db, fplist_db, folist_db = self._CheckDatabase()
 
             # check functions used in all scenarios/networks
-            scens = _M.emmebank.scenarios()
-            fdlist_net =[]
-            ftlist_net =[]
-            fplist_net =[]
+            fdlist_nt, ftlist_nt, fplist_nt = self._CheckNetworks()
 
-            for scen_id in scens:
-                lks = _M.emmebank.scenario(scen_id).get_network().links()
-                segs = _M.emmebank.scenario(scen_id).get_network().transit_segments()
-                trns = _M.emmebank.scenario(scen_id).get_network().turns()
-                
-                for l in lks:
-                    l_fcn = l.volume_delay_func 
-                    if (l_fcn > 0) and (l_fcn not in fdlist_net):
-                        fdlist_net.append(l_fcn)
-                        
-                for sg in segs:
-                    sg_fcn = sg.transit_time_func 
-                    if (sg_fcn > 0) and (sg_fcn not in ftlist_net):
-                        ftlist_net.append(sg_fcn)
-                        
-                for r in trns:
-                    r_fcn = r.penalty_func 
-                    if (r_fcn > 0) and (r_fcn not in fplist_net):
-                        fplist_net.append(r_fcn)
-                        
-            print "There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(fdlist_net)
-            print "There are %s Transit Time (ft) functions used in all scenarios/networks." %len(ftlist_net)
-            print "There are %s Turn Penalty (fp) functions used in all scenarios/networks." %len(fplist_net)
-
-            
-            # compare the functions between networks and the database
-            fdlist_diff = list(set(fdlist_database) - set(fdlist_net))
-            ftlist_diff = list(set(ftlist_database) - set(ftlist_net))
-            fplist_diff = list(set(fplist_database) - set(fplist_net))
-            
-            Redun_fcns = []
-            
-            for fd_i in fdlist_diff:
-                fd_id = "fd%s" %fd_i
-                Redun_fcns.append(_M.emmebank.function(fd_id))
-                
-            for ft_i in ftlist_diff:
-                ft_id = "ft%s" %ft_i
-                Redun_fcns.append(_M.emmebank.function(ft_id))
-                
-            for fp_i in fplist_diff:
-                fp_id = "fp%s" %fp_i
-                Redun_fcns.append(_M.emmebank.function(fp_id))
-
-
-            # export redundant functions
-            if len(Redun_fcns) == 0:
-                print "No redundant function is found."
-            else:
-                _exportFcns(functions = Redun_fcns, export_file = self.ExportFile, append_to_file = False)
-
-            
-            # delete redundant functions from database
-            for redun_i in Redun_fcns:
-                if redun_i is not None:
-                    _deleteFcns(redun_i)
-
-            print "Removed %s functions from the database." %(len(Redun_fcns))
+            # compare the functions between networks and the database, export and remove the redundant ones
+            self._CompareFcns(self.ExportFile, fdlist_db, ftlist_db, fplist_db, fdlist_nt, ftlist_nt, fplist_nt)
 
             self.TRACKER.completeTask()
 
@@ -238,6 +148,106 @@ class RemoveRedundantFunctions(_m.Tool()):
             
         return atts 
 
+
+    # check functions in the Emme database
+    def _CheckDatabase(self):
+        fcns = _M.emmebank.functions()
+        fdlist = []
+        ftlist = []
+        fplist = []
+        folist = []
+
+        for f in fcns:
+            f_type = str(f)[0:2]
+            if f_type == "fd":
+                fdlist.append(str(f)[2:])
+            elif f_type == "ft":
+                ftlist.append(str(f)[2:])
+            elif f_type == "fp":
+                fplist.append(str(f)[2:])
+            else:
+                folist.append(str(f)[2:])
+                    
+        fdlist_database = list(map(int, fdlist))
+        ftlist_database = list(map(int, ftlist))
+        fplist_database = list(map(int, fplist))
+        folist_database = list(map(int, folist))
+
+        print "There are %s Auto Volume Delay (fd) functions in the database." %len(fdlist_database)
+        print "There are %s Transit Time (ft) functions in the database." %len(ftlist_database)
+        print "There are %s Turn Penalty (fp) functions in the database." %len(fplist_database)
+        print "There are %s other types of functions in the database." %len(folist_database)
+
+        return fdlist_database, ftlist_database, fplist_database, folist_database
+
+    # check functions used in all scenarios/networks
+    def _CheckNetworks(self):
+        scens = _M.emmebank.scenarios()
+        fdlist_net =[]
+        ftlist_net =[]
+        fplist_net =[]
+
+        for scen_id in scens:
+            _net = _M.emmebank.scenario(scen_id).get_network()
+            lks = _net.links()
+            segs = _net.transit_segments()
+            trns = _net.turns()
+                
+        for l in lks:
+            l_fcn = l.volume_delay_func 
+            if (l_fcn > 0) and (l_fcn not in fdlist_net):
+                fdlist_net.append(l_fcn)
+                        
+        for sg in segs:
+            sg_fcn = sg.transit_time_func 
+            if (sg_fcn > 0) and (sg_fcn not in ftlist_net):
+                ftlist_net.append(sg_fcn)
+                        
+        for r in trns:
+            r_fcn = r.penalty_func 
+            if (r_fcn > 0) and (r_fcn not in fplist_net):
+                fplist_net.append(r_fcn)
+                        
+        print "There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(fdlist_net)
+        print "There are %s Transit Time (ft) functions used in all scenarios/networks." %len(ftlist_net)
+        print "There are %s Turn Penalty (fp) functions used in all scenarios/networks." %len(fplist_net)
+
+        return fdlist_net, ftlist_net, fplist_net
+
+    # compare the functions between networks and the database, export and remove the redundant ones
+    def _CompareFcns(self, ExportFile, fdlist_database, ftlist_database, fplist_database, fdlist_net, ftlist_net, fplist_net):
+        fdlist_diff = list(set(fdlist_database) - set(fdlist_net))
+        ftlist_diff = list(set(ftlist_database) - set(ftlist_net))
+        fplist_diff = list(set(fplist_database) - set(fplist_net))
+            
+        Redun_fcns = []
+            
+        for fd_i in fdlist_diff:
+            fd_id = "fd%s" %fd_i
+            Redun_fcns.append(_M.emmebank.function(fd_id))
+                
+        for ft_i in ftlist_diff:
+            ft_id = "ft%s" %ft_i
+            Redun_fcns.append(_M.emmebank.function(ft_id))
+                
+        for fp_i in fplist_diff:
+            fp_id = "fp%s" %fp_i
+            Redun_fcns.append(_M.emmebank.function(fp_id))
+
+            ## export redundant functions
+        if len(Redun_fcns) == 0:
+            print "No redundant function is found."
+        else:
+            _exportFcns(functions = Redun_fcns, export_file = self.ExportFile, append_to_file = False)
+
+            # delete redundant functions from database
+        for redun_i in Redun_fcns:
+            if redun_i is not None:
+                _deleteFcns(redun_i)
+
+        print "Removed %s functions from the database." %(len(Redun_fcns))
+
+
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
@@ -245,52 +255,3 @@ class RemoveRedundantFunctions(_m.Tool()):
     @_m.method(return_type=unicode)
     def tool_run_msg_status(self):
         return self.tool_run_msg
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
