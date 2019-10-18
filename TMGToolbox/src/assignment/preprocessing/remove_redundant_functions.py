@@ -188,10 +188,10 @@ class RemoveRedundantFunctions(_m.Tool()):
         fplist_net =[]
 
         for scen_id in scens:
-            _net = _M.emmebank.scenario(scen_id).get_network()
-            links = _net.links()
-            segments = _net.transit_segments()
-            turns = _net.turns()
+            network = _M.emmebank.scenario(scen_id).get_network()
+            links = network.links()
+            segments = network.transit_segments()
+            turns = network.turns()
                 
             for l in links:
                 link_function = l.volume_delay_func 
