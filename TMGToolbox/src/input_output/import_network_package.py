@@ -797,9 +797,13 @@ class ImportNetworkPackage(_m.Tool()):
             if s is not None:
                  vf = package.open(s)
                  version = vf.readline()
-                 versionNum = float(version[5:7])
+                 if version.startswith('Emme'):
+                     versionNum = float(version[5:8])
+                 else: 
+                     versionNum = float(version)
                  if versionNum >= 3:
                      self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
+                 
                  s = self._getZipOriginalString(processed, contents, 'link_results.csv')
                  s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
                  if s is not None and s2 is not None:
