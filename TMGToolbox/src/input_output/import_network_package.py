@@ -126,7 +126,7 @@ class ImportNetworkPackage(_m.Tool()):
         </div>""")
 
         pb.add_text_box(tool_attribute_name='ScenarioId',
-                        size=4,
+                        size=5,
                         title="New Scenario Number",
                         note="Enter a new or existing scenario")
         '''
