@@ -462,7 +462,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 #    toDelete.add(k)
             doNotDelete = altData.keys()
         else:
-            return
+            doNotDelete = []
         self.TRACKER.startProcess(network.element_totals['transit_lines'])
         for line in network.transit_lines():
             #Pick aggregation type for given line

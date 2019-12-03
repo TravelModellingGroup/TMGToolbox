@@ -796,9 +796,10 @@ class ImportNetworkPackage(_m.Tool()):
             s = self._getZipOriginalString(processed, contents, 'version.txt')
             if s is not None:
                  vf = package.open(s)
-                 version = float(vf.readline())
-                 if version >= 3:
+                 NWPversion = float(vf.readline())
+                 if NWPversion >= 3:
                      self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
+                 
                  s = self._getZipOriginalString(processed, contents, 'link_results.csv')
                  s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
                  if s is not None and s2 is not None:
@@ -806,7 +807,7 @@ class ImportNetworkPackage(_m.Tool()):
                  self._components.transit_results_files = self._getZipOriginalString(processed, contents, 'segment_results.csv')
                  self._components.aux_transit_results_file = self._getZipOriginalString(processed, contents, 'aux_transit_results.csv')	     
                  self._components.attribute_header_file = self._getZipOriginalString(processed, contents, "exatts.241")		     
-                 return version
+                 return NWPversion
 
         renumber_count = 0
         for component in contents:

@@ -180,8 +180,9 @@ class ExportNetworkPackage(_m.Tool()):
             self._check_attributes()
             with _zipfile.ZipFile(self.ExportFile, 'w', _zipfile.ZIP_DEFLATED) as zf, self._temp_file() as temp_folder:
                 version_file = _path.join(temp_folder, "version.txt")
+                EMMEversion = _util.getEmmeVersion(returnType= str)
                 with open(version_file, 'w') as writer:
-                    writer.write("4.0")
+                    writer.write("%s\n%s" % (str(5.0), EMMEversion))
                 zf.write(version_file, arcname="version.txt")
 
                 info_path = _path.join(temp_folder, "info.txt")
