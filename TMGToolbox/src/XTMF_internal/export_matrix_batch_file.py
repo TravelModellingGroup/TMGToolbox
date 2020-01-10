@@ -57,7 +57,7 @@ class ExportMatrix(_m.Tool()):
                     raise Exception("No matrix found with id '%s'" %MatrixId)
                 self._tracker.runTool(tool,
                                       export_file=Filename,
-                                      field_separator='TAB',
+                                      field_separator=' ',
                                       matrices=[mtx],
                                       full_matrix_line_format="ONE_ENTRY_PER_LINE",
                                       export_format="PROMPT_DATA_FORMAT",
