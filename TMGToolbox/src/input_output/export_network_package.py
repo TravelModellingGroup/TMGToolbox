@@ -67,7 +67,8 @@ class ExportNetworkPackage(_m.Tool()):
         pb = _tmg_tpb.TmgToolPageBuilder(
             self, title="Export Network Package v%s" % self.version,
             description="Exports all scenario data files (modes, vehicles, nodes, links, transit lines, link shape, " +
-                        "turns) to a compressed network package file (*.nwp).",
+                        "turns) to a compressed network package file (*.nwp)." + 
+                        "Descriptions that are empty or have single quotes will be replaced by 'No Description' and grave accent(`).",
             branding_text="- TMG Toolbox")
 
         if self.tool_run_msg != "":  # to display messages in the page
@@ -254,6 +255,18 @@ class ExportNetworkPackage(_m.Tool()):
             self._export_blank_batch_file(export_file, "lines")
             self.TRACKER.completeTask()
         else:
+            # check if the description is empty or has single quote
+            network = self.Scenario.get_network()
+            for line in network.transit_lines():
+                ln_description = line.description
+                if len(ln_description) == 0:
+                    line.description = "No Description"
+                elif "'" in ln_description:
+                    line.description = ln_description.replace("'","`")
+                else:
+                    pass
+            self.Scenario.publish_network(network)
+
             self.TRACKER.runTool(_export_transit_lines,
                                  export_file=export_file,
                                  scenario=self.Scenario,
