@@ -51,6 +51,7 @@ class ExportNetworkPackage(_m.Tool()):
     ExportAllFlag = _m.Attribute(bool)
     AttributeIdsToExport = _m.Attribute(_m.ListType)
     ExportMetadata = _m.Attribute(str)
+    ExportToEmmeOldVersion = _m.Attribute(bool)
 
     xtmf_AttributeIdString = _m.Attribute(str)
     xtmf_ScenarioNumber = _m.Attribute(int)
@@ -62,12 +63,14 @@ class ExportNetworkPackage(_m.Tool()):
         # Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario  # Default is primary scenario
         self.ExportMetadata = ""
+        self.ExportToEmmeOldVersion = False
 
     def page(self):
         pb = _tmg_tpb.TmgToolPageBuilder(
             self, title="Export Network Package v%s" % self.version,
             description="Exports all scenario data files (modes, vehicles, nodes, links, transit lines, link shape, " +
-                        "turns) to a compressed network package file (*.nwp).",
+                        "turns) to a compressed network package file (*.nwp)." + 
+                        "Descriptions that are empty, have single quotes, or double quotes will be replaced by 'No Description', grave accents (`), and spaces.",
             branding_text="- TMG Toolbox")
 
         if self.tool_run_msg != "":  # to display messages in the page
@@ -81,6 +84,10 @@ class ExportNetworkPackage(_m.Tool()):
                            title="File name",
                            window_type='save_file',
                            file_filter="*.nwp")
+
+        pb.add_checkbox(tool_attribute_name='ExportToEmmeOldVersion',
+                        label="Export it to be compatible with Emme 4.3?",
+                        note="Descriptions longer than 20 characters will be trimmed.")
 
         pb.add_checkbox(tool_attribute_name='ExportAllFlag',
                         label="Export all extra attributes?")
@@ -254,6 +261,20 @@ class ExportNetworkPackage(_m.Tool()):
             self._export_blank_batch_file(export_file, "lines")
             self.TRACKER.completeTask()
         else:
+            # check if the description is empty or has single quote
+            network = self.Scenario.get_network()
+            for line in network.transit_lines():
+                ln_description = line.description
+                if len(ln_description) == 0:
+                    line.description = "No Description"
+                elif "'" in ln_description:
+                    line.description = ln_description.replace("'","`")
+                elif '"' in ln_description:
+                    line.description = ln_description.replace('"',' ')
+                elif len(ln_description) > 20 and self.ExportToEmmeOldVersion:
+                    line.description = ln_description[0:19]
+            self.Scenario.publish_network(network)
+
             self.TRACKER.runTool(_export_transit_lines,
                                  export_file=export_file,
                                  scenario=self.Scenario,
