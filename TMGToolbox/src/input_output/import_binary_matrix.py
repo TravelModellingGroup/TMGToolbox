@@ -161,8 +161,8 @@ class ImportBinaryMatrix(_m.Tool()):
                           "4 for full matrices.")
         
         self.MatrixId = self.MATRIX_TYPES[xtmf_MatrixType] + str(xtmf_MatrixNumber)
-        
         self.ImportFile = ImportFile
+        self.MatrixDescription = MatrixDescription
         
         if _util.databankHasDifferentZones(_bank):
             self.Scenario = _bank.scenario(xtmf_ScenarioNumber)
