@@ -597,15 +597,16 @@ class ImportNetworkPackage(_m.Tool()):
             else:            
                 filename = "exatt_%ss.241" % t.lower()
             newfilename = self._getZipOriginalString(processed, contents, filename)
-            try:
-                import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
-                              field_separator=",",
-                              scenario=scenario)
-            except:
-                import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
-                              field_separator=" ",
-                              scenario=scenario)
-            self.TRACKER.completeSubtask()
+            if newfilename is not None:
+                try:
+                    import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
+                                  field_separator=",",
+                                  scenario=scenario)
+                except:
+                    import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
+                                  field_separator=" ",
+                                  scenario=scenario)
+                self.TRACKER.completeSubtask()
 
     @_m.logbook_trace("Reading functions")
     def _batchin_functions(self, temp_folder, zf):
