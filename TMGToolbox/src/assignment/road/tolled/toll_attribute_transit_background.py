@@ -23,7 +23,7 @@ Toll-Based Road Assignment
 
     Authors: Peter Kucirek, Eric Miller
 
-    Latest revision by: mattaustin222
+    Latest revision by: lunaxi
     
     Executes a road assignment which allows for the generalized penalty of road tolls.
         
@@ -80,7 +80,8 @@ Toll-Based Road Assignment
 
     3.3.3 Assignment now includes on-link operating costs in generalized costs (instead of only tolls)
         
-    
+    3.4.0 Add path analysis option 
+
 '''
 
 import inro.modeller as _m
@@ -104,7 +105,7 @@ def blankManager(obj):
 
 class TollBasedRoadAssignment(_m.Tool()):
     
-    version = '3.3.3'
+    version = '3.4.0'
     tool_run_msg = ""
     number_of_tasks = 5 # For progress reporting, enter the integer number of tasks here
     
@@ -137,6 +138,18 @@ class TollBasedRoadAssignment(_m.Tool()):
     PerformanceFlag = _m.Attribute(bool)
     SOLAFlag = _m.Attribute(bool)
 
+    LinkComponent = _m.Attribute(str)
+    TurnComponent = _m.Attribute(str)
+    OperatorForPathAnaysis = _m.Attribute(str)
+    LowerBound = _m.Attribute(float)
+    UpperBound = _m.Attribute(float)
+    PathToODAggregation = _m.Attribute(str)
+    AnalyzedDemandMatrix = _m.Attribute(str)
+    ODValueResults = _m.Attribute(str)
+    LinkVolResults = _m.Attribute(str)
+    TurnVolResults = _m.Attribute(str)
+    PathAnalysisFlag = _m.Attribute(bool)
+
     NumberOfProcessors = _m.Attribute(int)
     
     def __init__(self):
@@ -144,7 +157,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         
         self.Scenario = _MODELLER.scenario
         
-        mf10 = _MODELLER.emmebank.matrix('mf30')
+        mf10 = _MODELLER.emmebank.matrix('mf10')
         if mf10 is not None:
             self.DemandMatrix = mf10
         
@@ -158,11 +171,22 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.PerformanceFlag = False
         self.RunTitle = ""
         self.LinkTollAttributeId = "@toll"
-        
+        self.LinkComponent = "@sellk"
+        self.TurnComponent = None
+        self.OperatorForPathAnaysis = "+"
+        self.LowerBound = None
+        self.UpperBound = None
+        self.PathToODAggregation = "ANALYZED"
+        self.AnalyzedDemandMatrix = None
+        self.LinkVolResults = -1
+        self.TurnVolResults = -1
+
         if EMME_VERSION >= (4,1):
             self.SOLAFlag = True
         else:
             self.SOLAFlag = False
+
+        self.PathAnalysisFlag = False
 
         self.NumberOfProcessors = multiprocessing.cpu_count()
 
@@ -314,6 +338,93 @@ class TollBasedRoadAssignment(_m.Tool()):
             pb.add_checkbox(tool_attribute_name= 'SOLAFlag',
                             label= "Use SOLA traffic assignment?")
         
+        # Path Analysis (Optional)
+
+        pb.add_header("Path Analysis (Optional)")
+        
+        pb.add_checkbox(tool_attribute_name= 'PathAnalysisFlag',
+                        label= "Perform Path Analysis for this class?")
+
+        with pb.add_table(visible_border=False) as t:
+            with t.table_cell():
+                pb.add_select(tool_attribute_name='LinkComponent',
+                        keyvalues=keyval,
+                        title="Link Component")
+
+            keyval_turn = {}
+            for att in self.Scenario.extra_attributes():
+                if not att.type == 'TURN': continue
+                label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
+                keyval_turn[att.name] = label
+            
+            t.new_row()
+            with t.table_cell():
+                pb.add_select(tool_attribute_name='TurnComponent',
+                              keyvalues=keyval_turn,
+                              title="Turn Component")
+
+            t.new_row()
+            with t.table_cell():
+                pb.add_select(tool_attribute_name='OperatorForPathAnaysis',
+                              keyvalues={'+':'+','-':'-','*':'*','/':'/','.max.':'max','.min.':'min'},
+                              title="Operator")
+
+            t.new_row()
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='LowerBound',
+                                size=12,
+                                title="Selection Threshold: Lower Bound")
+            t.new_row()
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='UpperBound',
+                                size=12,
+                                title="Selection Threshold: Upper Bound")
+            
+            t.new_row()
+            with t.table_cell():
+                pb.add_select(tool_attribute_name='PathToODAggregation',
+                              keyvalues={'PATH':'Path','SELECTED':'Selected path','WEIGHTED':'Weighted selected path','ANALYZED':'Analyzed demand on selected paths'},
+                              title="Path to OD aggregation",
+                              note="<b>Path:</b> consider all paths, multiplied by path value. This gives the proportion-weighted average value of the path values, for all the paths used in the master assignment. \
+                              <br><br><b>Selected path:</b> consider only selected paths, multiplied by path value. This gives the sum, for selected paths only, of the path value multiplied by the path proportion. \
+                              <br><br><b>Weighted selected path:</b> consider only selected paths, multiplied by analyzed demand and path value. This gives the sum, for selected paths, of the proportion-weighted path value multiplied by the analyzed demand assigned to the path. \
+                              <br><br><b>Analyzed demand on selected paths:</b> consider only selected paths, multiplied by analyzed demand.")
+
+            t.new_row()
+            with t.table_cell():
+                pb.add_select_matrix(tool_attribute_name="AnalyzedDemandMatrix",
+                                     title="Analzyed Demand",
+                                     filter="FULL", note="By default this is the same as the demand used in the assignment (Select 'None').",
+                                     allow_none=True)
+
+            t.new_row()
+            with t.table_cell():
+                pb.add_select_new_matrix(tool_attribute_name="ODValueResults", 
+                        overwrite_existing=True,
+                        matrix_type='FULL',
+                        note='Create or override',
+                        title='OD value results')
+
+            linkKV = [(-1, 'No attribute')]
+            turnKV = [(-1, 'No attribute')]
+            for exatt in self.Scenario.extra_attributes():
+                if exatt.type == 'LINK':
+                    link_text = "%s - %s" %(exatt.id, exatt.description)
+                    linkKV.append((exatt.id, link_text))
+                elif exatt.type == 'TURN':
+                    turn_text = "%s - %s" %(exatt.id, exatt.description)
+                    turnKV.append((exatt.id, turn_text))
+            t.new_row()
+            with t.table_cell():
+                pb.add_select(tool_attribute_name='LinkVolResults',
+                        keyvalues=linkKV,
+                        title="Selected link volumes")
+            t.new_row()
+            with t.table_cell():
+                pb.add_select(tool_attribute_name='TurnVolResults',
+                        keyvalues=turnKV,
+                        title="Selected turn volumes")
+
         pb.add_html("""
 <script type="text/javascript">
     $(document).ready( function ()
@@ -328,6 +439,18 @@ class TollBasedRoadAssignment(_m.Tool()):
                 .append(tool._GetSelectAttributeOptionsHTML())
             inro.modeller.page.preload("#LinkTollAttributeId");
             $("#LinkTollAttributeId").trigger('change');
+
+            $("#LinkVolResults")
+                .empty()
+                .append(tool._GetSelectAttributeOptionsHTML())
+            inro.modeller.page.preload("#LinkVolResults");
+            $("#LinkVolResults").trigger('change');
+
+            $("#TurnVolResults")
+                .empty()
+                .append(tool._GetSelectTurnAttributeOptionsHTML())
+            inro.modeller.page.preload("#TurnVolResults");
+            $("#TurnVolResults").trigger('change');
         });
     });
 </script>""" % pb.tool_proxy_tag)
@@ -362,7 +485,8 @@ class TollBasedRoadAssignment(_m.Tool()):
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, TimesMatrixId, CostMatrixId, TollsMatrixId,
                  PeakHourFactor, LinkCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
-                 RunTitle, LinkTollAttributeId, SOLAFlag):
+                 RunTitle, LinkTollAttributeId, SOLAFlag, PathAnalysisFlag, LinkComponent, TurnComponent, OperatorForPathAnaysis, 
+                 LowerBound, UpperBound, PathToODAggregation, AnalyzedDemandMatrix, ODValueResults, LinkVolResults, TurnVolResults):
         
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -391,7 +515,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.rGap = rGap
         self.brGap = brGap
         self.normGap = normGap
-        
+
         self.RunTitle = RunTitle[:25]
         self.LinkTollAttributeId = LinkTollAttributeId
         
@@ -400,6 +524,18 @@ class TollBasedRoadAssignment(_m.Tool()):
         else:
             self.SOLAFlag = False
         
+        if self.PathAnalysisFlag == True:
+            self.LinkComponent = LinkComponent
+            self.TurnComponent = TurnComponent
+            self.OperatorForPathAnaysis = OperatorForPathAnaysis
+            self.LowerBound = LowerBound
+            self.UpperBound = UpperBound
+            self.PathToODAggregation = PathToODAggregation
+            self.AnalyzedDemandMatrix = AnalyzedDemandMatrix 
+            self.ODValueResults = ODValueResults
+            self.LinkVolResults = LinkVolResults
+            self.TurnVolResults = TurnVolResults
+
         #---3. Run
         try:
             with manager as self.DemandMatrix:
@@ -466,8 +602,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                     if self.SOLAFlag:
                         spec = self._getPrimarySOLASpec(peakHourMatrix.id, costAttribute.id, appliedTollFactor)
                     else:
-                        spec = self._getPrimaryRoadAssignmentSpec(peakHourMatrix.id, costAttribute.id, 
-                                                              appliedTollFactor)
+                        spec = self._getPrimaryRoadAssignmentSpec(peakHourMatrix.id, costAttribute.id, appliedTollFactor)
                         
                     report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
                     
@@ -504,7 +639,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                         if self.SOLAFlag:
                             spec = self._getSecondarySOLASpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor, costAttribute.id)
                         else:
-                            spec = self._getSecondaryAssignmentSpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor, costAttribute.id)
+                            spec = self._getSecondaryRoadAssignmentSpec(peakHourMatrix.id, timeAttribute.id, appliedTollFactor, costAttribute.id)
                                 
                         self._tracker.runTool(trafficAssignmentTool,
                                                 spec, scenario=self.Scenario)                  
@@ -526,14 +661,25 @@ class TollBasedRoadAssignment(_m.Tool()):
                         
                         self._tracker.completeTask()
                         
-                        with _m.logbook_trace("Running secondary assignment"):
+                        with _m.logbook_trace("Running tertiary assignment"):
                             if self.SOLAFlag:
                                 spec = self._getTertiarySOLASpec(peakHourMatrix.id, appliedTollFactor, costAttribute.id)
                             else:
                                 spec = self._getTertiaryAssignmentSpec(peakHourMatrix.id, appliedTollFactor, costAttribute.id)
                                 
                             self._tracker.runTool(trafficAssignmentTool,
-                                                  spec, scenario=self.Scenario)                               
+                                                  spec, scenario=self.Scenario)   
+
+                self._tracker.startProcess(1)
+                if self.PathAnalysisFlag == True :
+                    with _m.logbook_trace("Running traffic assignment for path analysis"):
+                            if self.SOLAFlag:
+                                spec = self._getSOLASpecForPathAnalysis(peakHourMatrix.id, costAttribute.id, appliedTollFactor, self.LinkComponent,self.TurnComponent,self.OperatorForPathAnaysis,self.LowerBound,self.UpperBound,self.PathToODAggregation,self.AnalyzedDemandMatrix,self.ODValueResults,self.LinkVolResults,self.TurnVolResults)
+                            else:
+                                spec = self._getAssignmentSpecForPathAnalysis(peakHourMatrix.id, costAttribute.id, appliedTollFactor, self.LinkComponent,self.TurnComponent,self.OperatorForPathAnaysis,self.LowerBound,self.UpperBound,self.PathToODAggregation,self.AnalyzedDemandMatrix,self.ODValueResults,self.LinkVolResults,self.TurnVolResults)
+                                
+                            self._tracker.runTool(trafficAssignmentTool,
+                                                  spec, scenario=self.Scenario) 
 
     ##########################################################################################################
 
@@ -738,7 +884,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         modeId = _util.getScenarioModes(self.Scenario, ['AUTO'])[0][0]
         #Returns a list of tuples. Emme guarantees that there is always
         #one auto mode.
-        
+
         return {
                 "type": "SOLA_TRAFFIC_ASSIGNMENT",
                 "classes": [
@@ -756,22 +902,22 @@ class TollBasedRoadAssignment(_m.Tool()):
                                 "shortest_paths": self.TimesMatrixId
                             }
                         },
-                        "path_analysis": {
-                            "link_component": costAttributeId,
-                            "turn_component": None,
-                            "operator": "+",
-                            "selection_threshold": {
-                                "lower": None,
-                                "upper": None
-                            },
-                            "path_to_od_composition": {
-                                "considered_paths": "ALL",
-                                "multiply_path_proportions_by": {
-                                    "analyzed_demand": False,
-                                    "path_value": True
-                                }
-                            }
-                        },
+                         "path_analysis": {
+                                 "link_component": costAttributeId,
+                                 "turn_component": None,
+                                 "operator": "+",
+                                 "selection_threshold": {
+                                     "lower": None,
+                                     "upper": None
+                                     },
+                                 "path_to_od_composition": {
+                                     "considered_paths": "ALL",
+                                     "multiply_path_proportions_by": {
+                                         "analyzed_demand": False,
+                                         "path_value": True
+                                         }
+                                     }
+                                 },
                         "cutoff_analysis": None,
                         "traversal_analysis": None,
                         "analysis": {
@@ -831,7 +977,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                                       "selected_link_volumes": None,
                                                       "selected_turn_volumes": None
                                                       }
-                                          }
+                                          },
                              }
                             ],
                 "performance_settings": {
@@ -873,7 +1019,12 @@ class TollBasedRoadAssignment(_m.Tool()):
         modeId = _util.getScenarioModes(self.Scenario, ['AUTO'])[0][0]
         #Returns a list of tuples. Emme guarantees that there is always
         #one auto mode.
-        
+
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 2, 1)
+
         return {
                 "type": "SOLA_TRAFFIC_ASSIGNMENT",
                 "classes": [
@@ -935,7 +1086,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             }
         
           
-    def _getSecondaryRoadAssignmentSpec(self, peakHourMatrixId, timeAttribute, appliedTollFactor):
+    def _getSecondaryRoadAssignmentSpec(self, peakHourMatrixId, timeAttribute, appliedTollFactor, costAttributeId):
         
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
@@ -1038,7 +1189,12 @@ class TollBasedRoadAssignment(_m.Tool()):
         modeId = _util.getScenarioModes(self.Scenario, ['AUTO'])[0][0]
         #Returns a list of tuples. Emme guarantees that there is always
         #one auto mode.
-        
+
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 2, 1)
+
         return {
                 "type": "SOLA_TRAFFIC_ASSIGNMENT",
                 "classes": [
@@ -1100,7 +1256,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             }
     
       
-    def _getTertiaryAssignmentSpec(self, peakHourMatrixId):
+    def _getTertiaryAssignmentSpec(self, peakHourMatrixId, appliedTollFactor, costAttributeId):
         if self.PerformanceFlag:
             numberOfPocessors = multiprocessing.cpu_count()
         else:
@@ -1163,6 +1319,180 @@ class TollBasedRoadAssignment(_m.Tool()):
                                                }
                          }
     
+    def _getSOLASpecForPathAnalysis(self, peakHourMatrixId, costAttributeId, appliedTollFactor,LinkComponent,TurnComponent,OperatorForPathAnaysis,LowerBound,UpperBound,PathToODAggregation,AnalyzedDemandMatrix,ODValueResults,LinkVolResults,TurnVolResults):
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 1, 1)
+        
+        modeId = _util.getScenarioModes(self.Scenario, ['AUTO'])[0][0]
+        #Returns a list of tuples. Emme guarantees that there is always
+        #one auto mode.
+
+        if self.PathToODAggregation == 'PATH':
+            considered_path = "ALL"
+            analyzed_demand_flag = False
+            path_value_flag = True
+        elif self.PathToODAggregation == 'SELECTED':
+            considered_path = "SELECTED"
+            analyzed_demand_flag = False
+            path_value_flag = True
+        elif self.PathToODAggregation == 'WEIGHTED':
+            considered_path = "SELECTED"
+            analyzed_demand_flag = True
+            path_value_flag = True
+        else:
+            considered_path = "SELECTED"
+            analyzed_demand_flag = True
+            path_value_flag = False
+        
+        if self.AnalyzedDemandMatrix == None:
+            AnalyzedDemandMatrixID = peakHourMatrixId
+        else:
+            AnalyzedDemandMatrixID = AnalyzedDemandMatrix
+
+        return {
+                "type": "SOLA_TRAFFIC_ASSIGNMENT",
+                "classes": [
+                    {
+                        "mode": modeId,
+                        "demand": peakHourMatrixId,
+                        "generalized_cost": {
+                            "link_costs": costAttributeId,
+                            "perception_factor": appliedTollFactor
+                        },
+                        "results": {
+                            "link_volumes": None,
+                            "turn_volumes": None,
+                            "od_travel_times": {
+                                "shortest_paths": self.TimesMatrixId
+                            }
+                        },
+                         "path_analysis": {
+                                 "link_component": LinkComponent,
+                                 "turn_component": TurnComponent,
+                                 "operator": OperatorForPathAnaysis,
+                                 "selection_threshold": {
+                                     "lower": LowerBound,
+                                     "upper": UpperBound
+                                     },
+                                 "path_to_od_composition": {
+                                     "considered_paths": considered_path,
+                                     "multiply_path_proportions_by": {
+                                         "analyzed_demand": analyzed_demand_flag,
+                                         "path_value": path_value_flag
+                                         }
+                                     },
+                                 "analyzed_demand": AnalyzedDemandMatrixID,
+                                 "results": {
+                                     "od_values": ODValueResults,
+                                     "selected_link_volumes": LinkVolResults,
+                                     "selected_turn_volumes": TurnVolResults
+                                     }
+                                 },
+                        "cutoff_analysis": None,
+                        "traversal_analysis": None
+                    }
+                ],
+                "path_analysis": None,
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "performance_settings": {
+                    "number_of_processors": numberOfPocessors
+                },
+                "background_traffic": None,
+                "stopping_criteria": {
+                    "max_iterations": self.Iterations,
+                    "relative_gap": self.rGap,
+                    "best_relative_gap": self.brGap,
+                    "normalized_gap": self.normGap
+                }
+            }
+
+    def _getAssignmentSpecForPathAnalysis(self, peakHourMatrixId, costAttributeId, appliedTollFactor, LinkComponent,TurnComponent,OperatorForPathAnaysis,LowerBound,UpperBound,PathToODAggregation,AnalyzedDemandMatrix,ODValueResults,LinkVolResults,TurnVolResults):
+        
+        if self.PerformanceFlag:
+            numberOfPocessors = multiprocessing.cpu_count()
+        else:
+            numberOfPocessors = max(multiprocessing.cpu_count() - 2, 1)
+
+        if self.PathToODAggregation == 'PATH':
+            considered_path = "ALL"
+            analyzed_demand_flag = False
+            path_value_flag = True
+        elif self.PathToODAggregation == 'SELECTED':
+            considered_path = "SELECTED"
+            analyzed_demand_flag = False
+            path_value_flag = True
+        elif self.PathToODAggregation == 'WEIGHTED':
+            considered_path = "SELECTED"
+            analyzed_demand_flag = True
+            path_value_flag = True
+        else:
+            considered_path = "SELECTED"
+            analyzed_demand_flag = True
+            path_value_flag = False
+        
+        if self.AnalyzedDemandMatrix == None:
+            AnalyzedDemandMatrixID = peakHourMatrixId
+        else:
+            AnalyzedDemandMatrixID = AnalyzedDemandMatrix
+            
+        return {
+                "type": "STANDARD_TRAFFIC_ASSIGNMENT",
+                "classes": [{
+                             "mode": "c",
+                             "demand": peakHourMatrixId,
+                             "generalized_cost": {
+                                                  "link_costs": costAttributeId,
+                                                  "perception_factor": appliedTollFactor
+                                                  },
+                             "results": {
+                                         "link_volumes": None,
+                                         "turn_volumes": None,
+                                         "od_travel_times": {
+                                                             "shortest_paths": self.TimesMatrixId
+                                                             }
+                                         },
+                             "analysis": {
+                                 "analyzed_demand": AnalyzedDemandMatrixID,
+                                 "results": {
+                                     "od_values": ODValueResults,
+                                     "selected_link_volumes": LinkVolResults,
+                                     "selected_turn_volumes": TurnVolResults
+                                     }
+                                 }
+                             }],
+                "performance_settings": {
+                                         "number_of_processors": numberOfPocessors
+                                         },
+                "background_traffic": None,
+                "path_analysis": {
+                                  "link_component": LinkComponent,
+                                  "turn_component": TurnComponent,
+                                  "operator": OperatorForPathAnaysis,
+                                  "selection_threshold": {
+                                                          "lower": LowerBound,
+                                                          "upper": UpperBound
+                                                          },
+                                  "path_to_od_composition": {
+                                                             "considered_paths": considered_path,
+                                                             "multiply_path_proportions_by": {
+                                                                                              "analyzed_demand": analyzed_demand_flag,
+                                                                                              "path_value": path_value_flag
+                                                                                              }
+                                                             }
+                                  },
+                "cutoff_analysis": None,
+                "traversal_analysis": None,
+                "stopping_criteria": {
+                                      "max_iterations": self.Iterations,
+                                      "best_relative_gap": self.brGap,
+                                      "relative_gap": self.rGap,
+                                      "normalized_gap": self.normGap
+                                      }
+                }        
+
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self._tracker.getProgress()
@@ -1182,3 +1512,13 @@ class TollBasedRoadAssignment(_m.Tool()):
             list.append(html)
         return "\n".join(list)
     
+    @_m.method(return_type=unicode)
+    def _GetSelectTurnAttributeOptionsHTML(self):
+        list = []
+        
+        for att in self.Scenario.extra_attributes():
+            if not att.type == 'TURN': continue
+            label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
+            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
+            list.append(html)
+        return "\n".join(list)
