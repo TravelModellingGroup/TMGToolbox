@@ -206,7 +206,7 @@ class ImportBinaryMatrix(_m.Tool()):
         with _m.logbook_trace(name="%s v%s" %(self.__class__.__name__, self.version), \
                               attributes= self._GetAtts()):
 
-            if self.MatrixId == None:
+            if self.MatrixId is None:
                 matrix = _util.initializeMatrix(id=self.NewMatrixID, name = self.NewMatrixName, description = self.NewMatrixDescription)
             else:
                 matrix = _util.initializeMatrix(self.MatrixId)
