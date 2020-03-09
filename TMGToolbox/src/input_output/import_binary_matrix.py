@@ -46,7 +46,6 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _bank = _MODELLER.emmebank
-#_CreateMatrixTool = _MODELLER.tool('inro.emme.data.matrix.create_matrix')
 
 ##########################################################################################################
 
@@ -82,8 +81,8 @@ class ImportBinaryMatrix(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
-        #self.NewMatrixName = ""
-        #self.NewMatrixDescription = ""
+        self.NewMatrixName = ""
+        self.NewMatrixDescription = ""
 
     ##########################################################################################################
     #---
