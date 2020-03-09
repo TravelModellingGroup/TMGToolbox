@@ -46,8 +46,7 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _bank = _MODELLER.emmebank
-_CreateMatrixTool = _MODELLER.tool('inro.emme.data.matrix.create_matrix')
-
+#_CreateMatrixTool = _MODELLER.tool('inro.emme.data.matrix.create_matrix')
 
 ##########################################################################################################
 
@@ -83,7 +82,9 @@ class ImportBinaryMatrix(_m.Tool()):
         
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
-    
+        #self.NewMatrixName = ""
+        #self.NewMatrixDescription = ""
+
     ##########################################################################################################
     #---
     #---MODELLER INTERACE METHODS
@@ -206,11 +207,7 @@ class ImportBinaryMatrix(_m.Tool()):
                               attributes= self._GetAtts()):
 
             if self.MatrixId == None:
-                new_matrix_id = "mf" + str(self.NewMatrixID)
-                new_matrix_name = self.NewMatrixName
-                new_matrix_desc = self.NewMatrixDescription
-                _CreateMatrixTool(matrix_id=new_matrix_id, matrix_name=new_matrix_name, matrix_description=new_matrix_desc)
-                matrix = _util.initializeMatrix(self.NewMatrixID)
+                matrix = _util.initializeMatrix(id=self.NewMatrixID, name = self.NewMatrixName, description = self.NewMatrixDescription)
             else:
                 matrix = _util.initializeMatrix(self.MatrixId)
                 if self.MatrixDescription:
