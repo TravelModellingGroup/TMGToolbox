@@ -74,6 +74,7 @@ class ImportBinaryMatrix(_m.Tool()):
     NewMatrixID = _m.Attribute(int)
     NewMatrixName = _m.Attribute(str)
     NewMatrixDescription = _m.Attribute(str)
+    MatrixType = _m.Attribute(str)
 
     def __init__(self):
         #---Init internal variables
@@ -182,7 +183,8 @@ class ImportBinaryMatrix(_m.Tool()):
                           "1 for scalar, 2 for origin, 3 for destination, and "+ 
                           "4 for full matrices.")
         
-        self.MatrixId = self.MATRIX_TYPES[xtmf_MatrixType] + str(xtmf_MatrixNumber)
+        self.MatrixType = self.MATRIX_TYPES[xtmf_MatrixType]
+        self.MatrixId = self.MatrixType + str(xtmf_MatrixNumber)
         self.ImportFile = ImportFile
         self.MatrixDescription = MatrixDescription
         
@@ -221,12 +223,18 @@ class ImportBinaryMatrix(_m.Tool()):
             else:
                 data = _MatrixData.load(self.ImportFile)
             
-            origins, destinations = data.indices
-            origins = set(origins)
-            destinations = set(destinations)
-            if origins ^ destinations:
-                raise Exception("Asymmetrical matrix detected. Matrix must be square.")
-            
+            # 2D matrix
+            if self.MatrixType in ['mf']:
+                origins, destinations = data.indices
+                origins = set(origins)
+                destinations = set(destinations)
+                if origins ^ destinations:
+                    raise Exception("Asymmetrical matrix detected. Matrix must be square.")
+            # 1D matrix
+            else:
+                origins = data.indices[0]
+                origins = set(origins)
+                
             if _util.databankHasDifferentZones(_bank):
                 
                 zones = set(self.Scenario.zone_numbers)
