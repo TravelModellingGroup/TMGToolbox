@@ -23,7 +23,7 @@ Import Binary Matrix
 
     Authors: pkucirek
 
-    Latest revision by: pkucirek
+    Latest revision by: lunaxi
     
     
     [Description]
@@ -33,6 +33,7 @@ Import Binary Matrix
 '''
     0.0.1 Created on 2014-06-30 by pkucirek
     
+    0.0.3 Modified on 2020-03-09 by lunaxi, allow the GUI to create a matrix first if not existed
 '''
 
 import inro.modeller as _m
@@ -50,7 +51,7 @@ _bank = _MODELLER.emmebank
 
 class ImportBinaryMatrix(_m.Tool()):
     
-    version = '0.0.2'
+    version = '0.0.3'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -69,14 +70,20 @@ class ImportBinaryMatrix(_m.Tool()):
     ImportFile = _m.Attribute(str)
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     MatrixDescription = _m.Attribute(str)
-    
+
+    NewMatrixID = _m.Attribute(int)
+    NewMatrixName = _m.Attribute(str)
+    NewMatrixDescription = _m.Attribute(str)
+
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
         
         #---Set the defaults of parameters used by Modeller
         self.Scenario = _MODELLER.scenario #Default is primary scenario
-    
+        self.NewMatrixName = ""
+        self.NewMatrixDescription = ""
+
     ##########################################################################################################
     #---
     #---MODELLER INTERACE METHODS
@@ -88,6 +95,11 @@ class ImportBinaryMatrix(_m.Tool()):
         
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
+
+        pb.add_select_scenario(tool_attribute_name='Scenario',
+                               title='Scenario:',
+                               allow_none=False,
+                               note= "Only required if scenarios have different zone systems.")
         
         pb.add_select_file(tool_attribute_name= 'ImportFile',
                            window_type= 'file',
@@ -97,12 +109,22 @@ class ImportBinaryMatrix(_m.Tool()):
         pb.add_select_matrix(tool_attribute_name= 'MatrixId',
                              id= True,
                              title= "Matrix",
-                             note= "Select an existing matrix in which to save data.")
+                             allow_none=True,
+                             note= "Select an existing matrix to save data, or leave as None and create a new matrix below.")
+
+        pb.add_header("Create a NEW matrix to save data: (Ignore if using existing matrix)")
         
-        pb.add_select_scenario(tool_attribute_name='Scenario',
-                               title='Scenario:',
-                               allow_none=False,
-                               note= "Only required if scenarios have different zone systems.")
+        with pb.add_table(visible_border=False) as t:
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='NewMatrixID', 
+                                title='Matrix ID: mf', multi_line=False)
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='NewMatrixName', 
+                                title='Matrix Name', multi_line=False)
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='NewMatrixDescription', 
+                                title='Description', multi_line=False)
+         
         
         #---JAVASCRIPT
         pb.add_html("""
@@ -182,9 +204,13 @@ class ImportBinaryMatrix(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="%s v%s" %(self.__class__.__name__, self.version), \
                               attributes= self._GetAtts()):
-            matrix = _util.initializeMatrix(self.MatrixId)
-            if self.MatrixDescription:
-                matrix.description = self.MatrixDescription
+
+            if self.MatrixId is None:
+                matrix = _util.initializeMatrix(id=self.NewMatrixID, name = self.NewMatrixName, description = self.NewMatrixDescription)
+            else:
+                matrix = _util.initializeMatrix(self.MatrixId)
+                if self.MatrixDescription:
+                    matrix.description = self.MatrixDescription
 
             if str(self.ImportFile)[-2:] == "gz":
                 new_file = 'matrix.mtx'
@@ -238,4 +264,4 @@ class ImportBinaryMatrix(_m.Tool()):
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts
-        
+
