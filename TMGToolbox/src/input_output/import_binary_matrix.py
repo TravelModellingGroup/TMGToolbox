@@ -116,9 +116,16 @@ class ImportBinaryMatrix(_m.Tool()):
         pb.add_header("Create a NEW matrix to save data: (Ignore if using existing matrix)")
         
         with pb.add_table(visible_border=False) as t:
+            mt_type = [('mf', 'Full'),('mo', 'Origin'),('md','Destination'),('ms','Scalar')]
+
             with t.table_cell():
-                pb.add_text_box(tool_attribute_name='NewMatrixID', 
-                                title='Matrix ID: mf', multi_line=False)
+                pb.add_select(tool_attribute_name='NewMatrixType',
+                              keyvalues=mt_type, title="Matrix Type")
+
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='NewMatrixID',
+                                title='Matrix ID', multi_line=False)
+
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='NewMatrixName', 
                                 title='Matrix Name', multi_line=False)
