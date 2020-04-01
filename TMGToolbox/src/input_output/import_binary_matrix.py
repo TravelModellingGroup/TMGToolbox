@@ -231,7 +231,7 @@ class ImportBinaryMatrix(_m.Tool()):
                 data = _MatrixData.load(self.ImportFile)
             
             # 2D matrix
-            if self.NewMatrixType in ['FULL']:
+            if self.NewMatrixType == "FULL":
                 origins, destinations = data.indices
                 origins = set(origins)
                 destinations = set(destinations)
