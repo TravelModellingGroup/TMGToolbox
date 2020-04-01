@@ -66,6 +66,7 @@ class ImportBinaryMatrix(_m.Tool()):
     xtmf_MatrixType = _m.Attribute(int)
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     
+    MatrixType = _m.Attribute(str)
     MatrixId = _m.Attribute(str)
     ImportFile = _m.Attribute(str)
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
@@ -74,6 +75,7 @@ class ImportBinaryMatrix(_m.Tool()):
     NewMatrixID = _m.Attribute(int)
     NewMatrixName = _m.Attribute(str)
     NewMatrixDescription = _m.Attribute(str)
+    NewMatrixType = _m.Attribute(str)
 
     def __init__(self):
         #---Init internal variables
@@ -115,9 +117,16 @@ class ImportBinaryMatrix(_m.Tool()):
         pb.add_header("Create a NEW matrix to save data: (Ignore if using existing matrix)")
         
         with pb.add_table(visible_border=False) as t:
+            mt_type = [('FULL','mf'),('ORIGIN','mo'),('DESTINATION','md'),('SCALAR','ms')]
+
             with t.table_cell():
-                pb.add_text_box(tool_attribute_name='NewMatrixID', 
-                                title='Matrix ID: mf', multi_line=False)
+                pb.add_select(tool_attribute_name='NewMatrixType',
+                              keyvalues=mt_type, title="Matrix Type")
+
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='NewMatrixID',
+                                title='Matrix ID', multi_line=False)
+
             with t.table_cell():
                 pb.add_text_box(tool_attribute_name='NewMatrixName', 
                                 title='Matrix Name', multi_line=False)
@@ -182,7 +191,8 @@ class ImportBinaryMatrix(_m.Tool()):
                           "1 for scalar, 2 for origin, 3 for destination, and "+ 
                           "4 for full matrices.")
         
-        self.MatrixId = self.MATRIX_TYPES[xtmf_MatrixType] + str(xtmf_MatrixNumber)
+        self.MatrixType = self.MATRIX_TYPES[xtmf_MatrixType]
+        self.MatrixId = self.MatrixType + str(xtmf_MatrixNumber)
         self.ImportFile = ImportFile
         self.MatrixDescription = MatrixDescription
         
@@ -204,9 +214,9 @@ class ImportBinaryMatrix(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="%s v%s" %(self.__class__.__name__, self.version), \
                               attributes= self._GetAtts()):
-
+            
             if self.MatrixId is None:
-                matrix = _util.initializeMatrix(id=self.NewMatrixID, name = self.NewMatrixName, description = self.NewMatrixDescription)
+                matrix = _util.initializeMatrix(id=self.NewMatrixID, name = self.NewMatrixName, description = self.NewMatrixDescription, matrix_type = self.NewMatrixType)
             else:
                 matrix = _util.initializeMatrix(self.MatrixId)
                 if self.MatrixDescription:
@@ -221,12 +231,19 @@ class ImportBinaryMatrix(_m.Tool()):
             else:
                 data = _MatrixData.load(self.ImportFile)
             
-            origins, destinations = data.indices
-            origins = set(origins)
-            destinations = set(destinations)
-            if origins ^ destinations:
-                raise Exception("Asymmetrical matrix detected. Matrix must be square.")
-            
+            self.MatrixType = matrix.type
+            # 2D matrix
+            if self.MatrixType == "mf":
+                origins, destinations = data.indices
+                origins = set(origins)
+                destinations = set(destinations)
+                if origins ^ destinations:
+                    raise Exception("Asymmetrical matrix detected. Matrix must be square.")
+            # 1D matrix
+            else:
+                origins = data.indices[0]
+                origins = set(origins)
+                
             if _util.databankHasDifferentZones(_bank):
                 
                 zones = set(self.Scenario.zone_numbers)
