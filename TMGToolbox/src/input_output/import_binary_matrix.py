@@ -74,7 +74,7 @@ class ImportBinaryMatrix(_m.Tool()):
     NewMatrixID = _m.Attribute(int)
     NewMatrixName = _m.Attribute(str)
     NewMatrixDescription = _m.Attribute(str)
-    MatrixType = _m.Attribute(str)
+    NewMatrixType = _m.Attribute(str)
 
     def __init__(self):
         #---Init internal variables
@@ -116,7 +116,7 @@ class ImportBinaryMatrix(_m.Tool()):
         pb.add_header("Create a NEW matrix to save data: (Ignore if using existing matrix)")
         
         with pb.add_table(visible_border=False) as t:
-            mt_type = [('mf', 'Full'),('mo', 'Origin'),('md','Destination'),('ms','Scalar')]
+            mt_type = [('FULL','mf'),('ORIGIN','mo'),('DESTINATION','md'),('SCALAR','ms')]
 
             with t.table_cell():
                 pb.add_select(tool_attribute_name='NewMatrixType',
@@ -213,9 +213,9 @@ class ImportBinaryMatrix(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="%s v%s" %(self.__class__.__name__, self.version), \
                               attributes= self._GetAtts()):
-
+            
             if self.MatrixId is None:
-                matrix = _util.initializeMatrix(id=self.NewMatrixID, name = self.NewMatrixName, description = self.NewMatrixDescription)
+                matrix = _util.initializeMatrix(id=self.NewMatrixID, name = self.NewMatrixName, description = self.NewMatrixDescription, matrix_type = self.NewMatrixType)
             else:
                 matrix = _util.initializeMatrix(self.MatrixId)
                 if self.MatrixDescription:
@@ -231,7 +231,7 @@ class ImportBinaryMatrix(_m.Tool()):
                 data = _MatrixData.load(self.ImportFile)
             
             # 2D matrix
-            if self.MatrixType in ['mf']:
+            if self.NewMatrixType in ['FULL']:
                 origins, destinations = data.indices
                 origins = set(origins)
                 destinations = set(destinations)
