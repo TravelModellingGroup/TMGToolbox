@@ -66,6 +66,7 @@ class ImportBinaryMatrix(_m.Tool()):
     xtmf_MatrixType = _m.Attribute(int)
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
     
+    MatrixType = _m.Attribute(str)
     MatrixId = _m.Attribute(str)
     ImportFile = _m.Attribute(str)
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
@@ -230,8 +231,9 @@ class ImportBinaryMatrix(_m.Tool()):
             else:
                 data = _MatrixData.load(self.ImportFile)
             
+            self.MatrixType = matrix.type
             # 2D matrix
-            if self.NewMatrixType == "FULL":
+            if self.MatrixType == "mf":
                 origins, destinations = data.indices
                 origins = set(origins)
                 destinations = set(destinations)
