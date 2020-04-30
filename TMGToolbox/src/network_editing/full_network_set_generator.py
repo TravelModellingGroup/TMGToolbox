@@ -943,7 +943,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                 print "Edited transit line data"
 
             # Prorate the transit speeds in all uncleaned networks
-            if self.LineFilterExpression is not None or self.LineFilterExpression.strip() != '':
+            if (self.LineFilterExpression is not None) and (self.LineFilterExpression.strip() != ''):
                 for scenarios in scenarioSet:
                     prorateTransitSpeed(scenarios[0], self.LineFilterExpression)
 
