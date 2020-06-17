@@ -21,6 +21,7 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 import zipfile as _zipfile
+import os
 from os import path as _path
 import shutil as _shutil
 import tempfile as _tf
@@ -48,6 +49,7 @@ class ComponentContainer(object):
         self.turns_file = None
         self.shape_file = None
         self.functions_file = None
+        self.transit_file_change = False
 
         self.attribute_header_file = None
         self.attribute_value_files = None
@@ -64,6 +66,7 @@ class ComponentContainer(object):
         self.turns_file = None
         self.shape_file = None
         self.functions_file = None
+        self.transit_file_change = False
 
         self.attribute_header_file = None
         self.attribute_value_files = None
@@ -573,6 +576,8 @@ class ImportNetworkPackage(_m.Tool()):
     @_m.logbook_trace("Reading transit lines")
     def _batchin_lines(self, scenario, temp_folder, zf):
         zf.extract(self._components.lines_file, temp_folder)
+        if self.transit_file_change is True:
+            self._transit_line_file_update(temp_folder)
         self.TRACKER.runTool(import_lines,
                              transaction_file=_path.join(temp_folder, self._components.lines_file),
                              scenario=scenario)
@@ -800,7 +805,9 @@ class ImportNetworkPackage(_m.Tool()):
                  NWPversion = float(vf.readline())
                  if NWPversion >= 3:
                      self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
-                 
+                 if NWPversion >= 4.4:
+                     self.transit_file_change = True
+
                  s = self._getZipOriginalString(processed, contents, 'link_results.csv')
                  s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
                  if s is not None and s2 is not None:
@@ -857,6 +864,19 @@ class ImportNetworkPackage(_m.Tool()):
                     # strip called twice: once to remove the '\n' character, and once to remove both ' characters
                     types.add(att.type)
         return types
+
+    def _transit_line_file_update(self, temp_folder):
+        lines = []
+        with open(_path.join(temp_folder, self._components.lines_file),"r") as infile, open(_path.join(temp_folder, 'temp.211'),"w") as outfile:
+            for line in infile:
+                if line[0] == 'c':
+                    outfile.write(line.replace("'",""))
+                else:
+                    outfile.write(line)
+        outfile.close()
+        os.remove(_path.join(temp_folder, self._components.lines_file))
+        os.renames(_path.join(temp_folder, 'temp.211'),_path.join(temp_folder, self._components.lines_file))
+        return None
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
