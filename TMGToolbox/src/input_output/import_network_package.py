@@ -21,6 +21,7 @@ import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
 import zipfile as _zipfile
+import os
 from os import path as _path
 import shutil as _shutil
 import tempfile as _tf
@@ -866,15 +867,15 @@ class ImportNetworkPackage(_m.Tool()):
 
     def _transit_line_file_update(self, temp_folder):
         lines = []
-        with open(_path.join(temp_folder, self._components.lines_file),"r") as infile:
+        with open(_path.join(temp_folder, self._components.lines_file),"r") as infile, open(_path.join(temp_folder, 'temp.211'),"w") as outfile:
             for line in infile:
                 if line[0] == 'c':
-                    lines.append(line.replace("'",""))
+                    outfile.write(line.replace("'",""))
                 else:
-                    lines.append(line)
-        with open(_path.join(temp_folder, self._components.lines_file),"w") as outfile:
-            for line in lines:
-                outfile.write(line)
+                    outfile.write(line)
+        outfile.close()
+        os.remove(_path.join(temp_folder, self._components.lines_file))
+        os.renames(_path.join(temp_folder, 'temp.211'),_path.join(temp_folder, self._components.lines_file))
         return None
 
     @_m.method(return_type=_m.TupleType)
