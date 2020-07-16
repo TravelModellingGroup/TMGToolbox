@@ -790,6 +790,8 @@ class ImportNetworkPackage(_m.Tool()):
 
         contents = package.namelist()
         processed = [self._getZipFileName(x) for x in contents]
+        self.transit_file_change = False 
+
         if 'version.txt' in processed:
             self._components.mode_file = self._getZipOriginalString(processed, contents, 'modes.201')
             self._components.vehicles_file = self._getZipOriginalString(processed, contents, 'vehicles.202')
