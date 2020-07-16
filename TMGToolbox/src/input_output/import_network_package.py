@@ -49,7 +49,6 @@ class ComponentContainer(object):
         self.turns_file = None
         self.shape_file = None
         self.functions_file = None
-        self.transit_file_change = False
 
         self.attribute_header_file = None
         self.attribute_value_files = None
@@ -66,7 +65,6 @@ class ComponentContainer(object):
         self.turns_file = None
         self.shape_file = None
         self.functions_file = None
-        self.transit_file_change = False
 
         self.attribute_header_file = None
         self.attribute_value_files = None
@@ -805,8 +803,7 @@ class ImportNetworkPackage(_m.Tool()):
                  NWPversion = float(vf.readline())
                  if NWPversion >= 3:
                      self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
-                 if NWPversion >= 4.4:
-                     self.transit_file_change = True
+                 self.transit_file_change = (NWPversion >= 4.4)
 
                  s = self._getZipOriginalString(processed, contents, 'link_results.csv')
                  s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
