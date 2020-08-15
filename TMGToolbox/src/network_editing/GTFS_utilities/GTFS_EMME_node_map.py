@@ -37,7 +37,7 @@ gtfsExportTool = _MODELLER.tool('tmg.network_editing.GTFS_utilities.export_GTFS_
 EMME_VERSION = _util.getEmmeVersion(tuple)
 
 class GTFStoEmmeMap(_m.Tool()):
-    version = '0.0.1'
+    version = '0.0.2'
     tool_run_msg = ""
     number_of_tasks = 1 
 
@@ -53,9 +53,8 @@ class GTFStoEmmeMap(_m.Tool()):
     def page(self):
 
         pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
-                     description = "Takes the <b>stops.txt</b> file and creates a mapping file that shows \
-                             the node in the EMME network which it corresponds to. \
-                             EXPERIMENTAL",
+                     description = "Takes the <b>stops.txt</b> file or a <b>shapefile</b> to create a mapping file that shows \
+                             the node in the EMME network which it corresponds to.",
                      branding_text = "- TMG Toolbox")
                 
         if self.tool_run_msg != "": # to display messages in the page
@@ -64,7 +63,7 @@ class GTFStoEmmeMap(_m.Tool()):
         pb.add_select_file(tool_attribute_name="FileName",
                            window_type='file',
                            file_filter="*.txt *.shp",
-                           title="stops.txt file from the GTFS folder or stops file in shp format")
+                           title="stops.txt file from the GTFS folder or stops file in *.shp format")
         
         pb.add_select_file(tool_attribute_name="MappingFileName",
                            window_type='save_file',
@@ -160,18 +159,15 @@ class GTFStoEmmeMap(_m.Tool()):
 
     def _LoadStopsShp(self):
         stops = {}
-        shp = ogr.Open(self.ShpFileName)
-        layer = shp.GetLayer(0)
-        if layer.GetGeomType() == 1:
-            for feat in layer:
-                index1 = feat.GetFieldIndex("StopID")
-                id = feat.GetField(index1)
-                geom  = feat.GetGeometryRef()
-                points = geom.GetPointCount()
-                for point in xrange(points):
-                    lon, lat, z = geom.GetPoint(point)
-                    stops[id] = [float(lon),float(lat)]
-        return stops 
+        with _geo.Shapely2ESRI(self.FileName, 'r') as reader:
+            for point in reader.readThrough():
+                id = str(point.properties['stop_id'])
+                lat = float(point.properties['stop_lat'])
+                lon = float(point.properties['stop_lon'])
+
+                stops[id] = [lon,lat]
+
+        return stops
 
     def _ConvertStops(self, stops):
         convertedStops = {}

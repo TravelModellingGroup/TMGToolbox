@@ -252,7 +252,7 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
     
     def _WriteProjectionFile(self):
         wkt = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]'
-        with open(_path.splitext(self.ShapefileName)[0] + ".prj", 'w') as writer:
+        with open(_path.splitext(self.ShapefileName)[0] + "/" + _path.splitext(_path.basename(self.ShapefileName))[0] + ".prj", 'w') as writer:
             writer.write(wkt)
         
     @_m.method(return_type=_m.TupleType)
