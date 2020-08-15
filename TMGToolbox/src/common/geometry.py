@@ -205,7 +205,7 @@ class StringField():
         self.type = 'STR'
         
     def addToDf(self, df):
-        df.schema[self.name] = ("std:%length" %self.length)
+        df.schema[self.name] = ("str:%d" %self.length)
     
     def format(self, value):
         return str(value)[:self.length]
@@ -258,7 +258,7 @@ class IntField():
         self.type = 'INT'
     
     def addToDf(self, df):
-        df.schema[self.name] = "int:%" %self.length
+        df.schema[self.name] = "int:%d" %self.length
     
     def format(self, value):
         i = int(value)
@@ -362,11 +362,12 @@ class Shapely2ESRI():
             elif dataType == Shapely2ESRI._MULTIPOLYGON:
                 geom = MultiPolygon(shape(record['geometry']))
             elif dataType == Shapely2ESRI._POINT:
-                geom = Point(data[0])
+                geom = Point(data)
             elif dataType == Shapely2ESRI._ARC:
-                dataType = LineString(data[0])
+                geom = LineString(data[0])
             else:
                 raise NotImplementedError("Unknown data type: " + str(dataType))
+            geom.properties = record['properties']
             self._records[fid] = geom
             fid += 1
         self._size = len(self._records)    

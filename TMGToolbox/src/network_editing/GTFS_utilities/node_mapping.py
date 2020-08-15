@@ -58,10 +58,16 @@ class NodeEMMEmap(_m.Tool()):
     def page(self):
 
         pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
+                     description = "This tool has been integrated with the <b>GTFS EMME Node Map</b>. \
+                     Please use the latter one instead.",
+                     branding_text = "- TMG Toolbox")
+        
+        """
+        pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
                      description = "Takes the <b>stops.txt</b> file and creates a mapping file that shows \
                              the node in the EMME network which it corresponds to.",
                      branding_text = "- TMG Toolbox")
-                
+
         if self.tool_run_msg != "": # to display messages in the page
             pb.tool_run_status(self.tool_run_msg_status)
             
@@ -74,10 +80,8 @@ class NodeEMMEmap(_m.Tool()):
         pb.add_select_file(tool_attribute_name="MappingFileName",
                            window_type='save_file',
                            title="Map file to export in csv format")
+        """
 
-        '''pb.add_select_file(tool_attribute_name="MappingfileName",
-                           window_type='save_file',
-                           title="Map file to export")'''
         return pb.render()
 
     def run(self):

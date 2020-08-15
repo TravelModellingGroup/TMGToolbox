@@ -24,6 +24,8 @@ from contextlib import contextmanager
 from contextlib import nested
 from os import path as _path
 from pyproj import Proj
+from osgeo import ogr
+
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -50,6 +52,12 @@ class ShptoEmmeMap(_m.Tool()):
     def page(self):
 
         pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
+                     description = "This tool has been integrated with the <b>GTFS EMME Node Map</b>. \
+                     Please use the latter one instead.",
+                     branding_text = "- TMG Toolbox")
+
+        """
+        pb = _tmgTPB.TmgToolPageBuilder(self, title = "GTFS Stops to Emme Node File v%s" %self.version,
                      description = "Takes a shapefile and creates a mapping file that shows \
                              the node in the EMME network which it corresponds to. \
                              EXPERIMENTAL",
@@ -66,10 +74,8 @@ class ShptoEmmeMap(_m.Tool()):
         pb.add_select_file(tool_attribute_name="MappingFileName",
                            window_type='save_file',
                            title="Map file to export")
+        """
 
-        '''pb.add_select_file(tool_attribute_name="MappingfileName",
-                           window_type='save_file',
-                           title="Map file to export")'''
         return pb.render()
 
     def __call__(self, StopFileName, MappingFileName):
