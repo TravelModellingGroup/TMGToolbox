@@ -89,6 +89,10 @@ class EstimateTransitOperatingCosts(_m.Tool()):
                          "by the selected scenario, in addition to revenue hours, revenue kilometres, and estimated " \
                          "vehicle count. Individual transit lines are grouped into routes."
         pb.branding_text = "TMG Toolbox"
+
+        if self.tool_run_msg:
+            pb.add_html(self.tool_run_msg)
+
         pb.add_select_scenario(tool_attribute_name='Scenario', title='Scenario:', allow_none=False,
                                note="Select the scenario to perform the cost computation for. Be sure to have the time "
                                     "period information (AM, MD, PM, EV, or ON) present in the scenario title. "
@@ -119,8 +123,7 @@ class EstimateTransitOperatingCosts(_m.Tool()):
                            window_type='save_file')
         # pb.add_select_file(tool_attribute_name='DebugFile', title="Debug File:", file_filter="*.csv",
         #                    window_type='save_file')
-        if self.tool_run_msg:
-            pb.add_html(self.tool_run_msg)
+
         return pb.render()
 
     def run(self):
