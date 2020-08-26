@@ -26,6 +26,7 @@
     <Compile Include="src\analysis\export_partition_average_matrix.py" />
     <Compile Include="src\analysis\matrix_statistics.py" />
     <Compile Include="src\analysis\traffic\export_countpost_results_multiclass.py" />
+    <Compile Include="src\analysis\transit\estimate_transit_operating_costs.py" />
     <Compile Include="src\analysis\transit\extract_transit_matrix_results.py">
       <SubType>Code</SubType>
     </Compile>
