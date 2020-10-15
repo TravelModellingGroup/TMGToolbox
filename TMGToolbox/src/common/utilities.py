@@ -847,6 +847,7 @@ class CSVReader():
         try:
             for line in self.__reader.readlines():
                 if not (line):
+                    self.__lincount += 1
                     continue
                 cells = line.strip().split(',')
                 self.__lincount += 1
