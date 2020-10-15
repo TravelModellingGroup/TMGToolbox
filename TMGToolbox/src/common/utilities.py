@@ -846,11 +846,10 @@ class CSVReader():
     def readlines(self):
         try:
             for line in self.__reader.readlines():
+                self.__lincount += 1
                 if not (line):
-                    self.__lincount += 1
                     continue
                 cells = line.strip().split(',')
-                self.__lincount += 1
                 if not self.append_blanks and len(cells) < len(self.header):
                     raise IOError("Fewer records than header")
                 
