@@ -846,6 +846,8 @@ class CSVReader():
     def readlines(self):
         try:
             for line in self.__reader.readlines():
+                if not (line):
+                    continue
                 cells = line.strip().split(',')
                 self.__lincount += 1
                 if not self.append_blanks and len(cells) < len(self.header):
