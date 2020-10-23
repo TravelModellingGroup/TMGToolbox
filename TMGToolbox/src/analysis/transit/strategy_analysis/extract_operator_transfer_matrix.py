@@ -158,6 +158,7 @@ class OperatorTransferMatrix(_m.Tool()):
     #---PARAMETERS
     Scenario = _m.Attribute(_m.InstanceType)
     xtmf_ScenarioNumber = _m.Attribute(int)
+    xtmf_ClassName = _m.Attribute(str)
     DemandMatrixId = _m.Attribute(str)
     ClassName = _m.Attribute(str)
     
@@ -394,12 +395,14 @@ class OperatorTransferMatrix(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
 
-    def __call__(self, xtmf_ScenarioNumber, ClassName, ExportTransferMatrixFlag, ExportWalkAllWayMatrixFlag, TransferMatrixFile, 
+    def __call__(self, xtmf_ScenarioNumber, xtmf_ClassName, ExportTransferMatrixFlag, ExportWalkAllWayMatrixFlag, TransferMatrixFile, 
                  xtmf_AggregationPartition, WalkAllWayExportFile, LineGroupOptionOrAttributeId):
         self.tool_run_msg = ""
         self.TRACKER.reset()                              
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
+        self.ClassName = xtmf_ClassName
+
         if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
 
