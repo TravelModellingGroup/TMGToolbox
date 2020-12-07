@@ -23,7 +23,7 @@ Assign V4 Boarding Penalties
 
     Authors: pkucirek
 
-    Latest revision by: Trajce Nikolov
+    Latest revision by: James Vaughan
     
     
     Assigns line-specific boarding penalties (stored in UT3) based on specified
@@ -44,6 +44,8 @@ Assign V4 Boarding Penalties
             and the number of line groups is open-ended.
 
     1.2.0 Added ability to set IVTT perception factor.
+
+    1.2.1 Added ability to set Transfer boarding penalties.
 
 '''
 
@@ -66,9 +68,9 @@ class AssignV4BoardingPenalties(_m.Tool()):
     number_of_tasks = 15 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
-    #    Only those parameters neccessary for Modeller and/or XTMF to dock with
+    #    Only those parameters necessary for Modeller and/or XTMF to dock with
     #    need to be placed here. Internal parameters (such as lists and dicts)
-    #    get intitialized during construction (__init__)
+    #    get initialized during construction (__init__)
     
     xtmf_ScenarioNumbers = _m.Attribute(str) # parameter used by XTMF only
     Scenarios = _m.Attribute(_m.ListType) # common variable or parameter
@@ -80,18 +82,18 @@ class AssignV4BoardingPenalties(_m.Tool()):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
         
         #---Set the defaults of parameters used by Modeller
-        lines = ["GO Train: mode=r: 1.0: 1.0",
-                 "GO Bus: mode=g: 1.0: 1.0",
-                 "Subway: mode=m: 1.0: 1.0",
-                 "Streetcar: mode=s: 1.0: 1.0",
-                 "TTC Bus: line=T_____ and mode=bp: 1.0: 1.0",
-                 "YRT: line=Y_____: 1.0: 1.0",
-                 "VIVA: line=YV____: 1.0: 1.0",
-                 "Brampton: line=B_____: 1.0: 1.0",
-                 "MiWay: line=M_____: 1.0: 1.0",
-                 "Durham: line=D_____: 1.0: 1.0",
-                 "Halton: line=H_____: 1.0: 1.0",
-                 "Hamilton: line=W_____: 1.0: 1.0"]
+        lines = ["GO Train: mode=r: 1.0: 1.0: 1.0",
+                 "GO Bus: mode=g: 1.0: 1.0: 1.0",
+                 "Subway: mode=m: 1.0: 1.0: 1.0",
+                 "Streetcar: mode=s: 1.0: 1.0: 1.0",
+                 "TTC Bus: line=T_____ and mode=bp: 1.0: 1.0: 1.0",
+                 "YRT: line=Y_____: 1.0: 1.0: 1.0",
+                 "VIVA: line=YV____: 1.0: 1.0: 1.0",
+                 "Brampton: line=B_____: 1.0: 1.0: 1.0",
+                 "MiWay: line=M_____: 1.0: 1.0: 1.0",
+                 "Durham: line=D_____: 1.0: 1.0: 1.0",
+                 "Halton: line=H_____: 1.0: 1.0: 1.0",
+                 "Hamilton: line=W_____: 1.0: 1.0: 1.0"]
 
         self.PenaltyFilterString = "\n".join(lines)
     
@@ -112,7 +114,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
                         title = "Line Group Boarding Penalties",
                         note= "List of filters and boarding penalties for line groups. \
                         <br><br><b>Syntax:</b> [<em>label (line group name)</em>] : [<em>network selector expression</em>] \
-                        : [<em>boarding penalty</em>] : [<em>IVTT Perception Factor</em>] ... \
+                        : [<em>initial boarding penalty</em>] : [<em>Transfer boarding penalty</em>] : [<em>IVTT Perception Factor</em>] ... \
                         <br><br>Separate (label-filter-penalty) groups with a comma or new line.\
                         <br><br>Note that order matters, since penalties are applied sequentially.")
 
@@ -211,8 +213,8 @@ class AssignV4BoardingPenalties(_m.Tool()):
             if component.isspace(): continue #Skip if totally empty
             
             parts = component.split(':')
-            if len(parts) != 4:
-                msg = "Error parsing penalty and filter string: Separate label, filter and penalty with colons label:filter:penalty:ivttPerception"
+            if len(parts) != 5:
+                msg = "Error parsing penalty and filter string: Separate label, filter and penalty with colons label:filter:initial:transfer:ivttPerception"
                 msg += ". [%s]" %component 
                 raise SyntaxError(msg)
             strippedParts = [item.strip() for item in parts]
@@ -225,14 +227,16 @@ class AssignV4BoardingPenalties(_m.Tool()):
         tool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
         
         self.TRACKER.startProcess(2 * len(penaltyFilterList) + 2)
-        
-        with _m.logbook_trace("Resetting UT3 to 0"):
+
+        with _m.logbook_trace("Resetting UT2 and UT3 to 0"):
+            tool(specification=self._GetClearLineSpec("ut2", "0"), scenario=scenario)
             tool(specification=self._GetClearLineSpec("ut3", "0"), scenario=scenario)
             self.TRACKER.completeSubtask()
 
         for group in penaltyFilterList:
             with _m.logbook_trace("Applying " + group[0] + " BP"):
-                tool(specification=self._GetGroupSpec(group), scenario=scenario)
+                tool(specification=self._GetGroupSpecInitial(group), scenario=scenario)
+                tool(specification=self._GetGroupSpecTransfer(group), scenario=scenario)
                 self.TRACKER.completeSubtask()
 
         with _m.logbook_trace("Resetting US2 to 1"):
@@ -266,8 +270,19 @@ class AssignV4BoardingPenalties(_m.Tool()):
                     },
                     "type": "NETWORK_CALCULATION"
                 }
+
+    def _GetGroupSpecTransfer(self, group):
+        return {
+                    "result": "ut2",
+                    "expression": group[3],
+                    "aggregation": None,
+                    "selections": {
+                        "transit_line": group[1]
+                    },
+                    "type": "NETWORK_CALCULATION"
+                }
     
-    def _GetGroupSpec(self, group):
+    def _GetGroupSpecInitial(self, group):
         return {
                     "result": "ut3",
                     "expression": group[2],
@@ -281,7 +296,7 @@ class AssignV4BoardingPenalties(_m.Tool()):
     def _IVTTPerceptionSpec(self,group):
         return {
                     "result": "us2",
-                    "expression": group[3],
+                    "expression": group[4],
                     "aggregation": None,
                     "selections": {
                         "transit_line": group[1],

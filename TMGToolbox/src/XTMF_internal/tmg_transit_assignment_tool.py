@@ -737,12 +737,11 @@ class TransitAssignmentTool(_m.Tool()):
                     },
                 'boarding_time': {
                     'at_nodes': None,
-                    'on_lines': {
-                        'penalty': 'ut3',
-                        'perception_factor': self.ClassBoardPerceptionList[index]
+                    'on_lines': None,
+                    'global': {
+                        'penalty': 0,
+                        'perception_factor': 1
                         },
-                    'global': None,
-                    'on_segments': None
                     },
                 'boarding_cost': {
                     'at_nodes': None,
@@ -814,7 +813,15 @@ class TransitAssignmentTool(_m.Tool()):
                         "description": "Walking",
                         "destinations_reachable": self.WalkAllWayFlag,
                         "transition_rules": modeList,
-                        "boarding_time": None,
+                        "boarding_time": {
+                            'at_nodes': None,
+                            'on_lines': {
+                                'penalty': 'ut3',
+                                'perception_factor': self.ClassBoardPerceptionList[index]
+                            },
+                            'global': None,
+                            'on_segments': None
+                        },
                         "boarding_cost": None,
                         "waiting_time": None
                     },
@@ -822,11 +829,30 @@ class TransitAssignmentTool(_m.Tool()):
                         "description": "Transit",
                         "destinations_reachable": True,
                         "transition_rules": modeList,
-                        "boarding_time": None,
+                        "boarding_time": {
+                            'at_nodes': None,
+                            'on_lines': {
+                                'penalty': 'ut2',
+                                'perception_factor': self.ClassBoardPerceptionList[index]
+                                },
+                            'global': None,
+                            'on_segments': None
+                        },
                         "boarding_cost": None,
                         "waiting_time": None
                     }
             ]
+        else:
+            # Provide backwards compatibility for a single boarding penalty
+            baseSpec['boarding_time'] = {
+                    'at_nodes': None,
+                    'on_lines': {
+                        'penalty': 'ut3',
+                        'perception_factor': self.ClassBoardPerceptionList[index]
+                        },
+                    'global': None,
+                    'on_segments': None
+                    }
         return baseSpec
  
     def _RunExtendedTransitAssignment(self, iteration):
