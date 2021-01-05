@@ -1,3 +1,4 @@
+from __future__ import print_function
 '''
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -1110,7 +1111,7 @@ class AStarLinks():
         while len(pq) > 0:
             link = pq.pop()
             if self.__debug:
-                print link.j_node
+                print(link.j_node)
             
             #---Check for completion
             if link == destinationLink:

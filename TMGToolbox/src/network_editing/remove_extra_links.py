@@ -37,10 +37,12 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from html import HTML
 from re import split as _regex_split
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -168,15 +170,7 @@ class RemoveExtraLinks(_m.Tool()):
                 self.TransferModeList.append(self.BaseNetwork.mode(modechar))
             else:
                 raise Exception ("Transfer mode %s was not found in the network!" %modechar)
-
-        try:
-            
-            self._Execute()
-        except Exception as e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
-            raise
-        
+        self._Execute()        
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")    
 
     ##########################################################################################################
@@ -189,7 +183,7 @@ class RemoveExtraLinks(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -360,7 +354,7 @@ class RemoveExtraLinks(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

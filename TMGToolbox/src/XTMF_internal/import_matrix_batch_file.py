@@ -55,7 +55,7 @@ class LoadMatrix(_m.Tool()):
                             throw_on_error = True,
                             scenario=scenario)
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
         
         self.XTMFBridge.ReportProgress(1.0)
         

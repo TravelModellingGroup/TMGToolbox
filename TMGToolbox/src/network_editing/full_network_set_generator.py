@@ -1,3 +1,4 @@
+from __future__ import print_function
 '''
     Copyright 2015-2016 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -52,10 +53,12 @@ Full Network Set Generator
 import inro.modeller as _m
 import traceback as _traceback
 import os
-from contextlib import contextmanager
-from contextlib import nested
-from html import HTML
 from re import split as _regex_split
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -68,7 +71,6 @@ applyNetUpdate = _MODELLER.tool('tmg.input_output.import_network_update')
 lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_batch_line_edits')
 
 ##########################################################################################################
-
 class FullNetworkSetGenerator(_m.Tool()):
     
     version = '0.3.1'
@@ -80,7 +82,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                 
     # Tool Input Parameters
     #    Only those parameters neccessary for Modeller and/or XTMF to dock with
-    #    need to be placed here. Internal parameters (such as lists and dicts)
+    #    need to be placed here.  Internal parameters (such as lists and dicts)
     #    get intitialized during construction (__init__)
     
     xtmf_ScenarioNumber = _m.Attribute(int) # parameter used by XTMF only
@@ -218,9 +220,9 @@ class FullNetworkSetGenerator(_m.Tool()):
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type in domains:
                 if exatt.name == "@stn1" or exatt.name == "@stn2":
-                    lines.append("%s: force" %exatt.name)
+                    lines.append("%s: force" % exatt.name)
                 else:
-                    lines.append("%s: avg" %exatt.name)
+                    lines.append("%s: avg" % exatt.name)
         self.AttributeAggregatorString = "\n".join(lines)
         
         #Set to -1 as this will be interpreted in the HTML
@@ -236,7 +238,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.CustomScenarioSetFlag = False
 
     def page(self):
-        pb = _tmgTPB.TmgToolPageBuilder(self, title="Full Network Set Generator v%s" %self.version,
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="Full Network Set Generator v%s" % self.version,
                      description="Builds a full set of cleaned time period network \
                          from a single base network. Make sure that the base network \
                          includes a zone system before running the tool. \
@@ -554,7 +556,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                             self.BaseScenario.mode('y')]
 
         pb.add_select_mode(tool_attribute_name='TransferModeList',
-                           filter=[ 'AUX_TRANSIT'],
+                           filter=['AUX_TRANSIT'],
                            allow_none=False,
                            title='Transfer Modes:',
                            note='Select all transfer modes.')
@@ -565,17 +567,18 @@ class FullNetworkSetGenerator(_m.Tool()):
         connectorKV = [(-1, 'No attribute')]
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type == 'NODE':
-                v = "%s - %s" %(exatt.name, exatt.description)
+                v = "%s - %s" % (exatt.name, exatt.description)
                 nodeKV.append((exatt.name, v))
             elif exatt.type == 'LINK':
-                v = "%s - %s" %(exatt.name, exatt.description)
+                v = "%s - %s" % (exatt.name, exatt.description)
                 connectorKV.append((exatt.name, v))
                 
         pb.add_select(tool_attribute_name= 'NodeFilterAttributeId',
                       keyvalues= nodeKV,
                       title="Node Filter Attribute",
                       note="Only remove candidate nodes whose attribute value != 0. Select 'No attribute' to remove all candidate nodes.")
-        #Excludes candidate nodes whose attribute value == 0. Select 'No attribute' to accept all nodes
+        #Excludes candidate nodes whose attribute value == 0.  Select 'No
+        #attribute' to accept all nodes
         
         pb.add_select(tool_attribute_name= 'StopFilterAttributeId',
                       keyvalues= nodeKV,
@@ -594,18 +597,20 @@ class FullNetworkSetGenerator(_m.Tool()):
         
         pb.add_header("AGGREGATION FUNCTIONS")
         
-        h = HTML()
-        ul = h.ul
-        ul.li("first - Uses the first element's attribute")
-        ul.li("last - Uses the last element's attribute")
-        ul.li("sum - Add the two attributes")
-        ul.li("avg - Averages the two attributes")
-        ul.li("avg_by_length - Average the two attributes, weighted by link length")
-        ul.li("min - The minimum of the two attributes")
-        ul.li("max - The maximum of the two attributes")
-        ul.li("and - Boolean AND")
-        ul.li("or - Boolean OR")
-        ul.li("force - Forces the tool to keep the node if the two attributes are different")
+
+        def add_li(li):
+            return "<li>" + li + "<\\li>"
+        aggregation_options = add_li("first - Uses the first element's attribute")
+        aggregation_options += add_li("last - Uses the last element's attribute")
+        aggregation_options += add_li("sum - Add the two attributes")
+        aggregation_options += add_li("avg - Averages the two attributes")
+        aggregation_options += add_li("avg_by_length - Average the two attributes, weighted by link length")
+        aggregation_options += add_li("min - The minimum of the two attributes")
+        aggregation_options += add_li("max - The maximum of the two attributes")
+        aggregation_options += add_li("and - Boolean AND")
+        aggregation_options += add_li("or - Boolean OR")
+        aggregation_options += add_li("force - Forces the tool to keep the node if the two attributes are different")
+        aggregation_options = "<ul>" + aggregation_options + "<\\ul>"
         
         pb.add_text_box(tool_attribute_name='AttributeAggregatorString',
                         size= 500, multi_line=True,
@@ -616,7 +621,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                         <br><br><b>Syntax:</b> [<em>attribute name</em>] : [<em>function</em>] , ... \
                         <br><br>Separate (attribute-function) pairs with a comma or new line. Either \
                         the Emme Desktop attribute names (e.g. 'lanes') or the Modeller API names \
-                        (e.g. 'num_lanes') can be used. Accepted functions are: " + str(ul) + \
+                        (e.g. 'num_lanes') can be used. Accepted functions are: " + aggregation_options + \
                         "The default function for unspecified extra attribtues is 'sum.'")
         
         #---JAVASCRIPT
@@ -790,27 +795,27 @@ class FullNetworkSetGenerator(_m.Tool()):
         #---1 Set up scenario
         self.BaseScenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.BaseScenario is None):
-            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+            raise Exception("Scenario %s was not found!" % xtmf_ScenarioNumber)
 
         #---2 Set up attributes
         if NodeFilterAttributeId.lower() == "none":
             self.NodeFilterAttributeId = None
         else:
             if self.BaseScenario.extra_attribute(NodeFilterAttributeId) is None:
-                raise Exception("Node filter attribute %s does not exist" %NodeFilterAttributeId)
+                raise Exception("Node filter attribute %s does not exist" % NodeFilterAttributeId)
             self.NodeFilterAttributeId = NodeFilterAttributeId
 
         if StopFilterAttributeId.lower() == "none":
             self.StopFilterAttributeId = None
         else:
             if self.BaseScenario.extra_attribute(StopFilterAttributeId) is None:
-                raise Exception("Stop filter attribute %s does not exist" %StopFilterAttributeId)
+                raise Exception("Stop filter attribute %s does not exist" % StopFilterAttributeId)
             self.StopFilterAttributeId = StopFilterAttributeId
         if ConnectorFilterAttributeId.lower() == "none":
             self.ConnectorFilterAttributeId = None
         else:
             if self.BaseScenario.extra_attribute(ConnectorFilterAttributeId) is None:
-                raise Exception("Connector filter attribute %s does not exist" %ConnectorFilterAttributeId)
+                raise Exception("Connector filter attribute %s does not exist" % ConnectorFilterAttributeId)
             self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
         
         #--3 Set up other parameters
@@ -844,18 +849,12 @@ class FullNetworkSetGenerator(_m.Tool()):
         self.AdditionalAlternativeDataFiles = AdditionalAlternativeDataFiles
 
 
-        print "Running full network set generation"
-        
-        try:
-            self._Execute()
-        except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
-            raise Exception(msg)
-        
-        print "Done full network generation"
+        print("Running full network set generation")
+        self._Execute()       
+        print("Done full network generation")
 
         
-    ##########################################################################################################          
+    ##########################################################################################################
     def run(self):
         self.tool_run_msg = ""
         self.TRACKER.reset()
@@ -869,8 +868,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         try:
             self._Execute()           
         except Exception as e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc())
             raise        
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -879,27 +877,27 @@ class FullNetworkSetGenerator(_m.Tool()):
     def check_scen_set_flag(self):
         return self.CustomScenarioSetFlag
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_node_attributes(self):
         options = ['<option value="-1">No attribute</option>']
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type != 'NODE': continue
-            text = "%s - %s" %(exatt.name, exatt.description)
-            options.append('<option value="%s">%s</option>' %(exatt.name, text)) 
+            text = "%s - %s" % (exatt.name, exatt.description)
+            options.append('<option value="%s">%s</option>' % (exatt.name, text)) 
         
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_link_attributes(self):
         options = ['<option value="-1">No attribute</option>']
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type != 'LINK': continue
-            text = "%s - %s" %(exatt.name, exatt.description)
-            options.append('<option value="%s">%s</option>' %(exatt.name, text)) 
+            text = "%s - %s" % (exatt.name, exatt.description)
+            options.append('<option value="%s">%s</option>' % (exatt.name, text)) 
         
         return "\n".join(options)
 
-    ##########################################################################################################    
+    ##########################################################################################################
         
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
@@ -935,34 +933,35 @@ class FullNetworkSetGenerator(_m.Tool()):
                 if not (scenarios[6] is None or scenarios[6].lower() == "none"):
                     applyNetUpdate(str(scenarios[0]),scenarios[6])                
 
-            print "Created uncleaned time period networks and applied network updates"
+            print("Created uncleaned time period networks and applied network updates")
 
             if self.BatchEditFile:
                 for scenarios in scenarioSet:
                     lineEdit(scenarios[0], self.BatchEditFile) #note that batch edit file should use uncleaned scenario numbers
-                print "Edited transit line data"
+                print("Edited transit line data")
 
             # Prorate the transit speeds in all uncleaned networks
             if (self.LineFilterExpression is not None) and (self.LineFilterExpression.strip() != ''):
                 for scenarios in scenarioSet:
                     prorateTransitSpeed(scenarios[0], self.LineFilterExpression)
 
-            print "Prorated transit speeds"
+            print("Prorated transit speeds")
 
             for scenarios in scenarioSet:
                 removeExtraLinks(scenarios[0], self.TransferModesString, True, scenarios[1], scenarios[3])
                 
                 removeExtraNodes(scenarios[1], self.NodeFilterAttributeId, self.StopFilterAttributeId, self.ConnectorFilterAttributeId, self.AttributeAggregatorString)
-            print "Cleaned networks"
+            print("Cleaned networks")
                 
             self.BaseScenario.publish_network(network)
             self.TRACKER.completeTask()
 
 
 
-    ##########################################################################################################    
+    ##########################################################################################################
     
-    #----SUB FUNCTIONS---------------------------------------------------------------------------------  
+    #----SUB
+    #FUNCTIONS---------------------------------------------------------------------------------
     
     def _GetAtts(self):
         atts = {
@@ -988,20 +987,20 @@ class FullNetworkSetGenerator(_m.Tool()):
             
             parts = component.split(':')
             if len(parts) not in [6,7]:
-				if len(parts) == 8:
-					checkPath = parts[6] + ":" + parts[7]
-					if os.path.exists(os.path.dirname(checkPath)):
-						parts[6]=checkPath
-						del parts[7]
-					else:				
-						msg = "Please verify that your scenario set is separated correctly and/or that the .nup file has a valid path"
-						msg += ". [%s]" %component 
-						raise SyntaxError(msg)
-				else:
-					msg = "Error parsing scenario set: Separate components with colons \
-							Uncleaned scenario number:Cleaned scenario number:Uncleaned scenario description:Cleaned scenario description:Scenario start:Scenario End:.nup file"
-					msg += ". [%s]" %component 
-					raise SyntaxError(msg)
+                if len(parts) == 8:
+                	checkPath = parts[6] + ":" + parts[7]
+                	if os.path.exists(os.path.dirname(checkPath)):
+                		parts[6] = checkPath
+                		del parts[7]
+                	else:				
+                		msg = "Please verify that your scenario set is separated correctly and/or that the .nup file has a valid path"
+                		msg += ". [%s]" % component 
+                		raise SyntaxError(msg)
+                else:
+                	msg = "Error parsing scenario set: Separate components with colons \
+                			Uncleaned scenario number:Cleaned scenario number:Uncleaned scenario description:Cleaned scenario description:Scenario start:Scenario End:.nup file"
+                	msg += ". [%s]" % component 
+                	raise SyntaxError(msg)
             partsList = [int(parts[0]), int(parts[1]), parts[2], parts[3], int(parts[4]), int(parts[5])]
             if len(parts) == 7:
                 if parts[6].lower() == 'none':
@@ -1010,7 +1009,7 @@ class FullNetworkSetGenerator(_m.Tool()):
                     continue
                 if not parts[6].strip()[-4:] == ".nup":
                     msg = "Network update file must be in the .nup format"
-                    msg += ". [%s]" %component 
+                    msg += ". [%s]" % component 
                     raise SyntaxError(msg)
                 partsList.append(parts[6])
             else:
@@ -1023,6 +1022,6 @@ class FullNetworkSetGenerator(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg

@@ -108,7 +108,7 @@ class ExportWorksheetTable(_m.Tool()):
         #try:
         #    self._Execute()
         #except Exception as e:
-        #    msg = str(e) + "\n" + _traceback.format_exc(e)
+        #    msg = str(e) + "\n" + _traceback.format_exc()
         #    raise Exception(msg)
 
         
@@ -149,7 +149,7 @@ class ExportWorksheetTable(_m.Tool()):
         try:
             self._Execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
 
 
@@ -195,7 +195,7 @@ class ExportWorksheetTable(_m.Tool()):
                     # note: copy_tree will overwrite any file with the same name
                     shutil.rmtree(os.path.abspath(os.path.join(logbookLocation, item))) # clean up
                 except Exception as e:
-                    msg = str(e) + "\n" + _traceback.format_exc(e)
+                    msg = str(e) + "\n" + _traceback.format_exc()
                     raise Exception(msg)
 
             

@@ -1,3 +1,4 @@
+from __future__ import print_function
 #---LICENSE----------------------
 '''
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
@@ -108,7 +109,7 @@ class ExtractGoInVehicleTime(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -134,7 +135,7 @@ class ExtractGoInVehicleTime(_m.Tool()):
         try:
             self._Execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
         return
     
@@ -147,7 +148,7 @@ class ExtractGoInVehicleTime(_m.Tool()):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
             
-            print "Extracting GO-rail in-vehicle times matrix"
+            print("Extracting GO-rail in-vehicle times matrix")
             
             #def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL'):
             _util.initializeMatrix(id= self.ResultMatrixId, description= "GO rail in-vehicle travel time")

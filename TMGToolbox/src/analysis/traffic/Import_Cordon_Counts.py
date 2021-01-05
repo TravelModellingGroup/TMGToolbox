@@ -1,3 +1,4 @@
+from __future__ import print_function
 '''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -103,7 +104,7 @@ class ImportCordonCounts(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -117,7 +118,7 @@ class ImportCordonCounts(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -131,11 +132,11 @@ class ImportCordonCounts(_m.Tool()):
             if self.Scenario.extra_attribute('@cord') is not None:                       
                         _m.logbook_write("Deleting Previous Extra Attributes.")
                         self.Scenario.delete_extra_attribute('@cord')
-                        print "Cleared previously created Cordon attribute"                    
+                        print("Cleared previously created Cordon attribute")                    
             
             _m.logbook_write("Created extra attribute for cordon counts.")
             self.Scenario.create_extra_attribute('LINK', '@cord', default_value=0)
-            print "Created extra attribute for cordon counts"
+            print("Created extra attribute for cordon counts")
             
             net = self.Scenario.get_network()
                         
@@ -149,10 +150,10 @@ class ImportCordonCounts(_m.Tool()):
             #apply the values
                     ourLink = net.link(countpostlinkid[0],countpostlinkid[1])
                     if ourLink is not None:
-                        print value
+                        print(value)
                         ourLink["@cord"] = int(value)
                     else:                    
-                        print "%d - %d" %countpostlinki %value                        
+                        print("%d - %d" %countpostlinki %value)
             
             self.Scenario.publish_network(net)
                     

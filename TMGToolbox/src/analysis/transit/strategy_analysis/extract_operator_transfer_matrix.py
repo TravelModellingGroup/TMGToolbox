@@ -1,3 +1,4 @@
+from __future__ import print_function
 #---LICENSE----------------------
 '''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
@@ -238,7 +239,7 @@ class OperatorTransferMatrix(_m.Tool()):
                 #keyval1.append((className, className))
         else:
             keyval1 = {-1: "Multiclass assignment not available"}
-        print keyval1
+        print(keyval1)
         pb.add_select(tool_attribute_name= 'ClassName',
                       keyvalues= keyval1,
                       title= "Class Name",
@@ -390,7 +391,7 @@ class OperatorTransferMatrix(_m.Tool()):
         except Exception as e:
             _MODELLER.desktop.refresh_needed(False)
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -515,12 +516,12 @@ class OperatorTransferMatrix(_m.Tool()):
                     #---3. Attach initial boarding and final alighting data to matrix
                     self._GetBoardingsAndAlightings(transferMatrix, lineGroupAtributeID, 
                                                     boardAttribute.id, alightAttribute.id)
-                    print "Loaded initial boardings and final alightings"
+                    print("Loaded initial boardings and final alightings")
                 else: transferMatrix = None 
                 
                 #---4. Get the walk-all-way matrix
                 self._GetWalkAllWayMatrix(walkAllWayMatrix, transferMatrix)
-                print "Loaded walk all-way matrix"
+                print("Loaded walk all-way matrix")
                 
                 #---5. Export the transfer matrix
                 if self.ExportTransferMatrixFlag:
@@ -684,7 +685,7 @@ class OperatorTransferMatrix(_m.Tool()):
             self._RunTraversalAnalysis(lineGroupAtributeID, filepath)
             files = filepath
         self.TRACKER.completeTask()
-        print "Processed traversal matrices"
+        print("Processed traversal matrices")
         
         #---4. Load or load and combine traversal matrices
         self.TRACKER.startProcess(nTasks)
@@ -698,12 +699,12 @@ class OperatorTransferMatrix(_m.Tool()):
                     if key in transferMatrix: transferMatrix[key] += weightedValue
                     else: transferMatrix[key] = weightedValue
                 self.TRACKER.completeSubtask()
-                print "Loaded class %s" %className
+                print("Loaded class %s" %className)
         else:
             filepath = files
             transferMatrix = self._ParseTraversalResults(filepath) 
         self.TRACKER.completeTask()
-        print "Aggregated transfer matrix."
+        print("Aggregated transfer matrix.")
         
         return transferMatrix
         
@@ -737,7 +738,7 @@ class OperatorTransferMatrix(_m.Tool()):
         else:
             spec['constraint'] = None
         
-        print "Running traversal analysis on class %s" %className
+        print("Running traversal analysis on class %s" %className)
         if className is not None:
             traversalAnalysisTool(spec, filepath, 
                                   scenario= self.Scenario,

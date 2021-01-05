@@ -58,7 +58,7 @@ class DeleteScenario(_m.Tool()):
         try:
             self._execute(Scenario)
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
 
     def _execute(self, Scenario):
         project = _MODELLER.emmebank

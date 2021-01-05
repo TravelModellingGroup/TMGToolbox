@@ -106,7 +106,7 @@ class ImportFromDatabase(_m.Tool()):
         try:
             self._Execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
 
     ##########################################################################################################    

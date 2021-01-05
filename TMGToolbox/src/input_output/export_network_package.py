@@ -146,7 +146,7 @@ class ExportNetworkPackage(_m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc(e))
+            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc())
             raise
 
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario exported to %s" % self.ExportFile)
@@ -171,7 +171,7 @@ class ExportNetworkPackage(_m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
 
     def _execute(self):

@@ -61,7 +61,7 @@ class CheckVDFs(_m.Tool()):
            self()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
     
     def __call__(self):

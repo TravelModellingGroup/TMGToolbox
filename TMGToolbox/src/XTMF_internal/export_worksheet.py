@@ -120,7 +120,7 @@ class ExportWorksheet(_m.Tool()):
             
             self._execute(scenario, worksheet, export_path, config)
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
         return
     

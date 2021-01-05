@@ -97,7 +97,7 @@ class AuxTransitDistance(m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            self.tool_run_msg = m.PageBuilder.format_exception(e, _traceback.format_exc(e))
+            self.tool_run_msg = m.PageBuilder.format_exception(e, _traceback.format_exc())
             raise
         self.tool_run_msg = m.PageBuilder.format_info("Script execution complete.")
 

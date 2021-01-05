@@ -196,7 +196,7 @@ class CheckNetworkIntegrity(_m.Tool()):
             errCount = self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         if errCount > 0:
@@ -226,7 +226,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                                 " logbook for details.")
             
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
     
     ##########################################################################################################    

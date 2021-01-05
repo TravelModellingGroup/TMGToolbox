@@ -1,3 +1,4 @@
+from __future__ import print_function
 '''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -42,8 +43,11 @@ Create Time Period Networks
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -66,7 +70,7 @@ def averageAggregation(departures, start, end):
         return end - start
     
     iter = departures.__iter__()
-    prevDep = iter.next()
+    prevDep = six.next(iter)
     for dep in iter:
         headway = dep - prevDep
         counter += 1
@@ -222,7 +226,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -240,7 +244,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -254,16 +258,16 @@ class CreateTimePeriodNetworks(_m.Tool()):
             
             network = self.BaseScenario.get_network()
             self.TRACKER.completeTask()
-            print "Loaded network"
+            print("Loaded network")
             
             start = self._ParseIntTime(self.TimePeriodStart)
             end = self._ParseIntTime(self.TimePeriodEnd)
             
             badIdSet = self._LoadServiceTable(network, start, end).union(self._LoadAggTypeSelect(network))
             self.TRACKER.completeTask()
-            print "Loaded service table"
+            print("Loaded service table")
             if len(badIdSet) > 0:
-                print "%s transit line IDs were not found in the network and were skipped." %len(badIdSet)
+                print("%s transit line IDs were not found in the network and were skipped." %len(badIdSet))
                 pb = _m.PageBuilder("Transit line IDs not in network")
                 
                 pb.add_text_element("<b>The following line IDs were not found in the network:</b>")
@@ -284,12 +288,12 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 self._ProcessTransitLines(network, start, end, altData)
                 if altData:
                     self._ProcessAltLines(network, altData)
-            print "Done processing transit lines"
+            print("Done processing transit lines")
             
             newScenario = _MODELLER.emmebank.copy_scenario(self.BaseScenario.id, self.NewScenarioNumber)
             newScenario.title = self.NewScenarioDescription
             
-            print "Publishing network"
+            print("Publishing network")
             network.delete_attribute('TRANSIT_LINE', 'trips')
             network.delete_attribute('TRANSIT_LINE', 'aggtype')
             newScenario.publish_network(network)
@@ -367,7 +371,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                         departure = self._ParseStringTime(cells[departureCol])
                         arrival = self._ParseStringTime(cells[arrivalCol])
                     except Exception as e:
-                        print "Line " + str(num) + " skipped: " + str(e)
+                        print("Line " + str(num) + " skipped: " + str(e))
                         continue
                 
                     if not departure in bounds: continue #Skip departures not in the time period
@@ -403,7 +407,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     try:
                         aggregation = self._ParseAggType(cells[aggCol])
                     except Exception as e:
-                        print "Line " + num + " skipped: " + str(e)
+                        print("Line " + num + " skipped: " + str(e))
                         continue
                                 
                     if transitLine.aggtype is None: transitLine.aggtype = aggregation
@@ -425,13 +429,13 @@ class CreateTimePeriodNetworks(_m.Tool()):
                 except Exception as e:
                     msg = "Error. No headway match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
                     _m.logbook_write(msg)
-                    print msg
+                    print(msg)
                 try:
                     speedCol = cells.index(speedTitle)
                 except Exception as e:
                     msg = "Error. No speed match for specified time period start: '%s'." %self._ParseIntTime(self.TimePeriodStart)
                     _m.logbook_write(msg)
-                    print msg
+                    print(msg)
 
                 localAltData = {}
             
@@ -446,7 +450,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
                     else:
                         raise ValueError('Line %s has multiple entries. Please revise your alt file.' %id)
                 #now that the file has been loaded in move it into the combined altFile dictionary
-            for id,data in localAltData.iteritems():
+            for id,data in six.iteritems(localAltData):
                 altData[id] = data
         return altData
         
@@ -491,7 +495,8 @@ class CreateTimePeriodNetworks(_m.Tool()):
             departures.sort()
             headway = aggregator(departures, start, end) / 60.0 #Convert from seconds to minutes
             
-            if not headway in bounds: print "%s: %s" %(line.id, headway)
+            if not headway in bounds: 
+                print("%s: %s" %(line.id, headway))
             line.headway = headway
             
             #Calc line speed
@@ -500,7 +505,8 @@ class CreateTimePeriodNetworks(_m.Tool()):
             avgTime = sumTimes / len(line.trips) / 3600.0 #Convert from seconds to hours
             length = sum([seg.link.length for seg in line.segments()]) #Given in km
             speed = length / avgTime #km/hr
-            if not speed in bounds: print "%s: %s" %(line.id, speed)
+            if not speed in bounds:
+               print("%s: %s" %(line.id, speed))
             line.speed = speed
             
             self.TRACKER.completeSubtask()
@@ -511,23 +517,23 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
     def _ProcessAltLines(self, network, altData):
         bounds = _util.FloatRange(0.01, 1000.0)
-        for key, data in altData.iteritems():
+        for key, data in six.iteritems(altData):
             line = network.transit_line(key)
             if line:
                 if data[0] == 9999: #a headway of 9999 indicates an unused line
                     network.delete_transit_line(line.id)
                     continue
                 elif data[0] == 0: #a headway of 0 allows for a line to be in the alt data file without changing existing headway
-                    print "%s: %s" %(line.id, data[0])
+                    print("%s: %s" %(line.id, data[0]))
                     _m.logbook_write("Headway = 0 in alt file. Headway remains as in base.  %s" %line.id)
                 elif not data[0] in bounds: 
-                    print "%s: %s" %(line.id, data[0])
+                    print("%s: %s" %(line.id, data[0]))
                     _m.logbook_write("Headway out of bounds line %s: %s minutes. Line removed from network." %(line.id, data[0]))
                     network.delete_transit_line(line.id)
                     continue
                 line.headway = data[0]
                 if not data[1] in bounds: 
-                    print "%s: %s" %(line.id, data[1])    
+                    print("%s: %s" %(line.id, data[1]))
                     _m.logbook_write("Speed out of bounds line %s: %s km/h. Speed remains as in base." %(line.id, data[1]))         
                     continue       
                 line.speed = data[1]
@@ -536,7 +542,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

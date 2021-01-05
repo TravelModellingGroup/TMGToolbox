@@ -246,7 +246,7 @@ class TransitAssignmentTool(_m.Tool()):
                 self.EffectiveHeadwayAttributeId = effectiveHeadwayAttribute.id
                 self._Execute()
         except Exception as e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc(e))
+            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc())
             raise 
 
         self.tool_run_msg = _m.PageBuilder.format_info('Done.')

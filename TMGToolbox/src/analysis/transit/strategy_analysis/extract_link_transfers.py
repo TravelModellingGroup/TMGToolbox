@@ -1,3 +1,4 @@
+from __future__ import print_function
 #---LICENSE----------------------
 '''
 	Copyright 2016 Matt Austin, Transportation Planning, City Planning Division, City of Toronto
@@ -164,7 +165,7 @@ class ExtractLinkTransfers(_m.Tool()):
 			self._Execute()
 		except Exception as e:
 			self.tool_run_msg = _m.PageBuilder.format_exception(
-				e, _traceback.format_exc(e))
+				e, _traceback.format_exc())
 			raise
 		
 		self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -174,7 +175,7 @@ class ExtractLinkTransfers(_m.Tool()):
 	def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, LinkSetString, 
 				 ExportFile, PeakHourFactor, HypernetworkFlag):
 
-		print "Beginning to extract link transfer data" 
+		print("Beginning to extract link transfer data")
 
 		self.BaseScenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
 		if (self.BaseScenario is None):
@@ -195,10 +196,10 @@ class ExtractLinkTransfers(_m.Tool()):
 		try:
 			self._Execute()
 		except Exception as e:
-			msg = str(e) + "\n" + _traceback.format_exc(e)
+			msg = str(e) + "\n" + _traceback.format_exc()
 			raise Exception(msg)
 
-		print "Finished extracting link transfer data"
+		print("Finished extracting link transfer data")
 
 ##########################################################################################################		  
 
@@ -218,7 +219,7 @@ class ExtractLinkTransfers(_m.Tool()):
 				fullLinkSet = linkPair[0:3]
 				link1List = [linkPair[1]] # maintain a list of links at and above link 1 for volume summing later (sums at/above link 1 and 2 will be identical)
 				if self.HypernetworkFlag: # search for links 'above' the initial link pair in the hypernetwork
-					print "Looking for links in the hypernetwork"
+					print("Looking for links in the hypernetwork")
 					network = self.BaseScenario.get_network()					 
 					initialLink1 = self._ParseIndividualLink(linkPair[1])
 					initialLink2 = self._ParseIndividualLink(linkPair[2])
@@ -255,7 +256,7 @@ class ExtractLinkTransfers(_m.Tool()):
 						print ('Finished running path analysis for %s' %fullLinkSet[0])
 											
 					network = self.BaseScenario.get_network()
-					print 'Network loaded'
+					print('Network loaded')
 					linkSum = 0
 					for link in link1List: #evaluate all links at/above link 1
 						singleLinkList = self._ParseIndividualLink(link)
@@ -293,7 +294,7 @@ class ExtractLinkTransfers(_m.Tool()):
 			
 			parts = component.split(':')
 			if len(parts) > 5 or len(parts) < 3 or len(parts) == 4:
-				print component;
+				print(component)
 				msg = "Error parsing label, link and line string: Separate label and links/lines with colons label:link1:link2[:line1:line2]"
 				msg += ". [%s]" %component 
 				raise SyntaxError(msg)
@@ -305,7 +306,7 @@ class ExtractLinkTransfers(_m.Tool()):
 	def _ParseIndividualLink(self, linkString): #converts string form of link into a list
 		indLinkList = linkString.split(',')
 		if len(indLinkList) != 2:
-			print linkString;
+			print(linkString)
 			msg = "Error parsing link. Link must be in the form 1000,1001"
 			msg += ". [%s]" %component 
 			raise SyntaxError(msg)

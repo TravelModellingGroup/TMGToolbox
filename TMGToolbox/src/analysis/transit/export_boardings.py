@@ -157,7 +157,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -193,7 +193,7 @@ class ExtractTransitLineBoardings(_m.Tool()):
         try:
             self._Execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
     
     ##########################################################################################################    

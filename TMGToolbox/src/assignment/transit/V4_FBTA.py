@@ -649,7 +649,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -758,7 +758,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                     demandMatrix.initialize(0.1)
                 self._Execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
         
         print "Done running transit assignment"

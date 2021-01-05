@@ -61,7 +61,7 @@ class AttachCentriodsToNodes(_m.Tool()):
         try:
             self._execute(ScenarioNumber, Nodes, Centroids)
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
 
     def _execute(self, ScenarioNumber, Nodes, Centroids):
         nodesToAttachTo = Nodes.split(";")

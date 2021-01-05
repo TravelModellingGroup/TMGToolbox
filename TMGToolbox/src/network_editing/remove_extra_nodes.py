@@ -41,10 +41,12 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from html import HTML
 from re import split as _regex_split
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -190,18 +192,19 @@ class RemoveExtraNodes(_m.Tool()):
         
         pb.add_header("AGGREGATION FUNCTIONS")
         
-        h = HTML()
-        ul = h.ul
-        ul.li("first - Uses the first element's attribute")
-        ul.li("last - Uses the last element's attribute")
-        ul.li("sum - Add the two attributes")
-        ul.li("avg - Averages the two attributes")
-        ul.li("avg_by_length - Average the two attributes, weighted by link length")
-        ul.li("min - The minimum of the two attributes")
-        ul.li("max - The maximum of the two attributes")
-        ul.li("and - Boolean AND")
-        ul.li("or - Boolean OR")
-        ul.li("force - Forces the tool to keep the node if the two attributes are different")
+        def add_li(li):
+            return "<li>" + li + "<\\li>"
+        aggregation_options = add_li("first - Uses the first element's attribute")
+        aggregation_options += add_li("last - Uses the last element's attribute")
+        aggregation_options += add_li("sum - Add the two attributes")
+        aggregation_options += add_li("avg - Averages the two attributes")
+        aggregation_options += add_li("avg_by_length - Average the two attributes, weighted by link length")
+        aggregation_options += add_li("min - The minimum of the two attributes")
+        aggregation_options += add_li("max - The maximum of the two attributes")
+        aggregation_options += add_li("and - Boolean AND")
+        aggregation_options += add_li("or - Boolean OR")
+        aggregation_options += add_li("force - Forces the tool to keep the node if the two attributes are different")
+        aggregation_options = "<ul>" + aggregation_options + "<\\ul>"
         
         pb.add_text_box(tool_attribute_name='AttributeAggregatorString',
                         size= 500, multi_line=True,
@@ -212,7 +215,7 @@ class RemoveExtraNodes(_m.Tool()):
                         <br><br><b>Syntax:</b> [<em>attribute name</em>] : [<em>function</em>] , ... \
                         <br><br>Separate (attribute-function) pairs with a comma or new line. Either \
                         the Emme Desktop attribute names (e.g. 'lanes') or the Modeller API names \
-                        (e.g. 'num_lanes') can be used. Accepted functions are: " + str(ul) + \
+                        (e.g. 'num_lanes') can be used. Accepted functions are: " + aggregation_options + \
                         "The default function for unspecified extra attribtues is 'sum.'")
         
         #---JAVASCRIPT
@@ -271,7 +274,7 @@ class RemoveExtraNodes(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")    
@@ -286,7 +289,7 @@ class RemoveExtraNodes(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -448,35 +451,35 @@ class RemoveExtraNodes(_m.Tool()):
                 self._segmentAggregators[attName] = funcName
                 self._nodeAggregators[attName] = funcName
         
-        for key in self._linkAggregators.iterkeys():
+        for key in six.iterkeys(self._linkAggregators):
             if key.endswith("_l"):
                 newKey = key.replace("_l", "")
                 val = self._linkAggregators.pop(key)
                 self._linkAggregators[newKey] = val
         
-        for key in self._segmentAggregators.iterkeys():
+        for key in six.iterkeys(self._segmentAggregators):
             if key.endswith("_s"):
                 newKey = key.replace("_s", "")
                 val = self._segmentAggregators.pop(key)
                 self._segmentAggregators[newKey] = val
         
-        for key in self._nodeAggregators.iterkeys():
+        for key in six.iterkeys(self._nodeAggregators):
             if key.endswith("_n"):
                 newKey = key.replace("_n", "")
                 val = self._nodeAggregators.pop(key)
                 self._nodeAggregators[newKey] = val
         
-        for att, funcName in self._linkAggregators.iteritems():
+        for att, funcName in six.iteritems(self._linkAggregators):
             if funcName == 'avg_by_length':
                 self._linkAggregators[att] = self.AVERAGE_BY_LENGTH_LINKS
             else:
                 self._linkAggregators[att] = _editing.NAMED_AGGREGATORS[funcName]
-        for att, funcName in self._segmentAggregators.iteritems():
+        for att, funcName in six.iteritems(self._segmentAggregators):
             if funcName == 'avg_by_length':
                 self._segmentAggregators[att] = self.AVERAGE_BY_LENGTH_SEGMENTS
             else:
                 self._segmentAggregators[att] = _editing.NAMED_AGGREGATORS[funcName]
-        for att, funcName in self._nodeAggregators.iteritems():
+        for att, funcName in six.iteritems(self._nodeAggregators):
             self._nodeAggregators[att] = _editing.NAMED_AGGREGATORS[funcName]
     
     def _GetCandidateNodes(self, network):
@@ -577,7 +580,7 @@ class RemoveExtraNodes(_m.Tool()):
                 log.append(str(inee))
             except Exception as e:
                 log.append("Deep error processing node %s: %s" %(nid, e))
-                deepErrors.append(_traceback.format_exc(e))
+                deepErrors.append(_traceback.format_exc())
             
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
@@ -596,7 +599,7 @@ class RemoveExtraNodes(_m.Tool()):
         
         _m.logbook_write("Error report", value=pb.render())
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_node_attributes(self):
         options = ['<option value="-1">No attribute</option>']
         for exatt in self.BaseScenario.extra_attributes():
@@ -606,7 +609,7 @@ class RemoveExtraNodes(_m.Tool()):
         
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_link_attributes(self):
         options = ['<option value="-1">No attribute</option>']
         for exatt in self.BaseScenario.extra_attributes():
@@ -620,7 +623,7 @@ class RemoveExtraNodes(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

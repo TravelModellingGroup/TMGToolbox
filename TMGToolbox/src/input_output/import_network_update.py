@@ -1,3 +1,4 @@
+from __future__ import print_function
 #---LICENSE----------------------
 '''
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
@@ -90,12 +91,16 @@ IMPORT NETWORK UPDATE
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 import shutil as _shutil
 from os import path
 import tempfile as _tf
 import zipfile as _zipfile
 import sys
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -198,12 +203,12 @@ class ImportNetworkUpdate(_m.Tool()):
         self.NetworkUpdateFile = NetworkUpdateFile
 
         if self.NetworkUpdateFile is None or self.NetworkUpdateFile.lower() == "none":
-            print "No network update file selected" # won't throw an error if called without a nup file
+            print("No network update file selected") # won't throw an error if called without a nup file
         else:
             try:
                 self._Execute()
             except Exception as e:
-                msg = str(e) + "\n" + _traceback.format_exc(e)
+                msg = str(e) + "\n" + _traceback.format_exc()
                 raise Exception(msg)        
         
     def run(self):
@@ -216,7 +221,7 @@ class ImportNetworkUpdate(_m.Tool()):
             self._Execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Done.")
@@ -362,11 +367,11 @@ class ImportNetworkUpdate(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_file_info(self):
         '''
         Reads the info file with which accompanies the update. The first

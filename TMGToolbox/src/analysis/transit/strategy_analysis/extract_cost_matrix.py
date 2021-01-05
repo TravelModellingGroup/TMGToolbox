@@ -81,7 +81,7 @@ class ExtractCostMatrix(_m.Tool()):
             self._execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Analysis complete. Results stored in matrix %s." %self.matrixResult.id)
@@ -104,7 +104,7 @@ class ExtractCostMatrix(_m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
 
     def _execute(self):
         

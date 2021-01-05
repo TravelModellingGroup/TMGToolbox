@@ -186,7 +186,7 @@ class Station2StationAssignment(_m.Tool()):
             self._execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Run complete.")
@@ -227,7 +227,7 @@ class Station2StationAssignment(_m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
     
     ##########################################################################################################    
     
@@ -422,7 +422,7 @@ class Station2StationAssignment(_m.Tool()):
         except Exception as e:
             print "Exception occurred during progress reporting."
             print "Tracker progress = %s" %self._tracker._progress
-            print  _traceback.format_exc(e)
+            print  _traceback.format_exc()
             raise
                 
     @_m.method(return_type=unicode)

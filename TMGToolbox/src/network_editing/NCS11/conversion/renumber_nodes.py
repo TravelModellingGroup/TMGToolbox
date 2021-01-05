@@ -51,7 +51,7 @@ class RenumberNonZoneNodes(_m.Tool()):
            self._exectue()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         _m.Modeller().desktop.refresh_needed(False) #Tells the Emme desktop that it needs to refresh the GUI with the emmebank

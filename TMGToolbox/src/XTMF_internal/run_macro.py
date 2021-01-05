@@ -50,7 +50,7 @@ class RunMacro(_m.Tool()):
                  macro_arguments=Args,
                  scenario=ScenarioNumber)
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
         
         self.XTMFBridge.ReportProgress(1.0)
         

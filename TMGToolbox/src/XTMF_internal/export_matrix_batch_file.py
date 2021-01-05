@@ -65,7 +65,7 @@ class ExportMatrix(_m.Tool()):
                                       skip_default_values=False)
                 
             except Exception as e:
-                raise Exception(_traceback.format_exc(e))
+                raise Exception(_traceback.format_exc())
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):

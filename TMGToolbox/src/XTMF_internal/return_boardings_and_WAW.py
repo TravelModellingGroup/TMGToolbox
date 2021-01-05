@@ -106,7 +106,7 @@ class ReturnBoardingsAndWAW(_m.Tool()):
         try:
             return self._Execute(scenario)
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
     
     ##########################################################################################################    

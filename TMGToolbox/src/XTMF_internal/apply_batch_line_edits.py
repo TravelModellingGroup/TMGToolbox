@@ -1,3 +1,4 @@
+from __future__ import print_function
 #---LICENSE----------------------
 '''
     Copyright 2015-2016 Travel Modelling Group, Department of Civil Engineering, University of Toronto
@@ -41,9 +42,11 @@ Apply Batch Line Edits
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from HTMLParser import HTMLParser
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -117,7 +120,7 @@ class ApplyBatchLineEdits(_m.Tool()):
         try:
             self._Execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
 
     ##########################################################################################################    
@@ -129,12 +132,12 @@ class ApplyBatchLineEdits(_m.Tool()):
             self.TRACKER = _util.ProgressTracker(len(self.InputFiles))
             for altFile in self.InputFiles:
                 changesToApply = self._LoadFile(altFile)
-                print "Instruction file loaded"
+                print("Instruction file loaded")
                 if changesToApply: 
                     self._ApplyLineChanges(changesToApply)
-                    print "Headway and speed changes applied"
+                    print("Headway and speed changes applied")
                 else:
-                    print "No changes available in this scenario"
+                    print("No changes available in this scenario")
                 self.TRACKER.completeTask()
 
 
@@ -163,14 +166,14 @@ class ApplyBatchLineEdits(_m.Tool()):
             except Exception as e:
                 msg = "Error. No headway match for specified scenario: '%s'." %self.Scenario.id
                 _m.logbook_write(msg)
-                print msg
+                print(msg)
                 return
             try:
                 speedCol = cells.index(speedTitle)
             except Exception as e:
                 msg = "Error. No speed match for specified scenario: '%s'." %self.Scenario.id
                 _m.logbook_write(msg)
-                print msg
+                print(msg)
                 return
 
             instructionData = {}
@@ -214,7 +217,7 @@ class ApplyBatchLineEdits(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
             

@@ -24,6 +24,7 @@ from shutil import copyfile
 from os import path as _path
 import warnings as _warn
 import inro.modeller as _m
+import six
 
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
@@ -310,7 +311,7 @@ class Shapely2ESRI():
         31 : "MULTIPATCH"
     }
       
-    convert_geometry_to_index = dict((v,k) for k, v in convert_index_to_geometry.iteritems())
+    convert_geometry_to_index = dict((v,k) for k, v in six.iteritems(convert_index_to_geometry))
          
     def __init__(self, filepath, mode='read', geometryType=0, projectionFile= None):
         if len(mode) <= 0:

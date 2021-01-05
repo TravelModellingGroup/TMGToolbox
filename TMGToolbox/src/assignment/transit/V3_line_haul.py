@@ -203,7 +203,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
             self._execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Run complete.")
@@ -243,7 +243,7 @@ class LegacyRailStation2StationAssignment(_m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
     
     ##########################################################################################################    
     
