@@ -39,8 +39,6 @@ import inro.modeller as _m
 import inro.emme.matrix as _matrix
 import traceback as _traceback
 import numpy as np
-from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
@@ -49,7 +47,6 @@ networkCalculation = _m.Modeller().tool("inro.emme.network_calculation.network_c
 class XTMFNetworkCalculator(_m.Tool()):
 
     #---Parameters---
-    Scenario = _m.Attribute(_m.InstanceType)
     xtmf_ScenarioNumber = _m.Attribute(str)
     domain = _m.Attribute(str)
     expression = _m.Attribute(str)
@@ -95,7 +92,7 @@ class XTMFNetworkCalculator(_m.Tool()):
         spec = self.network_calculator_spec()
 
         report = networkCalculation(spec, self.Scenario)
-        if report.has_key("sum"):
+        if "sum" in report:
             return report["sum"]
         return ""
 
