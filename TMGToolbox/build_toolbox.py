@@ -1,3 +1,4 @@
+from __future__ import print_function
 #---LICENSE----------------------
 '''
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
@@ -48,7 +49,6 @@ build_toolbox.py
             will be 'consolidated' (e.g., instead of referencing the source code files, it will
             contain the compiled Python code). 
 '''
-
 import sqlite3.dbapi2 as sqllib
 import os as oslib
 from os import path as pathlib
@@ -73,10 +73,15 @@ def capitalize_name(name):
         if token in CONJUNCTIONS:
             new_tokens.append(token)
         else:
-            firstChar = token[0]
-            remaining = token[1:]
-            new_token = firstChar.upper() + remaining
-            new_tokens.append(new_token)
+            try:
+                firstChar = token[0]
+                remaining = token[1:]
+                new_token = firstChar.upper() + remaining
+                new_tokens.append(new_token)
+            except Exception as e:
+                print(str(tokens))
+                print(str(e))
+                exit()
     
     return ' '.join(new_tokens)
 
@@ -98,7 +103,7 @@ def get_emme_version(return_type= str):
     '''
     #The following is code directly from INRO
     emme_process = subprocess.Popen(['Emme', '-V'], stdout= subprocess.PIPE, stderr= subprocess.PIPE)
-    output = emme_process.communicate()[0]
+    output = emme_process.communicate()[0].decode()
     retval = output.split(',')[0]
     if return_type == str: return retval
     
@@ -176,7 +181,7 @@ class ElementTree():
         try:
             node = ToolNode(self.next_id(), title, namespace, script_path, consolidate)
         except Exception as e:
-            print type(e), str(e)
+            print(type(e), str(e))
             return None
         
         node.parent = self
@@ -210,7 +215,7 @@ class FolderNode():
         try:
             node = ToolNode(self.root.next_id(), title, namespace, script_path, consolidate)
         except Exception as e:
-            print type(e), str(e)
+            print(type(e), str(e))
             return None
         
         node.parent = self
@@ -235,7 +240,7 @@ class ToolNode():
             self.script = ''
             self.extension = '.pyc'
             
-            py_compile.compile(script_path + ".py")
+            py_compile.compile(script_path + ".py", script_path + ".pyc")
             with open(script_path + ".pyc", 'rb') as reader:
                 compiled_binary = reader.read()
             oslib.remove(script_path + ".pyc")
@@ -358,13 +363,18 @@ class MTBXDatabase():
                 'description': '',
                 'namespace': tree.namespace,
                 MTBXDatabase.TOOLBOX_MAGIC_NUMBER: 'True'}
-        for key, val in atts.iteritems():
+        for key, val in atts.items():
             value_string = "{id}, '{name}', '{value}'".format(id= tree.element_id,
                                                             name= key,
                                                             value= val)
             sql = """INSERT INTO attributes (%s)
                     VALUES (%s);""" %(column_string, value_string)
-            self.db.execute(sql)
+            try:
+                self.db.execute(sql)
+            except Exception as e:
+                print(sql)
+                print(str(e))
+                exit()
         
         self.db.commit()
         
@@ -392,7 +402,7 @@ class MTBXDatabase():
                 'name': node.title,
                 'children': [c.element_id for c in node.children],
                 MTBXDatabase.CATEGORY_MAGIC_NUMBER: 'True'}
-        for key, val in atts.iteritems():
+        for key, val in atts.items():
             value_string = "{id}, '{name}', '{value}'".format(id= node.element_id,
                                                             name= key,
                                                             value= val)
@@ -429,7 +439,7 @@ class MTBXDatabase():
                 'python_suffix': node.extension,
                 'name': node.title,
                 MTBXDatabase.TOOL_MAGIC_NUMBER: 'True'}
-        for key, val in atts.iteritems():
+        for key, val in atts.items():
             value_string = "{id}, '{name}', '{value!s}'".format(id= node.element_id,
                                                             name= key,
                                                             value= val)
@@ -442,27 +452,27 @@ class MTBXDatabase():
 #---MAIN METHOD
 
 def build_toolbox(toolbox_file, source_folder, title= 'TMG Toolbox', namespace= 'TMG', consolidate= False):
-    print "------------------------"
-    print " Build Toolbox Utility"
-    print "------------------------"
-    print ""
-    print "toolbox: %s" %toolbox_file
-    print "source folder: %s" %source_folder
-    print "title: %s" %title
-    print "namespace: %s" %namespace
-    print "consolidate: %s" %consolidate
-    print ""
+    print("------------------------")
+    print(" Build Toolbox Utility")
+    print("------------------------")
+    print("")
+    print("toolbox: %s" %toolbox_file)
+    print("source folder: %s" %source_folder)
+    print("title: %s" %title)
+    print("namespace: %s" %namespace)
+    print("consolidate: %s" %consolidate)
+    print("")
     
-    print "Loading toolbox structure"
+    print("Loading toolbox structure")
     tree = ElementTree(title, namespace)
     explore_source_folder(source_folder, tree, consolidate)
-    print "Done. Found %s elements." %(tree.next_element_id)
+    print("Done. Found %s elements." %(tree.next_element_id))
     
-    print ""
-    print "Building MTBX file."
+    print("")
+    print("Building MTBX file.")
     mtbx = MTBXDatabase(toolbox_file, title)
     mtbx.populate_tables_from_tree(tree)
-    print "Done."
+    print("Done.")
     
 
 def explore_source_folder(root_folder_path, parent_node, consolidate):
@@ -481,7 +491,7 @@ def explore_source_folder(root_folder_path, parent_node, consolidate):
             folders.append(item)
     
     for foldername in folders:
-        if foldername == ".vs" or foldername == ".git":
+        if foldername == ".vs" or foldername == ".git" or foldername == "__pycache__":
             continue
         folderpath = pathlib.join(root_folder_path, foldername)
         namespace = foldername
@@ -494,7 +504,6 @@ def explore_source_folder(root_folder_path, parent_node, consolidate):
         namespace = filename
         title = capitalize_name(namespace)
         script_path = pathlib.join(root_folder_path, filename)
-        
         parent_node.add_tool(title, namespace, script_path, consolidate)    
 
 if __name__ == "__main__":
@@ -530,9 +539,3 @@ if __name__ == "__main__":
     consolidate_flag = args.consolidate
     
     build_toolbox(toolbox_file, source_folder, title, namespace, consolidate_flag)
-    
-    
-    
-    
-    
-    

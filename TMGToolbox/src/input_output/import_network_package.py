@@ -25,6 +25,7 @@ import os
 from os import path as _path
 import shutil as _shutil
 import tempfile as _tf
+import six
 
 _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _bank = _MODELLER.emmebank
@@ -478,11 +479,7 @@ class ImportNetworkPackage(_m.Tool()):
         else:
             self.ScenarioDescription = ScenarioName
 
-        try:
-            self._execute()
-        except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
-            raise Exception(msg)
+        self._execute()
 
     def _execute(self):
         with _m.logbook_trace(
@@ -538,7 +535,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.event.set()
         return True
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_get_conflicts(self):
         return self.merge_functions.function_conflicts
         #return True
@@ -620,7 +617,7 @@ class ImportNetworkPackage(_m.Tool()):
             # Replicate Overwrite here so that consoles won't crash with references to a GUI
             functions = self._LoadFunctionFile(extracted_function_file_name)
             emmebank = _MODELLER.emmebank
-            for (id, expression) in functions.iteritems():
+            for (id, expression) in six.iteritems(functions):
                 func = emmebank.function(id)
                 if func is None:
                     emmebank.create_function(id, expression)
@@ -877,15 +874,15 @@ class ImportNetworkPackage(_m.Tool()):
         os.renames(_path.join(temp_folder, 'temp.211'),_path.join(temp_folder, self._components.lines_file))
         return None
 
-    @_m.method(return_type=_m.TupleType)
+    #@_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_description_from_file(self):
         if self.NetworkPackageFile:
             if not self.ScenarioDescription:
@@ -893,7 +890,7 @@ class ImportNetworkPackage(_m.Tool()):
             else:
                 return self.ScenarioDescription
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_file_info(self):
         with _zipfile.ZipFile(self.NetworkPackageFile) as zf:
             nl = zf.namelist()

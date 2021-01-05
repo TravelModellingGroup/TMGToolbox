@@ -26,12 +26,14 @@ it can be distributed in the TMG toolbox
 import inro.modeller as _m
 import math
 import inro.emme.core.exception as _excep
-from contextlib import contextmanager, nested
+from contextlib import contextmanager
 import warnings as _warn
 import sys as _sys
 import traceback as _tb
 import subprocess as _sp
-from itertools import izip
+python_version = _sys.version_info.major
+if python_version <= 2:
+    from itertools import izip
 from json import loads as _parsedict
 from os.path import dirname
 
@@ -101,8 +103,11 @@ def itersync(list1, list2):
         >>>4 9
         >>>5 10
     '''
-
-    return izip(list1, list2)
+    # izip is no longer included in Python 3
+    if(python_version < 3):
+        return izip(list1, list2)
+    else:
+        return zip(list1, list2)
 
 #-------------------------------------------------------------------------------------------
 
@@ -766,7 +771,7 @@ class ProgressTracker():
         else:
             self._completedSubtasks += 1
     
-    @_m.method(return_type=_m.TupleType)
+    #@_m.method(return_type=_m.TupleType)
     def getProgress(self):
         '''
         Call inside a Tool's percent_completed method
