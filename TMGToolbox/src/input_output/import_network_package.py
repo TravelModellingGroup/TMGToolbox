@@ -478,8 +478,11 @@ class ImportNetworkPackage(_m.Tool()):
             self.ScenarioDescription = ""
         else:
             self.ScenarioDescription = ScenarioName
-
-        self._execute()
+        try:
+            self._execute()
+        except Exception as e:
+            msg = str(e) + "\n" + _traceback.format_exc()
+            raise Exception(msg)
 
     def _execute(self):
         with _m.logbook_trace(

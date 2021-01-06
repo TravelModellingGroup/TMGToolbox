@@ -1,3 +1,4 @@
+from __future__ import print_function
 #---LICENSE----------------------
 '''
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
@@ -42,6 +43,11 @@ from inro.emme.matrix import MatrixData as _MatrixData
 import shutil
 import os
 import gzip
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -170,14 +176,14 @@ class ImportBinaryMatrix(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
     @_m.method(return_type=bool)
     def scenario_required(self):
         retval = _util.databankHasDifferentZones(_bank)
-        print retval
+        print(retval)
         return retval
     
     #---

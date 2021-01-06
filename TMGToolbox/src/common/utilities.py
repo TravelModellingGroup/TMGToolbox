@@ -31,8 +31,8 @@ import warnings as _warn
 import sys as _sys
 import traceback as _tb
 import subprocess as _sp
-python_version = _sys.version_info.major
-if python_version <= 2:
+import six
+if six.PY2:
     from itertools import izip
 from json import loads as _parsedict
 from os.path import dirname
@@ -76,7 +76,7 @@ def iterpairs(iterable):
     
     iterator = iterable.__iter__()
     
-    try: prev = iterator.next()
+    try: prev = six.next(iterator)
     except StopIteration: return
     
     for val in iterator:
@@ -217,7 +217,7 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
         if not t in _mtxNames:
             raise TypeError("Assumed id was a matrix, but its type value was not recognized %s" %type(id))
         id = id.id #Set the 'id' variable to the matrix's 'id' property.
-    elif not isinstance(id, basestring):
+    elif not isinstance(id, six.string_types):
         raise TypeError("Id is not a supported type: %s" %type(id))
 
     mtx = _DATABANK.matrix(id)

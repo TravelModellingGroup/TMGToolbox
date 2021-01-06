@@ -19,6 +19,7 @@
 
 import inro.modeller as _m
 from contextlib import contextmanager
+import six
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _EMMEBANK = _MODELLER.emmebank
 
@@ -228,8 +229,8 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
     #-------------------------------------------------------------------------------------------
     
     def add_method_description(self, name, description="", args={}, return_string="void"):
-        iter = args.iterkeys()
-        h  = iter.next()
+        iter = six.iterkeys(args)
+        h  = six.next(iter)
         for a in iter:
             h += ", %s" %a
         
@@ -366,7 +367,7 @@ class _table():
     @contextmanager
     def table_cell(self, **attributes):
         h = "<td"
-        for keyval in attributes.iteritems():
+        for keyval in six.iteritems(attributes):
             h += " %s='%s'" %keyval
         h += ">"
         
