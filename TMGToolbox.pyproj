@@ -228,10 +228,8 @@
     <InterpreterReference Include="Global|PythonCore|2.7" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Build Consolidated Toolbox2.bat" />
-    <Content Include="Build Consolidated Toolbox3.bat" />
-    <Content Include="Build Toolbox2.bat" />
-    <Content Include="Build Toolbox3.bat" />
+    <Content Include="Build Consolidated Toolbox.bat" />
+    <Content Include="Build Toolbox.bat" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>
