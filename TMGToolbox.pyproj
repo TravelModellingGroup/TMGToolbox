@@ -182,6 +182,9 @@
     <Compile Include="src\XTMF_internal\export_worksheet_table.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\XTMF_internal\import_function_batch_file.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\XTMF_internal\return_boardings_multiclass.py" />
     <Compile Include="src\XTMF_internal\tmg_transit_assignment_tool.py" />
     <Compile Include="src\XTMF_internal\xtmf_matrix_calculator.py" />
@@ -225,10 +228,8 @@
     <InterpreterReference Include="Global|PythonCore|2.7" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Build Consolidated Toolbox2.bat" />
-    <Content Include="Build Consolidated Toolbox3.bat" />
-    <Content Include="Build Toolbox2.bat" />
-    <Content Include="Build Toolbox3.bat" />
+    <Content Include="Build Consolidated Toolbox.bat" />
+    <Content Include="Build Toolbox.bat" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>
