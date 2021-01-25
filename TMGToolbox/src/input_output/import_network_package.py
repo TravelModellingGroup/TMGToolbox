@@ -538,7 +538,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.event.set()
         return True
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_get_conflicts(self):
         return self.merge_functions.function_conflicts
         #return True
@@ -881,11 +881,11 @@ class ImportNetworkPackage(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_description_from_file(self):
         if self.NetworkPackageFile:
             if not self.ScenarioDescription:
@@ -893,7 +893,7 @@ class ImportNetworkPackage(_m.Tool()):
             else:
                 return self.ScenarioDescription
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_file_info(self):
         with _zipfile.ZipFile(self.NetworkPackageFile) as zf:
             nl = zf.namelist()
