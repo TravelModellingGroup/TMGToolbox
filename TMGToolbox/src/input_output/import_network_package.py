@@ -870,6 +870,33 @@ class ImportNetworkPackage(_m.Tool()):
             for line in infile:
                 if line[0] == 'c':
                     outfile.write(line.replace("'",""))
+                elif line[0] == 'a':
+                    liststrings = line.replace("'"," ").split()
+                    # find where to add the first quote for description
+                    for y in range(len(liststrings)-5, 0, -1):
+                        res = liststrings[y].replace('.', '', 1).isdigit()
+                        if res:
+                            first_quote = y + 1
+                            break
+                        else:
+                            continue
+
+                    # find where to add the second quote for description
+                    if liststrings[-3].replace('.', '', 1).isdigit():
+                        second_quote = -4
+                    else:
+                        raise IOError("Incorrect transit line file format.")
+
+                    # add single quotes around line name
+                    liststrings[1] = "'{0}'".format(liststrings[1])
+
+                    # add single quotes around line description
+                    liststrings[first_quote] = "'" + liststrings[first_quote]
+                    liststrings[second_quote] = liststrings[second_quote] + "'"
+
+                    # write the new line
+                    line = " ".join(liststrings)
+                    outfile.write(line + '\n')
                 else:
                     outfile.write(line)
         outfile.close()
