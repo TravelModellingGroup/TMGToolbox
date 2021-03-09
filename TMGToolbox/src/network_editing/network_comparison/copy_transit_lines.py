@@ -35,6 +35,8 @@ Copy Transit Lines
     0.0.1 Created on 2014-07-10 by pkucirek
     
     1.0.0 Published on 2014-08-27
+
+    1.1.0 Fixed the calculation of maximum skipped stops at the beginning or end
     
 '''
 
@@ -65,7 +67,7 @@ ItineraryData = namedtuple('ItineraryData', "succeeded path_data skipped_stops e
 
 class CopyTransitLines(_m.Tool()):
     
-    version = '1.0.0'
+    version = '1.1.0'
     tool_run_msg = ""
     number_of_tasks = 2 # For progress reporting, enter the integer number of tasks here
     
@@ -234,7 +236,7 @@ class CopyTransitLines(_m.Tool()):
                     allowed at the start of a line's itinerary."),
                    ('MaxSkippedEndingStops', "Max skipped ending stops", \
                     "The maximum number of untwinned (skipped) transit stops \
-                    allowed at the start of a line's itinerary."),
+                    allowed at the end of a line's itinerary."),
                    ('MaxTotalSkippedStops', "Max total skipped stops", \
                     "The maximum number of total untwinned (skipped) stops."),
                    ('MaxTotalNewNodes', "Max total new nodes", \
@@ -510,7 +512,7 @@ class CopyTransitLines(_m.Tool()):
             
             errorTable = []
             with ShapefileWriter(self.ErrorShapefileReport, mode= 'w', \
-                                 geometryType= ShapefileWriter.SHP_LINE_TYPE) as writer:
+                                 geometryType= ShapefileWriter._ARC) as writer:
                 writer.addField('Line_ID', length=6)
                 writer.addField('Error_msg', length=100)
                 writer.addField('Err_detail', length= 200)
@@ -525,6 +527,7 @@ class CopyTransitLines(_m.Tool()):
                 
             self.TRACKER.completeTask()
             print "Publishing network"
+            targetNetwork.publishable = True
             self.TargetScenario.publish_network(targetNetwork, True)
 
     ##########################################################################################################    
@@ -878,20 +881,45 @@ class CopyTransitLines(_m.Tool()):
     
     def _ValidateItinerary(self, line, skippedStops, pathData, targetNetwork):
         
-        if len(skippedStops) > self.MaxTotalSkippedStops:
+        CheckSkippedStops = [list(x) for x in skippedStops]
+
+        # count the total number of stops in the line to find the middle point
+        totalStops = 0
+        for segment in line.segments(True):
+            if segment.stop_index >= 0: totalStops +=1
+        middleStop = round(totalStops*0.5)
+
+        # calculate the number of skipped stops 
+        counter = 0
+        for s in CheckSkippedStops:
+            counter += 1
+            s.append(counter)
+
+        # find the middle point of the skipped stops
+        middle_stop_index = 0
+        for i in range(len(CheckSkippedStops)):
+            if CheckSkippedStops[i][1] <= (middleStop - 1):
+                middle_stop_index = i
+            else:
+                continue
+                
+        print "Skipped stops:%s" %CheckSkippedStops
+
+        if len(CheckSkippedStops) > self.MaxTotalSkippedStops:
             errorMsg = "Exceeded the max number of skipped stops"
-            errorDetail = len(skippedStops)
+            errorDetail = len(CheckSkippedStops)
             return False, errorMsg, errorDetail
         
-        if len(skippedStops) > 0:
-            if (skippedStops[0][1] + 1) > self.MaxSkippedStartingStops:
+        if len(CheckSkippedStops) > 0 and (len(CheckSkippedStops) > self.MaxSkippedStartingStops or len(CheckSkippedStops) > self.MaxSkippedEndingStops):
+
+            if (CheckSkippedStops[middle_stop_index][2]) > self.MaxSkippedStartingStops:
                 errorMsg = "Exceeded the max number of skipped stops at the start of the line"
-                errorDetail = skippedStops[0][1] + 1
+                errorDetail = CheckSkippedStops[middle_stop_index][2]
                 return False, errorMsg, errorDetail
             
-            if (skippedStops[-1][1] + 1) > self.MaxSkippedEndingStops:
+            if (CheckSkippedStops[-1][2] - CheckSkippedStops[middle_stop_index+1][2] + 1) > self.MaxSkippedEndingStops:
                 errorMsg = "Exceeded the max number of skipped stops at the end of the line"
-                errorDetail = skippedStops[-1][1] + 1
+                errorDetail = CheckSkippedStops[-1][2] - CheckSkippedStops[middle_stop_index+1][2] + 1
                 return False, errorMsg, errorDetail
         
         nNewNodes = sum([1 for node, isStop in pathData if node.twin is None])
@@ -972,6 +1000,7 @@ class CopyTransitLines(_m.Tool()):
         return lineShapeWithTicks
     
     def _CopyTransitLine(self, sourceLine, pathData, targetNetwork, targetVehicleId, segmentIsStop):
+        print "path data: %s" %pathData #debugging
         itinerary = [node.number for node, isStop in pathData]
         lineCopy = targetNetwork.create_transit_line(sourceLine.id, targetVehicleId, itinerary)
         sourceAttributes = set([attName for attName in sourceLine.network.attributes('TRANSIT_LINE')])
