@@ -36,7 +36,8 @@ Copy Transit Lines
     
     1.0.0 Published on 2014-08-27
 
-    1.1.0 Fixed the calculation of maximum skipped stops at the beginning or end
+    1.1.0 Fixed the calculation of maximum skipped stops at the beginning or end. 
+          Added the function to copy dwt and ttf to target network as well.
     
 '''
 
@@ -63,7 +64,7 @@ NullPointerException = _util.NullPointerException
 
 ##########################################################################################################
 
-ItineraryData = namedtuple('ItineraryData', "succeeded path_data skipped_stops error_msg error_detail")
+ItineraryData = namedtuple('ItineraryData', "succeeded path_data skipped_stops error_msg error_detail dwt_ttf")
 
 class CopyTransitLines(_m.Tool()):
     
@@ -795,7 +796,7 @@ class CopyTransitLines(_m.Tool()):
             
             #Copy over the transit line
             self._CopyTransitLine(sourceLine, itineraryData.path_data, targetNetwork, \
-                                  targetVehicle.id, segmentIsStop)
+                                  targetVehicle.id, segmentIsStop, itineraryData.dwt_ttf)
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
         return errorTable
@@ -809,6 +810,8 @@ class CopyTransitLines(_m.Tool()):
         requiredStops = []
         buffer = []
         prevStop = None
+        requiredStops_dwt_ttf = []
+
         for segment in line.segments(True):
             isStop = segment.stop_index >= 0
             index = segment.stop_index
@@ -821,6 +824,8 @@ class CopyTransitLines(_m.Tool()):
                 requiredStops.append(tup)
                 prevStop = sourceNode
                 buffer = []
+                dwt_ttf = sourceNode, segment.dwell_time, segment.transit_time_func
+                requiredStops_dwt_ttf.append(dwt_ttf) 
             elif isMatched and not isStop:
                 buffer.append(targetNode)
             elif isStop and not isMatched:
@@ -828,7 +833,7 @@ class CopyTransitLines(_m.Tool()):
         requiredStops.pop(0) #Remove the first entry, which should be (None, [] firstStop)
         
         if len(requiredStops) == 0: #No matched stops were found, return with error
-            id = ItineraryData(False, [], skippedStops, "Could not find two or more stops.", "")
+            id = ItineraryData(False, [], skippedStops, "Could not find two or more stops.", "", requiredStops_dwt_ttf)
             return id
         
         #Initialize the path with the first required stop
@@ -863,7 +868,7 @@ class CopyTransitLines(_m.Tool()):
                 if nodeIDs is None: #Path does not exist, return with error
                     details = "i=%s, j=%s, mode=%s" %(fromSourceStop.twin, toSourceStop.twin, line.mode)
                     id = ItineraryData(False, [], skippedStops, "Could not construct path for mode.", \
-                                       details)
+                                       details, requiredStops_dwt_ttf)
                     return id
                 for id in nodeIDs: path.append(targetNetwork.node(id))
             path.pop(-1) #Remove the last node, such that path only contains inter-stop nodes
@@ -876,7 +881,7 @@ class CopyTransitLines(_m.Tool()):
             path_data.append((protopath[-1], True))
         
         #The path has been successfully constructed
-        id = ItineraryData(True, path_data, skippedStops, None, None)
+        id = ItineraryData(True, path_data, skippedStops, None, None, requiredStops_dwt_ttf)
         return id
     
     def _ValidateItinerary(self, line, skippedStops, pathData, targetNetwork):
@@ -999,22 +1004,31 @@ class CopyTransitLines(_m.Tool()):
         
         return lineShapeWithTicks
     
-    def _CopyTransitLine(self, sourceLine, pathData, targetNetwork, targetVehicleId, segmentIsStop):
-        print "path data: %s" %pathData #debugging
+    def _CopyTransitLine(self, sourceLine, pathData, targetNetwork, targetVehicleId, segmentIsStop, dwt_ttf):
         itinerary = [node.number for node, isStop in pathData]
         lineCopy = targetNetwork.create_transit_line(sourceLine.id, targetVehicleId, itinerary)
         sourceAttributes = set([attName for attName in sourceLine.network.attributes('TRANSIT_LINE')])
+
         for attName in targetNetwork.attributes('TRANSIT_LINE'):
             if attName in sourceAttributes: #Only copy attributes which exist in both scenarios.
                 lineCopy[attName] = sourceLine[attName]
-        
+
+        stop_i = 0
         for i, (node, isStop) in enumerate(pathData):
             segment = lineCopy.segment(i)
-            
+
+            if node.id == dwt_ttf[stop_i][0].id:
+                segment.dwell_time = dwt_ttf[stop_i][1]
+                segment.transit_time_func = dwt_ttf[stop_i][2]
+                stop_i += 1
+            else:
+                segment.dwell_time = 0
+                segment.transit_time_func = dwt_ttf[0][2]
+
             if segmentIsStop(segment, isStop):
                 segment.allow_boardings = isStop
                 segment.allow_alightings = isStop
-                
+
     def _WriteErrorReport(self, errorTable):
         h = HTML()
         
