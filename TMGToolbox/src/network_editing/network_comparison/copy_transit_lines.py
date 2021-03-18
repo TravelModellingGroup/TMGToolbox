@@ -573,27 +573,31 @@ class CopyTransitLines(_m.Tool()):
     def _LoadVehicleCorrespondenceFile(self, sourceNetwork, targetNetwork):
         with open(self.TransitVehicleCorrespondenceFile) as reader:
             resultDictionary = {}
-            
-            header = reader.readline()
+
             for line in reader:
                 cells = line.strip().split(',')
-                sourceVehicleId = cells[0]
-                targetVehicleId = cells[1]
+
+                if len(cells) < 2:
+                    continue
+
+                if cells[0].isdigit() and cells[1].isdigit():
+                    sourceVehicleId = cells[0]
+                    targetVehicleId = cells[1]
                 
-                sourceVehicle = sourceNetwork.transit_vehicle(sourceVehicleId)
-                if sourceVehicle is None:
-                    raise IOError("A transit vehicle with ID '%s' does not exist in the source scenario" %sourceVehicleId)
+                    sourceVehicle = sourceNetwork.transit_vehicle(sourceVehicleId)
+                    if sourceVehicle is None:
+                        raise IOError("A transit vehicle with ID '%s' does not exist in the source scenario" %sourceVehicleId)
                 
-                targetVehicle = targetNetwork.transit_vehicle(targetVehicleId)
-                if targetVehicle is None:
-                    raise IOError("A transit vehicle with ID '%s' does not exist in the target scenario" %sourceVehicleId)
+                    targetVehicle = targetNetwork.transit_vehicle(targetVehicleId)
+                    if targetVehicle is None:
+                        raise IOError("A transit vehicle with ID '%s' does not exist in the target scenario" %sourceVehicleId)
                 
-                if sourceVehicle.mode.id != targetVehicle.mode.id:
-                    tup = sourceVehicleId, sourceVehicle.mode, targetVehicleId, targetVehicle.mode
-                    raise IOError("Source vehicle %s mode (%s) does not match target vehicle %s mode (%s)" \
-                                  %tup)
+                    if sourceVehicle.mode.id != targetVehicle.mode.id:
+                        tup = sourceVehicleId, sourceVehicle.mode, targetVehicleId, targetVehicle.mode
+                        raise IOError("Source vehicle %s mode (%s) does not match target vehicle %s mode (%s)" \
+                                      %tup)
                 
-                resultDictionary[sourceVehicleId] = targetVehicleId
+                    resultDictionary[sourceVehicleId] = targetVehicleId
             
             return resultDictionary
 
@@ -763,7 +767,7 @@ class CopyTransitLines(_m.Tool()):
                     continue
                 else:
                     targetNetwork.delete_transit_line(sourceLine.id)
-            
+
             targetVehicle = targetNetwork.transit_vehicle(vehicleTable[sourceLine.vehicle.id])
             pathBuilder = pathBuilders[targetVehicle.mode.id]
             
