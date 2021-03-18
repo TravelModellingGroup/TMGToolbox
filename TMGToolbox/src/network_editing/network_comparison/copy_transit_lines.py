@@ -577,6 +577,9 @@ class CopyTransitLines(_m.Tool()):
             for line in reader:
                 cells = line.strip().split(',')
 
+                if len(cells) < 2:
+                    continue
+
                 if cells[0].isdigit() and cells[1].isdigit():
                     sourceVehicleId = cells[0]
                     targetVehicleId = cells[1]
