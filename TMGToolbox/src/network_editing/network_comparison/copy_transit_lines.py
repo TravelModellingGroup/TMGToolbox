@@ -595,9 +595,6 @@ class CopyTransitLines(_m.Tool()):
                                       %tup)
                 
                     resultDictionary[sourceVehicleId] = targetVehicleId
-                else:
-                    # skip headers and blank lines
-                    continue
             
             return resultDictionary
 
