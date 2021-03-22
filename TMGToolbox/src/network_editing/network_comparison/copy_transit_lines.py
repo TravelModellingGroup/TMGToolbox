@@ -801,6 +801,7 @@ class CopyTransitLines(_m.Tool()):
             #Copy over the transit line
             self._CopyTransitLine(sourceLine, itineraryData.path_data, targetNetwork, \
                                   targetVehicle.id, segmentIsStop, itineraryData.dwt_ttf)
+
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
         return errorTable
@@ -1025,6 +1026,8 @@ class CopyTransitLines(_m.Tool()):
         stop_i = 0
         for i, (node, isStop) in enumerate(pathData):
             segment = lineCopy.segment(i)
+            segment.allow_boardings = False
+            segment.allow_alightings = False
 
             if node.id == dwt_ttf[stop_i][0].id:
                 segment.dwell_time = dwt_ttf[stop_i][1]
