@@ -912,7 +912,7 @@ class CopyTransitLines(_m.Tool()):
             else:
                 continue
                 
-        print "Skipped stops:%s" %CheckSkippedStops
+        print "Line:%s \n Skipped stops:%s" %(line,CheckSkippedStops)
 
         if len(CheckSkippedStops) > self.MaxTotalSkippedStops:
             errorMsg = "Exceeded the max number of skipped stops"
@@ -959,6 +959,11 @@ class CopyTransitLines(_m.Tool()):
             xy = i.x, i.y
             coords.append(xy)
             stopflags.append(iIsStop)
+
+            #Build the error shape for one-segment lines
+            if len(path_data) <= 2:
+                j_xy = j.x, j.y
+                coords.append(j_xy)
             
             try:
                 link = targetNetwork.link(i.id, j.id)
