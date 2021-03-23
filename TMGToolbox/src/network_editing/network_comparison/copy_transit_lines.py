@@ -815,7 +815,11 @@ class CopyTransitLines(_m.Tool()):
         requiredStops = []
         buffer = []
         prevStop = None
+
+        #Initialize dwt and ttf
         requiredStops_dwt_ttf = []
+        seg_dwt = None
+        seg_ttf = None
 
         for segment in line.segments(True):
             isStop = segment.stop_index >= 0
