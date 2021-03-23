@@ -801,6 +801,7 @@ class CopyTransitLines(_m.Tool()):
             #Copy over the transit line
             self._CopyTransitLine(sourceLine, itineraryData.path_data, targetNetwork, \
                                   targetVehicle.id, segmentIsStop, itineraryData.dwt_ttf)
+
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
         return errorTable
@@ -814,7 +815,11 @@ class CopyTransitLines(_m.Tool()):
         requiredStops = []
         buffer = []
         prevStop = None
+
+        #Initialize dwt and ttf
         requiredStops_dwt_ttf = []
+        seg_dwt = None
+        seg_ttf = None
 
         for segment in line.segments(True):
             isStop = segment.stop_index >= 0
@@ -822,13 +827,17 @@ class CopyTransitLines(_m.Tool()):
             sourceNode = segment.i_node
             targetNode = sourceNode.twin
             isMatched = targetNode is not None
+            if segment.j_node is not None:
+                # correct for the hidden segment
+                seg_dwt = segment.dwell_time
+                seg_ttf = segment.transit_time_func
             
             if isMatched and isStop:
                 tup = prevStop, buffer, sourceNode
                 requiredStops.append(tup)
                 prevStop = sourceNode
-                buffer = []
-                dwt_ttf = sourceNode, segment.dwell_time, segment.transit_time_func
+                buffer = []                
+                dwt_ttf = sourceNode, seg_dwt, seg_ttf
                 requiredStops_dwt_ttf.append(dwt_ttf) 
             elif isMatched and not isStop:
                 buffer.append(targetNode)
@@ -1023,10 +1032,13 @@ class CopyTransitLines(_m.Tool()):
                 lineCopy[attName] = sourceLine[attName]
 
         stop_i = 0
+
         for i, (node, isStop) in enumerate(pathData):
             segment = lineCopy.segment(i)
+            segment.allow_boardings = False
+            segment.allow_alightings = False
 
-            if node.id == dwt_ttf[stop_i][0].id:
+            if (stop_i < len(dwt_ttf)) and (node.id == dwt_ttf[stop_i][0].id) :
                 segment.dwell_time = dwt_ttf[stop_i][1]
                 segment.transit_time_func = dwt_ttf[stop_i][2]
                 stop_i += 1
