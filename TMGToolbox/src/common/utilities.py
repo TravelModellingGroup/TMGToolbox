@@ -104,7 +104,7 @@ def itersync(list1, list2):
         >>>5 10
     '''
     # izip is no longer included in Python 3
-    if(python_version < 3):
+    if(six.PY3):
         return izip(list1, list2)
     else:
         return zip(list1, list2)

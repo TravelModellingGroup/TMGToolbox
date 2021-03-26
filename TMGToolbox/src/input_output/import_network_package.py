@@ -538,7 +538,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.event.set()
         return True
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_get_conflicts(self):
         return self.merge_functions.function_conflicts
         #return True
@@ -805,7 +805,7 @@ class ImportNetworkPackage(_m.Tool()):
                  NWPversion = float(vf.readline())
                  if NWPversion >= 3:
                      self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
-                 self.transit_file_change = (NWPversion >= 4.4)
+                 self.transit_file_change = (NWPversion >= 4.0)
 
                  s = self._getZipOriginalString(processed, contents, 'link_results.csv')
                  s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
@@ -866,26 +866,51 @@ class ImportNetworkPackage(_m.Tool()):
 
     def _transit_line_file_update(self, temp_folder):
         lines = []
-        with open(_path.join(temp_folder, self._components.lines_file),"r") as infile, open(_path.join(temp_folder, 'temp.211'),"w") as outfile:
+        with open(_path.join(temp_folder, self._components.lines_file),"r") as infile, open(_path.join(temp_folder, 'temp.221'),"w") as outfile:
             for line in infile:
                 if line[0] == 'c':
                     outfile.write(line.replace("'",""))
+                elif line[0] == 'a':
+                    liststrings = line.replace("'"," ").split()
+
+                    # find where to add the first quote for description
+                    if liststrings[5].replace('.', '', 1).isdigit():
+                        first_quote = 6
+                    else:
+                        raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+
+                    # find where to add the second quote for description
+                    if liststrings[-3].replace('.', '', 1).isdigit():
+                        second_quote = -4
+                    else:
+                        raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+
+                    # add single quotes around line name
+                    liststrings[1] = "'{0}'".format(liststrings[1])
+
+                    # add single quotes around line description
+                    liststrings[first_quote] = "'" + liststrings[first_quote]
+                    liststrings[second_quote] = liststrings[second_quote] + "'"
+
+                    # write the new line
+                    line = " ".join(liststrings)
+                    outfile.write(line + '\n')
                 else:
                     outfile.write(line)
         outfile.close()
         os.remove(_path.join(temp_folder, self._components.lines_file))
-        os.renames(_path.join(temp_folder, 'temp.211'),_path.join(temp_folder, self._components.lines_file))
+        os.renames(_path.join(temp_folder, 'temp.221'),_path.join(temp_folder, self._components.lines_file))
         return None
 
     #@_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_description_from_file(self):
         if self.NetworkPackageFile:
             if not self.ScenarioDescription:
@@ -893,7 +918,7 @@ class ImportNetworkPackage(_m.Tool()):
             else:
                 return self.ScenarioDescription
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_file_info(self):
         with _zipfile.ZipFile(self.NetworkPackageFile) as zf:
             nl = zf.namelist()

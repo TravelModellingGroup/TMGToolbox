@@ -34,6 +34,7 @@ Analysis Tool for Extracting Select Line Matrix
 
 import inro.modeller as _m
 import traceback as _traceback
+import six
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -49,6 +50,9 @@ class ExtractSelectLineMatrix(_m.Tool()):
     #---Variable definitions
     xtmf_ScenarioNumber = _m.Attribute(int)
     xtmf_MatrixResultNumber = _m.Attribute(int)
+    xtmf_DemandMatrixNumber = _m.Attribute(int)
+    xtmf_ClassName = _m.Attribute(str)
+    xtmf_Attribute = _m.Attribute(str)
     MatrixResultId = _m.Attribute(str)
     Scenario = _m.Attribute(_m.InstanceType)
     
@@ -80,7 +84,9 @@ class ExtractSelectLineMatrix(_m.Tool()):
     
     def run(self):
         self.tool_run_msg = ""
-        
+        self.ClassName = None
+        self.Attribute = "@lflag"
+        self.DemandMatrixId = None
         try:
             self._execute()
         except Exception as e:
@@ -90,14 +96,19 @@ class ExtractSelectLineMatrix(_m.Tool()):
         
         self.tool_run_msg = _m.PageBuilder.format_info("Analysis complete. Results stored in matrix %s." %self.MatrixResultId)        
     
-    def __call__(self, xtmf_ScenarioNumber, xtmf_MatrixResultNumber):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_MatrixResultNumber, xtmf_ClassName, xtmf_Attribute, xtmf_DemandMatrixNumber):
         
-        self.Scenario = _m.Modeller().emmebank.Scenario(xtmf_ScenarioNumber)
+        self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if self.Scenario is None:
             raise Exception("Could not find Scenario %s!" %xtmf_ScenarioNumber)
     
         self.MatrixResultId = "mf%s" %xtmf_MatrixResultNumber
-        
+        self.DemandMatrixId = "mf%s" %xtmf_DemandMatrixNumber
+        if xtmf_ClassName == "":
+            self.ClassName = None
+        else:
+            self.ClassName = xtmf_ClassName
+        self.Attribute = xtmf_Attribute
         #Execute the tool
         try:
             self._execute()
@@ -120,13 +131,13 @@ class ExtractSelectLineMatrix(_m.Tool()):
                 strategyAnalysisTool = _m.Modeller().tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
             
             self.TRACKER.runTool(strategyAnalysisTool,
-                                 self._getAnalysisSpec(), self.Scenario)    
+                                 self._getAnalysisSpec(), self.Scenario, self.ClassName)
     
     def _getAnalysisSpec(self):
         
         spec = {
                 "trip_components": {
-                                    "boarding": "@lflag", #---Boarding attribute
+                                    "boarding": self.Attribute, #---Boarding attribute
                                     "in_vehicle": None,
                                     "aux_transit": None,
                                     "alighting": None
@@ -140,7 +151,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
                                                                                 "upper": 1
                                                                                 }
                                                         },
-                "analyzed_demand": None, #---Analyzed demand (this may need to be changed)
+                "analyzed_demand": self.DemandMatrixId, #---Analyzed demand (this may need to be changed)
                 "constraint": None,
                 "results": {
                     "strategy_values": self.MatrixResultId, #---Strategy results
@@ -155,7 +166,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
         
         return spec
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
