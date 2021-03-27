@@ -520,8 +520,8 @@ class CopyTransitLines(_m.Tool()):
             
             vehicleTable = self._LoadVehicleCorrespondenceFile(sourceNetwork, targetNetwork)
             print "Loaded vehicle correspondence table"
-            
-            if self.LinksAllowedForModification is not None:
+
+            if (self.LinksAllowedForModification is not None) and (self.LinksAllowedForModification.isspace() == False):
                 if self.TargetScenario.extra_attribute(self.linkModAttrID) is not None:
                     self.TargetScenario.delete_extra_attribute(self.linkModAttrID)
                 self.TargetScenario.create_extra_attribute('LINK', self.linkModAttrID)
