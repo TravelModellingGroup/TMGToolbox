@@ -89,7 +89,6 @@ class CopyTransitLines(_m.Tool()):
     
     TransitVehicleCorrespondenceFile = _m.Attribute(str)
     LinksAllowedForModification = _m.Attribute(str)
-    linkModAttrID = _m.Attribute(str)
     
     NodeCorrespondenceRadius = _m.Attribute(float)
     LineBufferRadius = _m.Attribute(float)
@@ -112,7 +111,6 @@ class CopyTransitLines(_m.Tool()):
         self.SourceScenarioId = _MODELLER.scenario.id
         self.TargetScenario = _MODELLER.scenario
         self.LinksAllowedForModification = None
-        self.linkModAttrID = '@link_added_mode'
 
         self.TargetNewStopOptionId = 0
         self.TargetLinkCostAttributeId = 'length'
@@ -506,56 +504,54 @@ class CopyTransitLines(_m.Tool()):
             
             networkCalculationTool = _MODELLER.tool("inro.emme.network_calculation.network_calculator")
 
-            sourceNetwork = self._LoadSourceNetwork()
-            targetNetwork = self.TargetScenario.get_network()
-            print "Loaded target network"
-            
-            if self.ClearTargetNetworkFlag:
-                lineIds = [line.id for line in targetNetwork.transit_lines()]
-                for lineId in lineIds: targetNetwork.delete_transit_line(lineId)
-                print "Cleared all transit lines in the target scenario"
-            
-            pathBuilders = self._GetShortestPathCalculators(targetNetwork)
-            print "Prepared path builders"
-            
-            vehicleTable = self._LoadVehicleCorrespondenceFile(sourceNetwork, targetNetwork)
-            print "Loaded vehicle correspondence table"
+            with _util.tempExtraAttributeMANAGER(self.TargetScenario, 'LINK', returnId= True) as linkModAttrID:
+                sourceNetwork = self._LoadSourceNetwork()
 
-            if (self.LinksAllowedForModification is not None) and (self.LinksAllowedForModification.isspace() == False):
-                if self.TargetScenario.extra_attribute(self.linkModAttrID) is not None:
-                    self.TargetScenario.delete_extra_attribute(self.linkModAttrID)
-                self.TargetScenario.create_extra_attribute('LINK', self.linkModAttrID)
-                networkCalculationTool(self._getLinkCalcSpec(), self.TargetScenario)
+                if (self.LinksAllowedForModification is not None) and (self.LinksAllowedForModification.isspace() == False):
+                    networkCalculationTool(self._getLinkCalcSpec(linkModAttrID), self.TargetScenario)
+                    print "Filtered the links allowed for modification"
+
                 targetNetwork = self.TargetScenario.get_network()
-                print "Filtered the links allowed for modification"
+                print "Loaded target network"
 
-            print "Starting network correspondence"
-            self._BuildNetworkCorrespondence(sourceNetwork, targetNetwork, self.LinksAllowedForModification)
-            if self.NodeCorrespondenceReportFile:
-                self._WriteCorrespondeceFile(sourceNetwork, targetNetwork)
+                if self.ClearTargetNetworkFlag:
+                    lineIds = [line.id for line in targetNetwork.transit_lines()]
+                    for lineId in lineIds: targetNetwork.delete_transit_line(lineId)
+                    print "Cleared all transit lines in the target scenario"
             
-            linesToProcess = self._PrepareNetwork(sourceNetwork)
-            print "Found %s lines to copy over" %len(linesToProcess)
+                pathBuilders = self._GetShortestPathCalculators(targetNetwork)
+                print "Prepared path builders"
             
-            errorTable = []
-            with ShapefileWriter(self.ErrorShapefileReport, mode= 'w', \
-                                 geometryType= ShapefileWriter._ARC) as writer:
-                writer.addField('Line_ID', length=6)
-                writer.addField('Error_msg', length=100)
-                writer.addField('Err_detail', length= 200)
+                vehicleTable = self._LoadVehicleCorrespondenceFile(sourceNetwork, targetNetwork)
+                print "Loaded vehicle correspondence table"
+
+                print "Starting network correspondence"
+                self._BuildNetworkCorrespondence(sourceNetwork, targetNetwork, self.LinksAllowedForModification)
+                if self.NodeCorrespondenceReportFile:
+                    self._WriteCorrespondeceFile(sourceNetwork, targetNetwork)
             
-                errorTable = self._ProcessTransitLines(linesToProcess, targetNetwork, vehicleTable, \
-                                          pathBuilders, writer, self.LinksAllowedForModification)
+                linesToProcess = self._PrepareNetwork(sourceNetwork)
+                print "Found %s lines to copy over" %len(linesToProcess)
+            
+                errorTable = []
+                with ShapefileWriter(self.ErrorShapefileReport, mode= 'w', \
+                                     geometryType= ShapefileWriter._ARC) as writer:
+                    writer.addField('Line_ID', length=6)
+                    writer.addField('Error_msg', length=100)
+                    writer.addField('Err_detail', length= 200)
+            
+                    errorTable = self._ProcessTransitLines(linesToProcess, targetNetwork, vehicleTable, \
+                                              pathBuilders, writer, self.LinksAllowedForModification, linkModAttrID)
                 
-                print "Done processing lines"
-                print "Encountered %s errors" %len(errorTable)
+                    print "Done processing lines"
+                    print "Encountered %s errors" %len(errorTable)
                 
-                self._WriteErrorReport(errorTable)
+                    self._WriteErrorReport(errorTable)
                 
-            self.TRACKER.completeTask()
-            print "Publishing network"
-            targetNetwork.publishable = True
-            self.TargetScenario.publish_network(targetNetwork, True)
+                self.TRACKER.completeTask()
+                print "Publishing network"
+                targetNetwork.publishable = True
+                self.TargetScenario.publish_network(targetNetwork, True)
 
     ##########################################################################################################    
     
@@ -642,7 +638,7 @@ class CopyTransitLines(_m.Tool()):
     #---Network Correspondence
     def _BuildNetworkCorrespondence(self, sourceNetwork, targetNetwork, LinksforMode):
         #Check if the target node is connected to the links allowed for the source modes 
-        if LinksforMode is None:
+        if (LinksforMode is None) or (LinksforMode.isspace()):
             sourceModeList = {}
             targetModeList = {}
             for node in sourceNetwork.regular_nodes():
@@ -675,7 +671,7 @@ class CopyTransitLines(_m.Tool()):
             
             #Rank the nodes within the search radius
             #Check if the target node has same modes as the source node
-            if LinksforMode is None:
+            if (LinksforMode is None) or (LinksforMode.isspace()):
                 smodes = set(sourceModeList[sourceNode.id])
                 for targetNode in targetIndex.queryCircle(sx, sy, self.NodeCorrespondenceRadius):
                     tmodes = set(targetModeList[targetNode.id])
@@ -769,7 +765,7 @@ class CopyTransitLines(_m.Tool()):
         msg = "Found %s lines to copy over from the source scenario" %len(linesToProcess)
         return linesToProcess
     
-    def _ProcessTransitLines(self, linesToProcess, targetNetwork, vehicleTable, pathBuilders, shapefileWriter, LinksforMode):
+    def _ProcessTransitLines(self, linesToProcess, targetNetwork, vehicleTable, pathBuilders, shapefileWriter, LinksforMode, linkModAttributeID):
         
         #Setup lambdas for assigning stops to nodes
         if self.TargetNewStopOptionId == '0':
@@ -823,7 +819,7 @@ class CopyTransitLines(_m.Tool()):
             #Try to construct the line's itinerary in the target network
             try:
                 itineraryData = self._ConstructTargetItinerary(sourceLine, pathBuilder, targetNetwork, \
-                                                               targetVehicle.mode, LinksforMode)
+                                                               targetVehicle.mode, LinksforMode, linkModAttributeID)
                 
                 if itineraryData.succeeded == False: #Could not construct a path
                     logError(lineId, itineraryData.error_msg, itineraryData.error_detail)
@@ -853,7 +849,7 @@ class CopyTransitLines(_m.Tool()):
         self.TRACKER.completeTask()
         return errorTable
     
-    def _ConstructTargetItinerary(self, line, pathBuilder, targetNetwork, targetMode, LinksforMode):
+    def _ConstructTargetItinerary(self, line, pathBuilder, targetNetwork, targetMode, LinksforMode, linkModAttributeID):
 
         sourceNetwork = line.network
         
@@ -907,7 +903,7 @@ class CopyTransitLines(_m.Tool()):
             path = []
 
             #Check if links are allowed to add new modes
-            if LinksforMode is None:
+            if (LinksforMode is None) or (LinksforMode.isspace()):
                 for i, j in _util.iterpairs(protopath):
                     #Occasionally, the same node can legitimately occur twice in the sequence (if a line
                     #doubles-back, for example). So just ignore it if this is the case
@@ -933,7 +929,7 @@ class CopyTransitLines(_m.Tool()):
                     #add new modes if not permitted alreay
                     candidateLink = targetNetwork.link(i.id, j.id)
 
-                    if candidateLink[self.linkModAttrID] > 0:
+                    if candidateLink[linkModAttributeID] > 0:
                         candidateLink.modes |= set([targetMode])
                         print "mode %s added to link %s." %(targetMode, candidateLink.id)
 
@@ -1170,9 +1166,9 @@ class CopyTransitLines(_m.Tool()):
         
         return modeList
 
-    def _getLinkCalcSpec(self):
+    def _getLinkCalcSpec(self, linkModAttributeID):
         return {
-                "result": self.linkModAttrID,
+                "result": linkModAttributeID,
                 "expression": "1",
                 "selections": {
                                "link": self.LinksAllowedForModification
