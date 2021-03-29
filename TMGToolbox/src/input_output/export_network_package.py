@@ -306,7 +306,7 @@ class ExportNetworkPackage(m.Tool()):
 
     def _batchout_transit_results(self, temp_folder, zf):
         segment_filepath = path.join(temp_folder, 'segment_results.csv')
-        result_attributes = ['transit_boardings', 'transit_time', 'transit_volume', 'aux_transit_volume']
+        result_attributes = ['transit_boardings', 'transit_time', 'transit_volume']
         segments = _pdu.load_transit_segment_dataframe(self.Scenario)[result_attributes]
         segments.to_csv(segment_filepath)
         zf.write(segment_filepath, arcname=path.basename(segment_filepath))
