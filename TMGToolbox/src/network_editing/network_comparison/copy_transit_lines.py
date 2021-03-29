@@ -53,6 +53,12 @@ from math import pow, sqrt
 from collections import namedtuple
 from html import HTML
 
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
+
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _building = _MODELLER.module('inro.emme.utility.transit_line_build_utilities')
 
@@ -393,11 +399,11 @@ class CopyTransitLines(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def preload_database_scenarios(self):
         self._cahcedSourceScenarioAttributes = {}
         
@@ -416,11 +422,11 @@ class CopyTransitLines(_m.Tool()):
 
             return "\n".join(options)
         
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def preload_source_scenario_attributes(self):
         return "\n".join(self._cahcedSourceScenarioAttributes[self.SourceScenarioId])
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def preload_target_scenario_link_attributes(self):
         options = ['<option value="length">length - LINK - Link length</option>',
                    '<option value="data1">ul1 - LINK - Link user data 1</option>',
@@ -437,7 +443,7 @@ class CopyTransitLines(_m.Tool()):
         
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def preload_target_scenario_node_attributes(self):
         options = ['<option value="0">NONE - No new stops</option>',
                    '<option value="1">ALL - Stops on all new nodes</option>']
@@ -452,7 +458,7 @@ class CopyTransitLines(_m.Tool()):
         
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def preload_vehicle_correspondence_file(self):
         try:
             with open(self.TransitVehicleCorrespondenceFile) as reader:
@@ -475,8 +481,10 @@ class CopyTransitLines(_m.Tool()):
             
             with Emmebank(self.SourceEmmebankPath) as emmebank:
                 sourceScenario = emmebank.scenario(self.SourceScenarioId)
+
+            functions = self._cachedCorrespondence()
             
-            for sourceVehicleId, targetVehicleId in self._cachedCorrespondence.iteritems():
+            for sourceVehicleId, targetVehicleId in six.iteritems(functions): 
                 sourceVehicle = sourceScenario.transit_vehicle(sourceVehicleId)
                 if sourceVehicle is None:
                     return "Vehicle %s does not exist in the source scenario" %sourceVehicleId
@@ -508,29 +516,29 @@ class CopyTransitLines(_m.Tool()):
 
                 if (self.LinksAllowedForModification is not None) and (self.LinksAllowedForModification.isspace() == False):
                     networkCalculationTool(self._getLinkCalcSpec(linkModAttrID), self.TargetScenario)
-                    print "Filtered the links allowed for modification"
+                    print("Filtered the links allowed for modification")
 
                 targetNetwork = self.TargetScenario.get_network()
-                print "Loaded target network"
+                print("Loaded target network")
 
                 if self.ClearTargetNetworkFlag:
                     lineIds = [line.id for line in targetNetwork.transit_lines()]
                     for lineId in lineIds: targetNetwork.delete_transit_line(lineId)
-                    print "Cleared all transit lines in the target scenario"
+                    print("Cleared all transit lines in the target scenario")
             
                 pathBuilders = self._GetShortestPathCalculators(targetNetwork)
-                print "Prepared path builders"
+                print("Prepared path builders")
             
                 vehicleTable = self._LoadVehicleCorrespondenceFile(sourceNetwork, targetNetwork)
-                print "Loaded vehicle correspondence table"
+                print("Loaded vehicle correspondence table")
 
-                print "Starting network correspondence"
+                print("Starting network correspondence")
                 self._BuildNetworkCorrespondence(sourceNetwork, targetNetwork, self.LinksAllowedForModification)
                 if self.NodeCorrespondenceReportFile:
                     self._WriteCorrespondeceFile(sourceNetwork, targetNetwork)
             
                 linesToProcess = self._PrepareNetwork(sourceNetwork)
-                print "Found %s lines to copy over" %len(linesToProcess)
+                print("Found %s lines to copy over" %len(linesToProcess))
             
                 errorTable = []
                 with ShapefileWriter(self.ErrorShapefileReport, mode= 'w', \
@@ -542,13 +550,13 @@ class CopyTransitLines(_m.Tool()):
                     errorTable = self._ProcessTransitLines(linesToProcess, targetNetwork, vehicleTable, \
                                               pathBuilders, writer, self.LinksAllowedForModification, linkModAttrID)
                 
-                    print "Done processing lines"
-                    print "Encountered %s errors" %len(errorTable)
+                    print("Done processing lines")
+                    print("Encountered %s errors" %len(errorTable))
                 
                     self._WriteErrorReport(errorTable)
                 
                 self.TRACKER.completeTask()
-                print "Publishing network"
+                print("Publishing network")
                 targetNetwork.publishable = True
                 self.TargetScenario.publish_network(targetNetwork, True)
 
@@ -588,7 +596,7 @@ class CopyTransitLines(_m.Tool()):
                                      + self.SourceEmmebankPath)
                 network = scenario.get_network()
                 
-        print "Loaded source network"
+        print("Loaded source network")
         return network
     
     def _LoadVehicleCorrespondenceFile(self, sourceNetwork, targetNetwork):
@@ -654,7 +662,7 @@ class CopyTransitLines(_m.Tool()):
         targetIndex = _spindex.GridIndex(targetExtents, xSize= 1000, ySize= 1000, marginSize= 1.0)
         for node in targetNetwork.regular_nodes(): targetIndex.insertPoint(node)
         
-        print "Built spatial index"
+        print("Built spatial index")
         
         sourceNetwork.create_attribute('NODE', 'twin', None)
         targetNetwork.create_attribute('NODE', 'twin', None)
@@ -721,7 +729,7 @@ class CopyTransitLines(_m.Tool()):
         self.TRACKER.completeTask()
         msg = "Found %s twins for nodes in the source network" %nTwinnedNodes
         _m.logbook_write(msg)
-        print msg
+        print(msg)
     
     def _WriteCorrespondeceFile(self, sourceNetwork, targetNetwork):
         with open(self.NodeCorrespondenceReportFile, 'w') as writer:
@@ -735,7 +743,7 @@ class CopyTransitLines(_m.Tool()):
             for targetNode in targetNetwork.regular_nodes():
                 if targetNode.number in twinnedTargetNodes: continue
                 writer.write("\n%s,%s" %(targetNode.twin, targetNode))
-        print "Done writing report file."
+        print("Done writing report file.")
                 
     #---
     #---Core execution
@@ -930,7 +938,7 @@ class CopyTransitLines(_m.Tool()):
 
                     if candidateLink[linkModAttributeID] > 0:
                         candidateLink.modes |= set([targetMode])
-                        print "mode %s added to link %s." %(targetMode, candidateLink.id)
+                        print("mode %s added to link %s." %(targetMode, candidateLink.id))
 
                     if candidateLink is not None and targetMode in candidateLink.modes:
                         path.append(j)
@@ -957,7 +965,7 @@ class CopyTransitLines(_m.Tool()):
             #Add the subsequent segment(s) to the path_data
             for i, waypointNode in enumerate(path):
                 if waypointNode is None:
-                    print "Found None at index %s for line %s" %(i, line)
+                    print("Found None at index %s for line %s" %(i, line))
                 path_data.append((waypointNode, False))
             path_data.append((protopath[-1], True))
         
@@ -989,7 +997,7 @@ class CopyTransitLines(_m.Tool()):
             else:
                 continue
                 
-        print "Line:%s \n Skipped stops:%s" %(line,CheckSkippedStops)
+        print("Line:%s \n Skipped stops:%s" %(line,CheckSkippedStops))
 
         if len(CheckSkippedStops) > self.MaxTotalSkippedStops:
             errorMsg = "Exceeded the max number of skipped stops"
@@ -1045,7 +1053,7 @@ class CopyTransitLines(_m.Tool()):
             try:
                 link = targetNetwork.link(i.id, j.id)
             except:
-                print i, iIsStop, j, jIsStop
+                print(i, iIsStop, j, jIsStop)
                 raise
             for xy in link.vertices:
                 coords.append(xy)
@@ -1079,9 +1087,9 @@ class CopyTransitLines(_m.Tool()):
             try:
                 tickxy = offsetLine.coords[index]
             except:
-                print lineShapeForChecking.type
-                print offsetLine.type
-                print coords
+                print(lineShapeForChecking.type)
+                print(offsetLine.type)
+                print(coords)
                 raise
             coords.insert(index, xy)
             coords.insert(index, tickxy)
