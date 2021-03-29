@@ -159,7 +159,6 @@ class CopyTransitLines(_m.Tool()):
                         size=200, title="Links allowed for modification",
                         note="An expression to select the links in target network that allows for modification. \
                         The mode(s) of the transit lines will be added to these links if they are selected for paths. \
-                        An extra attribute '@link_added_mode' will be created and a value of 1 will be assigned to the links allowed for modification. \
                         Example: i=10999 or j = 10999 and mode=b. More details refer to the 'Network element selectors' section in EMME manual. \
                         <br><br>Leave as Blank to not add any new modes to the links in target network. ",
                         multi_line=True)
