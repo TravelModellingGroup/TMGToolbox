@@ -42,14 +42,14 @@ class ExportNetworkPackage(m.Tool()):
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
     Scenario = m.Attribute(m.InstanceType)
-    ExportFile = m.Attribute(str)
+    export_file = m.Attribute(str)
     ExportAllFlag = m.Attribute(bool)
     AttributeIdsToExport = m.Attribute(m.ListType)
     ExportMetadata = m.Attribute(str)
     ExportToEmmeOldVersion = m.Attribute(bool)
 
-    xtmf_AttributeIdString = m.Attribute(str)
-    xtmf_ScenarioNumber = m.Attribute(int)
+    export_attributes = m.Attribute(str)
+    scenario_number = m.Attribute(int)
 
     def __init__(self):
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)  # init the ProgressTracker

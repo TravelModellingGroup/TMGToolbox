@@ -1,27 +1,21 @@
 '''
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
-
     This file is part of the TMG Toolbox.
-
     The TMG Toolbox is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-
     The TMG Toolbox is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 '''
 Analysis Tool for Extracting Select Line Matrix
-
     Author: Peter Kucirek
-
 '''
 
 #---VERSION HISTORY
@@ -34,6 +28,7 @@ Analysis Tool for Extracting Select Line Matrix
 
 import inro.modeller as _m
 import traceback as _traceback
+import six
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -49,6 +44,9 @@ class ExtractSelectLineMatrix(_m.Tool()):
     #---Variable definitions
     xtmf_ScenarioNumber = _m.Attribute(int)
     xtmf_MatrixResultNumber = _m.Attribute(int)
+    xtmf_DemandMatrixNumber = _m.Attribute(int)
+    xtmf_ClassName = _m.Attribute(str)
+    xtmf_Attribute = _m.Attribute(str)
     MatrixResultId = _m.Attribute(str)
     Scenario = _m.Attribute(_m.InstanceType)
     
@@ -80,29 +78,36 @@ class ExtractSelectLineMatrix(_m.Tool()):
     
     def run(self):
         self.tool_run_msg = ""
-        
+        self.ClassName = None
+        self.Attribute = "@lflag"
+        self.DemandMatrixId = None
         try:
             self._execute()
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc(e))
+                e, _traceback.format_exc())
             raise
         
         self.tool_run_msg = _m.PageBuilder.format_info("Analysis complete. Results stored in matrix %s." %self.MatrixResultId)        
     
-    def __call__(self, xtmf_ScenarioNumber, xtmf_MatrixResultNumber):
+    def __call__(self, xtmf_ScenarioNumber, xtmf_MatrixResultNumber, xtmf_ClassName, xtmf_Attribute, xtmf_DemandMatrixNumber):
         
-        self.Scenario = _m.Modeller().emmebank.Scenario(xtmf_ScenarioNumber)
+        self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if self.Scenario is None:
             raise Exception("Could not find Scenario %s!" %xtmf_ScenarioNumber)
     
         self.MatrixResultId = "mf%s" %xtmf_MatrixResultNumber
-        
+        self.DemandMatrixId = "mf%s" %xtmf_DemandMatrixNumber
+        if xtmf_ClassName == "":
+            self.ClassName = None
+        else:
+            self.ClassName = xtmf_ClassName
+        self.Attribute = xtmf_Attribute
         #Execute the tool
         try:
             self._execute()
         except Exception as e:
-            raise Exception(_traceback.format_exc(e))
+            raise Exception(_traceback.format_exc())
         
     def _execute(self):
         with _m.logbook_trace(name="Extract select line matrix v%s" %self.version,
@@ -120,13 +125,13 @@ class ExtractSelectLineMatrix(_m.Tool()):
                 strategyAnalysisTool = _m.Modeller().tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
             
             self.TRACKER.runTool(strategyAnalysisTool,
-                                 self._getAnalysisSpec(), self.Scenario)    
+                                 self._getAnalysisSpec(), self.Scenario, self.ClassName)
     
     def _getAnalysisSpec(self):
         
         spec = {
                 "trip_components": {
-                                    "boarding": "@lflag", #---Boarding attribute
+                                    "boarding": self.Attribute, #---Boarding attribute
                                     "in_vehicle": None,
                                     "aux_transit": None,
                                     "alighting": None
@@ -140,7 +145,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
                                                                                 "upper": 1
                                                                                 }
                                                         },
-                "analyzed_demand": None, #---Analyzed demand (this may need to be changed)
+                "analyzed_demand": self.DemandMatrixId, #---Analyzed demand (this may need to be changed)
                 "constraint": None,
                 "results": {
                     "strategy_values": self.MatrixResultId, #---Strategy results
@@ -155,7 +160,7 @@ class ExtractSelectLineMatrix(_m.Tool()):
         
         return spec
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
