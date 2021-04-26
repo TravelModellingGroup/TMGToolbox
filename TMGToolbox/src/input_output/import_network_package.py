@@ -1,18 +1,14 @@
 """
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
-
     This file is part of the TMG Toolbox.
-
     The TMG Toolbox is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-
     The TMG Toolbox is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 """
@@ -25,6 +21,7 @@ import os
 from os import path as _path
 import shutil as _shutil
 import tempfile as _tf
+import six
 
 _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _bank = _MODELLER.emmebank
@@ -152,14 +149,11 @@ class ImportNetworkPackage(_m.Tool()):
                       Ignore if 'SkipMergingFunctions' is checked.")
 
         pb.add_html("""
-
        <div id="modal" class="modal">
-
           <div class="modal-content">
             <span id="modal-close" class="close">&times;</span>
             <p>Conflicts detected between the database and the network package file for the following functions(s). Please resolve these conflicts
             by indicating which version(s) to save in the database.</p>
-
             <table id="conflicts-table">
             <thead>
             <tr>
@@ -183,22 +177,16 @@ class ImportNetworkPackage(_m.Tool()):
           <button id="modal-cancel-button">Cancel</button>
           </div>
           </div>
-
         
-
         </div>
-
         <style>
-
             .all-select
             {
                 padding-left:15px;
                 padding-top:10px;
                 padding-bottom:10px;
             }
-
             .modal thead td{
-
                 font-weight:bold;
             }
              .modal {
@@ -214,8 +202,6 @@ class ImportNetworkPackage(_m.Tool()):
                 background-color: rgb(0,0,0); 
                 background-color: rgba(0,0,0,0.4); 
             }
-
-
             .modal-content {
                 background-color: #fefefe;
                 margin: auto;
@@ -223,31 +209,26 @@ class ImportNetworkPackage(_m.Tool()):
                 border: 1px solid #888;
                 width: 80%;
             }
-
             .close {
                 color: #aaaaaa;
                 float: right;
                 font-size: 28px;
                 font-weight: bold;
             }
-
             .close:hover,
             .close:focus {
                 color: #000;
                 text-decoration: none;
                 cursor: pointer;
             }
-
             td.radio, thead td
             {
                 text-align:center;
             }
-
             #conflicts-table
             {
                 width: 100%;
             }
-
             #conflicts-table tbody tr:nth-child(odd)
             {
                 background-color:#eaeae8;
@@ -259,7 +240,6 @@ class ImportNetworkPackage(_m.Tool()):
             }
         }
         </style>
-
         """)
 
         # ---JAVASCRIPT
@@ -267,63 +247,47 @@ class ImportNetworkPackage(_m.Tool()):
 <script type="text/javascript">
     $(document).ready( function ()
     {
-
             var conflicts = [];
-
             var modal = document.getElementById('modal');
       
             var tool = new inro.modeller.util.Proxy(%s) ;
-
             window.inp_tool = tool;
-
             window.con = [];
-
             $('#typeselectfile').on('change',function() {
-
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="file"]').prop('checked',true).change();
                 }
             });
-
             $('#typeselectfile').on('click',function() {
-
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="file"]').prop('checked',true).change();
                 }
             });
-
             $('#typeselectdatabase').on('change',function() {
-
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="database"]').prop('checked',true).change();
                 }
             });
-
             $('#typeselectdatabase').on('click',function() {
-
                
                 if($(this).prop('checked'))
                 {
                   $('input[value="database"]').prop('checked',true).change();
                 }
             });
-
             var intervalFunction = function() {
-
               if(tool.should_show_merge_edit_dialog())
             {
                modal.style.display = "block";
                clearInterval(dialogPollingInterval);
-
                var conflictsString = tool.get_function_conflicts().replace(/'/g,'"');
                window.con = JSON.parse(conflictsString);
-
                
                for(var i = 0; i < con.length; i++)
                {
@@ -333,12 +297,8 @@ class ImportNetworkPackage(_m.Tool()):
                   '<input type="radio" name="'+i+'" value="file"></td><td class="radio">'+
                   '<input type="radio" name="'+i+'" value="other"></td><td><input class="expression_input" type="text" id="exp_'+i+'" name="expression" value="'+con[i]['database_expression']+'"></td></tr>');
                }
-
-
                $('#conflicts-table input').on('change', function() {
                     var idx = parseInt($(this)[0].name);
-
-
                     if($(this)[0].value == 'database')
                     {
                         $('#exp_'+idx).val(window.con[idx]['database_expression']);
@@ -357,15 +317,10 @@ class ImportNetworkPackage(_m.Tool()):
                         window.con[idx]['expression'] = $('#exp_'+idx).val()
                      }
                });
-
             };
-
             }
-
             var dialogPollingInterval = setInterval(intervalFunction,200);
-
         $('#modal-save-button').bind('click',function(evt) {
-
             for(var i = 0; i < window.con.length; i++)
             {
                 if(window.con[i]['resolve'] == 'expression')
@@ -381,7 +336,6 @@ class ImportNetworkPackage(_m.Tool()):
             tool.reset_tool();
         });
         
-
         $('#modal-close,#modal-cancel-button').bind('click',function(evt) {
             window.con = [];
             $('#conflicts-table tbody').empty();
@@ -389,8 +343,6 @@ class ImportNetworkPackage(_m.Tool()):
              tool.reset_tool();
         });
         
-
-
         $("#NetworkPackageFile").bind('change', function()
         {
             $(this).commit();
@@ -461,7 +413,7 @@ class ImportNetworkPackage(_m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc(e))
+            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc())
             raise
 
         self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario %s created." % self.ScenarioId)
@@ -477,11 +429,10 @@ class ImportNetworkPackage(_m.Tool()):
             self.ScenarioDescription = ""
         else:
             self.ScenarioDescription = ScenarioName
-
         try:
             self._execute()
         except Exception as e:
-            msg = str(e) + "\n" + _traceback.format_exc(e)
+            msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
 
     def _execute(self):
@@ -538,7 +489,7 @@ class ImportNetworkPackage(_m.Tool()):
         self.event.set()
         return True
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_get_conflicts(self):
         return self.merge_functions.function_conflicts
         #return True
@@ -620,7 +571,7 @@ class ImportNetworkPackage(_m.Tool()):
             # Replicate Overwrite here so that consoles won't crash with references to a GUI
             functions = self._LoadFunctionFile(extracted_function_file_name)
             emmebank = _MODELLER.emmebank
-            for (id, expression) in functions.iteritems():
+            for (id, expression) in six.iteritems(functions):
                 func = emmebank.function(id)
                 if func is None:
                     emmebank.create_function(id, expression)
@@ -805,7 +756,7 @@ class ImportNetworkPackage(_m.Tool()):
                  NWPversion = float(vf.readline())
                  if NWPversion >= 3:
                      self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
-                 self.transit_file_change = (NWPversion >= 4.4)
+                 self.transit_file_change = (NWPversion >= 4.0)
 
                  s = self._getZipOriginalString(processed, contents, 'link_results.csv')
                  s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
@@ -866,26 +817,51 @@ class ImportNetworkPackage(_m.Tool()):
 
     def _transit_line_file_update(self, temp_folder):
         lines = []
-        with open(_path.join(temp_folder, self._components.lines_file),"r") as infile, open(_path.join(temp_folder, 'temp.211'),"w") as outfile:
+        with open(_path.join(temp_folder, self._components.lines_file),"r") as infile, open(_path.join(temp_folder, 'temp.221'),"w") as outfile:
             for line in infile:
                 if line[0] == 'c':
                     outfile.write(line.replace("'",""))
+                elif line[0] == 'a':
+                    liststrings = line.replace("'"," ").split()
+
+                    # find where to add the first quote for description
+                    if liststrings[5].replace('.', '', 1).isdigit():
+                        first_quote = 6
+                    else:
+                        raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+
+                    # find where to add the second quote for description
+                    if liststrings[-3].replace('.', '', 1).isdigit():
+                        second_quote = -4
+                    else:
+                        raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+
+                    # add single quotes around line name
+                    liststrings[1] = "'{0}'".format(liststrings[1])
+
+                    # add single quotes around line description
+                    liststrings[first_quote] = "'" + liststrings[first_quote]
+                    liststrings[second_quote] = liststrings[second_quote] + "'"
+
+                    # write the new line
+                    line = " ".join(liststrings)
+                    outfile.write(line + '\n')
                 else:
                     outfile.write(line)
         outfile.close()
         os.remove(_path.join(temp_folder, self._components.lines_file))
-        os.renames(_path.join(temp_folder, 'temp.211'),_path.join(temp_folder, self._components.lines_file))
+        os.renames(_path.join(temp_folder, 'temp.221'),_path.join(temp_folder, self._components.lines_file))
         return None
 
-    @_m.method(return_type=_m.TupleType)
+    #@_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def get_description_from_file(self):
         if self.NetworkPackageFile:
             if not self.ScenarioDescription:
@@ -893,7 +869,7 @@ class ImportNetworkPackage(_m.Tool()):
             else:
                 return self.ScenarioDescription
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def get_file_info(self):
         with _zipfile.ZipFile(self.NetworkPackageFile) as zf:
             nl = zf.namelist()
@@ -961,4 +937,3 @@ class ImportNetworkPackage(_m.Tool()):
     def reset_tool(self):
         self.OverwriteScenarioFlag = False
         self.has_exception = False
-        
