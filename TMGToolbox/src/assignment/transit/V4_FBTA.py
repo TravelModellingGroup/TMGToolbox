@@ -677,7 +677,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
         self.WalkAttributeId = WalkAttributeId
         self.LinkFareAttributeId = LinkFareAttributeId
         self.SegmentFareAttributeId = SegmentFareAttributeId
-        
+        self.WalkSpeed = WalkSpeed
         self.WaitPerception = WaitPerception
         self.WalkPerceptionNonToronto = WalkPerceptionNonToronto
         self.WalkPerceptionToronto = WalkPerceptionToronto
