@@ -42,7 +42,7 @@ class ExportNetworkPackage(m.Tool()):
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
     Scenario = m.Attribute(m.InstanceType)
-    export_file = m.Attribute(str)
+    ExportFile = m.Attribute(str)
     ExportAllFlag = m.Attribute(bool)
     AttributeIdsToExport = m.Attribute(m.ListType)
     ExportMetadata = m.Attribute(str)
@@ -132,13 +132,13 @@ class ExportNetworkPackage(m.Tool()):
     def check_all_flag(self):
         return self.ExportAllFlag
 
-    def __call__(self, scenario_number, export_file, export_attributes):
+    def __call__(self, scenario_number, ExportFile, export_attributes):
 
         self.Scenario = mm.emmebank.scenario(scenario_number)
         if self.Scenario is None:
             raise Exception('Scenario %s was not found!' % scenario_number)
 
-        self.ExportFile = export_file
+        self.ExportFile = ExportFile
         if export_attributes.lower() == 'all':
             self.ExportAllFlag = True  # if true, self.AttributeIdsToExport gets set in execute
         else:
