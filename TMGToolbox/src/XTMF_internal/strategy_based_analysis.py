@@ -56,6 +56,10 @@ class StrategyBasedAnalysis(_m.Tool()):
 
     xtmf_in_vehicle_trip_component = _m.Attribute(str)
 
+    xtmf_transit_volumes_attribute = _m.Attribute(str)
+    xtmf_aux_transit_attribute = _m.Attribute(str)
+    xtmf_aux_transit_volumes_attribute = _m.Attribute(str)
+
     def __init__(self):
         #---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks) #init the ProgressTracker
@@ -67,20 +71,32 @@ class StrategyBasedAnalysis(_m.Tool()):
                      branding_text="XTMF")
         return pb.render()
 
-    def __call__(self, xtmf_ScenarioNumber, xtmf_ClassName, xtmf_DemandMatrixNumber, xtmf_sub_path_combination_operator, xtmf_StrategyValuesMatrixNumber, xtmf_in_vehicle_trip_component):
-        if xtmf_ClassName == '':
-            xtmf_ClassName = None
-        if xtmf_in_vehicle_trip_component == '':
-            xtmf_in_vehicle_trip_component = None
+    def value_or_none(self, value):
+        if value == '':
+            return None
+        else:
+            return value
+
+    def __call__(self, xtmf_ScenarioNumber, xtmf_ClassName, xtmf_DemandMatrixNumber, xtmf_sub_path_combination_operator, xtmf_StrategyValuesMatrixNumber,
+                xtmf_in_vehicle_trip_component, xtmf_transit_volumes_attribute,
+                xtmf_aux_transit_attribute, xtmf_aux_transit_volumes_attribute):
+        
+        xtmf_ClassName = self.value_or_none(xtmf_ClassName)
+        xtmf_in_vehicle_trip_component = self.value_or_none(xtmf_in_vehicle_trip_component)
+
+        xtmf_transit_volumes_attribute = self.value_or_none(xtmf_transit_volumes_attribute)
+        xtmf_aux_transit_attribute = self.value_or_none(xtmf_aux_transit_attribute)
+        xtmf_aux_transit_volumes_attribute = self.value_or_none(xtmf_aux_transit_volumes_attribute)
+
         database = _MODELLER.emmebank
         tool = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
-        strategyValuesMatrixNumber = self.InitializeMatrix(database, xtmf_StrategyValuesMatrixNumber)
+        strategyValuesMatrixId = self.InitializeMatrix(database, xtmf_StrategyValuesMatrixNumber)
         spec = { 
             "trip_components": 
             {
               "boarding": None,
               "in_vehicle": xtmf_in_vehicle_trip_component,
-              "aux_transit": None,
+              "aux_transit": xtmf_aux_transit_attribute,
               "alighting": None
             },
             "sub_path_combination_operator": xtmf_sub_path_combination_operator,
@@ -94,10 +110,10 @@ class StrategyBasedAnalysis(_m.Tool()):
             "constraint": None,
             "results": 
             { 
-              "strategy_values": strategyValuesMatrixNumber.id,
+              "strategy_values": strategyValuesMatrixId,
               "selected_demand": None,
-              "transit_volumes": None,
-              "aux_transit_volumes": None,
+              "transit_volumes": xtmf_transit_volumes_attribute,
+              "aux_transit_volumes": xtmf_aux_transit_volumes_attribute,
               "total_boardings": None,
               "total_alightings": None
             },
@@ -106,8 +122,10 @@ class StrategyBasedAnalysis(_m.Tool()):
         tool(spec, database.scenario(xtmf_ScenarioNumber), class_name=xtmf_ClassName, num_processors='max')
 
     def InitializeMatrix(self, database, matrixNumber):
+        if matrixNumber == 0:
+            return None
         matrix_name = "mf" + str(matrixNumber)
         matrix = database.matrix(matrix_name)
         if matrix is None:
             matrix = database.create_matrix(matrix_name)
-        return matrix
+        return matrix.id
