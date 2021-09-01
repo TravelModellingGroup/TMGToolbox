@@ -868,33 +868,80 @@ class ImportNetworkPackage(_m.Tool()):
         lines = []
         with open(_path.join(temp_folder, self._components.lines_file),"r") as infile, open(_path.join(temp_folder, 'temp.221'),"w") as outfile:
             for line in infile:
+                line_length = len(line)
+                if line_length < 3:
+                    continue
                 if line[0] == 'c':
                     outfile.write(line.replace("'",""))
                 elif line[0] == 'a':
-                    liststrings = line.replace("'"," ").split()
+                    # Load Line Name, Skip the initial comma to get the name
+                    pos = 1
+                    has_quote = False
+                    if line[pos] == '\'':
+                        pos = 2
+                        has_quote = True
 
-                    # find where to add the first quote for description
-                    if liststrings[5].replace('.', '', 1).isdigit():
-                        first_quote = 6
+                    # Find the end of the line's name
+                    line_name = None
+                    if has_quote:
+                        end_pos = line.find("'", 2)
+                        if end_pos < 0:
+                            raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+                        line_name = line[pos:end_pos]
+                        pos = end_pos + 1
                     else:
-                        raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+                        while pos < line_length:
+                            pos += 1
+                            if line[pos] == '\'':
+                                line_name = line[2:pos]
+                                break
+                        if line_name is None:
+                            raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
 
-                    # find where to add the second quote for description
-                    if liststrings[-3].replace('.', '', 1).isdigit():
-                        second_quote = -4
+                    # Find the start of the description and store the inner portion the way it is
+                    start = pos
+                    whitespace_state = True
+                    inner_text = None
+                    count = 0
+                    while pos < line_length:
+                        if whitespace_state:
+                            if line[pos] != ' ':
+                                count += 1
+                                whitespace_state = False
+                                # If we found the first character of the description (might be a quote)
+                                if count >= 5:
+                                    inner_text = line[start:pos]
+                                    break
+                        else:
+                            if line[pos] == ' ' or line[pos] == "'":
+                                whitespace_state = True
+                        pos += 1
+
+                    if inner_text is None:
+                        raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+                    
+                    # Parse the description string
+                    description = None
+                    if line[pos] == '\'':
+                        # Just find the next ' for the end of the description
+                        end = line.find("'", pos + 1)
+                        if end < 0:
+                            raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+                        description = line[pos + 1:end]
+                        pos = end + 1
                     else:
-                        raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
+                        # Then the description is the next 20 characters, replacing quotes with `
+                        description = line[pos:pos + 20].replace("'","`")
+                        pos += 21 # 19 for the end of description + 1 for ' and + 1 for the start of the next entry
 
-                    # add single quotes around line name
-                    liststrings[1] = "'{0}'".format(liststrings[1])
+                    # Skip until we find the start of the next non-whitespace
+                    while pos < line_length:
+                        if line[pos] != ' ':
+                            break
+                        pos += 1
 
-                    # add single quotes around line description
-                    liststrings[first_quote] = "'" + liststrings[first_quote]
-                    liststrings[second_quote] = liststrings[second_quote] + "'"
-
-                    # write the new line
-                    line = " ".join(liststrings)
-                    outfile.write(line + '\n')
+                    # Write out the final formatted string in a format that all versions of EMME can read
+                    outfile.write('a\'{0}\' {1} \'{2}\' {3}\n'.format(line_name.ljust(6, ' '), inner_text, description.ljust(20, ' '),  line[pos:line_length - 1]))
                 else:
                     outfile.write(line)
         outfile.close()
