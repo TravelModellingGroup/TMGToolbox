@@ -6,6 +6,7 @@
 
 # Emme Toolbox
 *.mtbx
+.vs/
 
 # User-specific files
 *.suo
