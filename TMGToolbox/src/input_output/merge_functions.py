@@ -52,18 +52,23 @@ Merge Functions
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
+
 from os import path as _path
 import six
-if six.PY3:
-    _m.InstanceType = object
-    _m.TupleType = object
-    _m.ListType = object
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+
+EMME_VERSION = _util.getEmmeVersion(tuple)
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
+elif EMME_VERSION < (4,4,5):
+    # Support for QT was removed in 4.4.5
+    from PyQt4 import QtGui, QtCore
+    from PyQt4.QtCore import Qt
 
 ##########################################################################################################
 
@@ -87,10 +92,17 @@ class MergeFunctions(_m.Tool()):
     OVERWRITE_OPTION = "OVERWRITE"
     EDIT_OPTION = "EDIT"
     
-    OPTIONS_LIST = [(EDIT_OPTION, "EDIT - Launch an editor GUI to resolve conflicts manually."),
+    # Editing is not an option after 4.4.5
+    if EMME_VERSION < (4,4,5):
+        OPTIONS_LIST = [(EDIT_OPTION, "EDIT - Launch an editor GUI to resolve conflicts manually."),
                   (RAISE_OPTION, "RAISE - Raise an error if any conflicsts are detected."),
                   (PRESERVE_OPTION, "PRESERVE - Preserve functional definitions from the current Emme project."),
                   (OVERWRITE_OPTION, "OVERWRITE - Overwrite functional definitions from the function file.")]
+    else:
+        OPTIONS_LIST = [(OVERWRITE_OPTION, "OVERWRITE - Overwrite functional definitions from the function file."),
+                  (RAISE_OPTION, "RAISE - Raise an error if any conflicsts are detected."),
+                  (PRESERVE_OPTION, "PRESERVE - Preserve functional definitions from the current Emme project."),
+                  ]
     
     def __init__(self):
         #---Init internal variables
@@ -99,7 +111,7 @@ class MergeFunctions(_m.Tool()):
         #---Set the defaults of parameters used by Modeller
         self.RevertOnError = True
         
-        self.ConflictOption = 'EDIT'
+        self.ConflictOption = 'OVERWRITE'
 
         #--- event to block GUI / merge edit
         self.event = None
@@ -401,309 +413,274 @@ class MergeFunctions(_m.Tool()):
                 _m.logbook_write("New expression: %s" %expression)
 
 
-##########################################################################################
-
-class FunctionConflictDialog(QtGui.QDialog):
-
-    def closeEvent(self, event):
-
-        if(event.isAccepted()):
-            self.caller.update_data()
-        self.caller.event.set()
-        self.deleteLater()
-
-    def __init__(self, data, caller):
-        super(FunctionConflictDialog, self).__init__(parent=None)
-        
-        self.setWindowTitle("Function Conflict")
-        infoText = QtGui.QLabel("""Conflicts detected between the database and the network package \
-file for the following function(s). Please resolve these conflicts by indicating which version(s) to save \
-in the database.""")
-        infoText.setWordWrap(True)
-        infoText.setAlignment(Qt.AlignJustify)
-        #infoText.setFrameShadow(infoText.Sunken)
-        #infoText.setFrameStyle(infoText.StyledPanel)
-        infoText.setMargin(5)
-
-        self.caller = caller
-
-        self.cancel = False
-        
-        self.dataRows = []
-        
-        vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(infoText)
-        vbox.addSpacing(15)
-        
-        headerGrid = self.buildHeaderGrid()
-        vbox.addLayout(headerGrid)
-        
-        mainGrid = self.buildMainGrid(data)
-        mainGridWrapper = QtGui.QWidget()
-        mainGridWrapper.setLayout(mainGrid)
-        scrollArea = QtGui.QScrollArea()
-        scrollArea.setWidget(mainGridWrapper)
-        scrollArea.setMaximumHeight(220)
-        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        scrollArea.setFrameShadow(QtGui.QFrame.Sunken)
-        scrollArea.setFrameStyle(QtGui.QFrame.StyledPanel)
-        scrollArea.setWidgetResizable(True)
-        
-        vbox.addWidget(scrollArea)
-        
-        footerGrid = self.buildFooterGrid()
-        vbox.addLayout(footerGrid)
-        
-        vbox.addSpacing(10)
-        vbox.addLayout(self.buildFooterButtons())
-        
-        self.syncGridWidths(headerGrid, mainGrid, footerGrid)
-        
-        self.setLayout(vbox)
-        self.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
-        
-        self.setResult(self.Rejected)
-        
-    def buildHeaderGrid(self):
-        headerGrid = QtGui.QGridLayout()
-        
-        idLabel = QtGui.QLabel("Id")
-        dbLabel = QtGui.QLabel("Database")
-        fileLabel = QtGui.QLabel("File")
-        otherLabel = QtGui.QLabel("Other")
-        expLabel = QtGui.QLabel("  Expression")
-        
-        font = idLabel.font()
-        font.setBold(True)
-        idLabel.setFont(font)
-        dbLabel.setFont(font)
-        fileLabel.setFont(font)
-        otherLabel.setFont(font)
-        expLabel.setFont(font)
-        
-        headerGrid.setMargin(2)
-        headerGrid.setColumnMinimumWidth(0,3)
-        headerGrid.addWidget(idLabel, 0, 1, 1, 1, Qt.AlignHCenter)
-        headerGrid.addWidget(dbLabel, 0, 2, 1, 1, Qt.AlignHCenter)
-        headerGrid.addWidget(fileLabel, 0, 3, 1, 1, Qt.AlignHCenter)
-        headerGrid.addWidget(otherLabel, 0, 4, 1, 1, Qt.AlignHCenter)
-        headerGrid.addWidget(expLabel, 0, 5, 1, 1, Qt.AlignLeft)
-        
-        return headerGrid
+################# ONLY build the GUI class helpers if QT is available #################################
+if EMME_VERSION < (4,4,5):
+    class FunctionConflictDialog(QtGui.QDialog):
     
-    def buildMainGrid(self, data):
-        mainGrid = QtGui.QGridLayout()
-        
-        row = 0
-        for fid, dbExpression, fileExpression in data:
-            rowDataWrapper = FunctionRowDataWrapper(fid, dbExpression, fileExpression, row, mainGrid, self)
-            self.dataRows.append(rowDataWrapper)
-            row += 1
-            
-            strut = QtGui.QFrame()
-            strut.setFrameShadow(strut.Raised)
-            strut.setFrameShape(strut.HLine)
-            mainGrid.addWidget(strut, row, 0, 1, 5)
-            row += 1
-        mainGrid.setColumnStretch(4, 1.0)
-        
-        return mainGrid
+        def closeEvent(self, event):
     
-    def buildFooterGrid(self):
-        footerGrid = QtGui.QGridLayout()
-        
-        label = QtGui.QLabel("All")
-        
-        self.dbCheckBox = QtGui.QRadioButton()
-        self.dbCheckBox.setAutoExclusive(False)
-        self.dbCheckBox.toggled.connect(self.dbButtonToggled)
-        self.fCheckBox = QtGui.QRadioButton()
-        self.fCheckBox.setAutoExclusive(False)
-        self.fCheckBox.toggled.connect(self.fButtonToggled)
-        
-        self.dbCheckBox.click()
-        
-        footerGrid.setColumnMinimumWidth(0, 10)
-        footerGrid.addWidget(label, 0, 1, 1, 1, Qt.AlignHCenter)
-        footerGrid.addWidget(self.dbCheckBox, 0, 2, 1, 1, Qt.AlignHCenter)
-        footerGrid.addWidget(self.fCheckBox, 0, 3, 1, 1, Qt.AlignHCenter)
-        
-        return footerGrid
+            if(event.isAccepted()):
+                self.caller.update_data()
+            self.caller.event.set()
+            self.deleteLater()
     
-    def syncGridWidths(self, headerGrid, mainGrid, footerGrid):
-        rowCount = mainGrid.rowCount()
-        for columnNumber in range(5):
-            width = 0
+        def __init__(self, data, caller):
+            super(FunctionConflictDialog, self).__init__(parent=None)
             
-            def getWidth(grid, row, col):
-                item = grid.itemAtPosition(row, col)
-                width = 0
-                if item is not None:
-                    width = item.widget().sizeHint().width()
-                return width
-            
-            width = max(width, getWidth(headerGrid, 0, columnNumber + 1))
-            for row in range(rowCount):
-                width = max(width, getWidth(mainGrid, row, columnNumber))
-            if columnNumber < 3: minWidth = max(width, getWidth(footerGrid, 0, columnNumber + 1))
-            
-            headerGrid.setColumnMinimumWidth(columnNumber + 1, width)
-            mainGrid.setColumnMinimumWidth(columnNumber, width)
-            if columnNumber < 3: footerGrid.setColumnMinimumWidth(columnNumber + 1, width)
-        headerGrid.setColumnStretch(6, 1.0)
-        footerGrid.setColumnStretch(4, 1.0)
-
-    def cancel(self):
-        self.cancel = True
-        self.close()
-
-    def buildFooterButtons(self):
-        hbox = QtGui.QHBoxLayout()
-        
-        saveButton = QtGui.QPushButton("Save")
-        saveButton.clicked.connect(self.accept)
-        cancelButton = QtGui.QPushButton("Cancel")
-        cancelButton.clicked.connect(self.reject)
-        
-        hbox.addWidget(saveButton)
-        hbox.addWidget(cancelButton)
-        hbox.addStretch(1.0)
-        
-        return hbox
+            self.setWindowTitle("Function Conflict")
+            infoText = QtGui.QLabel("""Conflicts detected between the database and the network package \
+    file for the following function(s). Please resolve these conflicts by indicating which version(s) to save \
+    in the database.""")
+            infoText.setWordWrap(True)
+            infoText.setAlignment(Qt.AlignJustify)
+            #infoText.setFrameShadow(infoText.Sunken)
+            #infoText.setFrameStyle(infoText.StyledPanel)
+            infoText.setMargin(5)
     
-    def dbButtonToggled(self):
-        if self.dbCheckBox.isChecked():
-            for row in self.dataRows:
-                row.dbButton.click()
-    def fButtonToggled(self):
-        if self.fCheckBox.isChecked():
-            for row in self.dataRows:
-                row.fButton.click()
+            self.caller = caller
     
-    def selectAllDB(self, state):
-        if state == QtCore.Qt.Checked:
-            self.fCheckBox.setChecked(False)
-            for row in self.dataRows:
-                row.dbButton.click()
-    
-    def selectAllFile(self, state):
-        if state == QtCore.Qt.Checked:
-            self.dbCheckBox.setChecked(False)
-            for row in self.dataRows:
-                row.fButton.click()
-            self.fCheckBox.setChecked(True)
+            self.cancel = False
             
-    def accept(self):
-        super(FunctionConflictDialog, self).accept()
-        self.close()
-        
-    def getFunctionsToChange(self):
-        changes = {}
-        for dataRow in self.dataRows:
-            state = dataRow.buttonGroup.checkedId()
-            if state == 1: continue #Function is flagged to not be changed
+            self.dataRows = []
             
-            fid = dataRow.fid
-            expression = dataRow.textBox.text()
+            vbox = QtGui.QVBoxLayout()
+            vbox.addWidget(infoText)
+            vbox.addSpacing(15)
             
-            changes[fid] = expression
-        return changes
+            headerGrid = self.buildHeaderGrid()
+            vbox.addLayout(headerGrid)
+            
+            mainGrid = self.buildMainGrid(data)
+            mainGridWrapper = QtGui.QWidget()
+            mainGridWrapper.setLayout(mainGrid)
+            scrollArea = QtGui.QScrollArea()
+            scrollArea.setWidget(mainGridWrapper)
+            scrollArea.setMaximumHeight(220)
+            scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            scrollArea.setFrameShadow(QtGui.QFrame.Sunken)
+            scrollArea.setFrameStyle(QtGui.QFrame.StyledPanel)
+            scrollArea.setWidgetResizable(True)
+            
+            vbox.addWidget(scrollArea)
+            
+            footerGrid = self.buildFooterGrid()
+            vbox.addLayout(footerGrid)
+            
+            vbox.addSpacing(10)
+            vbox.addLayout(self.buildFooterButtons())
+            
+            self.syncGridWidths(headerGrid, mainGrid, footerGrid)
+            
+            self.setLayout(vbox)
+            self.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
+            
+            self.setResult(self.Rejected)
+            
+        def buildHeaderGrid(self):
+            headerGrid = QtGui.QGridLayout()
+            
+            idLabel = QtGui.QLabel("Id")
+            dbLabel = QtGui.QLabel("Database")
+            fileLabel = QtGui.QLabel("File")
+            otherLabel = QtGui.QLabel("Other")
+            expLabel = QtGui.QLabel("  Expression")
+            
+            font = idLabel.font()
+            font.setBold(True)
+            idLabel.setFont(font)
+            dbLabel.setFont(font)
+            fileLabel.setFont(font)
+            otherLabel.setFont(font)
+            expLabel.setFont(font)
+            
+            headerGrid.setMargin(2)
+            headerGrid.setColumnMinimumWidth(0,3)
+            headerGrid.addWidget(idLabel, 0, 1, 1, 1, Qt.AlignHCenter)
+            headerGrid.addWidget(dbLabel, 0, 2, 1, 1, Qt.AlignHCenter)
+            headerGrid.addWidget(fileLabel, 0, 3, 1, 1, Qt.AlignHCenter)
+            headerGrid.addWidget(otherLabel, 0, 4, 1, 1, Qt.AlignHCenter)
+            headerGrid.addWidget(expLabel, 0, 5, 1, 1, Qt.AlignLeft)
+            
+            return headerGrid
         
-class FunctionRowDataWrapper():
-    
-    def __init__(self, fid, dbExpression, fileExpression, rowNumber, gridLayout, parent):
-        self.fid = fid
-        self.dbExpression = dbExpression
-        self.fileExpression = fileExpression
-        self.parent = parent
-        
-        label = QtGui.QLabel(fid.upper())
-        gridLayout.addWidget(label, rowNumber, 0, 1, 1, QtCore.Qt.AlignHCenter)
-        
-        self.buttonGroup = QtGui.QButtonGroup()
-        self.dbButton = QtGui.QRadioButton()
-        self.dbButton.setChecked(True)
-        self.fButton = QtGui.QRadioButton()
-        self.oButton = QtGui.QRadioButton()
-        self.buttonGroup.addButton(self.dbButton, 1)
-        self.buttonGroup.addButton(self.fButton, 2)
-        self.buttonGroup.addButton(self.oButton, 3)
-        gridLayout.addWidget(self.dbButton, rowNumber, 1, 1, 1, QtCore.Qt.AlignHCenter)
-        gridLayout.addWidget(self.fButton, rowNumber, 2, 1, 1, QtCore.Qt.AlignHCenter)
-        gridLayout.addWidget(self.oButton, rowNumber, 3, 1, 1, QtCore.Qt.AlignHCenter)
-        
-        self.textBox = ActuatedTextBox()
-        self.textBox.setText(self.dbExpression)
-        self.textBox.adjustSize()
-        #self.textBox.setMinimumWidth(150)
-        #self.textBox.setSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
-        gridLayout.addWidget(self.textBox, rowNumber, 4)
+        def buildMainGrid(self, data):
+            mainGrid = QtGui.QGridLayout()
+            
+            row = 0
+            for fid, dbExpression, fileExpression in data:
+                rowDataWrapper = FunctionRowDataWrapper(fid, dbExpression, fileExpression, row, mainGrid, self)
+                self.dataRows.append(rowDataWrapper)
+                row += 1
                 
-        self.dbButton.clicked.connect(self.onDbButtonClick)
-        self.fButton.clicked.connect(self.onFileButtonClick)
-        self.oButton.clicked.connect(self.onOtherButtonClick)
-        self.textBox.clicked.connect(self.onTextBoxClick)
+                strut = QtGui.QFrame()
+                strut.setFrameShadow(strut.Raised)
+                strut.setFrameShape(strut.HLine)
+                mainGrid.addWidget(strut, row, 0, 1, 5)
+                row += 1
+            mainGrid.setColumnStretch(4, 1.0)
+            
+            return mainGrid
+        
+        def buildFooterGrid(self):
+            footerGrid = QtGui.QGridLayout()
+            
+            label = QtGui.QLabel("All")
+            
+            self.dbCheckBox = QtGui.QRadioButton()
+            self.dbCheckBox.setAutoExclusive(False)
+            self.dbCheckBox.toggled.connect(self.dbButtonToggled)
+            self.fCheckBox = QtGui.QRadioButton()
+            self.fCheckBox.setAutoExclusive(False)
+            self.fCheckBox.toggled.connect(self.fButtonToggled)
+            
+            self.dbCheckBox.click()
+            
+            footerGrid.setColumnMinimumWidth(0, 10)
+            footerGrid.addWidget(label, 0, 1, 1, 1, Qt.AlignHCenter)
+            footerGrid.addWidget(self.dbCheckBox, 0, 2, 1, 1, Qt.AlignHCenter)
+            footerGrid.addWidget(self.fCheckBox, 0, 3, 1, 1, Qt.AlignHCenter)
+            
+            return footerGrid
+        
+        def syncGridWidths(self, headerGrid, mainGrid, footerGrid):
+            rowCount = mainGrid.rowCount()
+            for columnNumber in range(5):
+                width = 0
+                
+                def getWidth(grid, row, col):
+                    item = grid.itemAtPosition(row, col)
+                    width = 0
+                    if item is not None:
+                        width = item.widget().sizeHint().width()
+                    return width
+                
+                width = max(width, getWidth(headerGrid, 0, columnNumber + 1))
+                for row in range(rowCount):
+                    width = max(width, getWidth(mainGrid, row, columnNumber))
+                if columnNumber < 3: minWidth = max(width, getWidth(footerGrid, 0, columnNumber + 1))
+                
+                headerGrid.setColumnMinimumWidth(columnNumber + 1, width)
+                mainGrid.setColumnMinimumWidth(columnNumber, width)
+                if columnNumber < 3: footerGrid.setColumnMinimumWidth(columnNumber + 1, width)
+            headerGrid.setColumnStretch(6, 1.0)
+            footerGrid.setColumnStretch(4, 1.0)
     
-    def onDbButtonClick(self):
-        self.textBox.setText(self.dbExpression)
-        self.parent.fCheckBox.setChecked(False)
+        def cancel(self):
+            self.cancel = True
+            self.close()
     
-    def onFileButtonClick(self):
-        self.textBox.setText(self.fileExpression)
-        self.parent.dbCheckBox.setChecked(False) 
-    
-    def onTextBoxClick(self):
-        self.oButton.click()
-    
-    def onOtherButtonClick(self):
-        self.parent.fCheckBox.setChecked(False)
-        self.parent.dbCheckBox.setChecked(False)
-    
-class ActuatedTextBox(QtGui.QLineEdit):
-    
-    clicked = QtCore.pyqtSignal()
-    
-    def __init__(self, contents="", parent=None):
-        super(ActuatedTextBox, self).__init__(contents, parent)
-    
-    def mousePressEvent(self, event):
-        super(ActuatedTextBox, self).mousePressEvent(event)
-        self.clicked.emit()
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+        def buildFooterButtons(self):
+            hbox = QtGui.QHBoxLayout()
+            
+            saveButton = QtGui.QPushButton("Save")
+            saveButton.clicked.connect(self.accept)
+            cancelButton = QtGui.QPushButton("Cancel")
+            cancelButton.clicked.connect(self.reject)
+            
+            hbox.addWidget(saveButton)
+            hbox.addWidget(cancelButton)
+            hbox.addStretch(1.0)
+            
+            return hbox
+        
+        def dbButtonToggled(self):
+            if self.dbCheckBox.isChecked():
+                for row in self.dataRows:
+                    row.dbButton.click()
+        def fButtonToggled(self):
+            if self.fCheckBox.isChecked():
+                for row in self.dataRows:
+                    row.fButton.click()
+        
+        def selectAllDB(self, state):
+            if state == QtCore.Qt.Checked:
+                self.fCheckBox.setChecked(False)
+                for row in self.dataRows:
+                    row.dbButton.click()
+        
+        def selectAllFile(self, state):
+            if state == QtCore.Qt.Checked:
+                self.dbCheckBox.setChecked(False)
+                for row in self.dataRows:
+                    row.fButton.click()
+                self.fCheckBox.setChecked(True)
+                
+        def accept(self):
+            super(FunctionConflictDialog, self).accept()
+            self.close()
+            
+        def getFunctionsToChange(self):
+            changes = {}
+            for dataRow in self.dataRows:
+                state = dataRow.buttonGroup.checkedId()
+                if state == 1: continue #Function is flagged to not be changed
+                
+                fid = dataRow.fid
+                expression = dataRow.textBox.text()
+                
+                changes[fid] = expression
+            return changes
+            
+    class FunctionRowDataWrapper():
+        
+        def __init__(self, fid, dbExpression, fileExpression, rowNumber, gridLayout, parent):
+            self.fid = fid
+            self.dbExpression = dbExpression
+            self.fileExpression = fileExpression
+            self.parent = parent
+            
+            label = QtGui.QLabel(fid.upper())
+            gridLayout.addWidget(label, rowNumber, 0, 1, 1, QtCore.Qt.AlignHCenter)
+            
+            self.buttonGroup = QtGui.QButtonGroup()
+            self.dbButton = QtGui.QRadioButton()
+            self.dbButton.setChecked(True)
+            self.fButton = QtGui.QRadioButton()
+            self.oButton = QtGui.QRadioButton()
+            self.buttonGroup.addButton(self.dbButton, 1)
+            self.buttonGroup.addButton(self.fButton, 2)
+            self.buttonGroup.addButton(self.oButton, 3)
+            gridLayout.addWidget(self.dbButton, rowNumber, 1, 1, 1, QtCore.Qt.AlignHCenter)
+            gridLayout.addWidget(self.fButton, rowNumber, 2, 1, 1, QtCore.Qt.AlignHCenter)
+            gridLayout.addWidget(self.oButton, rowNumber, 3, 1, 1, QtCore.Qt.AlignHCenter)
+            
+            self.textBox = ActuatedTextBox()
+            self.textBox.setText(self.dbExpression)
+            self.textBox.adjustSize()
+            #self.textBox.setMinimumWidth(150)
+            #self.textBox.setSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
+            gridLayout.addWidget(self.textBox, rowNumber, 4)
+                    
+            self.dbButton.clicked.connect(self.onDbButtonClick)
+            self.fButton.clicked.connect(self.onFileButtonClick)
+            self.oButton.clicked.connect(self.onOtherButtonClick)
+            self.textBox.clicked.connect(self.onTextBoxClick)
+        
+        def onDbButtonClick(self):
+            self.textBox.setText(self.dbExpression)
+            self.parent.fCheckBox.setChecked(False)
+        
+        def onFileButtonClick(self):
+            self.textBox.setText(self.fileExpression)
+            self.parent.dbCheckBox.setChecked(False) 
+        
+        def onTextBoxClick(self):
+            self.oButton.click()
+        
+        def onOtherButtonClick(self):
+            self.parent.fCheckBox.setChecked(False)
+            self.parent.dbCheckBox.setChecked(False)
+        
+    class ActuatedTextBox(QtGui.QLineEdit):
+        
+        clicked = QtCore.pyqtSignal()
+        
+        def __init__(self, contents="", parent=None):
+            super(ActuatedTextBox, self).__init__(contents, parent)
+        
+        def mousePressEvent(self, event):
+            super(ActuatedTextBox, self).mousePressEvent(event)
+            self.clicked.emit()
+        
+        
