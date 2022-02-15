@@ -36,12 +36,6 @@ Extract Transit Origin and Destination Vectors
 '''
 
 import inro.modeller as _m
-import inro.emme.matrix as _matrix
-import traceback as _traceback
-import numpy as np
-from contextlib import contextmanager
-from contextlib import nested
-from multiprocessing import cpu_count
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 networkCalculation = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
