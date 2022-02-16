@@ -40,13 +40,16 @@ CALC 407 ETR TOLLS
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 NullPointerException = _util.NullPointerException
-
+#import six library for python2 to python3 conversion
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 
 ##########################################################################################################
 
@@ -60,7 +63,6 @@ class Calc407ETRTolls(_m.Tool()):
     #    Only those parameters necessary for Modeller and/or XTMF to dock with
     #    need to be placed here. Internal parameters (such as lists and dicts)
     #    get initialized during construction (__init__)
-    
     Scenario = _m.Attribute(_m.InstanceType) # common variable or parameter
     ResultAttributeId = _m.Attribute(str)
     TollZoneAttributeId = _m.Attribute(str)
@@ -244,8 +246,7 @@ class Calc407ETRTolls(_m.Tool()):
                             },
                 "type": "NETWORK_CALCULATION"
                 }
-
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def getExtraAttributes(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
@@ -264,7 +265,7 @@ class Calc407ETRTolls(_m.Tool()):
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
-                
-    @_m.method(return_type=unicode)
+
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
