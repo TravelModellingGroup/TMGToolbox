@@ -29,12 +29,6 @@ Quick plug in from XTMF to the Emme Matrix Calculator. very basic, will add func
 '''
 
 import inro.modeller as _m
-import inro.emme.matrix as _matrix
-import traceback as _traceback
-import numpy as np
-from contextlib import contextmanager
-from contextlib import nested
-from multiprocessing import cpu_count
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 matrixCalculator = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
