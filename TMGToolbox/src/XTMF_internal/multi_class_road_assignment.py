@@ -1,4 +1,5 @@
-'''
+from __future__ import print_function
+"""
     Copyright 2015-2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
@@ -15,10 +16,10 @@
 
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 
+"""
 #---METADATA---------------------
-'''
 Toll-Based Road Assignment
 
     Authors: David King, Eric Miller
@@ -33,16 +34,24 @@ Toll-Based Road Assignment
 
     V 1.1.1 Updated to allow for multi-threaded matrix calcs in 4.2.1+
         
-'''
+"""
+
 
 import inro.modeller as _m
 import traceback as _traceback
 import multiprocessing
 from contextlib import contextmanager
-from contextlib import nested
+import six
+if six.PY3:
+    _m.InstanceType = object
+    _m.TupleType = object
+    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 EMME_VERSION = _util.getEmmeVersion(tuple)
+
+
+
 
 ##########################################################################################################
 
@@ -249,7 +258,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                 if str(demandMatrix).lower() == 'mf0':
                     dm = _util.initializeMatrix(matrix_type='FULL')
                     demandMatrix = dm.id
-                    print "Assigning a Zero Demand matrix for class '%s' on scenario %d" %(str(self.ClassNames[i]),int(self.Scenario.number))
+                    print ("Assigning a Zero Demand matrix for class '%s' on scenario %d") %(str(self.ClassNames[i]),int(self.Scenario.number))
                     self.Demand_List[i] = dm.id
                     self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
                 else:
@@ -270,9 +279,9 @@ class MultiClassRoadAssignment(_m.Tool()):
             self.BackgroundTransit = False
         #---3. Run
         try:          
-                print "Starting assignment."
+                print("Starting assignment.")
                 self._execute()
-                print "Assignment complete."  
+                print("Assignment complete.")
         except Exception as e:
             raise Exception(_util.formatReverseStack())
     
@@ -297,11 +306,8 @@ class MultiClassRoadAssignment(_m.Tool()):
 
                 self._tracker.completeSubtask()
             
-            
-                with nested(self._costAttributeMANAGER(), self._transitTrafficAttributeMANAGER(), self._timeAttributeMANAGER()) \
-                         as (costAttribute, bgTransitAttribute, timeAttribute): #bgTransitAttribute is None          
-               
-           
+                with self._costAttributeMANAGER() as costAttribute, self._transitTrafficAttributeMANAGER() as bgTransitAttribute, self._timeAttributeMANAGER() as timeAttribute:
+                    #bgTransitAttribute is None
                     #Adding @ for the process of generating link cost attributes and declaring list variables
                 
                     def get_attribute_name(at):
@@ -512,8 +518,8 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 else:
                                     val = 'undefined'
                             
-                                print "Primary assignment complete at %s iterations." %number
-                                print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
+                                print ("Primary assignment complete at %s iterations.") %number
+                                print ("Stopping criterion was %s with a value of %s.") %(stoppingCriterion, val)
         
     ##########################################################################################################
             
@@ -902,11 +908,11 @@ class MultiClassRoadAssignment(_m.Tool()):
     def percent_completed(self):
         return self._tracker.getProgress()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def _GetSelectAttributeOptionsHTML(self):
         list = []
         
