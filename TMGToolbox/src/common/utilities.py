@@ -51,6 +51,16 @@ class Face(_m.Tool()):
 
 #-------------------------------------------------------------------------------------------
 
+def initalizeModellerTypes(modeller):
+    """
+    function to initalize the six python3 settings across
+    all tools and libraries
+    """
+    if six.PY3:
+        modeller.InstanceType = object
+        modeller.TupleType = object
+        modeller.ListType = list
+
 def formatReverseStack():
     eType, eVal, eTb = _sys.exc_info()
     stackList = _tb.extract_tb(eTb)
