@@ -44,13 +44,10 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 NullPointerException = _util.NullPointerException
-#import six library for python2 to python3 conversion
+#import utility function for python2 to python3 conversion
+#initalize python3 types
 import six
-if six.PY3:
-    _m.InstanceType = object
-    _m.TupleType = object
-    _m.ListType = object
-
+_util.initalizeModellerTypes(_m)
 ##########################################################################################################
 
 class Calc407ETRTolls(_m.Tool()):
