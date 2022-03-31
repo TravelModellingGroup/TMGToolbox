@@ -34,6 +34,11 @@ Space has been made for ZUM, but since this service is not yet defined,
 import inro.modeller as _m
 import traceback as _traceback
 
+_MODELLER = _m.Modeller() #Instantiate Modeller once.
+_util = _MODELLER.module('tmg.common.utilities')
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class FlagPremiumBusLines(_m.Tool()):
     
@@ -187,9 +192,6 @@ class FlagPremiumBusLines(_m.Tool()):
     def _flagZumBuses(self, line):
         raise Exception("Flagging of ZUM lines is currently unsupported.")
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
-        
-        
-    
