@@ -185,7 +185,7 @@ class LinkSpecificVolumes(_m.Tool()):
             
             parts = component.split(':')
             if len(parts) != 2:
-                print(component);
+                print(component)
                 msg = "Error parsing label and filter string: Separate label and filter with colons label:filter"
                 msg += ". [%s]" %component 
                 raise SyntaxError(msg)
