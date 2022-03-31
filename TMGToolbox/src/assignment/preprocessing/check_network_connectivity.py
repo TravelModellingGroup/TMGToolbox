@@ -40,8 +40,6 @@
 '''
 
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from html import HTML
 from numpy import array
 from numpy import where
@@ -52,6 +50,11 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 EMME_VERSION = _util.getEmmeVersion(float) 
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -264,9 +267,9 @@ class CheckNetworkConnectivity(_m.Tool()):
             for i, modeId in enumerate(self.AutoModeIds):
                 classInfo.append((modeId, timesMatrices[i].id))
             
-            print "Auto assignment prepared."
+            print("Auto assignment prepared.")
             self._RunAutoAssignment(demandMatrixId, classInfo)
-            print "Auto assignment complete."
+            print("Auto assignment complete.")
             
             bank = _MODELLER.emmebank
             for modeId, matrixId in classInfo:
@@ -276,7 +279,7 @@ class CheckNetworkConnectivity(_m.Tool()):
                 fountains, sinks, orphans = self._GetDisconnectedNodes(matrix)
                 dataTuples.append(("Auto", [modeId], fountains, sinks, orphans))
                 
-                print "Processed auto mode %s" %modeId
+                print("Processed auto mode %s" %modeId)
                 
     def _RunAutoAssignment(self, demandMatrixId, classInfo):
         
@@ -330,13 +333,13 @@ class CheckNetworkConnectivity(_m.Tool()):
         with _util.tempMatrixMANAGER(description="Transit times matrix") as timesMatrix:
             
             self._RunTransitAssignment(demandMatrixId, timesMatrix.id)
-            print "Transit assignment complete."
+            print("Transit assignment complete.")
             
             matrix = _MODELLER.emmebank.matrix(timesMatrix.id)
             fountains, sinks, orphans = self._GetDisconnectedNodes(matrix)
             
             dataTuples.append(("Transit", self.TransitModeIds, fountains, sinks, orphans))
-            print "Processed transit connectivity."
+            print("Processed transit connectivity.")
     
     def _RunTransitAssignment(self, demandMatrixId, timesMatrixId):
         spec = {
@@ -491,7 +494,7 @@ class CheckNetworkConnectivity(_m.Tool()):
             options.append(str(h.option(text, value= id)))
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_transit_modes(self):
         options = []
         h = HTML()

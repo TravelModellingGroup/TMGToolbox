@@ -249,13 +249,13 @@ class CheckNetworkIntegrity(_m.Tool()):
             
             if self.LinkFlagAttributeId is not None:
                 for link in network.links(): link[self.LinkFlagAttributeId] = 0
-                print ("Reset link extra attribute '%s' to 0") %self.LinkFlagAttributeId
+                print ("Reset link extra attribute '%s' to 0" %self.LinkFlagAttributeId)
             if self.LineFlagAttributeId is not None:
                 for line in network.transit_lines(): link[self.LineFlagAttributeId] = 0
-                print ("Reset transit line extra attribute '%s' to 0") %self.LineFlagAttributeId
+                print ("Reset transit line extra attribute '%s' to 0" %self.LineFlagAttributeId)
             if self.SegmentFlagAttributeId is not None:
                 for seg in network.transit_segments(): seg[self.SegmentFlagAttributeId] = 0
-                print ("Reset transit segment extra attribute '%s' to 0") %self.SegmentFlagAttributeId
+                print ("Reset transit segment extra attribute '%s' to 0" %self.SegmentFlagAttributeId)
             
             print ("Checking links")
             self.TRACKER.startProcess(network.element_totals['links'])
