@@ -37,6 +37,10 @@ import traceback as _traceback
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class AddNodeWeights(_m.Tool()):
 
@@ -81,7 +85,7 @@ class AddNodeWeights(_m.Tool()):
 
         return pb.render()
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
@@ -99,13 +103,13 @@ class AddNodeWeights(_m.Tool()):
 
     def _execute(self):
         network = self.Scenario.get_network()
-        print 'loaded network'
+        print('loaded network')
 
         network.create_attribute('NODE', 'is_stop', False)
         for segment in network.transit_segments():
             if segment.allow_boardings or segment.allow_alightings:
                 segment.i_node.is_stop = True
-        print 'flagged all transit stops'
+        print('flagged all transit stops')
 
         network.create_attribute('NODE', 'degree', 0)
         for node in network.regular_nodes():
@@ -119,7 +123,7 @@ class AddNodeWeights(_m.Tool()):
                 if i_node.is_centroid: continue #Skip connected centroids
                 neighbours.add(i_node.number)
             node.degree = len(neighbours)
-        print "calculated degrees"
+        print("calculated degrees")
 
         for node in network.regular_nodes():
             weight = 1
@@ -131,9 +135,9 @@ class AddNodeWeights(_m.Tool()):
     
             if node.is_stop: weight += 1
             node[self.MassAttribute.id] = weight
-        print "processed node weight"
+        print("processed node weight")
 
         self.Scenario.publish_network(network, resolve_attributes= True)
-        print "published network"
+        print("published network")
 
         self.tool_run_msg = _m.PageBuilder.format_info("Node weights have successfully been added to %s." %(self.MassAttribute.id))
