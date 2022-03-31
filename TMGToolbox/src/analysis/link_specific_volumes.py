@@ -38,17 +38,7 @@ Export Specific Link Volumes
 '''
 
 import inro.modeller as _m
-
-from html import HTML
 from re import split as _regex_split
-import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from os.path import exists
-from json import loads as _parsedict
-from os.path import dirname
-import tempfile as _tf
-import shutil as _shutil
 import csv
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
@@ -56,6 +46,10 @@ _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 networkCalculator = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -87,7 +81,7 @@ class LinkSpecificVolumes(_m.Tool()):
         
     def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath, TransitFlag=False):
         self.tool_run_msg = ""
-        print "Starting Link volume calculations"
+        print("Starting Link volume calculations")
 
         self.Scenarios = []
         for number in xtmf_ScenarioNumbers.split(','):
@@ -117,7 +111,7 @@ class LinkSpecificVolumes(_m.Tool()):
                     output.extend(self.results[scenario][linkFilter])
                     writer.writerow(output)
 
-        print "Finished Link volume calculations"
+        print("Finished Link volume calculations")
 
     def _Execute(self):
 
@@ -191,7 +185,7 @@ class LinkSpecificVolumes(_m.Tool()):
             
             parts = component.split(':')
             if len(parts) != 2:
-                print component;
+                print(component);
                 msg = "Error parsing label and filter string: Separate label and filter with colons label:filter"
                 msg += ". [%s]" %component 
                 raise SyntaxError(msg)
