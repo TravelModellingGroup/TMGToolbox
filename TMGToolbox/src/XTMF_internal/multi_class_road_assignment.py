@@ -41,17 +41,13 @@ import inro.modeller as _m
 import traceback as _traceback
 import multiprocessing
 from contextlib import contextmanager
-import six
-if six.PY3:
-    _m.InstanceType = object
-    _m.TupleType = object
-    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 EMME_VERSION = _util.getEmmeVersion(tuple)
-
-
-
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -258,7 +254,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                 if str(demandMatrix).lower() == 'mf0':
                     dm = _util.initializeMatrix(matrix_type='FULL')
                     demandMatrix = dm.id
-                    print ("Assigning a Zero Demand matrix for class '%s' on scenario %d") %(str(self.ClassNames[i]),int(self.Scenario.number))
+                    print ("Assigning a Zero Demand matrix for class '%s' on scenario %d" %(str(self.ClassNames[i]),int(self.Scenario.number)))
                     self.Demand_List[i] = dm.id
                     self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
                 else:
@@ -518,8 +514,8 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 else:
                                     val = 'undefined'
                             
-                                print ("Primary assignment complete at %s iterations.") %number
-                                print ("Stopping criterion was %s with a value of %s.") %(stoppingCriterion, val)
+                                print ("Primary assignment complete at %s iterations." %number)
+                                print ("Stopping criterion was %s with a value of %s." %(stoppingCriterion, val))
         
     ##########################################################################################################
             
