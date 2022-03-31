@@ -46,11 +46,13 @@ Check Auto Network Integrity
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -237,7 +239,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                                      attributes=self._GetAtts()):
             
             network = self.Scenario.get_network()
-            print "Network loaded."
+            print ("Network loaded.")
             
             functions = set([func.id for func in _MODELLER.emmebank.functions()])
             autoModes = set([m for m in network.modes() if m.type == 'AUTO' or m.type == 'AUX_AUTO'])
@@ -247,15 +249,15 @@ class CheckNetworkIntegrity(_m.Tool()):
             
             if self.LinkFlagAttributeId is not None:
                 for link in network.links(): link[self.LinkFlagAttributeId] = 0
-                print "Reset link extra attribute '%s' to 0" %self.LinkFlagAttributeId
+                print ("Reset link extra attribute '%s' to 0") %self.LinkFlagAttributeId
             if self.LineFlagAttributeId is not None:
                 for line in network.transit_lines(): link[self.LineFlagAttributeId] = 0
-                print "Reset transit line extra attribute '%s' to 0" %self.LineFlagAttributeId
+                print ("Reset transit line extra attribute '%s' to 0") %self.LineFlagAttributeId
             if self.SegmentFlagAttributeId is not None:
                 for seg in network.transit_segments(): seg[self.SegmentFlagAttributeId] = 0
-                print "Reset transit segment extra attribute '%s' to 0" %self.SegmentFlagAttributeId
+                print ("Reset transit segment extra attribute '%s' to 0") %self.SegmentFlagAttributeId
             
-            print "Checking links"
+            print ("Checking links")
             self.TRACKER.startProcess(network.element_totals['links'])
             for link in network.links():
                 errors = []
@@ -290,7 +292,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                 self.TRACKER.completeSubtask()
             self.TRACKER.completeTask()
             
-            print "Checking transit lines"
+            print ("Checking transit lines")
             self.TRACKER.startProcess(network.element_totals['transit_lines'])
             for line in network.transit_lines():
                 if line.speed == 0:
@@ -304,7 +306,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                 self.TRACKER.completeSubtask()
             self.TRACKER.completeTask()
             
-            print "Checking transit segments"
+            print ("Checking transit segments")
             self.TRACKER.startProcess(network.element_totals['transit_segments'])
             for segment in network.transit_segments():
                 errors = []
@@ -328,7 +330,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                 self.TRACKER.completeSubtask()
             self.TRACKER.completeTask()
             
-            print "Checking turns"
+            print ("Checking turns")
             self.TRACKER.startProcess(network.element_totals['turns'])
             for turn in network.turns():
                 if turn.penalty_func > 0:
@@ -346,7 +348,7 @@ class CheckNetworkIntegrity(_m.Tool()):
                 if self.LineFlagAttributeId is not None or self.LinkFlagAttributeId is not None \
                         or self.SegmentFlagAttributeId is not None:
                     self.Scenario.publish_network(network)
-                    print "Saved network flags"
+                    print ("Saved network flags")
                 
                 return errCount
             return 0
@@ -368,7 +370,7 @@ class CheckNetworkIntegrity(_m.Tool()):
     
     def _WriteReport(self, issues, errCount):
         
-        print "Writing report to logbook"
+        print ("Writing report to logbook")
         pb = _m.PageBuilder(title="Network Integrity Report for Scenario %s" %self.Scenario.number,
                             description="Tool found %s errors in the network for scenario %s. These \
                             errors are likely to cause infinite loops or division-by-zero errors \
@@ -400,9 +402,9 @@ class CheckNetworkIntegrity(_m.Tool()):
         pb.wrap_html(body=doc)
         
         _m.logbook_write("%s problems found" %errCount, value= pb.render())
-        print "Done."
-        
-    @_m.method(return_type=unicode)
+        print ("Done.")
+
+    @_m.method(return_type=six.u)
     def _GetLinkExtraAttributes(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
@@ -417,8 +419,8 @@ class CheckNetworkIntegrity(_m.Tool()):
             options.append(html)
             
         return "\n".join(options)
-    
-    @_m.method(return_type=unicode)
+
+    @_m.method(return_type=six.u)
     def _GetLineExtraAttribute(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
@@ -433,8 +435,8 @@ class CheckNetworkIntegrity(_m.Tool()):
             options.append(html)
             
         return "\n".join(options)
-    
-    @_m.method(return_type=unicode)
+
+    @_m.method(return_type=six.u)
     def _GetSegExtraAttributes(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
@@ -449,12 +451,12 @@ class CheckNetworkIntegrity(_m.Tool()):
             options.append(html)
             
         return "\n".join(options)
-    
+
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
-                
-    @_m.method(return_type=unicode)
+
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
