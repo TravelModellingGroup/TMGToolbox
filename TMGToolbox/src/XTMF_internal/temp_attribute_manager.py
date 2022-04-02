@@ -72,20 +72,28 @@ class TempAttributeManager(_m.Tool()):
     
     def __call__(self, xtmf_ScenarioNumber, xtmf_AttributeId, xtmf_AttributeDomain, 
                  xtmf_AttributeDefault, xtmf_DeleteFlag, xtmf_ResetToDefault):
+        # Return True if the attribute was created, False otherwise
         scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (scenario is None):
-            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
-        
-        exatt = scenario.extra_attribute(xtmf_AttributeId)
-        if xtmf_DeleteFlag and exatt is not None:
-            scenario.delete_extra_attribute(xtmf_AttributeId)
+            raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)        
+        if xtmf_DeleteFlag:
+            return self._Delete(scenario, xtmf_AttributeId)
         else:
-            if xtmf_ResetToDefault:
-                if exatt is not None:
-                    scenario.delete_extra_attribute(xtmf_AttributeId)
-                scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
-            else:
-                if exatt is None:
-                    scenario.create_extra_attribute(xtmf_AttributeDomain, xtmf_AttributeId, xtmf_AttributeDefault)
+            return self._CreateIfDoesNotExist(scenario, xtmf_AttributeId, xtmf_AttributeDomain, xtmf_AttributeDefault, xtmf_ResetToDefault)
+                
+    def _Delete(self, scenario, attribute_id):
+        exatt = scenario.extra_attribute(attribute_id)
+        scenario.delete_extra_attribute(attribute_id)
+        return exatt is not None
     
-    
+    def _CreateIfDoesNotExist(self, scenario, attribute_id, attributeDomain, attributeDefault, resetToDefault):
+        exatt = scenario.extra_attribute(attribute_id)
+        if exatt is None:
+            scenario.create_extra_attribute(xtmf_AttributeDomain, attribute_id, attributeDefault)
+            return True
+        elif exatt.type != attributeDomain:
+            self._Delete(scenario, attribute_id)
+            exatt = scenario.create_extra_attribute(attributeDomain, attribute_id, attributeDefault)
+        elif resetToDefault:
+            exatt.initialize(attributeDefault)
+        return False
