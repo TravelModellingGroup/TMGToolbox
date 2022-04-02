@@ -32,6 +32,7 @@ import sys as _sys
 import traceback as _tb
 import subprocess as _sp
 import six
+from six.moves import range
 if six.PY2:
     from itertools import izip
 from json import loads as _parsedict
@@ -353,6 +354,34 @@ def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', defaul
         
         s = "Deleted matrix %s." %mtx.id
         _m.logbook_write(s)
+
+@contextmanager
+def tempMatricesMANAGER(number_of_matrices, description="[No description]", matrix_type='FULL', default=0.0):
+    '''
+    Creates a temporary matrix in a context manager.
+    Throws Exception if it was unable to create one of the matrices.
+    Args:
+        - number_of_matrices: The number of matrices to create
+        - description (="[No description]"): The description of the temporary matrix.
+        - matrix_type (='FULL'): The type of temporary matrix to create. One of 
+            'SCALAR', 'ORIGIN', 'DESTINATION', or 'FULL'.
+        - default (=0.0): The matrix's default value.
+    '''
+    matrices = []
+    try:
+        for i in range(0, number_of_matrices):
+            matrix = initializeMatrix(default=default, description= 'Temporary %s' %description, \
+                           matrix_type=matrix_type)
+            if matrix is None:
+                raise Exception("Could not create temporary matrix: %s" %description)
+            matrices.append(matrix)
+        yield matrices
+    finally:
+        for matrix in matrices:
+            _DATABANK.delete_matrix(matrix.id)
+            _m.logbook_write("Deleted matrix %s." %matrix.id)
+    return
+
 
 #-------------------------------------------------------------------------------------------
 
