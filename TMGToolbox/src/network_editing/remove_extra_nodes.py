@@ -83,7 +83,7 @@ class RemoveExtraNodes(_m.Tool()):
     number_of_tasks = 6 # For progress reporting, enter the integer number of tasks here
     
     BaseScenario = _m.Attribute(_m.InstanceType) # common variable or parameter
-
+    baseScen = _m.Attribute(int)
     
     NodeFilterAttributeId = _m.Attribute(str)
     StopFilterAttributeId = _m.Attribute(str)
@@ -259,15 +259,15 @@ class RemoveExtraNodes(_m.Tool()):
 
     ##########################################################################################################
         
-    def __call__(self, baseScen, nodeFilter, stopFilter, connFilter, attAgg):
+    def __call__(self, baseScen, NodeFilterAttributeId, StopFilterAttributeId, ConnectorFilterAttributeId, AttributeAggregatorString):
         self.tool_run_msg = ""
         self.TRACKER.reset()
 
         self.BaseScenario = _MODELLER.emmebank.scenario(baseScen)
-        self.NodeFilterAttributeId = nodeFilter
-        self.StopFilterAttributeId = stopFilter
-        self.ConnectorFilterAttributeId = connFilter
-        self.AttributeAggregatorString = attAgg
+        self.NodeFilterAttributeId = NodeFilterAttributeId
+        self.StopFilterAttributeId = StopFilterAttributeId
+        self.ConnectorFilterAttributeId = ConnectorFilterAttributeId
+        self.AttributeAggregatorString = AttributeAggregatorString
 
         try:
             
