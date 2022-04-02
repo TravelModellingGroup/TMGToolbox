@@ -195,61 +195,8 @@ class TransitAssignmentTool(_m.Tool()):
         return pb.render()
 
     def run(self):
-        self.tool_run_msg = ''
-        self.TRACKER.reset()
-        try:
-            if self.AssignmentPeriod is None:
-                raise NullPointerException('Assignment period not specified')
-            if self.WalkPerception is None:
-                raise NullPointerException('Walk perception not specified')
-            if self.CongestionExponentString is None:
-                raise NullPointerException('Congestion parameters not specified')
-            if self.Iterations is None:
-                raise NullPointerException('Maximum iterations not specified')
-            if self.NormGap is None:
-                raise NullPointerException('Normalized gap not specified')
-            if self.RelGap is None:
-                raise NullPointerException('Relative gap not specified')
-            if self.EffectiveHeadwaySlope is None:
-                raise NullPointerException('Effective headway slope not specified')
-            if self.LinkFareAttributeIdList is None:
-                raise NullPointerException('Link fare attribute not specified')
-            if self.SegmentFareAttributeIdList is None:
-                raise NullPointerException('Segment fare attribute not specified')
-
-            @contextmanager
-            def blank(att):
-                try:
-                    yield att
-                finally:
-                    pass
-
-            if self.HeadwayFractionAttributeId is None:
-                manager1 = _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE', default=0.5)
-            else:
-                manager1 = blank(self.Scenario.extra_attribute(self.HeadwayFractionAttributeId))
-            if self.WalkAttributeIdList is None:
-                manager2 = _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', default=1.0)
-            else:
-                manager2 = blank(self.Scenario.extra_attribute(self.WalkAttributeIdList))
-            if self.EffectiveHeadwayAttributeId is None:
-                manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default=0.0)
-            else:
-                manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
-            nest = nested(manager1, manager2, manager3)
-            with nest as headwayAttribute, walkAttribute, effectiveHeadwayAttribute:
-                headwayAttribute.initialize(0.5)
-                walkAttribute.initialize(1.0)
-                effectiveHeadwayAttribute.initialize(0.0)
-                self.HeadwayFractionAttributeId = headwayAttribute.id
-                self.WalkAttributeIdList = walkAttribute.id
-                self.EffectiveHeadwayAttributeId = effectiveHeadwayAttribute.id
-                self._Execute()
-        except Exception as e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc())
-            raise 
-
-        self.tool_run_msg = _m.PageBuilder.format_info('Done.')
+        raise Exception("This tool can not be called from Modeller.")
+        self.tool_run_msg = _m.PageBuilder.format_info('Can not be executed from modeller.')
 
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixString, xtmf_NameString,\
         WalkSpeed, xtmf_WalkPerceptionString, xtmf_WalkPerceptionAttributeIdString, \
@@ -377,10 +324,6 @@ class TransitAssignmentTool(_m.Tool()):
 
     def _Execute(self):
         with _trace(name='{classname} v{version}'.format(classname=self.__class__.__name__, version=self.version), attributes=self._GetAtts()):
-            with _trace('Checking travel time functions'):
-                changes = self._HealTravelTimeFunctions()
-                if changes == 0:
-                    _m.logbook_write('No problems were found')
             self._InitMatrices()
             self._ChangeWalkSpeed()
             with self._getImpendenceMatrices():
@@ -490,13 +433,12 @@ class TransitAssignmentTool(_m.Tool()):
          'self': self.__MODELLER_NAMESPACE__}
         return atts
 
-    def _HealTravelTimeFunctions(self):
-        changes = 0
-        for function in _bank.functions():
-            if function.type != 'TRANSIT_TIME':
-                continue
-            cleanedExpression = function.expression.replace(' ', '')
-            if 'us3' in cleanedExpression:
+    def _HealTravelTimeFunction(self, ttfNumber):
+        function = _bank.function("ft" + str(ttfNumber))
+        if function is None:
+            raise Exception('The Transit Time Function ft' + str(ttfNumber) + ' is not defined!')
+        cleanedExpression = function.expression.replace(' ', '')
+        if 'us3' in cleanedExpression:
                 if cleanedExpression.endswith('*(1+us3)'):
                     index = cleanedExpression.find('*(1+us3)')
                     newExpression = cleanedExpression[:index]
@@ -508,11 +450,13 @@ class TransitAssignmentTool(_m.Tool()):
                     _m.logbook_write('Detected function %s with existing congestion term.' % function)
                     _m.logbook_write("Original expression= '%s'" % cleanedExpression)
                     _m.logbook_write("Healed expression= '%s'" % newExpression)
-                    changes += 1
+                    return True
                 else:
                     raise Exception('Function %s already uses US3, which is reserved for transit' % function + ' segment congestion values. Please modify the expression ' + 'to use different attributes.')
+        return False
 
-        return changes
+    def _ValidateNetworkTTFs(self, ttfDictionary):
+        pass
 
     def _InitMatrices(self):
         for i in range(0, len(self.DemandMatrixList)):
@@ -1496,10 +1440,11 @@ class TransitAssignmentTool(_m.Tool()):
                 msg = 'Exponent value must be a number'
                 msg += '. [%s]' % component
                 raise SyntaxError(msg)
-            strippedParts[0] = int(strippedParts[0])
-            strippedParts[1] = float(strippedParts[1])
-            strippedParts[2] = float(strippedParts[2])
-            exponentList[strippedParts[0]] = strippedParts[0:3]
+            strippedParts[0] = ttf
+            strippedParts[1] = perception
+            strippedParts[2] = exponent
+            exponentList[strippedParts[0]] = strippedParts[0:3]           
+            self._HealTravelTimeFunction(ttf)
         return exponentList
 
     def _GetFuncSpec(self):
