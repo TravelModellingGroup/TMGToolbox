@@ -578,9 +578,11 @@ class TollBasedRoadAssignment(_m.Tool()):
                         self._timeAttributeMANAGER()) \
                     as (costAttribute, peakHourMatrix, bgTransitAttribute, timeAttribute): #bgTransitAttribute is None
                 
-                with _m.logbook_trace("Calculating transit background traffic"):
-                    networkCalculationTool(self._getTransitBGSpec(), scenario=self.Scenario)
-                    self._tracker.completeSubtask()
+                # Only apply the background transit if there are transit lines
+                if self._any_transit_lines():
+                    with _m.logbook_trace("Calculating transit background traffic"):
+                        networkCalculationTool(self._getTransitBGSpec(), scenario=self.Scenario)
+                        self._tracker.completeSubtask()
                     
                 with _m.logbook_trace("Calculating link costs"):
                     networkCalculationTool(self._getLinkCostCalcSpec(costAttribute.id), scenario=self.Scenario)
@@ -680,6 +682,12 @@ class TollBasedRoadAssignment(_m.Tool()):
                                 
                             self._tracker.runTool(trafficAssignmentTool,
                                                   spec, scenario=self.Scenario) 
+
+    def _any_transit_lines(self):
+        network = self.Scenario.get_network()
+        for x in network.transit_lines():
+            return True
+        return False
 
     ##########################################################################################################
 

@@ -455,9 +455,6 @@ class TransitAssignmentTool(_m.Tool()):
                     raise Exception('Function %s already uses US3, which is reserved for transit' % function + ' segment congestion values. Please modify the expression ' + 'to use different attributes.')
         return False
 
-    def _ValidateNetworkTTFs(self, ttfDictionary):
-        pass
-
     def _InitMatrices(self):
         for i in range(0, len(self.DemandMatrixList)):
                 if self.InVehicleTimeMatrixList[i] != 'mf0':

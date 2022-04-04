@@ -89,7 +89,7 @@ class TempAttributeManager(_m.Tool()):
     def _CreateIfDoesNotExist(self, scenario, attribute_id, attributeDomain, attributeDefault, resetToDefault):
         exatt = scenario.extra_attribute(attribute_id)
         if exatt is None:
-            scenario.create_extra_attribute(xtmf_AttributeDomain, attribute_id, attributeDefault)
+            scenario.create_extra_attribute(attributeDomain, attribute_id, attributeDefault)
             return True
         elif exatt.type != attributeDomain:
             self._Delete(scenario, attribute_id)
