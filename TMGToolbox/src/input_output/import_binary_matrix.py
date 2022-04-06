@@ -44,6 +44,7 @@ import shutil
 import os
 import gzip
 import six
+import tempfile
 if six.PY3:
     _m.InstanceType = object
     _m.TupleType = object
@@ -229,11 +230,14 @@ class ImportBinaryMatrix(_m.Tool()):
                     matrix.description = self.MatrixDescription
 
             if str(self.ImportFile)[-2:] == "gz":
-                new_file = 'matrix.mtx'
-                with gzip.open(self.ImportFile, 'rb') as zip_file, open (new_file, 'wb') as non_zip_file:
-                    shutil.copyfileobj(zip_file, non_zip_file)
-                data = _MatrixData.load(new_file)
-                os.remove(new_file)
+                (temp_file_fd, new_file) = tempfile.mkstemp()
+                os.close(temp_file_fd)
+                try:
+                    with gzip.open(self.ImportFile, 'rb') as zip_file, open (new_file, 'wb') as non_zip_file:
+                        shutil.copyfileobj(zip_file, non_zip_file)
+                    data = _MatrixData.load(new_file)
+                finally:
+                    os.remove(new_file)
             else:
                 data = _MatrixData.load(self.ImportFile)
             
