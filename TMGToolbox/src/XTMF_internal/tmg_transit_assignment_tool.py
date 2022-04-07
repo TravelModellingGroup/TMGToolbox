@@ -966,12 +966,12 @@ class TransitAssignmentTool(_m.Tool()):
         if self.Scenario.extra_attribute("@doors") is None:
             attributes_to_copy["TRANSIT_LINE"].remove("@doors")
 
-        for type, atts in attributes_to_copy.iteritems():
+        for type, atts in six.iteritems(attributes_to_copy):
             atts = list(atts)
             data = self.Scenario.get_attribute_values(type, atts)
             network.set_attribute_values(type, atts, data)
-        for type, mapping in self._AttributeMapping().iteritems():
-            for source, dest in mapping.iteritems():
+        for type, mapping in six.iteritems(self._AttributeMapping()):
+            for source, dest in six.iteritems(mapping):
                 network.copy_attribute(type, source, dest)
         network.create_attribute("TRANSIT_SEGMENT", "current_voltr")
         network.create_attribute("TRANSIT_SEGMENT", "cost")
@@ -1150,7 +1150,7 @@ class TransitAssignmentTool(_m.Tool()):
     def _UpdateNetwork(self, network):
         attributeMapping = self._AttributeMapping()
         attributeMapping["TRANSIT_SEGMENT"]["dwell_time"] = "dwell_time"
-        for type, mapping in attributeMapping.iteritems():
+        for type, mapping in six.iteritems(attributeMapping):
             attributes = mapping.keys()
             data = self.Scenario.get_attribute_values(type, attributes)
             network.set_attribute_values(type, attributes, data)
@@ -1254,7 +1254,7 @@ class TransitAssignmentTool(_m.Tool()):
         attributeMapping = self._AttributeMapping()
         attributeMapping["TRANSIT_SEGMENT"]["@ccost"] = "@ccost"
         attributeMapping["TRANSIT_SEGMENT"]["transit_time"] = "transit_time"
-        for type, mapping in attributeMapping.iteritems():
+        for type, mapping in six.iteritems(attributeMapping):
             data = network.get_attribute_values(type, mapping.values())
             self.Scenario.set_attribute_values(type, mapping.keys(), data)
         if self.SurfaceTransitSpeed != False:
@@ -1574,7 +1574,7 @@ class TransitAssignmentTool(_m.Tool()):
             + str(self.AssignmentPeriod)
         )
         i = 0
-        for ttf, item in parameterList.iteritems():
+        for ttf, item in six.iteritems(parameterList):
             ttf = str(ttf)
             alpha = float(item[2])
             beta = (2 * alpha - 1) / (2 * alpha - 2)
@@ -1902,7 +1902,7 @@ class TransitAssignmentTool(_m.Tool()):
         ttfs = self._ParseExponentString()
         self.stsu_ttf_map = {}
         created = {}
-        for ttf, items in ttfs.iteritems():
+        for ttf, items in six.iteritems(ttfs):
             for i in range(1, 100):
                 func = "ft" + str(i)
                 if self.Scenario.emmebank.function(func) is None:
