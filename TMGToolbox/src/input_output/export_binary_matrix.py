@@ -45,6 +45,7 @@ import traceback as _traceback
 import gzip
 import shutil
 import os
+import tempfile
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -201,11 +202,14 @@ class ExportBinaryMatrix(_m.Tool()):
             else:
                 data = matrix.get_data()
             if self.ExportFile[-2:] == "gz":
-                new_file = self.ExportFile[:-3]
-                data.save(new_file)
-                with open (new_file, 'rb') as in_file, gzip.open(self.ExportFile, 'wb') as out_file:
-                    shutil.copyfileobj(in_file, out_file)
-                os.remove(new_file)
+                (temp_file_fd, new_file) = tempfile.mkstemp()
+                os.close(temp_file_fd)
+                try:
+                    data.save(new_file)
+                    with open (new_file, 'rb') as in_file, gzip.open(self.ExportFile, 'wb') as out_file:
+                        shutil.copyfileobj(in_file, out_file)
+                finally:
+                    os.remove(new_file)
             else:
                 data.save(self.ExportFile)
             
