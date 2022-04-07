@@ -72,18 +72,15 @@ Kucirek-Vaughan Automated Centroid Connector Generator (CCGen)
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from os import path
-from itertools import combinations
-import math
-import inspect
-import numpy
 _MODELLER = _m.Modeller()
 _g = _MODELLER.module('tmg.common.geometry')
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _spindex = _MODELLER.module('tmg.common.spatial_index')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 def _straightLineDist(x1, y1, x2, y2):
     return math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2))
@@ -342,7 +339,7 @@ class CCGEN(_m.Tool()):
     def has_shapefile_loaded(self):
         return self.ZoneShapeFile is not None
     
-    @_m.method(return_type= unicode)
+    @_m.method(return_type=six.u)
     def preload_shapefile_fields(self):
 
         with _g.Shapely2ESRI(self.ZoneShapeFile) as reader:
@@ -356,7 +353,7 @@ class CCGEN(_m.Tool()):
     def percent_completed(self):
         return self._tracker.getProgress()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
@@ -427,7 +424,7 @@ class CCGEN(_m.Tool()):
                     feasibleNodes, nFeasibleNodes = {2 : self._getFeasibleNodesGreedy,
                                      1 : self._getFeasibleNodesReluctant}[self.NodeExcluderOption](network, flagAttr.id)
                     _m.logbook_write("%s nodes were selected as feasible in the network." %nFeasibleNodes)
-                    print "Filtered and indexed feasible nodes"
+                    print("Filtered and indexed feasible nodes")
                 self._tracker.completeTask() # TASK 3
                 
                 #---5. Process new zones
@@ -448,7 +445,7 @@ class CCGEN(_m.Tool()):
                 zonesHandled = 0
                 errors = 0
                 self._tracker.startProcess(len(zonesToProcess)) # TASK 4
-                print "Processing zones"
+                print("Processing zones")
                 for zone in zonesToProcess: #{1
                     try:
                         #{
@@ -472,7 +469,7 @@ class CCGEN(_m.Tool()):
                         else:
                             raise
                     self._tracker.completeSubtask()
-                print "Done connecting zones. %s new nodes were created." %(self.NewNodeCount)
+                print("Done connecting zones. %s new nodes were created." %(self.NewNodeCount))
                 #}1
                 
                 #---6. Report results
@@ -545,7 +542,7 @@ class CCGEN(_m.Tool()):
             
             self._Boundaries = spatialIndex
             
-        print "Loaded and indexed boundaries."
+        print("Loaded and indexed boundaries.")
         _m.logbook_write("Boundary file loaded: '%s'" %filename)
     
     def _loadZoneShape(self, filename, network):
@@ -762,7 +759,7 @@ class CCGEN(_m.Tool()):
                 for link in node.outgoing_links():
                     type = link.type
                     index = 0 
-                    while index <len(type_list) and type_list[index][0] <>type:
+                    while index <len(type_list) and type_list[index][0] !=type:
                         index += 1
                     if index >= len(type_list):
                         type_list.append([type,1])
@@ -1170,7 +1167,7 @@ class CCGEN(_m.Tool()):
                 
                 d = self._measureDistance(iNode, jNode)
                 if d == 0:
-                    print "Zero distance found: %s -> %s" %(iNode, jNode)
+                    print("Zero distance found: %s -> %s" %(iNode, jNode) )
                     d = 0.0001
                     
                 im[jNode] = d
