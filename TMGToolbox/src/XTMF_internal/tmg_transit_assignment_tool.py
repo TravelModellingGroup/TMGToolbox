@@ -1,4 +1,5 @@
 from __future__ import print_function
+import re
 
 """
     Copyright 2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
@@ -849,18 +850,15 @@ class TransitAssignmentTool(_m.Tool()):
                 "choices_at_regular_nodes": "OPTIMAL_STRATEGY"
             }
         if EMME_VERSION >= (4, 2, 1):
-            modeList = []
+
             partialNetwork = self.Scenario.get_partial_network(["MODE"], True)
             # if all modes are selected for class, get all transit modes for journey levels
-            if self.ClassModeList[index] == ["*"]:
-                for mode in partialNetwork.modes():
-                    if mode.type == "TRANSIT":
-                        modeList.append({"mode": mode.id, "next_journey_level": 1})
+
             baseSpec["journey_levels"] = [
                 {
                     "description": "Walking",
                     "destinations_reachable": self.WalkAllWayFlag,
-                    "transition_rules": modeList,
+                    "transition_rules": self._create_journey_level_modes(partialNetwork, 0, index),
                     "boarding_time": {
                         "at_nodes": None,
                         "on_lines": {"penalty": "ut3", "perception_factor": self.ClassBoardPerceptionList[index]},
@@ -873,7 +871,7 @@ class TransitAssignmentTool(_m.Tool()):
                 {
                     "description": "Transit",
                     "destinations_reachable": True,
-                    "transition_rules": modeList,
+                    "transition_rules": self._create_journey_level_modes(partialNetwork, 1, index),
                     "boarding_time": {
                         "at_nodes": None,
                         "on_lines": {"penalty": "ut2", "perception_factor": self.ClassBoardPerceptionList[index]},
@@ -893,6 +891,23 @@ class TransitAssignmentTool(_m.Tool()):
                 "on_segments": None,
             }
         return baseSpec
+
+    def _create_journey_level_modes(self, partialNetwork, level, index):
+        modeList = []
+        if self.ClassModeList[index] == ["*"]:
+            for mode in partialNetwork.modes():
+                if mode.type == "TRANSIT":
+                    modeList.append({"mode": mode.id, "next_journey_level": 1})
+                elif mode.type == "AUX_TRANSIT":
+                    modeList.append({"mode": mode.id, "next_journey_level": level})
+        else:
+            for c in self.ClassModeList:
+                mode = partialNetwork.mode(c)
+                if mode.type == "TRANSIT":
+                    modeList.append({"mode": mode.id, "next_journey_level": 1})
+                elif mode.type == "AUX_TRANSIT":
+                    modeList.append({"mode": mode.id, "next_journey_level": level})
+        return modeList
 
     def _RunExtendedTransitAssignment(self, iteration):
         if iteration == 0:
