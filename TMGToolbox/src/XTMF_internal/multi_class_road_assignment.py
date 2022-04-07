@@ -579,7 +579,7 @@ class MultiClassRoadAssignment(_m.Tool()):
             bgTrafficAttribute.initialize(0)
             _m.logbook_write("Initialized existing extra attribute '@tvph' to 0.")
         
-        if EMME_VERSION >= 4:
+        if EMME_VERSION >= (4,):
             extraParameterTool = _MODELLER.tool('inro.emme.traffic_assignment.set_extra_function_parameters')
         else:
             extraParameterTool = _MODELLER.tool('inro.emme.standard.traffic_assignment.set_extra_function_parameters')
