@@ -897,14 +897,14 @@ class TransitAssignmentTool(_m.Tool()):
             for mode in partialNetwork.modes():
                 if mode.type == "TRANSIT":
                     modeList.append({"mode": mode.id, "next_journey_level": 1})
-                elif mode.type == "AUX_TRANSIT":
+                elif six.PY3 and mode.type == "AUX_TRANSIT":
                     modeList.append({"mode": mode.id, "next_journey_level": level})
         else:
             for c in self.ClassModeList:
                 mode = partialNetwork.mode(c)
                 if mode.type == "TRANSIT":
                     modeList.append({"mode": mode.id, "next_journey_level": 1})
-                elif mode.type == "AUX_TRANSIT":
+                elif six.PY3 and mode.type == "AUX_TRANSIT":
                     modeList.append({"mode": mode.id, "next_journey_level": level})
         return modeList
 
