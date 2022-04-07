@@ -5,7 +5,9 @@ import inro.modeller as m
 mm = m.Modeller()
 util = mm.module('tmg.common.utilities')
 pdu = mm.module('tmg.common.pandas_utils')
-
+import six 
+# initalize python3 types
+util.initalizeModellerTypes(m)
 
 class ExportNetworkTables(m.Tool()):
     tool_run_msg = ""
@@ -75,8 +77,8 @@ class ExportNetworkTables(m.Tool()):
                               note="<div id='ux_all'>Export all elements?</div>")
 
         return pb.render()
-
-    @m.method(return_type=unicode)
+    
+    @m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
@@ -93,7 +95,7 @@ class ExportNetworkTables(m.Tool()):
     def __call__(self, scenario_id, target_folder, file_prefix, export_nodes, export_links, export_turns, export_lines,
                  export_segments):
         try:
-            print "Exporting Network Tables"
+            print("Exporting Network Tables")
             self.SourceScenario = mm.emmebank.scenario(scenario_id)
             assert self.SourceScenario is not None, "Scenario %s does not exist" % scenario_id
 
@@ -120,7 +122,7 @@ class ExportNetworkTables(m.Tool()):
             else:
                 self.SegmentTableFlag = False
             self._execute()
-            print "Export Network Tables Complete"
+            print("Export Network Tables Complete")
         except Exception as e:
             msg = str(e) + "\n" + tb.format_exc(e)
             raise Exception(msg)
@@ -161,7 +163,7 @@ class ExportNetworkTables(m.Tool()):
 
     def _to_csv(self, df, file_name):
         fn = "{}_{}.csv".format(self.FilePrefix, file_name) if self.FilePrefix else "%s.csv" % file_name
-        print fn
+        print(fn)
         fp = path.join(self.TargetFolder, fn)
         df.to_csv(fp, header=True, index=True)
 
