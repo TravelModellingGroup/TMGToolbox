@@ -35,6 +35,10 @@ _export_attributes = mm.tool('inro.emme.data.extra_attribute.export_extra_attrib
 _export_functions = mm.tool('inro.emme.data.function.export_functions')
 _pdu = mm.module('tmg.common.pandas_utils')
 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(m)
 
 class ExportNetworkPackage(m.Tool()):
     version = '1.2.2'
@@ -352,8 +356,8 @@ class ExportNetworkPackage(m.Tool()):
             label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
             keyval[att.name] = label
         return keyval
-
-    @m.method(return_type=unicode)
+    
+    @m.method(return_type=six.u)
     def _get_select_attribute_options_html(self):
         list_ = []
         for att in self.Scenario.extra_attributes():
@@ -365,7 +369,7 @@ class ExportNetworkPackage(m.Tool()):
     @m.method(return_type=m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
-
-    @m.method(return_type=unicode)
+    
+    @m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
