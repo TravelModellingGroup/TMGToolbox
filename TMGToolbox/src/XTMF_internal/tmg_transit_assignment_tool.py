@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
     Copyright 2017 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
@@ -26,6 +27,10 @@ from re import split as _regex_split
 from json import loads as _parsedict
 import inro.modeller as _m
 import csv
+# import six library for python2 to python3 conversion
+import six 
+# initialize python3 types
+_util.initalizeModellerTypes(_m)
 
 _trace = _m.logbook_trace
 _MODELLER = _m.Modeller()
