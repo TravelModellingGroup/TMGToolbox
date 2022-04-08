@@ -37,7 +37,8 @@ import inro.modeller as _m
 from copy import copy
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
-
+# import six library for python2 to python3 conversion
+import six 
 
 class Face(_m.Tool()):
     def page(self):
@@ -158,10 +159,11 @@ def get_network_extents(net):
 class grid():
     def __init__(self, xSize, ySize):
         self._contents = []
-        for col in xrange(xSize):
+        for col in list(range(xSize)):
             cells = []
             
-            for row in xrange(ySize): cells.append(set())
+            for row in list(range(ySize)):
+                cells.append(set())
             
             self._contents.append(cells)
         self._maxCol = xSize
