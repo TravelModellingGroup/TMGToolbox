@@ -37,7 +37,9 @@ import inro.modeller as _m
 from copy import copy
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
-
+# import six library for python2 to python3 conversion
+import six 
+from six.moves import xrange
 
 class Face(_m.Tool()):
     def page(self):
@@ -161,7 +163,8 @@ class grid():
         for col in xrange(xSize):
             cells = []
             
-            for row in xrange(ySize): cells.append(set())
+            for row in xrange(ySize):
+                cells.append(set())
             
             self._contents.append(cells)
         self._maxCol = xSize
