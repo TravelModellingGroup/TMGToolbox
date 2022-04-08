@@ -39,6 +39,7 @@ _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
 # import six library for python2 to python3 conversion
 import six 
+from six.moves import xrange
 
 class Face(_m.Tool()):
     def page(self):
@@ -159,10 +160,10 @@ def get_network_extents(net):
 class grid():
     def __init__(self, xSize, ySize):
         self._contents = []
-        for col in list(range(xSize)):
+        for col in xrange(xSize):
             cells = []
             
-            for row in list(range(ySize)):
+            for row in xrange(ySize):
                 cells.append(set())
             
             self._contents.append(cells)
