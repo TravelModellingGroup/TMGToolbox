@@ -44,6 +44,10 @@ _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 networkResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.network_results')
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -105,7 +109,7 @@ class ReturnBoardings(_m.Tool()):
     
     def _Execute(self, scenario):
         
-        print "Extracting Boarding Results"
+        print("Extracting Boarding Results")
         self.classDemandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario)
         lineAggregation = self._LoadLineAggregationFile()
 
@@ -139,7 +143,7 @@ class ReturnBoardings(_m.Tool()):
             self.TRACKER.completeSubtask()
             allResults.append(results)
             
-        print "Extracted results from Emme"
+        print("Extracted results from Emme")
         self._OutputResults(allResults)       
     
     def _LoadLineAggregationFile(self):  
@@ -161,7 +165,7 @@ class ReturnBoardings(_m.Tool()):
                     + "/Database/STRATS_s%s/config" %scenario
         
         if not exists(configPath): 
-            print "path cannot be found"
+            print("path cannot be found")
             return []
         
         with open(configPath) as reader:
@@ -170,7 +174,7 @@ class ReturnBoardings(_m.Tool()):
         classDemandMatrix = {}
         for info in config['strat_files']:
             className = info['name']
-            print className
+            print(className)
             if(info['data'] is not None):
                 classDemandMatrix[className] = info['data']['demand']
         '''
@@ -270,7 +274,7 @@ class ReturnBoardings(_m.Tool()):
 
         for personClass in valueDict:
             fileName = self.xtmf_OutputDirectory + "\\" + re.sub(removeSpecialString, '', personClass["name"]) + ".csv"
-            print fileName
+            print(fileName)
             del personClass["name"]
             with open(fileName, 'wb') as classFile:
                 wr = csv.writer(classFile, delimiter = ',', quoting = csv.QUOTE_NONNUMERIC)
@@ -282,7 +286,7 @@ class ReturnBoardings(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

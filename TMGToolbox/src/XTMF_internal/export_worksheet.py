@@ -36,8 +36,6 @@
 '''
 
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from json import loads as parse_json
 from os import path as _path
 import re as _re
@@ -49,6 +47,10 @@ import inro.modeller as _m
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -87,7 +89,7 @@ class ExportWorksheet(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
@@ -115,7 +117,7 @@ class ExportWorksheet(_m.Tool()):
             try:
                 config = parse_json(modified_config)
             except:
-                print modified_config
+                print(modified_config)
                 raise
             
             self._execute(scenario, worksheet, export_path, config)
@@ -272,10 +274,10 @@ class ExportWorksheet(_m.Tool()):
             raise RuntimeError("Cannot load layer from worksheet. Either a layer name or layer type must be specified.")
         
         if layer is None:
-            print type(worksheet)
-            print type(layer)
-            print layer_type, type(layer_type)
-            print layer_name, type(layer_name)
+            print(type(worksheet))
+            print(type(layer))
+            print(layer_type, type(layer_type))
+            print(layer_name, type(layer_name))
             raise NameError("Could not find a layer of type '%s' with name '%s'" %(layer_type, layer_name))
         
         parameter = layer.par(parameter_name)
