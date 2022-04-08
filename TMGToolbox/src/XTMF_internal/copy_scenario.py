@@ -64,8 +64,8 @@ class CopyScenario(_m.Tool()):
 
     def _execute(self, FromScenario, ToScenario, CopyStrategy):
         if FromScenario == ToScenario:
-            print "A copy was requested to from scenario " + str(FromScenario) + " to " + str(ToScenario) \
-                + ".  This was not executed."
+            print("A copy was requested to from scenario " + str(FromScenario) + " to " + str(ToScenario) \
+                + ".  This was not executed.")
             return
         project = _MODELLER.emmebank
         original = project.scenario(str(FromScenario))

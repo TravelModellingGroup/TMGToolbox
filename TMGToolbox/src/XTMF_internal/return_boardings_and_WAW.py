@@ -42,8 +42,6 @@ Return Boardings and WAW
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from json import loads
 from multiprocessing import cpu_count
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
@@ -53,6 +51,11 @@ strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.str
 matrixCalculator = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -133,11 +136,11 @@ class ReturnBoardingsAndWAW(_m.Tool()):
                 results[lineGroupId] = lineCount
             self.TRACKER.completeSubtask()
             
-        print "Loaded transit line boardings"
+        print("Loaded transit line boardings")
         
         if self.xtmf_ExportWAW:
             results['Walk-all-way'] = self._GetWalkAllWayMatrix(scenario)
-            print "Loaded transit walk-all-way numbers"
+            print("Loaded transit walk-all-way numbers")
         
         return str(results)            
     
@@ -173,14 +176,14 @@ class ReturnBoardingsAndWAW(_m.Tool()):
             msg += ",".join(linesInNetworkButNotMapped[:10])
             if len(linesInNetworkButNotMapped) > 10:
                 msg += "...(%s more)" %(len(linesInNetworkButNotMapped) - 10)
-            print msg
+            print(msg)
             
         if len(linesMappedButNotInNetwork) > 0:
             msg = "%s lines have been found in the aggregation file but do not exist in the network: " %len(linesMappedButNotInNetwork)
             msg += ",".join(linesMappedButNotInNetwork[:10])
             if len(linesMappedButNotInNetwork) > 10:
                 msg += "...(%s more)" %(len(linesMappedButNotInNetwork) - 10)
-            print msg
+            print(msg)
     
     def _GetWalkAllWayMatrix(self, scenario):
         with _util.tempMatrixMANAGER() as wawMatrix:
@@ -247,7 +250,7 @@ class ReturnBoardingsAndWAW(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

@@ -39,12 +39,14 @@ Returb Boardings
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from json import loads
+#from json import loads
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -124,7 +126,7 @@ class ReturnBoardings(_m.Tool()):
                 results[lineGroupId] = lineCount
             self.TRACKER.completeSubtask()
             
-        print "Extracted results from Emme"
+        print("Extracted results from Emme")
         return str(results)            
     
     def _LoadLineAggregationFile(self):
@@ -159,14 +161,14 @@ class ReturnBoardings(_m.Tool()):
             msg += ",".join(linesInNetworkButNotMapped[:10])
             if len(linesInNetworkButNotMapped) > 10:
                 msg += "...(%s more)" %(len(linesInNetworkButNotMapped) - 10)
-            print msg
+            print(msg)
             
         if len(linesMappedButNotInNetwork) > 0:
             msg = "%s lines have been found in the aggregation file but do not exist in the network: " %len(linesMappedButNotInNetwork)
             msg += ",".join(linesMappedButNotInNetwork[:10])
             if len(linesMappedButNotInNetwork) > 10:
                 msg += "...(%s more)" %(len(linesMappedButNotInNetwork) - 10)
-            print msg
+            print(msg)
     
     ##########################################################################################################
 
@@ -175,7 +177,7 @@ class ReturnBoardings(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
