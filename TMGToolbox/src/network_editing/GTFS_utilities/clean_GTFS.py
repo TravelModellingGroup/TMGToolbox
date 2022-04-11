@@ -20,10 +20,12 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 import os.path
 _util = _m.Modeller().module('tmg.common.utilities')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -129,13 +131,13 @@ class CleanGTFS(_m.Tool()):
                 cells = line.split(",")
                 idSet.add(cells[idCol])
         return idSet
-    
+
     def _FilterTripsFile(self, routeIdSet, serviceIdSet):
         exists = os.path.isfile(self.GTFSFolderName + "/shapes.txt")
         shapeIdSet = set()
         tripIdSet = set()
-        with nested(open(self.GTFSFolderName + "/trips.txt"), 
-                    open(self.GTFSFolderName + "/trips.updated.csv", 'w')) as (reader, writer):
+        with open(self.GTFSFolderName + "/trips.txt") as reader,\
+                    open(self.GTFSFolderName + "/trips.updated.csv", 'w') as writer:
             header = reader.readline().strip()
             cells = header.split(",")
             writer.write(header)
@@ -162,8 +164,8 @@ class CleanGTFS(_m.Tool()):
         return tripIdSet
     
     def _FilterShapesFile(self, shapeIdSet):
-        with nested(open(self.GTFSFolderName + "/shapes.txt"),
-                    open(self.GTFSFolderName + "/shapes.updated.csv", 'w')) as (reader, writer):
+        with open(self.GTFSFolderName + "/shapes.txt") as reader,\
+                    open(self.GTFSFolderName + "/shapes.updated.csv", 'w') as writer:
             header = reader.readline().strip()
             cells = header.split(",")
             writer.write(header)
@@ -178,8 +180,8 @@ class CleanGTFS(_m.Tool()):
 
     def _FilterStopTimesFile(self, tripIdSet):
         servicedStopsSet = set()
-        with nested(open(self.GTFSFolderName + "/stop_times.txt"),
-                    open(self.GTFSFolderName + "/stop_times.updated.csv", 'w')) as (reader, writer):
+        with open(self.GTFSFolderName + "/stop_times.txt") as reader,\
+                    open(self.GTFSFolderName + "/stop_times.updated.csv", 'w') as writer:
             header = reader.readline().strip()
             writer.write(header)
             cells = header.split(",")
@@ -196,8 +198,8 @@ class CleanGTFS(_m.Tool()):
         return servicedStopsSet
 
     def _FilterStopsFile(self, servicedStopsSet):
-        with nested(open(self.GTFSFolderName + "/stops.txt"),
-                    open(self.GTFSFolderName + "/stops.updated.csv", 'w')) as (reader, writer):
+        with open(self.GTFSFolderName + "/stops.txt") as reader,\
+                    open(self.GTFSFolderName + "/stops.updated.csv", 'w') as writer:
             header = reader.readline().strip()
             writer.write(header)
             cells = header.split(",")
@@ -209,13 +211,12 @@ class CleanGTFS(_m.Tool()):
                 if not cells[stopIdCol] in servicedStopsSet:
                     continue
                 writer.write("\n%s" %line)
-
-    
+                
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
