@@ -17,11 +17,15 @@
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-import os
-import time
-import math
 import inro.modeller as _m
 import traceback as _traceback
+_MODELLER = _m.Modeller()
+_util = _MODELLER.module('tmg.common.utilities')
+_tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class CalculateStationFrequency(_m.Tool()):
     
@@ -128,7 +132,7 @@ class CalculateStationFrequency(_m.Tool()):
         
         return "Tool complete. %i out of %i lines were selected." %(_i, _total_lines)
         
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
