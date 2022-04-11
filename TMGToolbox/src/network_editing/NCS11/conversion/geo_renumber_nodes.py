@@ -38,14 +38,16 @@ GEO RENUMBER NODES
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _geo = _MODELLER.module('tmg.common.geometry')
 _spindex = _MODELLER.module('tmg.common.spatial_index') 
 Shapely2ESRI = _geo.Shapely2ESRI
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -210,7 +212,7 @@ class GeoRenumberNodes(_m.Tool()):
         searchGrid = _spindex.GridIndex([minx, miny, maxx, maxy], marginSiz= 1.0)
         for bound in boundaries:
             searchGrid.insertPolygon(bounds)
-        print "Constructed spatial index."
+        print("Constructed spatial index.")
         
         self.TRACKER.startProcess(network.element_totals['regular_nodes'])
         errorCount = 0
@@ -300,7 +302,7 @@ class GeoRenumberNodes(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
