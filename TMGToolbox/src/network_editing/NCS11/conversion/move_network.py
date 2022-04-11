@@ -20,6 +20,10 @@
 import inro.modeller as _m
 import traceback as _traceback
 _util = _m.Modeller().module('tmg.common.utilities')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class MoveNetowrks(_m.Tool()):
     
@@ -89,6 +93,6 @@ class MoveNetowrks(_m.Tool()):
         
         return result
         
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
