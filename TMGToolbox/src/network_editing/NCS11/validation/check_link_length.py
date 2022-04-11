@@ -17,13 +17,16 @@
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-import os
-import os.path
-import time
 import math
 import inro.modeller as _m
-import math
 import traceback as _traceback
+_MODELLER = _m.Modeller()
+_util = _MODELLER.module('tmg.common.utilities')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
+
 
 class CheckLinkLengths(_m.Tool()):
     
@@ -31,7 +34,7 @@ class CheckLinkLengths(_m.Tool()):
     Error = _m.Attribute(float)
     tool_run_msg = ""
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
