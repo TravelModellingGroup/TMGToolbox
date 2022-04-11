@@ -63,13 +63,15 @@ Generate Transit Lines from GTFS
 import inro.modeller as _m
 import traceback as _traceback
 import csv
-from contextlib import contextmanager
-from contextlib import nested
 from os import path as _path
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _editing = _MODELLER.module('tmg.common.network_editing')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -101,7 +103,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     NewScenarioId = _m.Attribute(str)
     NewScenarioTitle = _m.Attribute(str)
     MaxNonStopNodes = _m.Attribute(int)
-    LinkPriorityAttributeId = _m.Attribute(unicode)
+    LinkPriorityAttributeId = _m.Attribute(str)
     
     GtfsFolder = _m.Attribute(str)
     Stop2NodeFile = _m.Attribute(str)
@@ -266,7 +268,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             self.TRACKER.completeTask()
             
             network = self.Scenario.get_network()
-            print "Loaded network"
+            print("Loaded network")
             self.TRACKER.completeTask()
             
             stops2nodes = self._LoadStopNodeMapFile(network)
@@ -318,7 +320,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             
             for record in reader.readlines():
                 emmeId = record['emme_id'][:5]
-                print emmeId
+                print(emmeId)
                 if emmeId in emIdSet:
                     raise IOError("Route file contains duplicate id '%s'" %emmeId)
                 
@@ -330,7 +332,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                     route = Route(record)
                 routes[route.route_id] = route
         msg = "%s routes loaded from transit feed" %len(routes)
-        print msg
+        print(msg)
         _m.logbook_write(msg)
         return routes
     
@@ -350,7 +352,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                 stops2nodes[cells[0]] = cells[1]
             self.TRACKER.completeTask()
         msg = "%s stop-node pairs loaded." %len(stops2nodes)
-        print msg
+        print(msg)
         _m.logbook_write(msg)
         return stops2nodes
     
@@ -371,16 +373,15 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                 self.TRACKER.completeSubtask()
             self.TRACKER.completeTask()
         msg = "%s trips loaded." %len(trips)
-        print msg
+        print(msg)
         _m.logbook_write(msg)
         
         return trips
     
     def _LoadPrintStopTimes(self, trips, stops2nodes):
         count = 0
-        with nested(_util.CSVReader(self.GtfsFolder + "/stop_times.txt"),
-                    open(self.GtfsFolder + "/stop_times_emme_nodes.txt", 'w'))\
-                     as (reader, writer):
+        with _util.CSVReader(self.GtfsFolder + "/stop_times.txt") as reader,\
+                    open(self.GtfsFolder + "/stop_times_emme_nodes.txt", 'w') as writer:
             
             s = reader.header[0]
             for i in range(1, len(reader.header)):
@@ -409,9 +410,9 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             self.TRACKER.completeTask()
                 
         msg = "%s stop times loaded" %count
-        print msg
+        print(msg)
         _m.logbook_write(msg)
-        print "Stop times file updated with emme node mapping."
+        print("Stop times file updated with emme node mapping.")
         pb = _m.PageBuilder(title="Link to updated stop times file")
         pb.add_link(self.GtfsFolder + "/stop_times_emme_nodes.txt")
         _m.logbook_write("Link to updated stop times file",
@@ -450,14 +451,14 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
         
             self.TRACKER.startProcess(len(routes))
             lineCount = 0
-            print "Starting line itinerary generation"
+            print("Starting line itinerary generation")
             for route in routes.itervalues():
                 baseEmmeId = route.emme_id
                 vehicle = network.transit_vehicle(route.emme_vehicle)
                 if vehicle is None:
                     raise Exception("Cannot find a vehicle with id=%s" %route.emme_vehicle)
                 if GtfsModeMap[vehicle.mode.id] != route.route_type:
-                    print "Warning: Vehicle mode of route {0} ({1}) does not match suggested route type ({2})".\
+                    print("Warning: Vehicle mode of route {0} ({1}) does not match suggested route type ({2})").\
                         format(route.route_id, vehicle.mode.id, route.route_type)
                 filter = functionBank[vehicle.mode]
                 algo.link_filter = filter
@@ -537,7 +538,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                         branchNumber += 1
                         lineCount += 1
                     except Exception as e:
-                        print "Exception for line %s: %s" %(id, e)
+                        print("Exception for line %s: %s" %(id, e))
                         #routeId, branchNum, error, seq
                         failedSequences.append((baseEmmeId, seqCount, str(e), seq))
                         seqCount += 1
@@ -562,23 +563,23 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                     for trip in trips:
                         writer.write("\n%s,%s,%s" %(id, trip.stopTimes[0][1].departure_time, trip.lastStopTime()[1].arrival_time))
                         csvwriter.writerow([trip.id, id])
-                print "Added route %s" %route.emme_id
+                print("Added route %s" %route.emme_id)
                 
                 self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
         
         msg = "Done. %s lines were successfully created." %lineCount
-        print msg
+        print(msg)
         _m.logbook_write(msg)
         
         _m.logbook_write("Skipped stops report", value = self._WriteSkippedStopsReport(skippedStopIds))
-        print "%s stops skipped" %len(skippedStopIds)
+        print("%s stops skipped" %len(skippedStopIds))
         _m.logbook_write("Failed sequences report", value = self._WriteFailedSequencesReport(failedSequences))
-        print "%s sequences failed" %len(failedSequences)
+        print("%s sequences failed" %len(failedSequences))
         
         if self.PublishFlag:
             _m.logbook_write("Lines to check report", value = self._WriteLinesToCheckReport(linesToCheck))
-            print "%s lines were logged for review." %len(linesToCheck)
+            print("%s lines were logged for review." %len(linesToCheck))
     
     def _GetOrganizedTrips(self, route):
         tripSet = {}
@@ -627,7 +628,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                     skippedStopIds[stopId] += 1
                 else:
                     skippedStopIds[stopId] = 1
-                print "Could not find node %s" %nodeId
+                print("Could not find node %s" %nodeId)
                 continue #Could not find the node for this stop
             if last(node_itin) == node:
                 continue #Immediate duplicates might occur due to stop grouping process
@@ -687,11 +688,11 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def getExtraAttributes(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
