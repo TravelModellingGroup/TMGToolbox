@@ -38,13 +38,15 @@ Create Aggregation Selection File
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 import csv
 from inro.emme.core.exception import ModuleError
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -191,7 +193,7 @@ class CreateAggregationSelectionFile(_m.Tool()):
                 self._AssignAggType(groups, aggType.id)
                 network = self.BaseScenario.get_network()
                 self.TRACKER.completeTask()
-                print "Loaded network" 
+                print("Loaded network")
                 self._WriteAggSelections(network, aggType.id)
 
             
@@ -250,11 +252,11 @@ class CreateAggregationSelectionFile(_m.Tool()):
             except ModuleError:
                 msg = "Emme runtime error processing line group '%s'." %id
                 _m.logbook_write(msg)
-                print msg
+                print(msg)
                 raise
 
             msg = "Loaded group %s: %s" %(groupAgg, id)
-            print msg
+            print(msg)
             _m.logbook_write(msg)
 
     def _WriteAggSelections(self, network, aggTypeId):
@@ -269,6 +271,6 @@ class CreateAggregationSelectionFile(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
