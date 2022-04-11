@@ -37,14 +37,17 @@ Export Gtfs Stops as Shapefile
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from os import path as _path
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _geo = _MODELLER.module('tmg.common.geometry')
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -110,16 +113,16 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
             
             
             routeModes = self._LoadRoutes()
-            print "Routes Loaded."
+            print("Routes Loaded.")
             tripModes = self._LoadTrips(routeModes)
-            print "Trips loaded."
+            print("Trips loaded.")
             stops = self._LoadStops()
-            print "Stops loaded."
+            print("Stops loaded.")
             self._LoadStopTimes(stops, tripModes)
-            print "Stop times loaded."
+            print("Stop times loaded.")
             self._WriteStopsToShapefile(stops)
             self._WriteProjectionFile()
-            print "Shapefile written."
+            print("Shapefile written.")
 
     ##########################################################################################################    
     #----SUB FUNCTIONS---------------------------------------------------------------------------------  
@@ -200,12 +203,12 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
             for line in reader.readlines():
                 cells = line.strip().split(',')
                 if not cells[stopIdCol] in stops: 
-                    print "Could not find stop '%s'" %cells[stopIdCol]
+                    print("Could not find stop '%s'" %cells[stopIdCol])
                     continue
                 stop = stops[cells[stopIdCol]]                    
                 
                 if not cells[tripIdCol] in tripModes:
-                    print "Could not find trip '%s'" %cells[tripIdCol]
+                    print("Could not find trip '%s'" %cells[tripIdCol])
                     continue
                 mode = tripModes[cells[tripIdCol]]
                 
@@ -227,8 +230,8 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
                 if desLen > maxDescription:
                     maxDescription = desLen
             
-            print maxDescription
-            print maxName
+            print(maxDescription)
+            print(maxName)
             
             writer.addField("StopID")
             writer.addField("Name", length=maxName)
@@ -259,7 +262,7 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
