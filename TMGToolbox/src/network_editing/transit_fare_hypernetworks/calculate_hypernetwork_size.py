@@ -47,14 +47,16 @@ ESTIMATE NETWORK SIZE
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from math import factorial
 from xml.etree import ElementTree as _ET
 from os import path as _PATH
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -373,11 +375,11 @@ class EstimateHyperNetworkSize(_m.Tool()):
                 except ModuleError:
                     msg = "Emme runtime error processing line group '%s'." %id
                     _m.logbook_write(msg)
-                    print msg
+                    print(msg)
                     raise
             
             msg = "Loaded group %s: %s" %(groupNumber, id)
-            print msg
+            print(msg)
             _m.logbook_write(msg)
             
             self.TRACKER.completeSubtask()
@@ -470,8 +472,8 @@ class EstimateHyperNetworkSize(_m.Tool()):
             nVirtualSurfaceNodes += addNodes
             nBaseConnectorLinks += addLinks
             self.TRACKER.completeSubtask()
-        print "%s virtual road nodes" %nVirtualSurfaceNodes
-        print "%s access links to virtual road nodes" %nBaseConnectorLinks
+        print("%s virtual road nodes" %nVirtualSurfaceNodes)
+        print("%s access links to virtual road nodes" %nBaseConnectorLinks)
         
         nVirtualStationNodes, nStationConnectorLinks = 0, 0
         for node in baseStationNodes:
@@ -480,13 +482,13 @@ class EstimateHyperNetworkSize(_m.Tool()):
             nStationConnectorLinks += addLinks
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
-        print "%s virtual station nodes" %nVirtualStationNodes
-        print "%s access links to virtual station nodes" %nStationConnectorLinks
+        print("%s virtual station nodes" %nVirtualStationNodes)
+        print("%s access links to virtual station nodes" %nStationConnectorLinks)
         
         nConnectorLinks = 0
         for node in baseStationNodes + baseSurfaceNodes:
             nConnectorLinks += self._CalcStationToSurfaceConnectors(node)
-        print "%s road-to-transit connector links." %nConnectorLinks
+        print("%s road-to-transit connector links." %nConnectorLinks)
         
         inVehicleLinks = 0
         network.create_attribute('LINK', 'copies', None)
@@ -502,7 +504,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
                 inVehicleLinks += max(len(link.copies) - 1, 0)
             else:
                 inVehicleLinks += len(link.copies)
-        print "%s in-vehicle links" %inVehicleLinks
+        print("%s in-vehicle links" %inVehicleLinks)
         
         totalNodes = baseNodes + nVirtualStationNodes + nVirtualSurfaceNodes
         totalLinks = baseLinks + nBaseConnectorLinks + nConnectorLinks + nStationConnectorLinks + inVehicleLinks
@@ -644,7 +646,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
                 if link.role != 0: connectedNodes.append(link.j_node)
             
             if numberOfStoppingGroups == 0:
-                print "Found no stopping groups for station node %s %s" %(node, node.passing_groups)
+                print("Found no stopping groups for station node %s %s" %(node, node.passing_groups))
                 numberOfVirtualRole2Nodes += numberOfPassingGroups - 1
             else:
                 numberOfVirtualRole2Nodes += numberOfPassingGroups + numberOfStoppingGroups - 1
@@ -671,20 +673,20 @@ class EstimateHyperNetworkSize(_m.Tool()):
                     virtualRole3Links.add(linkTuple)
                     prevNode = node
                         
-        print "Average groups per node: %s" %(float(totalStops) / len(baseSurfaceNodes))
-        print "Number of new virtual role 1 nodes: %s" %numberOfVirtualRole1Nodes
-        print "Number of new virtual role 2 nodes: %s" %numberOfVirtualRole2Nodes
-        print "Number of new virtual role 1 links: %s" %numberOfVirtualRole1Links
-        print "Number of new virtual role 2 links: %s" %numberOfVirtualRole2Links
-        print "Number of new virtual role 3 links: %s" %len(virtualRole3Links)
-        print "Estimated total nodes: %s" %(network.element_totals['regular_nodes'] + numberOfVirtualRole1Nodes + numberOfVirtualRole2Nodes)
-        print "Estimated total links: %s" %(network.element_totals['links'] + numberOfVirtualRole1Links + numberOfVirtualRole2Links + len(virtualRole3Links))
+        print("Average groups per node: %s" %(float(totalStops) / len(baseSurfaceNodes)))
+        print("Number of new virtual role 1 nodes: %s" %numberOfVirtualRole1Nodes)
+        print("Number of new virtual role 2 nodes: %s" %numberOfVirtualRole2Nodes)
+        print("Number of new virtual role 1 links: %s" %numberOfVirtualRole1Links)
+        print("Number of new virtual role 2 links: %s" %numberOfVirtualRole2Links)
+        print("Number of new virtual role 3 links: %s" %len(virtualRole3Links))
+        print("Estimated total nodes: %s" %(network.element_totals['regular_nodes'] + numberOfVirtualRole1Nodes + numberOfVirtualRole2Nodes))
+        print("Estimated total links: %s" %(network.element_totals['links'] + numberOfVirtualRole1Links + numberOfVirtualRole2Links + len(virtualRole3Links)))
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
