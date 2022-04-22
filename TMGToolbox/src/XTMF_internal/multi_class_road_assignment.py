@@ -728,10 +728,8 @@ class MultiClassRoadAssignment(_m.Tool()):
         #defines the aggregator     
         SOLA_path_analysis = []
         for i in range(0,len(self.Demand_List)):
-            if attributes[i] is None:
-                SOLA_path_analysis.append(None)
-            else:
-                SOLA_path_analysis.append([])
+            SOLA_path_analysis.append([])
+            if attributes[i] is not None:
                 allNone = True
                 for j in range(len(attributes[i])):
                     if attributes[i][j] is None:
@@ -760,9 +758,10 @@ class MultiClassRoadAssignment(_m.Tool()):
                     SOLA_path_analysis[i].append(path)
                 if allNone is True:
                     SOLA_path_analysis[i] = []
+        
         #Creates a list entry for each mode specified in the Mode List and its associated Demand Matrix
-        #"mf"+str(int(int(self.TimesMatrixId[0][2:])+3))
-        SOLA_Class_Generator = [{
+        
+        SOLA_spec['classes'] = [{
                     "mode": Mode_List[i],
                     "demand": peakHourMatrixId[i].id,
                     "generalized_cost": {
@@ -778,7 +777,6 @@ class MultiClassRoadAssignment(_m.Tool()):
                     },
                     "path_analyses": SOLA_path_analysis[i]
                 } for i in range(len(Mode_List))]
-        SOLA_spec['classes'] = SOLA_Class_Generator
 
         return SOLA_spec
 
