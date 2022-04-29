@@ -18,8 +18,6 @@
 """
 
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 import inro.modeller as _m
 import os
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
@@ -64,9 +62,9 @@ class ExportSubareaTool(_m.Tool()):
 
        
         try:
-            print "Adding Toolbox"
+            print("Adding Toolbox")
             self._execute()
-            print "Toolbox added"
+            print("Toolbox added")
         except Exception as e:
             raise Exception(_util.formatReverseStack())
 
