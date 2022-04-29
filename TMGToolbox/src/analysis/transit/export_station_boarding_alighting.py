@@ -37,13 +37,16 @@ Export Transit Line Boardings
 
 import inro.modeller as _m
 
-from html import HTML
 import csv
 import traceback as _traceback
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -126,7 +129,7 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
@@ -171,7 +174,7 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
             stations, badNodes = self._LoadStationNodeFile(network)
 
             if len(badNodes) > 0:
-                print "%s node IDs were not found in the network and were skipped." %len(badNodes)
+                print("%s node IDs were not found in the network and were skipped." %len(badNodes))
                 pb = _m.PageBuilder("NodeIDs not in network")
                 
                 pb.add_text_element("<b>The following node IDs were not found in the network:</b>")
