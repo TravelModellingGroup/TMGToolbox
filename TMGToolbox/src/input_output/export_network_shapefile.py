@@ -19,13 +19,7 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
 from os import path as _path
-from datetime import datetime as _dt
-import shutil as _shutil
-import zipfile as _zipfile
-import tempfile as _tf
-
 _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _exportShapefile = _MODELLER.tool('inro.emme.data.network.export_network_as_shapefile')
@@ -64,9 +58,9 @@ class ExportNetworkAsShapefile(_m.Tool()):
         self.scenario = _m.Modeller().emmebank.scenario(xtmf_scenario)
 
         try:          
-                print "Starting export."
+                print("Starting export.")
                 self._execute()
-                print "Export complete."  
+                print("Export complete.") 
         except Exception as e:
             raise Exception(_util.formatReverseStack())
 
