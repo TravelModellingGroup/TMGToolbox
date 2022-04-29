@@ -36,8 +36,6 @@ from __future__ import print_function
     
 '''
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 
 import inro.modeller as _m
 
@@ -46,6 +44,11 @@ _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 matrixResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix_results')
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -118,7 +121,7 @@ class ExtractGoInVehicleTime(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
