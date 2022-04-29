@@ -30,6 +30,10 @@ _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class ExtractFeasibilityMatrix(_m.Tool()):
     
@@ -246,7 +250,7 @@ class ExtractFeasibilityMatrix(_m.Tool()):
         except Exception as e:
             pass
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
