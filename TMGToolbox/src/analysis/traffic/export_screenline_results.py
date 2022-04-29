@@ -40,11 +40,13 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -179,14 +181,14 @@ class ExportScreenlineResults(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
     def short_description(self):
         return "<em>Exports traffic results for screenlines defined by multiple count posts.</em>"
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_screenline_definitions(self):
         atts = [self.CountpostFlagAttribute]
         if self.AlternateFlagAttribute: atts.append(self.AlternateFlagAttribute)
