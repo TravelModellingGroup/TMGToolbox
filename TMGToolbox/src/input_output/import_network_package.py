@@ -573,12 +573,15 @@ class ImportNetworkPackage(_m.Tool()):
 
     @_m.logbook_trace("Reading transit lines")
     def _batchin_lines(self, scenario, temp_folder, zf):
-        zf.extract(self._components.lines_file, temp_folder)
-        if self.transit_file_change is True:
-            self._transit_line_file_update(temp_folder)
-        self.TRACKER.runTool(import_lines,
-                             transaction_file=_path.join(temp_folder, self._components.lines_file),
-                             scenario=scenario)
+        # Check to see if there are any transit vehicles before loading the transit lines otherwise it will crash
+        partial_network = scenario.get_partial_network(['TRANSIT_VEHICLE'], False)
+        if partial_network.transit_vehicles().__length_hint__() > 0:
+            zf.extract(self._components.lines_file, temp_folder)
+            if self.transit_file_change is True:
+                self._transit_line_file_update(temp_folder)
+            self.TRACKER.runTool(import_lines,
+                                 transaction_file=_path.join(temp_folder, self._components.lines_file),
+                                 scenario=scenario)
 
     @_m.logbook_trace("Reading turns")
     def _batchin_turns(self, scenario, temp_folder, zf):
