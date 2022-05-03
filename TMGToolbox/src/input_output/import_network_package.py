@@ -943,7 +943,26 @@ class ImportNetworkPackage(_m.Tool()):
                     # Write out the final formatted string in a format that all versions of EMME can read
                     outfile.write('a\'{0}\' {1} \'{2}\' {3}\n'.format(line_name.ljust(6, ' '), inner_text, description.ljust(20, ' '),  line[pos:line_length - 1]))
                 else:
-                    outfile.write(line)
+                    # try to parse out the individual segments
+                    # j-node, dwell time, ttf, us1, us2, us3 (and ignore the rest)
+                    column_count = 0
+                    last_whitespace = False
+                    pos = 0
+                    while pos < line_length:
+                        if not last_whitespace and line[pos] == ' ':
+                            last_whitespace = True
+                            column_count += 1
+                            if column_count == 7:
+                                break
+                        elif line[pos] != ' ':
+                            last_whitespace = False
+                        pos += 1
+
+                    if column_count == 7:
+                        # then there is some extra data so we need to clip it out
+                        outfile.write(line[0:pos])
+                    else:
+                        outfile.write(line)
         outfile.close()
         os.remove(_path.join(temp_folder, self._components.lines_file))
         os.renames(_path.join(temp_folder, 'temp.221'),_path.join(temp_folder, self._components.lines_file))
