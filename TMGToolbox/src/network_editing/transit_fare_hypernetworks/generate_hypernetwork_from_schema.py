@@ -403,9 +403,6 @@ class FBTNFromSchema(_m.Tool()):
             print("Loading Fare Schema File version %s" %version)
             
             self.TRACKER.startProcess(nGroups + nZones)
-            #with nested (_util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_LINE', description= "Line Group"),
-            #             _util.tempExtraAttributeMANAGER(self.BaseScenario, 'NODE', description= "Fare Zone")) \
-            #         as (lineGroupAtt, zoneAtt):
             with _util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_LINE', description= "Line Group") as lineGroupAtt, _util.tempExtraAttributeMANAGER(self.BaseScenario, 'NODE', description= "Fare Zone") as zoneAtt:
                  
                 with _m.logbook_trace("Transit Line Groups"):
@@ -440,7 +437,6 @@ class FBTNFromSchema(_m.Tool()):
             #Transform the network
             with _m.logbook_trace("Transforming hyper network"):
                 transferGrid, zoneCrossingGrid = self._TransformNetwork(network, nGroups, nZones)
-                #print(transferGrid[0,1])
                 if nStationGroups > 0:
                     self._IndexStationConnectors(network, transferGrid, stationGroups, groupIds2Int)
                 print("Hyper network generated.")
