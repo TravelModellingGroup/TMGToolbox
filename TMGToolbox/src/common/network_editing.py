@@ -29,6 +29,8 @@ _geolib = _MODELLER.module('tmg.common.geometry')
 COORD_FACTOR = _MODELLER.emmebank.coord_unit_length
 EMME_VERSION = _util.getEmmeVersion(tuple) 
 
+# import six library for python2 to python3 conversion
+import six 
 
 class Face(_m.Tool()):
     
@@ -853,7 +855,7 @@ class TransitLineProxy():
         copy.data2 = self.data2
         copy.data3 = self.data3
         
-        for key, val in self.exatts.iteritems():
+        for key, val in six.iteritems(self.exatts):
             copy[key] = val
         
         try:
@@ -930,7 +932,7 @@ class TransitSegmentProxy():
         segment.data2 = self.data2
         segment.data3 = self.data3
         
-        for key, val in self.exatts.iteritems():
+        for key, val in six.iteritems(self.exatts):
             segment[key] = val
         
 

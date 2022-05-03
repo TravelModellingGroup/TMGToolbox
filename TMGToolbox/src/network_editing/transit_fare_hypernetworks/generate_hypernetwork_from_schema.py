@@ -72,9 +72,6 @@ Fare-Based Transit Network (FBTN) From Schema
     
 '''
 from copy import copy
-from contextlib import contextmanager
-from contextlib import nested
-from html import HTML
 from itertools import combinations as get_combinations
 from os import path
 import traceback as _traceback
@@ -82,7 +79,6 @@ from xml.etree import ElementTree as _ET
 
 import inro.modeller as _m
 from inro.emme.core.exception import ModuleError
-
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -94,6 +90,12 @@ GridIndex = _spindex.GridIndex
 TransitLineProxy = _editing.TransitLineProxy
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
+from six.moves import html_parser
+from six.moves import xrange
 
 ##########################################################################################################    
 
@@ -386,7 +388,7 @@ class FBTNFromSchema(_m.Tool()):
             if int(self.BaseScenario.element_totals['transit_lines']) == 0:
                 raise Exception("There are no Transit Lines defined in this scenario!")
 
-            print "Starting Hyper Networking Generation"
+            print("Starting Hyper Networking Generation")
             self._nextNodeId = self.VirtualNodeDomain
             
             root = _ET.parse(self.XMLSchemaFile).getroot()            
@@ -398,29 +400,30 @@ class FBTNFromSchema(_m.Tool()):
             #Load the line groups and zones
             version = root.find('version').attrib['number']
             _m.logbook_write("Loading Fare Schema File version %s" %version)
-            print "Loading Fare Schema File version %s" %version
+            print("Loading Fare Schema File version %s" %version)
             
             self.TRACKER.startProcess(nGroups + nZones)
-            with nested (_util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_LINE', description= "Line Group"),
-                         _util.tempExtraAttributeMANAGER(self.BaseScenario, 'NODE', description= "Fare Zone")) \
-                     as (lineGroupAtt, zoneAtt):
-                
+            #with nested (_util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_LINE', description= "Line Group"),
+            #             _util.tempExtraAttributeMANAGER(self.BaseScenario, 'NODE', description= "Fare Zone")) \
+            #         as (lineGroupAtt, zoneAtt):
+            with _util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_LINE', description= "Line Group") as lineGroupAtt, _util.tempExtraAttributeMANAGER(self.BaseScenario, 'NODE', description= "Fare Zone") as zoneAtt:
+                 
                 with _m.logbook_trace("Transit Line Groups"):
                     groupsElement = root.find('groups')
                     groupIds2Int, int2groupIds = self._LoadGroups(groupsElement, lineGroupAtt.id)
-                    print "Loaded groups."
+                    print("Loaded groups.")
                 
                 stationGroupsElement = root.find('station_groups')
                 if stationGroupsElement is not None:
                     with _m.logbook_trace("Station Groups"):
                         stationGroups = self._LoadStationGroups(stationGroupsElement)
-                        print "Loaded station groups"
+                        print("Loaded station groups")
                 
                 zonesElement = root.find('zones')
                 if zonesElement is not None:
                     with _m.logbook_trace("Fare Zones"):
                         zoneId2Int, int2ZoneId, nodeProxies = self._LoadZones(zonesElement, zoneAtt.id)
-                        print "Loaded zones."
+                        print("Loaded zones.")
                 else:
                     zoneId2Int, int2ZoneId, nodeProxies = {}, {}, {}
                 self.TRACKER.completeTask() #Complete the group/zone loading task
@@ -428,19 +431,19 @@ class FBTNFromSchema(_m.Tool()):
                 #Load and prepare the network.
                 self.TRACKER.startProcess(2)
                 network = self.BaseScenario.get_network()
-                print "Loaded network."
+                print("Loaded network.")
                 self.TRACKER.completeSubtask()
                 self._PrepareNetwork(network, nodeProxies, lineGroupAtt.id)
                 self.TRACKER.completeTask()
-                print "Prepared base network."
+                print("Prepared base network.")
             
             #Transform the network
             with _m.logbook_trace("Transforming hyper network"):
                 transferGrid, zoneCrossingGrid = self._TransformNetwork(network, nGroups, nZones)
-                #print transferGrid[0,1]
+                #print(transferGrid[0,1])
                 if nStationGroups > 0:
                     self._IndexStationConnectors(network, transferGrid, stationGroups, groupIds2Int)
-                print "Hyper network generated."            
+                print("Hyper network generated.")
             
             #Apply fare rules to network.
             with _m.logbook_trace("Applying fare rules"):
@@ -451,7 +454,7 @@ class FBTNFromSchema(_m.Tool()):
                 self._CheckForNegativeFares(network)
 
                 self.TRACKER.completeTask()
-                print "Applied fare rules to network."
+                print("Applied fare rules to network.")
             
             #Publish the network
             bank = _MODELLER.emmebank
@@ -463,7 +466,7 @@ class FBTNFromSchema(_m.Tool()):
             newSc.publish_network(network, resolve_attributes= True)
             
             _MODELLER.desktop.refresh_needed(True) #Tell the desktop app that a data refresh is required
-            print "Finished Hyper Network Generation"
+            print("Finished Hyper Network Generation")
 
     ##########################################################################################################     
     
@@ -638,7 +641,7 @@ class FBTNFromSchema(_m.Tool()):
                 raise XmlValidationError("Fare rule type '%s' not recognized." %ruleType)
             
             #Check required children
-            for name, checkFunc in requiredChildren.iteritems():
+            for name, checkFunc in six.iteritems(requiredChildren):
                 child = fareElement.find(name)
                 if child is None:
                     raise XmlValidationError("Fare element #%s of type '%s' must specify a '%s' element" %(i, ruleType, name))
@@ -647,7 +650,7 @@ class FBTNFromSchema(_m.Tool()):
                 checkFunc(text, name)
             
             #Check optional children
-            for name, checkFunc in optionalChildren.iteritems():
+            for name, checkFunc in six.iteritems(optionalChildren):
                 child = fareElement.find(name)
                 if child is None: continue
                 
@@ -687,10 +690,10 @@ class FBTNFromSchema(_m.Tool()):
                 except ModuleError:
                     msg = "Emme runtime error processing line group '%s'." %id
                     _m.logbook_write(msg)
-                    print msg
+                    print(msg)
             
             msg = "Loaded group %s: %s" %(groupNumber, id)
-            print msg
+            print(msg)
             _m.logbook_write(msg)
             
             self.TRACKER.completeSubtask()
@@ -721,7 +724,7 @@ class FBTNFromSchema(_m.Tool()):
                 ids.append(forGroup)
             
             indices, table = self.BaseScenario.get_attribute_values('NODE', [attr])
-            for nodeNumber, index in indices.iteritems():
+            for nodeNumber, index in six.iteritems(indices):
                 value = int(table[index])
                 if value == 0: continue
                 stationGroups[ids[value - 1]].add(nodeNumber)
@@ -763,11 +766,11 @@ class FBTNFromSchema(_m.Tool()):
                 
                 msg = "Loaded zone %s: %s" %(number, id)
                 _m.logbook_write(msg)
-                print msg
+                print(msg)
                 
                 self.TRACKER.completeSubtask()
         finally: #Close the shapefile readers
-            for reader in shapefiles.itervalues():
+            for reader in six.itervalues(shapefiles):
                 reader.close()
         
         return zoneId2Int, int2ZoneId, nodes
@@ -810,7 +813,7 @@ class FBTNFromSchema(_m.Tool()):
         spatialIndex = GridIndex(extents, marginSize= 1.0)
         proxies = {}
         
-        for nodeNumber, index in indices.iteritems():
+        for nodeNumber, index in six.iteritems(indices):
             x = xtable[index]
             y = ytable[index]
             
@@ -843,7 +846,7 @@ class FBTNFromSchema(_m.Tool()):
         
         #Update the list of proxy nodes with the network's newly-loaded zones attribute
         indices, table = self.BaseScenario.get_attribute_values('NODE', [zoneAttributeId])
-        for number, index in indices.iteritems():
+        for number, index in six.iteritems(indices):
             nodes[number].zone = table[index]
     
     def _LoadZoneFromGeometry(self, zoneElement, spatialIndex, shapefiles, number, nodes):
@@ -978,7 +981,7 @@ class FBTNFromSchema(_m.Tool()):
             self._TransformSurfaceNode(node, transferGrid, transferMode)
             self.TRACKER.completeSubtask()
         
-        print "Processed surface nodes"
+        print("Processed surface nodes")
         totalNodes1 = network.element_totals['regular_nodes']
         totalLinks1 = network.element_totals['links']
         _m.logbook_write("Created %s virtual road nodes." %(totalNodes1 - totalNodes0))
@@ -988,7 +991,7 @@ class FBTNFromSchema(_m.Tool()):
             self._TransformStationNode(node, transferGrid, transferMode)
             self.TRACKER.completeSubtask()
         
-        print "Processed station nodes"
+        print("Processed station nodes")
         totalNodes2 = network.element_totals['regular_nodes']
         totalLinks2 = network.element_totals['links']
         _m.logbook_write("Created %s virtual transit nodes." %(totalNodes2 - totalNodes1))
@@ -1001,7 +1004,7 @@ class FBTNFromSchema(_m.Tool()):
             self._ConnectSurfaceOrStationNode(node, transferGrid)
             self.TRACKER.completeSubtask()
         
-        print "Connected surface and station nodes"
+        print("Connected surface and station nodes")
         totalLinks3 = network.element_totals['links']
         _m.logbook_write("Created %s road-to-transit connector links" %(totalLinks3 - totalLinks2))
         
@@ -1016,7 +1019,7 @@ class FBTNFromSchema(_m.Tool()):
             self._ProcessTransitLine(lineId, network, zoneCrossingGrid, saveFunction)
             self.TRACKER.completeSubtask()
         
-        print "Processed transit lines"
+        print("Processed transit lines")
         totalLinks4 = network.element_totals['links']
         _m.logbook_write("Created %s in-line virtual links" %(totalLinks4 - totalLinks3))
         
@@ -1269,8 +1272,8 @@ class FBTNFromSchema(_m.Tool()):
         _editing.changeTransitLineId(newLine, lineId)
     
     def _IndexStationConnectors(self, network, transferGrid, stationGroups, groupIds2Int):
-        print "Indexing station connectors"        
-        for lineGroupId, stationCentroids in stationGroups.iteritems():
+        print("Indexing station connectors")
+        for lineGroupId, stationCentroids in six.iteritems(stationGroups):
             idx = groupIds2Int[lineGroupId]
             
             for nodeId in stationCentroids:
@@ -1283,7 +1286,7 @@ class FBTNFromSchema(_m.Tool()):
                 for link in centroid.incoming_links():
                     if idx in link.i_node.stopping_groups:
                         transferGrid[idx, 0].add(link)
-            print "Indexed connectors for group %s" %lineGroupId
+            print("Indexed connectors for group %s" %lineGroupId)
                 
     
     #---              
@@ -1480,7 +1483,7 @@ class FBTNFromSchema(_m.Tool()):
         
         
         if (len(negativeLinks) + len(negativeSegments)) > 0:
-            print "WARNING: Found %s links and %s segments with negative fares" %(len(negativeLinks), len(negativeSegments))
+            print("WARNING: Found %s links and %s segments with negative fares" %(len(negativeLinks), len(negativeSegments)))
             
             pb = _m.PageBuilder(title="Negative Fares Report")
             h = HTML()
@@ -1511,7 +1514,7 @@ class FBTNFromSchema(_m.Tool()):
     #---              
     #---MODELLER INTERFACE FUNCTIONS----------------------------------------------------------------------      
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_auxtr_modes(self):
         options = []
         h = HTML()
@@ -1520,7 +1523,7 @@ class FBTNFromSchema(_m.Tool()):
             options.append(str(h.option(text, value= id)))
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_scenario_link_attributes(self):
         options = []
         h = HTML()
@@ -1529,8 +1532,8 @@ class FBTNFromSchema(_m.Tool()):
             text = "%s - %s" %(exatt.name, exatt.description)
             options.append(str(h.option(text, value= exatt.name)))
         return "\n".join(options)
-
-    @_m.method(return_type=unicode)
+    
+    @_m.method(return_type=six.u)
     def preload_scenario_segment_attributes(self):
         options = []
         h = HTML()
@@ -1543,8 +1546,8 @@ class FBTNFromSchema(_m.Tool()):
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
-                
-    @_m.method(return_type=unicode)
+    
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
