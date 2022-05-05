@@ -319,7 +319,7 @@ class ExportScreenlineResults(_m.Tool()):
         linkAttributes = _util.fastLoadLinkAttributes(self.Scenario, atts)
         
         counts = {}
-        for attributes in linkAttributes.itervalues():
+        for attributes in six.itervalues(linkAttributes):
             volau = attributes['auto_volume']
             volad = attributes['additional_volume']
             
