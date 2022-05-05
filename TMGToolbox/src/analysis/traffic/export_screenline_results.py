@@ -194,7 +194,7 @@ class ExportScreenlineResults(_m.Tool()):
         if self.AlternateFlagAttribute: atts.append(self.AlternateFlagAttribute)
         
         countposts = set()
-        for linkId, attributes in _util.fastLoadLinkAttributes(self.Scenario, atts).iteritems():
+        for linkId, attributes in six.iteritems(_util.fastLoadLinkAttributes(self.Scenario, atts)):
             post1 = attributes[self.CountpostFlagAttribute]
             post2 = 0
             if self.AlternateFlagAttribute: post2 = attributes[self.AlternateFlagAttribute]
@@ -219,7 +219,7 @@ class ExportScreenlineResults(_m.Tool()):
             except Exception as e:
                 return "Error while parsing screenline defintion file: %s" %e
                     
-        for screenlineID, stations in screenlines.iteritems():
+        for screenlineID, stations in six.iteritems(screenlines):
             nStations = len(stations)
             nMissing = 0
             for station in stations:
@@ -347,7 +347,7 @@ class ExportScreenlineResults(_m.Tool()):
         with open(self.ExportFile, 'w') as writer:
             writer.write("Screenline,nStations,nMissing,AutoVolume,AdditionalVolume")
             
-            orderedLines = [item for item in screenlines.iteritems()]
+            orderedLines = [item for item in six.iteritems(screenlines)]
             orderedLines.sort()
             
             for screenlineID, stations in orderedLines:
