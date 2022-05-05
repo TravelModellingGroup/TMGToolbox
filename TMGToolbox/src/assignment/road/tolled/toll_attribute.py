@@ -67,11 +67,15 @@ import inro.modeller as _m
 import traceback as _traceback
 import multiprocessing
 from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 EMME_VERSION = _util.getEmmeVersion(float)
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -338,7 +342,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, TimesMatrixId, CostMatrixId, TollsMatrixId,
                  PeakHourFactor, LinkCost, TollCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
                  RunTitle, LinkTollAttributeId, SOLAFlag):
-        print "STARTING"
+        print("STARTING")
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario is None):
@@ -378,7 +382,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         try:
             with manager as self.DemandMatrix:
                 
-                print "Running Auto Assignment"
+                print("Running Auto Assignment")
                 self._execute()
         except Exception as e:
             raise Exception(_util.formatReverseStack())
@@ -391,7 +395,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         with _m.logbook_trace(name="%s (%s v%s)" %(self.RunTitle, self.__class__.__name__, self.version),
                                      attributes=self._getAtts()):
             
-            print "Starting Road Assignment"
+            print("Starting Road Assignment")
             self._tracker.reset()
             
             if EMME_VERSION < 4:
@@ -427,7 +431,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                     self._tracker.completeTask()
                     
                     with _m.logbook_trace("Running primary road assignment."):
-                        print "Running primary road assignment"
+                        print("Running primary road assignment")
                         
                         if self.SOLAFlag:
                             spec = self._getPrimarySOLASpec(peakHourMatrix.id, appliedTollFactor)
@@ -456,15 +460,15 @@ class TollBasedRoadAssignment(_m.Tool()):
                         else:
                             val = 'undefined'
                         
-                        print "Primary assignment complete at %s iterations" %number
-                        print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
+                        print("Primary assignment complete at %s iterations" %number)
+                        print("Stopping criterion was %s with a value of %s." %(stoppingCriterion, val))
                     
                     self._tracker.startProcess(3)
                     with self._AoNScenarioMANAGER() as allOrNothingScenario:
                         self._tracker.completeSubtask
                         
                         with _m.logbook_trace("All or nothing assignment to recover costs:"):
-                            print "Running all-or-nothing assignment to recover costs."
+                            print("Running all-or-nothing assignment to recover costs.")
                             
                             with _m.logbook_trace("Copying auto times into UL2"):
                                 networkCalculationTool(self._getSaveAutoTimesSpec(), scenario=allOrNothingScenario)
@@ -485,7 +489,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                 
                                 self._tracker.runTool(trafficAssignmentTool,
                                                       spec, scenario= allOrNothingScenario)
-        print "Road Assignment complete."
+        print("Road Assignment complete.")
                                  
 
     ##########################################################################################################
@@ -904,11 +908,11 @@ class TollBasedRoadAssignment(_m.Tool()):
     def percent_completed(self):
         return self._tracker.getProgress()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def _GetSelectAttributeOptionsHTML(self):
         list = []
         

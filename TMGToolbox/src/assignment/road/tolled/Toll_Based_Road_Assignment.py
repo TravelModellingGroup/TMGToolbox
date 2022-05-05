@@ -62,12 +62,15 @@ import inro.modeller as _m
 import traceback as _traceback
 import multiprocessing
 from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(float)
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -360,7 +363,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         with _m.logbook_trace(name="%s (%s v%s)" %(self.RunTitle, self.__class__.__name__, self.version),
                                      attributes=self._getAtts()):
             
-            print "Starting Road Assignment"
+            print("Starting Road Assignment")
             self._tracker.reset()
             
             if EMME_VERSION < 4:
@@ -380,8 +383,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             self._initOutputMatrices()
             self._tracker.completeSubtask()
             
-            with nested(self._costAttributeMANAGER(), self._tollAttributeMANAGER())\
-                    as (costAttribute, tollAttribute): 
+            with self._costAttributeMANAGER() as costAttribute, self._tollAttributeMANAGER() as tollAttribute: 
                 with _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix:
                     
                     with _m.logbook_trace("Calculating link costs"):
@@ -406,7 +408,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                     self._tracker.completeTask()
                     
                     with _m.logbook_trace("Running primary road assignment."):
-                        print "Running primary road assignment"
+                        print("Running primary road assignment")
                         
                         if self.SOLAFlag:
                             spec = self._getPrimarySOLASpec(peakHourMatrix.id, tollAttribute.id, appliedTollFactor)
@@ -435,15 +437,15 @@ class TollBasedRoadAssignment(_m.Tool()):
                         else:
                             val = 'undefined'
                         
-                        print "Primary assignment complete at %s iterations" %number
-                        print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
+                        print("Primary assignment complete at %s iterations" %number)
+                        print("Stopping criterion was %s with a value of %s." %(stoppingCriterion, val))
                     
                     self._tracker.startProcess(3)
                     with self._AoNScenarioMANAGER() as allOrNothingScenario:
                         self._tracker.completeSubtask
                         
                         with _m.logbook_trace("All or nothing assignment to recover costs:"):
-                            print "Running all-or-nothing assignment to recover costs."
+                            print("Running all-or-nothing assignment to recover costs.")
                             
                             with _m.logbook_trace("Copying auto times into UL2"):
                                 networkCalculationTool(self._getSaveAutoTimesSpec(), scenario=allOrNothingScenario)
@@ -464,7 +466,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                                 
                                 self._tracker.runTool(trafficAssignmentTool,
                                                       spec, scenario= allOrNothingScenario)
-        print "Road Assignment complete."
+        print("Road Assignment complete.")
 
     ##########################################################################################################
 
@@ -929,7 +931,7 @@ class TollBasedRoadAssignment(_m.Tool()):
     def percent_completed(self):
         return self._tracker.getProgress()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
