@@ -88,11 +88,16 @@ import inro.modeller as _m
 import traceback as _traceback
 import multiprocessing
 from contextlib import contextmanager
-from contextlib import nested
+#from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 EMME_VERSION = _util.getEmmeVersion(tuple)
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -225,7 +230,7 @@ class TollBasedRoadAssignment(_m.Tool()):
                              allow_none=False)
         
         keyval = {}
-        print self.Scenario.id
+        print(self.Scenario.id)
         for att in self.Scenario.extra_attributes():
             if not att.type == 'LINK': continue
             label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
@@ -539,9 +544,9 @@ class TollBasedRoadAssignment(_m.Tool()):
         #---3. Run
         try:
             with manager as self.DemandMatrix:
-                print "Starting auto assignment."
+                print("Starting auto assignment.")
                 self._execute()
-                print "Road assignment complete."  
+                print("Road assignment complete.")
         except Exception as e:
             raise Exception(_util.formatReverseStack())
     
@@ -555,7 +560,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             
             self._tracker.reset()
             
-            if EMME_VERSION < 4:
+            if EMME_VERSION <= (4,1):
                 matrixCalcTool = _MODELLER.tool("inro.emme.standard.matrix_calculation.matrix_calculator")
                 trafficAssignmentTool = _MODELLER.tool("inro.emme.standard.traffic_assignment.standard_traffic_assignment")
                 networkCalculationTool = _MODELLER.tool("inro.emme.standard.network_calculation.network_calculator")
@@ -572,11 +577,16 @@ class TollBasedRoadAssignment(_m.Tool()):
             self._initOutputMatrices()
             self._tracker.completeSubtask()
             
-            with nested(self._costAttributeMANAGER(),
-                        _util.tempMatrixMANAGER(description="Peak hour matrix"),
-                        self._transitTrafficAttributeMANAGER(),
-                        self._timeAttributeMANAGER()) \
-                    as (costAttribute, peakHourMatrix, bgTransitAttribute, timeAttribute): #bgTransitAttribute is None
+            #with nested(self._costAttributeMANAGER(),
+            #            _util.tempMatrixMANAGER(description="Peak hour matrix"),
+            #            self._transitTrafficAttributeMANAGER(),
+            #            self._timeAttributeMANAGER()) \
+            #        as (costAttribute, peakHourMatrix, bgTransitAttribute, timeAttribute): #bgTransitAttribute is None
+                
+            with self._costAttributeMANAGER() as costAttribute, \
+                    _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix, \
+                     self._transitTrafficAttributeMANAGER() as bgTransitAttribute, \
+                        self._timeAttributeMANAGER() as timeAttribute:  #bgTransitAttribute is None
                 
                 # Only apply the background transit if there are transit lines
                 if self._any_transit_lines():
@@ -627,8 +637,8 @@ class TollBasedRoadAssignment(_m.Tool()):
                     else:
                         val = 'undefined'
                     
-                    print "Primary assignment complete at %s iterations." %number
-                    print "Stopping criterion was %s with a value of %s." %(stoppingCriterion, val)
+                    print("Primary assignment complete at %s iterations." %number)
+                    print("Stopping criterion was %s with a value of %s." %(stoppingCriterion, val))
 
                 self._tracker.startProcess(1)
                 with _m.logbook_trace("Secondary assignment to recover true travel times:"):
@@ -799,7 +809,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             bgTrafficAttribute.initialize(0)
             _m.logbook_write("Initialized existing extra attribute '@tvph' to 0.")
         
-        if EMME_VERSION >= 4:
+        if EMME_VERSION >= (4,1):
             extraParameterTool = _MODELLER.tool('inro.emme.traffic_assignment.set_extra_function_parameters')
         else:
             extraParameterTool = _MODELLER.tool('inro.emme.standard.traffic_assignment.set_extra_function_parameters')
@@ -1505,11 +1515,11 @@ class TollBasedRoadAssignment(_m.Tool()):
     def percent_completed(self):
         return self._tracker.getProgress()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def _GetSelectAttributeOptionsHTML(self):
         list = []
         
@@ -1520,7 +1530,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             list.append(html)
         return "\n".join(list)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def _GetSelectTurnAttributeOptionsHTML(self):
         list = []
         
