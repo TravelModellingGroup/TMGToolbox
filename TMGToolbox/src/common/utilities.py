@@ -422,7 +422,7 @@ def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
     indices = root_data[0]
     values = root_data[1:]
     
-    for lineId, segmentIndices in indices.iteritems():
+    for lineId, segmentIndices in six.iteritems(indices):
         segments = []
         
         for number, dataIndex in enumerate(segmentIndices[1]):
@@ -455,11 +455,11 @@ def fastLoadSummedSegmentAttributes(scenario, list_of_attributes):
    
     major, minor, release, beta = getEmmeVersion(tuple)
     if (major,minor,release) >= (4,1,2):
-        get_iter = lambda segmentIndices: segmentIndices.iteritems()
+        get_iter = lambda segmentIndices: six.iteritems(segmentIndices)
     else:
         get_iter = lambda segmentIndices: itersync(*segmentIndices)
     
-    for lineId, segmentIndices in indices.iteritems():
+    for lineId, segmentIndices in six.iteritems(indices):
         line = {'id': lineId}
         
         for iNode, dataRow in get_iter(segmentIndices):
@@ -497,7 +497,7 @@ def fastLoadTransitLineAttributes(scenario, list_of_attributes):
     indices = root_data[0]
     values = root_data[1:]
     
-    for lineId, dataIndex in indices.iteritems():
+    for lineId, dataIndex in six.iteritems(indices):
         line = {'id': lineId}
         
         for attIndex, attName in enumerate(list_of_attributes):
@@ -529,8 +529,8 @@ def fastLoadLinkAttributes(scenario, list_of_attributes):
     attribute_tables = package[1:]
     
     retval = {}
-    for i_node, outgoing_links in indices.iteritems():
-        for j_node, index in outgoing_links.iteritems():
+    for i_node, outgoing_links in six.iteritems(indices):
+        for j_node, index in six.iteritems(outgoing_links):
             link = i_node, j_node
             attributes = {'i_node': i_node, 'j_node': j_node}
             for att_name, table in itersync(list_of_attributes, attribute_tables):
