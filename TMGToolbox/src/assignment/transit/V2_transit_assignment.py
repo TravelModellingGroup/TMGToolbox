@@ -38,11 +38,14 @@ BASIC TRANSIT ASSIGNMENT
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -349,7 +352,7 @@ class BasicTransitAssignment(_m.Tool()):
     def percent_completed(self):
         return self._tracker.getProgress()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
