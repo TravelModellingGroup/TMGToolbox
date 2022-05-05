@@ -393,14 +393,14 @@ class ExportCountpostResults(_m.Tool()):
         return lines
     
     def _WriteReport(self, lines):
-        with open(self.ExportFile, 'wb') as csv_file:
+        with open(self.ExportFile, 'w') as csv_file:
             writer = csv.writer(csv_file)
             #writer.writerow("Countpost,Link,Auto Volume,Additional Volume,Auto Time")
             #for line in lines:
             #    line = [str(c) for c in line]
             #    writer.writerow(line)'''
             writer.writerow(["Countpost","Auto Volume"])
-            for post in sorted(lines.iterkeys()):
+            for post in sorted(six.iterkeys(lines)):
                 post = int(post)
                 volau = float(lines[post])
                 writer.writerow([post, volau])
