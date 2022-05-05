@@ -343,7 +343,7 @@ class ExportCountpostResults(_m.Tool()):
             if self.SumPostFile is not None:
                 with open(self.SumPostFile) as sumPostFile:
                     reader = csv.reader(sumPostFile)
-                    firstRow = reader.next()
+                    firstRow = six.next(reader)
                     for row in reader:
                         sumPosts.append(int(row[0]))
             if post1:
