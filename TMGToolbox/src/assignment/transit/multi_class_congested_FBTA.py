@@ -34,6 +34,10 @@ strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.str
 matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple)
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class MultiClassTransitAssignment(_m.Tool()):
     version = '1.0.0'
@@ -322,9 +326,9 @@ class MultiClassTransitAssignment(_m.Tool()):
             self.PenaltyMatrixList = xtmf_PenaltyMatrixString.split(',')
         if xtmf_ImpedanceMatrixString:
             self.ImpedanceMatrixList = xtmf_ImpedanceMatrixString.split(',')
-        print 'Running Multi-Class Transit Assignment'
+        print('Running Multi-Class Transit Assignment')
         self._Execute()
-        print 'Done running transit assignment'
+        print('Done running transit assignment')
 
     def _Execute(self):
         with _m.logbook_trace(name='{classname} v{version}'.format(classname=self.__class__.__name__, version=self.version), attributes=self._GetAtts()):
@@ -410,10 +414,10 @@ class MultiClassTransitAssignment(_m.Tool()):
                     index = cleanedExpression.find('*(1+us3)')
                     newExpression = cleanedExpression[:index][1:-1]
                     function.expression = newExpression
-                    print 'Detected function %s with existing congestion term.' % function
-                    print "Original expression= '%s'" % cleanedExpression
-                    print "Healed expression= '%s'" % newExpression
-                    print ''
+                    print('Detected function %s with existing congestion term.' % function)
+                    print("Original expression= '%s'" % cleanedExpression)
+                    print("Healed expression= '%s'" % newExpression)
+                    print('')
                     _m.logbook_write('Detected function %s with existing congestion term.' % function)
                     _m.logbook_write("Original expression= '%s'" % cleanedExpression)
                     _m.logbook_write("Healed expression= '%s'" % newExpression)
@@ -871,7 +875,7 @@ class MultiClassTransitAssignment(_m.Tool()):
     def short_description(self):
         return 'MultiClass transit assignment tool for GTAModel V4'
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_node_attributes(self):
         options = ["<option value='-1'>None</option>"]
         for exatt in self.Scenario.extra_attributes():
@@ -880,7 +884,7 @@ class MultiClassTransitAssignment(_m.Tool()):
 
         return '\n'.join(options)
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_link_attributes(self, include_none = True):
         options = []
         if include_none:
@@ -891,7 +895,7 @@ class MultiClassTransitAssignment(_m.Tool()):
 
         return '\n'.join(options)
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_segment_attribtues(self):
         options = []
         for exatt in self.Scenario.extra_attributes():
@@ -904,6 +908,6 @@ class MultiClassTransitAssignment(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg

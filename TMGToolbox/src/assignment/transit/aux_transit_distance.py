@@ -24,6 +24,11 @@ import inro.modeller as m
 mm = m.Modeller()
 utils = mm.module('tmg.common.utilities')
 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+utils.initalizeModellerTypes(m)
+
 class AuxTransitDistance(m.Tool()):
     tool_run_msg = ""
     AssignmentModes = m.Attribute(m.ListType)
@@ -78,7 +83,7 @@ class AuxTransitDistance(m.Tool()):
         </script>""" % pb.tool_proxy_tag)
         return pb.render()
 
-    @m.method(argument_types=[bool], return_type=unicode)
+    @m.method(argument_types=[bool], return_type=six.u)
     def populate_mode_list(self, as_html=False):
         allowed_modes = []
         for mode in self.Scenario.modes():
@@ -199,7 +204,7 @@ class AuxTransitDistance(m.Tool()):
         if ts.strat_file(self.ClassName) is not None:
             ts.delete_strat_file(self.ClassName)
 
-        print "Running auxiliary-transit-all-way assignment"
+        print("Running auxiliary-transit-all-way assignment")
         mm.tool('inro.emme.transit_assignment.extended_transit_assignment'
                 )(spec, scenario=self.Scenario, add_volumes=False, save_strategies=True, class_name=self.ClassName)
 
@@ -211,7 +216,7 @@ class AuxTransitDistance(m.Tool()):
             },
             "type": "EXTENDED_TRANSIT_MATRIX_RESULTS"
         }
-        print "Extracting distance matrix"
+        print("Extracting distance matrix")
         mm.tool('inro.emme.transit_assignment.extended.matrix_results'
                 )(spec, self.Scenario, self.ClassName, self.NCpus)
 
@@ -219,7 +224,7 @@ class AuxTransitDistance(m.Tool()):
     @m.method(return_type=m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
-
-    @m.method(return_type=unicode)
+    
+    @m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
