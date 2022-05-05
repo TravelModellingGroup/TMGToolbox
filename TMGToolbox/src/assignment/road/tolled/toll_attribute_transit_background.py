@@ -560,7 +560,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             
             self._tracker.reset()
             
-            if EMME_VERSION <= (4,1):
+            if EMME_VERSION <= (4,):
                 matrixCalcTool = _MODELLER.tool("inro.emme.standard.matrix_calculation.matrix_calculator")
                 trafficAssignmentTool = _MODELLER.tool("inro.emme.standard.traffic_assignment.standard_traffic_assignment")
                 networkCalculationTool = _MODELLER.tool("inro.emme.standard.network_calculation.network_calculator")
@@ -576,13 +576,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             
             self._initOutputMatrices()
             self._tracker.completeSubtask()
-            
-            #with nested(self._costAttributeMANAGER(),
-            #            _util.tempMatrixMANAGER(description="Peak hour matrix"),
-            #            self._transitTrafficAttributeMANAGER(),
-            #            self._timeAttributeMANAGER()) \
-            #        as (costAttribute, peakHourMatrix, bgTransitAttribute, timeAttribute): #bgTransitAttribute is None
-                
+
             with self._costAttributeMANAGER() as costAttribute, \
                     _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix, \
                      self._transitTrafficAttributeMANAGER() as bgTransitAttribute, \
@@ -809,7 +803,7 @@ class TollBasedRoadAssignment(_m.Tool()):
             bgTrafficAttribute.initialize(0)
             _m.logbook_write("Initialized existing extra attribute '@tvph' to 0.")
         
-        if EMME_VERSION >= (4,1):
+        if EMME_VERSION >= (4,):
             extraParameterTool = _MODELLER.tool('inro.emme.traffic_assignment.set_extra_function_parameters')
         else:
             extraParameterTool = _MODELLER.tool('inro.emme.standard.traffic_assignment.set_extra_function_parameters')
