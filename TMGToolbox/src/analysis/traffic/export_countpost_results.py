@@ -272,7 +272,7 @@ class ExportCountpostResults(_m.Tool()):
     
     def _CleanResults(self, linkResults, alternateLinkResults):
         idsToRemove = []
-        for linkId, attributes in linkResults.iteritems():
+        for linkId, attributes in six.iteritems(linkResults):
             post1 = attributes[self.CountpostAttributeId]
             post2 = 0
             if linkId in alternateLinkResults:
@@ -288,7 +288,7 @@ class ExportCountpostResults(_m.Tool()):
         
         posts = 0
         self.TRACKER.startProcess(len(linkResults))
-        for linkIdTuple, attributes in linkResults.iteritems():
+        for linkIdTuple, attributes in six.iteritems(linkResults):
             linkId = "%s-%s" %linkIdTuple
 
             post1 = attributes[self.CountpostAttributeId]
