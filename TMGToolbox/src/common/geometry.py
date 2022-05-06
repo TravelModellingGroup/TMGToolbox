@@ -227,7 +227,7 @@ class FloatField():
         self.decimals = decimals
         self.default = default        
         self.type = 'FLOAT'
-    
+        
     def addToDf(self, df):
         df.schema[self.name] = ("float:%s.%s" %(str(self.length), str(self.decimals)))
     
