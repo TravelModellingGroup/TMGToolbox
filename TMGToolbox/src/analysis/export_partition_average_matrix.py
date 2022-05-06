@@ -43,14 +43,17 @@ Export Aggregate Average Matrix by Partition
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -160,12 +163,8 @@ class ExportAggregateAverageMatrix(_m.Tool()):
     def _Execute(self, writeToFile):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-            
-            with nested(_util.tempMatrixMANAGER(), 
-                        _util.tempMatrixMANAGER(),
-                        _util.tempMatrixMANAGER())\
-                    as (denominatorMatrix, adjustedDemandMatrix, finalAggregateMatrix):
-                
+
+            with _util.tempMatrixMANAGER() as denominatorMatrix, _util.tempMatrixMANAGER() as adjustedDemandMatrix, _util.tempMatrixMANAGER() as finalAggregateMatrix:
                 try:
                     partitionAggTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_partition_aggregation')
                     matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
@@ -334,7 +333,7 @@ class ExportAggregateAverageMatrix(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

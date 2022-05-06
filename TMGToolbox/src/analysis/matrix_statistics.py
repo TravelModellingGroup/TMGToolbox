@@ -44,8 +44,6 @@ Export Matrix Summary
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from numpy import average, histogram, array, min, max, std, median
 from math import sqrt
 from inro.emme.matrix import submatrix as get_submatrix
@@ -54,6 +52,10 @@ from os import path
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -240,7 +242,7 @@ class MatrixSummary(_m.Tool()):
             else:
                 valueData = self.ValueMatrix.get_data()
             self.TRACKER.completeTask() #1
-            
+            _m.logbook_write("checking the errors")
             validIndices = [[p for p in valueData.indices[0] if originFilter(p)],
                             [q for q in valueData.indices[1] if destinationFilter(q)]]
             self.TRACKER.completeTask() #2
@@ -304,28 +306,28 @@ class MatrixSummary(_m.Tool()):
                                             unweightedMedian, unweightedHistogram, 
                                             bins, weightedAverage, weightedStdDev, 
                                             weightedHistogram)
-                    print "Report written to %s" %self.ReportFile
+                    print("Report written to %s" %self.ReportFile)
                 
                 self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
                                            unweightedMedian, unweightedHistogram, bins, 
                                            weightedAverage, weightedStdDev, weightedHistogram)
-                print "Report written to logbook."
+                print("Report written to logbook.")
                 
             elif self.ReportFile:
                 for i in range(3): self.TRACKER.completeTask()
                 self._WriteReportToFile(unweightedAverage, minVal, 
                                         maxVal, unweightedStdDev, unweightedMedian, 
                                         unweightedHistogram, bins)
-                print "Report written to %s" %self.ReportFile
+                print("Report written to %s" %self.ReportFile)
                 
                 self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
                                            unweightedMedian, unweightedHistogram, bins)
-                print "Report written to logbook."
+                print("Report written to logbook.")
                 
             else:
                 self._WriteReportToLogbook(unweightedAverage, minVal, maxVal, unweightedStdDev, 
                                            unweightedMedian, unweightedHistogram, bins)
-                print "Report written to logbook."
+                print("Report written to logbook.")
             
             
             
@@ -462,7 +464,7 @@ class MatrixSummary(_m.Tool()):
                                     }
                           })
         except Exception as e:
-            print cds
+            print(cds)
             raise
         
         _m.logbook_write("Matrix Summary Report for %s" %self.ValueMatrix,
@@ -540,7 +542,7 @@ BinMin,BinMax,Freq''')
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
