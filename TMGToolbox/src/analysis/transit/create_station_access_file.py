@@ -47,13 +47,16 @@ GET STATION ACCESS FILE
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 from os import path as _path
 from math import sqrt
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _spindex = _MODELLER.module('tmg.common.spatial_index')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -192,8 +195,7 @@ class GetStationAccessFile(_m.Tool()):
                     self._FlagTransitStops(network)
                     subwayStations, goStations = self._GetNodeSet(network)
                     
-                with nested(_m.logbook_trace("Performing search"),
-                            open(self.ExportFile, 'w')) as (log, writer):
+                with _m.logbook_trace("Performing search") as log, open(self.ExportFile, 'w') as writer:
                     
                     #Prepare the search grid
                     extents = _spindex.get_network_extents(network)
@@ -332,7 +334,7 @@ class GetStationAccessFile(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
