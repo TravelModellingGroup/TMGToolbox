@@ -41,8 +41,6 @@ import inro.modeller as _m
 import traceback as _traceback
 import csv
 from re import split as _regex_split
-from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _spindex = _MODELLER.module('tmg.common.spatial_index')
@@ -50,6 +48,11 @@ _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 networkCalcTool = _MODELLER.tool('inro.emme.network_calculation.network_calculator')
 pathAnalysis = _m.Modeller().tool("inro.emme.transit_assignment.extended.path_based_analysis")
 EMME_VERSION = _util.getEmmeVersion(tuple)
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -238,11 +241,7 @@ class ExtractLinkTransfers(_m.Tool()):
 							if linkString not in fullLinkSet:
 								fullLinkSet.append(linkString)
 
-				with nested(_util.tempExtraAttributeMANAGER(self.BaseScenario, 'LINK', description= 'Link Flag'),
-							_util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_LINE', description= 'Line Flag'),
-							_util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_SEGMENT', description= 'Transit Volumes')) \
-							as (linkMarkerAtt, lineMarkerAtt, segVol):
-
+				with _util.tempExtraAttributeMANAGER(self.BaseScenario, 'LINK', description= 'Link Flag') as linkMarkerAtt, _util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_LINE', description= 'Line Flag') as lineMarkerAtt, _util.tempExtraAttributeMANAGER(self.BaseScenario, 'TRANSIT_SEGMENT', description= 'Transit Volumes') as segVol:
 					
 					networkCalcTool(self._MarkLinks(fullLinkSet, linkMarkerAtt.id), scenario=self.BaseScenario)
 					print ('Finished marking links for %s' %fullLinkSet[0])
@@ -264,7 +263,7 @@ class ExtractLinkTransfers(_m.Tool()):
 							linkSum += s[segVol.id]
 					linkSum /= self.PeakHourFactor
 					results.append([fullLinkSet[0],linkSum]) #add label and sum
-					print ('Results calculated for %s' %fullLinkSet[0])
+					print('Results calculated for %s' %fullLinkSet[0])
 
 
 			self._WriteResultsToFile(results)
@@ -410,7 +409,7 @@ class ExtractLinkTransfers(_m.Tool()):
 	def percent_completed(self):
 		return self.TRACKER.getProgress()
 				
-	@_m.method(return_type=unicode)
+	@_m.method(return_type=six.u)
 	def tool_run_msg_status(self):
 		return self.tool_run_msg
 
