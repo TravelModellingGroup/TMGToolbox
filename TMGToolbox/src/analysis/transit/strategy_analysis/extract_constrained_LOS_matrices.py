@@ -37,7 +37,6 @@ Analysis Tool for Extracting Travel Time Matrices, constrained by transit feasib
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 from datetime import datetime as _dt
 from multiprocessing import cpu_count
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
@@ -45,6 +44,10 @@ _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class ExtractConstrainedLOSMatrices(_m.Tool()):
     
@@ -90,8 +93,8 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
         self.WaitTimeCutoff = 40
         self.TotalTimeCutoff = 150
         self.RunTitle = ""
-
         self.NumberOfProcessors = cpu_count()
+        self.modeller_ModeList = []
             
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="Extract Constrained LOS Matrices",
@@ -182,7 +185,7 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
         self.tool_run_msg = ""
         
         # Convert the list of mode objects to a list of mode characters
-        modes = [m.id for m in modeller_ModeList]
+        modes = [m.id for m in self.modeller_ModeList]
         
         # Run the tool
         try:
@@ -198,12 +201,14 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                  WalkTimeCutoff, WaitTimeCutoff, TotalTimeCutoff,
                  InVehicleTimeMatrixId, CostMatrixId,
                  WalkTimeMatrixId, WaitTimeMatrixId, BoardingTimeMatrixId,
-                 FarePerception, RunTitle):
+                 FarePerception, RunTitle, modeller_ModeList):
         
         #---1 Set up scenario
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
+        
+        self.modeller_ModeList = modeller_ModeList
         
         #---2 Pass in remaining args
         self.RunTitle = RunTitle[:25]
@@ -232,10 +237,8 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
             
             self._assignmentCheck()
             
-            with nested(_util.tempMatrixMANAGER(description="Feasibility matrix"), #Create three temporary matrix managers
-                        _util.tempMatrixMANAGER(description="Line fares matrix"),
-                        _util.tempMatrixMANAGER(description="Access fares matrix"))\
-                    as (feasibilityMatrix, lineFaresMatrix, accessFaresMatrix):
+            #Create three temporary matrix managers
+            with _util.tempMatrixMANAGER(description="Feasibility matrix") as feasibilityMatrix, _util.tempMatrixMANAGER(description="Line fares matrix") as lineFaresMatrix, _util.tempMatrixMANAGER(description="Access fares matrix") as accessFaresMatrix:
                 
                 self.TRACKER.completeTask()
                 
@@ -538,7 +541,7 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
    
