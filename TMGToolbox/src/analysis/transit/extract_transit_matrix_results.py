@@ -20,7 +20,6 @@ import traceback as _traceback
 import time as _time
 import math
 from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 from re import split as _regex_split
 from json import loads as _parsedict
@@ -36,6 +35,10 @@ matrixResultsTool = _MODELLER.tool('inro.emme.transit_assignment.extended.matrix
 matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple)
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class ExtractTransitMatrixResults(_m.Tool()):
     
@@ -132,7 +135,7 @@ class ExtractTransitMatrixResults(_m.Tool()):
     def _Execute(self):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-            print "Extracting Transit Result Matrices"
+            print("Extracting Transit Result Matrices")
             if not self.scenario.has_transit_results:
                 raise Exception("Scenario %s has no transit results" %self.scenario)
 
@@ -158,7 +161,7 @@ class ExtractTransitMatrixResults(_m.Tool()):
                         }
                     report = self.TRACKER.runTool(matrixCalcTool, specification = spec, scenario = self.scenario)
 
-            print "Finished Extracting Transit Result Matrices"
+            print("Finished Extracting Transit Result Matrices")
 
     ##########################################################################################################
     
