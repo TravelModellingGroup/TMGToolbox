@@ -44,13 +44,16 @@ EXTRACT SELECT LINE COMPONENT MATRICES
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -258,11 +261,11 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                 matrixAnalysisTool = _m.Modeller().tool('inro.emme.standard.transit_assignment.extended.matrix_results')
                 matrixCalcTool = _m.Modeller().tool('inro.emme.standard.matrix_calculation.matrix_calculator')
             
-            with nested(_util.tempMatrixMANAGER(description="Select-line matrix"), #Create four temporary matrix managers
-                        _util.tempMatrixMANAGER(description="Line fares matrix"),
-                        _util.tempMatrixMANAGER(description="Access fares matrix"),
-                        _util.tempMatrixMANAGER(description="Feasibility matrix"))\
-                    as (self._selectLineMatrix, self.lineFaresMatrix, self.accessFaresMatrix, self.feasibilityMatrix):
+            #Create four temporary matrix managers
+            with _util.tempMatrixMANAGER(description="Select-line matrix") as self._selectLineMatrix,\
+                        _util.tempMatrixMANAGER(description="Line fares matrix") as self.lineFaresMatrix,\
+                        _util.tempMatrixMANAGER(description="Access fares matrix") as self.accessFaresMatrix,\
+                        _util.tempMatrixMANAGER(description="Feasibility matrix") as self.feasibilityMatrix:
                 
                 with _m.logbook_trace("Extracting select-line matrix:"):
                     strategyAnalysisTool(self._getSelectLineAnalysisSpec(), self.scenario)
@@ -607,6 +610,6 @@ class ExtractSelectLineTimesAndCosts(_m.Tool()):
                 }
         return spec
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg    
