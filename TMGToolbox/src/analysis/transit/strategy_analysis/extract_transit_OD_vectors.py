@@ -43,8 +43,6 @@ import inro.modeller as _m
 import inro.emme.matrix as _matrix
 import traceback as _traceback
 import numpy as np
-from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 from json import loads as _parsedict
 from os.path import dirname
@@ -60,6 +58,11 @@ matrixAgg = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_aggregation"
 matrixCopy = _m.Modeller().tool("inro.emme.data.matrix.copy_matrix")
 matrixCalc = _m.Modeller().tool("inro.emme.matrix_calculation.matrix_calculator")
 EMME_VERSION = _util.getEmmeVersion(tuple)
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -224,21 +227,19 @@ class ExtractTransitODVectors(_m.Tool()):
                 self.ZoneCentroidRangeSplit = [int(self.ZoneCentroidRangeSplit[0]),int(self.ZoneCentroidRangeSplit[0])]
             if len(self.AccessStationRangeSplit) == 1:
                 self.AccessStationRangeSplit = [int(self.AccessStationRangeSplit[0]),int(self.AccessStationRangeSplit[0])]
-            with nested(_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= 'Line Flag'),
-                        _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes'),
-                        _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes'),
-                        _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes'),
-                        _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes'),
-                        _util.tempMatrixMANAGER(description="Origin Probabilities", matrix_type='FULL'),              
-                        _util.tempMatrixMANAGER(description="Destinations Probabilities", matrix_type='FULL'),
-                        _util.tempMatrixMANAGER(description="DAT Origin Aggregation", matrix_type='ORIGIN'),
-                        _util.tempMatrixMANAGER(description="DAT Destination Aggregation", matrix_type='DESTINATION'),
-                        _util.tempMatrixMANAGER(description="Full Auto Origin Matrix", matrix_type='FULL'),
-                        _util.tempMatrixMANAGER(description="Full Auto Destination Matrix", matrix_type='FULL'),
-                        _util.tempMatrixMANAGER(description="Temp DAT Demand", matrix_type='FULL'),              
-                        _util.tempMatrixMANAGER(description="Temp DAT Demand Secondary", matrix_type='FULL')) \
-                    as (lineFlag, auxTransitVolumes, transitVolumes, auxTransitVolumesSecondary, transitVolumesSecondary, origProbMatrix,  
-                        destProbMatrix, tempDatOrig, tempDatDest,autoOrigMatrix, autoDestMatrix, tempDatDemand, tempDatDemandSecondary): 
+            with _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= 'Line Flag') as lineFlag, \
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes') as auxTransitVolumes, \
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes') as transitVolumes, \
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK', description= 'Flagged Line Aux Tr Volumes') as auxTransitVolumesSecondary, \
+                        _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_SEGMENT', description= 'Flagged Line Tr Volumes') as transitVolumesSecondary, \
+                        _util.tempMatrixMANAGER(description="Origin Probabilities", matrix_type='FULL') as origProbMatrix,\
+                        _util.tempMatrixMANAGER(description="Destinations Probabilities", matrix_type='FULL') as destProbMatrix, \
+                        _util.tempMatrixMANAGER(description="DAT Origin Aggregation", matrix_type='ORIGIN') as tempDatOrig, \
+                        _util.tempMatrixMANAGER(description="DAT Destination Aggregation", matrix_type='DESTINATION') as tempDatDest, \
+                        _util.tempMatrixMANAGER(description="Full Auto Origin Matrix", matrix_type='FULL') as autoOrigMatrix, \
+                        _util.tempMatrixMANAGER(description="Full Auto Destination Matrix", matrix_type='FULL') as autoDestMatrix, \
+                        _util.tempMatrixMANAGER(description="Temp DAT Demand", matrix_type='FULL') as tempDatDemand, \
+                        _util.tempMatrixMANAGER(description="Temp DAT Demand Secondary", matrix_type='FULL') as tempDatDemandSecondary: 
                 demandMatrixId = _util.DetermineAnalyzedTransitDemandId(EMME_VERSION, self.Scenario)
                 configPath = dirname(_MODELLER.desktop.project_file_name()) + "/Database/STRATS_s%s/config" %self.Scenario.id 
                 with open(configPath) as reader:
@@ -530,7 +531,7 @@ class ExtractTransitODVectors(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
