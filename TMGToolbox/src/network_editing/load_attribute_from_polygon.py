@@ -345,13 +345,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
         
         self.TRACKER.startProcess(len(elements))
         for element in elements:
-            if str(element) == '13375':
-                print("Node 13375")
-                p = _geolib.Point(element.x, element.y)
-                p['NODE'] = element
-                grid.insertPoint(p)
-            else:
-                self.__ELEMENT_INSERTERS[exatt.type](element, grid)
+            self.__ELEMENT_INSERTERS[exatt.type](element, grid)
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
         print("Indexed %s network elements" %len(elements))
@@ -392,9 +386,6 @@ class LoadAttributeFromPolygon(_m.Tool()):
             intersection_method = getattr(polygon, self.IntersectionOption)
             
             value = polygon[self.ShapefileFieldIdToLoad]
-            
-            if value == 325.0:
-                print("Zone 325")
             
             for element_geometry in grid.queryPolygon(polygon):
                 if intersection_method(element_geometry):
