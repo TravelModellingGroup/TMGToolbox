@@ -33,10 +33,14 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import nested
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class ValidateConnectors(_m.Tool()):
 
@@ -116,7 +120,7 @@ class ValidateConnectors(_m.Tool()):
 
         return pb.render()
 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
@@ -142,9 +146,8 @@ class ValidateConnectors(_m.Tool()):
             if not self.criteria or not self.intCutoff or not self.FlagAttribute:
                 raise Exception ("Criteria, cutoff value and/or flag attribute not specified")
 
-            with nested(_util.tempExtraAttributeMANAGER(self.Scenario, 'NODE'), _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK'))\
-             as (selectZone, excludeLink):
-
+            with _util.tempExtraAttributeMANAGER(self.Scenario, 'NODE') as selectZone, \
+                _util.tempExtraAttributeMANAGER(self.Scenario, 'LINK') as excludeLink:
                     self._applyInfeasibleLinkFilter(excludeLink.id)
                     self._applyZoneFilter(selectZone.id) 
                     network = self.Scenario.get_network()
@@ -178,7 +181,7 @@ class ValidateConnectors(_m.Tool()):
                                 for second_link in connector.j_node.outgoing_links():
                                     if second_link[excludeLink.id] == 0:
                                         second_node = second_link.j_node
-                                        if second_node <> node:
+                                        if second_node != node:
                                             if second_node.is_centroid == False:
                                                 degree += 1
                                             else:
