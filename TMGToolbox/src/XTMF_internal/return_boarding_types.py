@@ -37,12 +37,13 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from HTMLParser import HTMLParser
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -140,12 +141,8 @@ class ReturnBoardingTypesByLineGroup(_m.Tool()):
                 lineTypes = self._GetLineTypes(scenario, lineTypeAttribute.id)
                 self.TRACKER.completeTask()
             
-            with nested(_util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT'),
-                        _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT')) \
-                    as (iBoardAttribiute, tBoardAttribute):
-                
+            with _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT') as iBoardAttribiute, _util.tempExtraAttributeMANAGER(scenario, 'TRANSIT_SEGMENT') as tBoardAttribute:
                 self._ApplyAnalysis(scenario, iBoardAttribiute.id, tBoardAttribute.id)
-                
                 lineBoardings = self._GetLineResults(scenario, iBoardAttribiute.id, tBoardAttribute.id)
             
         groupResults = {}
@@ -248,7 +245,7 @@ class ReturnBoardingTypesByLineGroup(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
             
