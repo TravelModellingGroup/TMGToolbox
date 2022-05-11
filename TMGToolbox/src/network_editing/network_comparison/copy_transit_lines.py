@@ -47,17 +47,8 @@ import inro.modeller as _m
 from inro.emme.database.emmebank import Emmebank
 
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from math import pow, sqrt
 from collections import namedtuple
-from html import HTML
-
-import six
-if six.PY3:
-    _m.InstanceType = object
-    _m.TupleType = object
-    _m.ListType = object
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _building = _MODELLER.module('inro.emme.utility.transit_line_build_utilities')
@@ -69,6 +60,12 @@ _spindex = _MODELLER.module('tmg.common.spatial_index')
 
 ShapefileWriter = _geolib.Shapely2ESRI
 NullPointerException = _util.NullPointerException
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
+from six.moves import html_parser
 
 ##########################################################################################################
 
