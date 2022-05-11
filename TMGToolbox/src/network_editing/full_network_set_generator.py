@@ -54,11 +54,6 @@ import inro.modeller as _m
 import traceback as _traceback
 import os
 from re import split as _regex_split
-import six
-if six.PY3:
-    _m.InstanceType = object
-    _m.TupleType = object
-    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -69,6 +64,11 @@ prorateTransitSpeed = _MODELLER.tool('tmg.network_editing.prorate_transit_speed'
 createTimePeriod = _MODELLER.tool('tmg.network_editing.time_of_day_changes.create_transit_time_period')
 applyNetUpdate = _MODELLER.tool('tmg.input_output.import_network_update')
 lineEdit = _MODELLER.tool('tmg.XTMF_internal.apply_batch_line_edits')
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 class FullNetworkSetGenerator(_m.Tool()):

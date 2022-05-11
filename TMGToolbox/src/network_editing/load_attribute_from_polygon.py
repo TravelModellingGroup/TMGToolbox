@@ -38,8 +38,6 @@ Load Attribute From Shapefile
 
 
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 from shapely.validation import explain_validity
 
 import inro.modeller as _m
@@ -49,6 +47,10 @@ _geolib = _MODELLER.module('tmg.common.geometry')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _spindex = _MODELLER.module('tmg.common.spatial_index')
 Shapely2ESRI = _geolib.Shapely2ESRI
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -230,7 +232,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
         
         return pb.render()
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_fields(self):
         options = []
         self.__loadedFields = []
@@ -253,7 +255,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
                 
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_attributes(self):
         options = []
         for exatt in self.Scenario.extra_attributes():
@@ -275,7 +277,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
     def is_shapefile_loaded(self):
         return bool(self.__loadedFields)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
@@ -303,14 +305,14 @@ class LoadAttributeFromPolygon(_m.Tool()):
                                      attributes=self._GetAtts()):
             
             polygons = self._LoadPolygons()
-            print "Loaded polygons"
+            print("Loaded polygons")
             
             if self.InitializeAttribute:
                 self.Scenario.extra_attribute(self.EmmeAttributeIdToLoad).initialize()
             
             network = self.Scenario.get_network()
             self.TRACKER.completeTask()
-            print "Loaded network."
+            print("Loaded network.")
             
             grid = self._SetupSpatialIndex(network)
             
@@ -337,14 +339,14 @@ class LoadAttributeFromPolygon(_m.Tool()):
         elements = self.__ELEMENT_LOADERS[exatt.type](network)
         
         extents = _spindex.get_network_extents(network)
-        print "Determined network extents"
+        print("Determined network extents")
         
         grid = _spindex.GridIndex(extents, 200, 200)
         
         self.TRACKER.startProcess(len(elements))
         for element in elements:
             if str(element) == '13375':
-                print "Node 13375"
+                print("Node 13375")
                 p = _geolib.Point(element.x, element.y)
                 p['NODE'] = element
                 grid.insertPoint(p)
@@ -352,7 +354,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
                 self.__ELEMENT_INSERTERS[exatt.type](element, grid)
             self.TRACKER.completeSubtask()
         self.TRACKER.completeTask()
-        print "Indexed %s network elements" %len(elements)
+        print("Indexed %s network elements" %len(elements))
         
         return grid
     
@@ -392,7 +394,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
             value = polygon[self.ShapefileFieldIdToLoad]
             
             if value == 325.0:
-                print "Zone 325"
+                print("Zone 325")
             
             for element_geometry in grid.queryPolygon(polygon):
                 if intersection_method(element_geometry):

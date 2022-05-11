@@ -38,15 +38,15 @@
 '''
 
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from html import HTML
-
 import inro.modeller as _m
-
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
+from six.moves import html_parser
 
 ##########################################################################################################
 
@@ -112,7 +112,7 @@ class ReverseTransitLines(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
@@ -129,13 +129,13 @@ class ReverseTransitLines(_m.Tool()):
                 self._FlagLines(lineFlagAttribute.id)
                 
                 network = self.Scenario.get_network()
-                print "Loaded network"
+                print("Loaded network")
                 
                 linesToReverse = [line for line in network.transit_lines() if line[lineFlagAttribute.id]]
                 if len(linesToReverse) == 0:
                     _m.logbook_write("Found no lines to reverse")
                     return
-                print "Found %s lines to reverse" %len(linesToReverse)
+                print("Found %s lines to reverse" %len(linesToReverse))
                 
                 self._ReverseLines(linesToReverse)
             

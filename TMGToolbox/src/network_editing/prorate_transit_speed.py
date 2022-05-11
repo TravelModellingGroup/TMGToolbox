@@ -38,14 +38,13 @@ Pro-rate Segment Speeds for Select Lines
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-import six
-if six.PY3:
-    _m.InstanceType = object
-    _m.TupleType = object
-    _m.ListType = object
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
