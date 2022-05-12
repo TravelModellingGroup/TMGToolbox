@@ -38,11 +38,13 @@
 
 import inro.modeller as _m
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -115,9 +117,7 @@ class SupplementalTransitMatrices(_m.Tool()):
         partitionAggTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_partition_aggregation')
         partitionAverageTool = _MODELLER.tool('TMG2.Analysis.ExportPartitionAverage')
         
-        with nested(_util.tempMatrixMANAGER('Avg Boardings'),\
-                    _util.tempMatrixMANAGER('In Vehicle Times')) \
-                as (avgBoardingsMatrix, walkAllWayMatrix):
+        with _util.tempMatrixMANAGER('Avg Boardings') as avgBoardingsMatrix, _util.tempMatrixMANAGER('In Vehicle Times') as walkAllWayMatrix:
         
             #Extract walk-all-way matrix
             spec = {
@@ -194,7 +194,7 @@ class SupplementalTransitMatrices(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
