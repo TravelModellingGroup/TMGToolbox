@@ -159,14 +159,12 @@ class CreateZoneAdjacencyMatrix(_m.Tool()):
     def _LoadShapefileGeometry(self, network):
         network.create_attribute('NODE', 'geometry', default_value=None)
         loaded = 0
-        
         with _geo.Shapely2ESRI(self.ZoneBoundariesFile) as reader:
             self.TRACKER.startProcess(len(reader))
-            
             if not self.ZoneIdFiledName in reader.getFieldNames():
                 raise IOError("Cannot find zone id field '%s' in zone boundary shapefile '%s'." %(self.ZoneIdFiledName, self.ZoneBoundariesFile))
             for feature in reader.readThrough():
-                zoneId = feature[self.ZoneIdFiledName]
+                zoneId = feature.properties[self.ZoneIdFiledName] #this is the zoneId integer
                 zone = network.node(zoneId)
                 if zone is None or not zone.is_centroid:
                     _m.logbook_write("Could not find a valid zone '%s' in network" %zoneId)
