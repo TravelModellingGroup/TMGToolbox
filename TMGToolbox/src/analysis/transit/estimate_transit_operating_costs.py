@@ -36,7 +36,10 @@ import datetime
 import math
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
-
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 #######################################################################################################
 
 
