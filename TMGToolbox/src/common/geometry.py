@@ -218,8 +218,8 @@ class FloatField():
     def __init__(self, name, length=12, decimals=4, default=0.0):
         if length < 3:
             raise IOError("DBF field definition failed: Field length must be at least 3.")
-        if decimals >= (length - 2):
-            raise IOError("DBF field definition failed: Cannot assign more than {0} decimals for a field length of {1}".format((length - 2), length))       
+        if decimals > (length - 2): #remove >= with an > sign only
+            raise IOError("DBF field definition failed: Cannot assign more than {0} decimals for a field length of {1} of decimals {2} ".format((length - 2), length, decimals))       
         self.name =str(name)
         self.max = float(pow(10, length - decimals - 1) - 1)
         self.min = - float(pow(10, length - decimals - 1) - 2) # This is untested.
@@ -395,7 +395,7 @@ class Shapely2ESRI():
         '''
         return [geom for geom in self.readThrough()]
     
-    def readThrough(self):   
+    def readThrough(self):
         for fid in range(0, self._size):
             yield self.readFrom(fid)
     
@@ -433,7 +433,7 @@ class Shapely2ESRI():
         })
             
     def getFieldNames(self):
-        return [k for k in self._fields.iterkeys()]
+        return [k for k in six.iterkeys(self._fields)]
     
     def getFieldCount(self):
         return len(self.fields)
