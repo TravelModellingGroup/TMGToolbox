@@ -31,9 +31,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\analysis\transit\strategy_analysis\extract_link_transfers.py" />
-    <Compile Include="src\analysis\xtmf_network_calculator.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="src\analysis\traffic\export_countpost_results.py" />
     <Compile Include="src\analysis\traffic\export_screenline_results.py" />
     <Compile Include="src\analysis\traffic\Export_Count_Station_Location.py" />
