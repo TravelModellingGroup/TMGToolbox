@@ -56,11 +56,14 @@ LEGACY GTA Model fare-based transit assignment script
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -252,7 +255,7 @@ class LegacyFBTA(_m.Tool()):
                         
             self._calculateFareFactor()
             
-            with nested(self._demandMatrixMANAGER(), self._walkLinksMANAGER(), self._transitFunctionsMANAGER()):
+            with self._demandMatrixMANAGER(), self._walkLinksMANAGER(), self._transitFunctionsMANAGER():
                 self._calculateUL1()
                 _m.logbook_write(name="Running extended transit assignment")
                 self.transitAssignmentTool(self._setUpAssignment(), # Specification
@@ -361,7 +364,7 @@ class LegacyFBTA(_m.Tool()):
         finally:
             # Code here is executed in all cases.
             with _m.logbook_trace("Resetting transit time functions."):
-                for item in expressionArchive.iteritems():
+                for item in six.iteritems(expressionArchive):
                     f = self.databank.function(item[0])
                     functionChanger(f, item[1])
                     #f.expression = item[1]
@@ -482,6 +485,6 @@ class LegacyFBTA(_m.Tool()):
                     }
         return spec
             
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
