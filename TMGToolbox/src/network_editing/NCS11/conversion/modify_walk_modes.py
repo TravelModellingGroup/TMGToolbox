@@ -48,9 +48,12 @@ MODIFY WALK MODES
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 _util = _m.Modeller().module('tmg.common.utilities')
 _tmgTPB = _m.Modeller().module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -133,8 +136,7 @@ class ModifyWalkModes(_m.Tool()):
             changeModeTool = _m.Modeller().tool('inro.emme.data.network.mode.change_mode')
             networkCalcTool = _m.Modeller().tool("inro.emme.network_calculation.network_calculator")
             
-            with nested(self._walkableLinkFlagAttributeMANAGER(), #self._yFlagAttributeMANAGER(),
-                        self._stnNodeFlagAttributeMANAGER()):
+            with self._walkableLinkFlagAttributeMANAGER(), self._stnNodeFlagAttributeMANAGER():
                 
                 #---1. Flag links and nodes first to catch parsing errors before irreversible changes are made.
                 with _m.logbook_trace("Flagging feasible links"):
@@ -412,7 +414,7 @@ class ModifyWalkModes(_m.Tool()):
         self.scenario.publish_network(network)
         _m.logbook_write("Created %s new links in the network. Click for report." %counter, value=report)
             
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
