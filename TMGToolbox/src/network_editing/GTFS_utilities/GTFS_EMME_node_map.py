@@ -20,12 +20,7 @@
 import inro.modeller as _m
 import csv
 import traceback as _traceback
-from contextlib import contextmanager
-from contextlib import nested
-from os import path as _path
 from pyproj import Proj
-from osgeo import ogr
-import osgeo.ogr
 
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
@@ -35,6 +30,11 @@ _spindex = _MODELLER.module('tmg.common.spatial_index')
 networkExportTool = _MODELLER.tool('inro.emme.data.network.export_network_as_shapefile')
 gtfsExportTool = _MODELLER.tool('tmg.network_editing.GTFS_utilities.export_GTFS_stops_as_shapefile')
 EMME_VERSION = _util.getEmmeVersion(tuple)
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
+import re
 
 class GTFStoEmmeMap(_m.Tool()):
     version = '0.0.2'
@@ -176,8 +176,20 @@ class GTFStoEmmeMap(_m.Tool()):
         if EMME_VERSION >= (4,3,0):
             with open(fullzonestring, 'r') as zoneFile:
                 zoneString = zoneFile.read()
-                hemisphere = zoneString[28:29]
-                prjzone = int(zoneString[26:28])
+                # parse for the first set of words between quotation "" marks
+                # this is where the hemisphere and zone projection data is located
+                # using the group() to extract the string
+                zoneregex = re.search('"(.*?)"', zoneString)
+                # determine which hemisphere the data exists and use appropiate marker
+                if 'Northern Hemisphere' in zoneregex.group(0):
+                    hemisphere = 'N'
+                else: 
+                    hemisphere = 'S'
+                # split the word on spaces into a list of strings
+                zonelist = zoneregex.group(0).split(' ')
+                # remove the trailing comma at the end of the number the number is 17,
+                # convert the number into an integer
+                prjzone = int(zonelist[2].replace(',',''))
         else:
             hemisphere = fullzonestring[-5:-4]
             prjzone = int(fullzonestring[-7:-5])
@@ -240,7 +252,7 @@ class GTFStoEmmeMap(_m.Tool()):
                 cleanedNumber = int(nearestNode[0])
                 map.append([stop, cleanedNumber,convertedStops[stop][0],convertedStops[stop][1],nodes[cleanedNumber][0],nodes[cleanedNumber][1]])
 
-        with open(self.MappingFileName, 'wb') as csvfile:
+        with open(self.MappingFileName, 'w') as csvfile:
             mapFile = csv.writer(csvfile, delimiter=',')
             header = ["stopID","emmeID","stop x", "stop y", "node x", "node y"]
             mapFile.writerow(header)
@@ -252,7 +264,7 @@ class GTFStoEmmeMap(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
