@@ -17,20 +17,10 @@
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-import traceback as _traceback
-import time as _time
-import math
 from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 import multiprocessing
-from re import split as _regex_split
-from json import loads as _parsedict
 import inro.modeller as _m
-import csv
-import shapelib as _shp
-import shapely
 
 _trace = _m.logbook_trace
 _MODELLER = _m.Modeller()
@@ -43,6 +33,11 @@ matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator'
 subareaAnalysisTool = _MODELLER.tool('inro.emme.subarea.subarea')
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple)
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class ExportSubareaTool(_m.Tool()):
     version = '1.1.1'
@@ -143,9 +138,9 @@ class ExportSubareaTool(_m.Tool()):
         if self.ShapefileLocation is None and self.SubareaNodeAttribute is None:
             raise Exception("You must specify an existing subarea node attribute which defines the subarea or a shapefile that defines the subarea")
         try:
-            print "Exporting Subarea"
+            print("Exporting Subarea")
             self._execute()
-            print "Subarea Exported"
+            print("Subarea Exported")
         except Exception as e:
             raise Exception(_util.formatReverseStack())
 
@@ -155,13 +150,12 @@ class ExportSubareaTool(_m.Tool()):
             
             self._tracker.reset()
             self._checkDemandMatrices()
-
+            
             with nested(self._costAttributeMANAGER(), self._transitTrafficAttributeMANAGER(), self._subareaNodeAttributeManager()) \
                      as (costAttribute, bgTransitAttribute, subareaNodeAttribute):
 
                 self._initResultAttributes()
-
-
+                
                 with nested (*(_util.tempMatrixMANAGER(description="Peak hour matrix") \
                                for Demand in self.DemandMatrixIdList)) as peakHourMatrix:
                     with _m.logbook_trace("Calculating transit background traffic"): #Do Once
