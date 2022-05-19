@@ -104,7 +104,6 @@ V4 Transit Assignment
 '''
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 from re import split as _regex_split
 
@@ -123,6 +122,11 @@ matrixCalcTool = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator'
 
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -633,9 +637,10 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.EffectiveHeadwayAttributeId is None:
                 manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default= 0.0)
             else: manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
-            nest = nested(manager1, manager2, manager3)
-            
-            with nest as (headwayAttribute, walkAttribute, effectiveHeadwayAttribute):
+            nest = (manager1, manager2, manager3)
+
+            headwayAttribute, walkAttribute, effectiveHeadwayAttribute = nest
+            with headwayAttribute, walkAttribute, effectiveHeadwayAttribute:
                 # Set attributes to default values.
                 headwayAttribute.initialize(0.5) 
                 walkAttribute.initialize(1.0)
@@ -749,7 +754,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             self.DistanceMatrixId = "mf%s" %xtmf_DistanceMatrixNumber
        
         
-        print "Running V4 Transit Assignment"
+        print("Running V4 Transit Assignment")
         
         try:
             with manager as self.DemandMatrix:
@@ -761,7 +766,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             msg = str(e) + "\n" + _traceback.format_exc()
             raise Exception(msg)
         
-        print "Done running transit assignment"
+        print("Done running transit assignment")
     
     ##########################################################################################################    
     
@@ -891,10 +896,10 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                     
                     function.expression = newExpression
                     
-                    print "Detected function %s with existing congestion term." %function
-                    print "Original expression= '%s'" %cleanedExpression
-                    print "Healed expression= '%s'" %newExpression
-                    print ""
+                    print("Detected function %s with existing congestion term." %function)
+                    print("Original expression= '%s'" %cleanedExpression)
+                    print("Healed expression= '%s'" %newExpression)
+                    print("")
                     _m.logbook_write("Detected function %s with existing congestion term." %function)
                     _m.logbook_write("Original expression= '%s'" %cleanedExpression)
                     _m.logbook_write("Healed expression= '%s'" %newExpression)
@@ -1381,7 +1386,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
     def short_description(self):
         return "Fare-based transit assignment tool for GTAModel V4"
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_node_attributes(self):
         options = ["<option value='-1'>None</option>"]
         for exatt in self.Scenario.extra_attributes():
@@ -1389,7 +1394,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_link_attributes(self, include_none= True):
         options = []
         if include_none:
@@ -1399,7 +1404,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def get_scenario_segment_attribtues(self):
         options = []
         for exatt in self.Scenario.extra_attributes():
@@ -1411,7 +1416,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         
