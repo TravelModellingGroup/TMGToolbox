@@ -48,7 +48,6 @@ import inro.modeller as _m
 
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 from os.path import exists
 from json import loads as _parsedict
 from os.path import dirname
@@ -66,6 +65,11 @@ strategyAnalysisTool = _MODELLER.tool('inro.emme.transit_assignment.extended.str
 matrixCalculator = _MODELLER.tool('inro.emme.matrix_calculation.matrix_calculator')
 matrixExportTool = _MODELLER.tool('inro.emme.data.matrix.export_matrices')
 EMME_VERSION = _util.getEmmeVersion(tuple)
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -430,7 +434,7 @@ class OperatorTransferMatrix(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
@@ -438,7 +442,7 @@ class OperatorTransferMatrix(_m.Tool()):
     def class_name_is_required(self):
         return self._GetAssignmentType() == 'MULTICLASS_TRANSIT_ASSIGNMENT'
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_class_names(self):
         classInfo = self._LoadClassInfo()
         options = []
@@ -446,7 +450,7 @@ class OperatorTransferMatrix(_m.Tool()):
             options.append("<option value='%s'>%s</option>" %(name, name))
         return "\n".join(options)
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_line_group_options(self):
         options = [(1, "<em>Pre-built:</em> NCS11 operator codes"),
                    (2, "<em>Pre-built:</em> Alphabetical by operator"),
@@ -497,10 +501,9 @@ class OperatorTransferMatrix(_m.Tool()):
             else:
                 managers.insert(0, blankContextManager(self.LineGroupOptionOrAttributeId))
                 lineGroupOption = 0
-            
-            with nested(*managers) as (lineGroupAtributeID, walkAllWayMatrix, 
-                                       boardAttribute, alightAttribute,
-                                       tempFolder):
+
+            (lineGroupAtributeID, walkAllWayMatrix, boardAttribute, alightAttribute, tempFolder) = managers
+            with lineGroupAtributeID, walkAllWayMatrix, boardAttribute, alightAttribute, tempFolder:
                 
                 #---1. Flag pre-built groupings, if needed
                 if lineGroupOption and self.ExportTransferMatrixFlag:
