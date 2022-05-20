@@ -151,47 +151,47 @@ class ExportSubareaTool(_m.Tool()):
             self._tracker.reset()
             self._checkDemandMatrices()
             
-            with nested(self._costAttributeMANAGER(), self._transitTrafficAttributeMANAGER(), self._subareaNodeAttributeManager()) \
-                     as (costAttribute, bgTransitAttribute, subareaNodeAttribute):
+            with self._costAttributeMANAGER() as costAttribute,self._transitTrafficAttributeMANAGER() as bgTransitAttribute,self._subareaNodeAttributeManager() as subareaNodeAttribute:
 
                 self._initResultAttributes()
-                
-                with nested (*(_util.tempMatrixMANAGER(description="Peak hour matrix") \
-                               for Demand in self.DemandMatrixIdList)) as peakHourMatrix:
-                    with _m.logbook_trace("Calculating transit background traffic"): #Do Once
-                        networkCalcTool(self._getTransitBGSpec(), scenario=self.Scenario)
-                        self._tracker.completeSubtask()
-                            
-                    with _m.logbook_trace("Calculating link costs"): #Do for each class
-                        for i in range(len(self.ModeList)):
-                            networkCalcTool(self._getLinkCostCalcSpec(costAttribute[i].id, self.LinkCosts[i], self.LinkTollAttributeIds[i]), scenario=self.Scenario)
+                #ToDo: NOTE THIS PIECE IS BROKEN WE WILL NEED TO SEE HOW TO UNPACK A LIST IN ANOTHER PR
+                for Demand in self.DemandMatrixIdList:
+                    with _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix:
+
+                        with _m.logbook_trace("Calculating transit background traffic"): #Do Once
+                            networkCalcTool(self._getTransitBGSpec(), scenario=self.Scenario)
                             self._tracker.completeSubtask()
+                            
+                        with _m.logbook_trace("Calculating link costs"): #Do for each class
+                            for i in range(len(self.ModeList)):
+                                networkCalcTool(self._getLinkCostCalcSpec(costAttribute[i].id, self.LinkCosts[i], self.LinkTollAttributeIds[i]), scenario=self.Scenario)
+                                self._tracker.completeSubtask()
                         
                           
-                    with _m.logbook_trace("Calculating peak hour matrix"):  #For each class
-                        for i in range(len(self.ModeList)):
-                            if EMME_VERSION >= (4,2,1):
-                                matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.DemandMatrixList[i].id), scenario = self.Scenario, 
-                                                num_processors=self.NumberOfProcessors)
-                            else:
-                                matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.DemandMatrixList[i].id), scenario = self.Scenario)                        
-                        self._tracker.completeSubtask()
+                        with _m.logbook_trace("Calculating peak hour matrix"):  #For each class
+                            for i in range(len(self.ModeList)):
+                                if EMME_VERSION >= (4,2,1):
+                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.DemandMatrixList[i].id), scenario = self.Scenario, 
+                                                    num_processors=self.NumberOfProcessors)
+                                else:
+                                    matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.DemandMatrixList[i].id), scenario = self.Scenario)                        
+                            self._tracker.completeSubtask()
 
-                    appliedTollFactor = self._calculateAppliedTollFactor()
+                        appliedTollFactor = self._calculateAppliedTollFactor()
 
-                    SOLA_spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.ModeList, self.ClassResultAttributes, costAttribute)
+                        SOLA_spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.ModeList, self.ClassResultAttributes, costAttribute)
 
-                    if self.ShapefileLocation is not None:
-                        network = self.Scenario.get_network()
-                        subareaNodes = self._loadShapefile(network)
-                        for node in subareaNodes:
-                            node[subareaNodeAttribute.id] = 1
-                        self.Scenario.publish_network(network)
+                        if self.ShapefileLocation is not None:
+                            network = self.Scenario.get_network()
+                            subareaNodes = self._loadShapefile(network)
+                            for node in subareaNodes:
+                                node[subareaNodeAttribute.id] = 1
+                            self.Scenario.publish_network(network)
 
 
-                    self._tracker.runTool(subareaAnalysisTool, subarea_nodes = subareaNodeAttribute, subarea_folder = self.OutputFolder, 
-                                          traffic_assignment_spec = SOLA_spec, extract_transit = self.ExtractTransit, overwrite = True, gate_labels = self.GateLabel,
-                                          start_number = self.StartingNodeNumber, scenario=self.Scenario)
+                        self._tracker.runTool(subareaAnalysisTool, subarea_nodes = subareaNodeAttribute, subarea_folder = self.OutputFolder, 
+                                              traffic_assignment_spec = SOLA_spec, extract_transit = self.ExtractTransit, overwrite = True, gate_labels = self.GateLabel,
+                                              start_number = self.StartingNodeNumber, scenario=self.Scenario)
                         
 
 
@@ -272,7 +272,7 @@ class ExportSubareaTool(_m.Tool()):
             bgTrafficAttribute.initialize(0)
             _m.logbook_write("Initialized existing extra attribute '@tvph' to 0.")
         
-        if EMME_VERSION >= 4:
+        if EMME_VERSION >= (4,2,1):
             extraParameterTool = _MODELLER.tool('inro.emme.traffic_assignment.set_extra_function_parameters')
         else:
             extraParameterTool = _MODELLER.tool('inro.emme.standard.traffic_assignment.set_extra_function_parameters')

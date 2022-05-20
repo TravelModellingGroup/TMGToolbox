@@ -639,7 +639,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             else: manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
             nest = (manager1, manager2, manager3)
 
-            headwayAttribute, walkAttribute, effectiveHeadwayAttribute = nest
+            (headwayAttribute, walkAttribute, effectiveHeadwayAttribute) = nest
             with headwayAttribute, walkAttribute, effectiveHeadwayAttribute:
                 # Set attributes to default values.
                 headwayAttribute.initialize(0.5) 
