@@ -19,7 +19,6 @@
 """
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 from multiprocessing import cpu_count
 from re import split as _regex_split
 import inro.modeller as _m
@@ -225,8 +224,9 @@ class MultiClassTransitAssignment(_m.Tool()):
                 manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default=0.0)
             else:
                 manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
-            nest = nested(manager1, manager2, manager3)
-            with nest as headwayAttribute, walkAttribute, effectiveHeadwayAttribute:
+            nest = (manager1, manager2, manager3)
+            (headwayAttribute, walkAttribute, effectiveHeadwayAttribute) = nest
+            with headwayAttribute, walkAttribute, effectiveHeadwayAttribute:
                 headwayAttribute.initialize(0.5)
                 walkAttribute.initialize(1.0)
                 effectiveHeadwayAttribute.initialize(0.0)
