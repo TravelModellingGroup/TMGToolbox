@@ -637,10 +637,8 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             if self.EffectiveHeadwayAttributeId is None:
                 manager3 = _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', default= 0.0)
             else: manager3 = blank(self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId))
-            nest = (manager1, manager2, manager3)
 
-            (headwayAttribute, walkAttribute, effectiveHeadwayAttribute) = nest
-            with headwayAttribute, walkAttribute, effectiveHeadwayAttribute:
+            with manager1 as  headwayAttribute, manager2 as walkAttribute, manager3 as effectiveHeadwayAttribute:
                 # Set attributes to default values.
                 headwayAttribute.initialize(0.5) 
                 walkAttribute.initialize(1.0)
