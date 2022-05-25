@@ -138,6 +138,8 @@ class ReverseTransitLines(_m.Tool()):
                 print("Found %s lines to reverse" %len(linesToReverse))
                 
                 self._ReverseLines(linesToReverse)
+
+                print ('DMC _ReversedLines() method ran successfully!')
             
                 self.Scenario.publish_network(network)
 
@@ -230,35 +232,35 @@ class ReverseTransitLines(_m.Tool()):
         raise Exception("Could not create a valid ID for the reverse line")
     
     def _WriteMainReport(self, reversedLines):
-        h = HTML()
-        t = h.table()
-        tr = t.tr()
-        tr.th('Original ID')
-        tr.th('Reversed ID')
-        
+        t = "<table>\n"
+        t += "  <tr>\n"
+        t += "  <th>Original ID</th>\n"
+        t += "  <th>Reversed ID</th>\n"
+
         for originalId, newId in  reversedLines:
-            tr = t.tr()
-            tr.td(originalId)
-            tr.td(newId)
-        
+            t += "</tr>\n"
+            t += "<td>{0}</td>\n".format(originalId.strip())
+            t += "<td>{0}</td>\n".format(newId.strip())
+        t += "</table>"
+
         pb = _m.PageBuilder(title= "Reversed Lines Report")
         pb.wrap_html(body= str(t))
         _m.logbook_write("Reversed lines report", value= pb.render())
     
     def _WriteErrorReport(self, errorLines):
-        h = HTML()
-        t = h.table()
-        tr = t.tr()
-        tr.th('Line ID')
-        tr.th('Error Type')
-        tr.th('Error Message')
-        
+        t = "<table>\n"
+        t += "<tr>\n"
+        t += "<th>Line ID</th>\n"
+        t += "<th>Error Type</th>\n"
+        t += "<th>Error Message</th>\n"
+
         for lineId, errorType, errorMsg in errorLines:
-            tr = t.tr()
-            tr.td(lineId)
-            tr.td(errorType)
-            tr.td(errorMsg)
-        
+            t += "<tr>\n"
+            t += "<td>{0}</td>\n".format(lineId.strip())
+            t += "<td>{0}</td>\n".format(errorType.strip())
+            t += "<td>{0}</td>\n".format(errorMsg.strip())
+        t += "</table>"
+
         pb = _m.PageBuilder(title= "Error Report")
         pb.wrap_html(body= str(t))
         _m.logbook_write("Error report", value= pb.render())
