@@ -40,12 +40,11 @@
 '''
 
 import traceback as _traceback
-from html import HTML
+from contextlib import contextmanager
 from numpy import array
 from numpy import where
 
 import inro.modeller as _m
-
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -55,6 +54,7 @@ EMME_VERSION = _util.getEmmeVersion(float)
 import six 
 # initalize python3 types
 _util.initalizeModellerTypes(_m)
+from six.moves import html_parser
 
 ##########################################################################################################
 
@@ -200,9 +200,11 @@ class CheckNetworkConnectivity(_m.Tool()):
                         self._CheckAutoConnectivity(demandMatrix.id, dataTuples)
                     
                     if self.TransitModeIds:
+                        network = self.Scenario.get_network()
+                        for item in self.TransitModeIds:
+                            if network.mode(item).type != 'AUX_TRANSIT':
+                                raise Exception("Only AUX_TRANSIT types are be allowed. TransitModeId" , item, " is not allowed")
                         self._CheckTransitConnectivity(demandMatrix.id, dataTuples)
-                    
-                    
                     
                     totalFountains = set()
                     totalSinks = set()
@@ -258,11 +260,7 @@ class CheckNetworkConnectivity(_m.Tool()):
         return atts 
     
     def _CheckAutoConnectivity(self, demandMatrixId, dataTuples):
-        managers = []
-        for modeId in self.AutoModeIds:
-            managers.append(_util.tempMatrixMANAGER(description= "Temp times matrix for mode %s" %modeId))
-        
-        with nested(*managers) as timesMatrices:
+        with (_util.tempMatricesMANAGER(len(self.AutoModeIds), description="Time Matrices")) as timesMatrices:
             classInfo = []
             for i, modeId in enumerate(self.AutoModeIds):
                 classInfo.append((modeId, timesMatrices[i].id))
@@ -331,7 +329,6 @@ class CheckNetworkConnectivity(_m.Tool()):
     
     def _CheckTransitConnectivity(self, demandMatrixId, dataTuples):
         with _util.tempMatrixMANAGER(description="Transit times matrix") as timesMatrix:
-            
             self._RunTransitAssignment(demandMatrixId, timesMatrix.id)
             print("Transit assignment complete.")
             
@@ -368,10 +365,10 @@ class CheckNetworkConnectivity(_m.Tool()):
             "strategy_analysis": None,
             "type": "STANDARD_TRANSIT_ASSIGNMENT"
         }
-        
+
         tool = _MODELLER.tool('inro.emme.transit_assignment.standard_transit_assignment')
-        
         tool(spec, scenario= self.Scenario)
+
     
     def _GetDisconnectedNodes(self, matrix):
         matrixData = matrix.get_data(self.Scenario)
@@ -400,7 +397,7 @@ class CheckNetworkConnectivity(_m.Tool()):
 
         fountains, sinks, orphans = [], [], []
         
-        for zone, counts in zoneEnds.iteritems():
+        for zone, counts in six.iteritems(zoneEnds):
             outCount, inCount = counts
             
             if inCount == nZones:
@@ -424,7 +421,7 @@ class CheckNetworkConnectivity(_m.Tool()):
     def _AddReportSection(self, pb, type, modes, fountains, sinks, orphans):
         modes = [str(mode) for mode in modes]
         
-        h = HTML()
+        #h = HTML()
         
         plural = ''
         if len(modes) > 1: plural = "s"
@@ -442,50 +439,66 @@ class CheckNetworkConnectivity(_m.Tool()):
             if nFountains > 1: plural = 's'
             title= "Found %s fountain node%s:" %(nFountains, plural)
             
-            t = h.table()
-            tr = t.tr()
-            tr.th(title)
+            t = "<table>\n" #h.table()
+            t += "<tr>\n"
+            t += "<th>{0}</th>\n".format(title.strip())
+            #tr = t.tr()
+            #tr.th(title)
             
             for node in fountains:
-                t.tr().td(str(node))
+                t += "</tr>\n"
+                t += "<td>{0}</td>\n".format(str(node).strip())
+                #t.tr().td(str(node))
+            t = "<table>\n"
             
         if nSinks > 0:
-            
             plural = ''
             if nSinks > 1: plural = 's'
             title= "Found %s sink node%s:" %(nSinks, plural)
             
-            t = h.table()
-            tr = t.tr()
-            tr.th(title)
+            t = "<table>\n"
+            t += "<tr>\n"
+            t += "<th>{0}</th>\n".format(title.strip())
+            #t = h.table()
+            #tr = t.tr()
+            #tr.th(title)
             
             for node in sinks:
-                t.tr().td(str(node))
-                
+                t += "<tr>\n"
+                t += "<td>{0}</td>\n".format(str(node).strip())
+                #t.tr().td(str(node))
+            t = "<table>\n"
+
         if nOrphans > 0:
-            
             plural = ''
             if nOrphans > 1: plural = 's'
             title= "Found %s orphan node%s:" %(nOrphans, plural)
             
-            t = h.table()
-            tr = t.tr()
-            tr.th(title)
+            t = "<table>\n"
+            t += "<tr>\n"
+            t += "<th>{0}</th>\n".format(title.strip())
+
+            #t = h.table()
+            #tr = t.tr()
+            #tr.th(title)
             
             for node in orphans:
-                t.tr().td(str(node))
+                t += "<tr>\n"
+                t += "<td>{0}</td>\n".format(str(node).strip())
+                #t.tr().td(str(node))
+            t = "<table>\n"
         
-        pb.wrap_html(sectionTitle, body= str(h))
+        pb.wrap_html(sectionTitle, body= str(t)) #h
             
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.u)
     def preload_auto_modes(self):
         options = []
         h = HTML()
