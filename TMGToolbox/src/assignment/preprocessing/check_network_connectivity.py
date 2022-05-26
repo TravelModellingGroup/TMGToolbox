@@ -39,8 +39,6 @@
     
 '''
 
-from logging import raiseExceptions
-from tkinter import Scale
 import traceback as _traceback
 from contextlib import contextmanager
 from numpy import array
@@ -262,11 +260,7 @@ class CheckNetworkConnectivity(_m.Tool()):
         return atts 
     
     def _CheckAutoConnectivity(self, demandMatrixId, dataTuples):
-        managers = []
-        for modeId in self.AutoModeIds:
-            managers.append(_util.tempMatrixMANAGER(description= "Temp times matrix for mode %s" %modeId))
-        
-        with (_util.tempMatricesMANAGER(len(managers), description="Time Matrices")) as timesMatrices:
+        with (_util.tempMatricesMANAGER(len(self.AutoModeIds), description="Time Matrices")) as timesMatrices:
             classInfo = []
             for i, modeId in enumerate(self.AutoModeIds):
                 classInfo.append((modeId, timesMatrices[i].id))
