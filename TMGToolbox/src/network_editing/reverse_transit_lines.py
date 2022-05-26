@@ -233,9 +233,9 @@ class ReverseTransitLines(_m.Tool()):
     
     def _WriteMainReport(self, reversedLines):
         t = "<table>\n"
-        t += "  <tr>\n"
-        t += "  <th>Original ID</th>\n"
-        t += "  <th>Reversed ID</th>\n"
+        t += "<tr>\n"
+        t += "<th>Original ID</th>\n"
+        t += "<th>Reversed ID</th>\n"
 
         for originalId, newId in  reversedLines:
             t += "</tr>\n"
