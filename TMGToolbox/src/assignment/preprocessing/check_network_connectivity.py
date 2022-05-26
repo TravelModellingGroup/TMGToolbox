@@ -54,7 +54,7 @@ EMME_VERSION = _util.getEmmeVersion(float)
 import six 
 # initalize python3 types
 _util.initalizeModellerTypes(_m)
-from six.moves import html_parser
+#from six.moves import html_parser
 
 ##########################################################################################################
 
