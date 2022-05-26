@@ -43,7 +43,6 @@ from logging import raiseExceptions
 from tkinter import Scale
 import traceback as _traceback
 from contextlib import contextmanager
-#from html import HTML
 from numpy import array
 from numpy import where
 
