@@ -184,7 +184,6 @@ class MatrixSummary(_m.Tool()):
         try:
             originFilter = self._GetOriginFilterFunction()
             destinationFilter = self._GetDestinationFilterFunction()
-            
             self._Execute(originFilter, destinationFilter)
         except Exception as e:
             self.tool_run_msg = _m.PageBuilder.format_exception(
@@ -236,7 +235,6 @@ class MatrixSummary(_m.Tool()):
     def _Execute(self, originFilter, destinationFilter):
         with _m.logbook_trace(name="{classname} v{version}".format(classname=(self.__class__.__name__), version=self.version),
                                      attributes=self._GetAtts()):
-            
             if self.Scenario:
                 valueData = self.ValueMatrix.get_data(self.Scenario.number)
             else:
@@ -364,16 +362,14 @@ class MatrixSummary(_m.Tool()):
         return filter
     
     def _GetOriginFilterFunction(self):
-        exec('''def filter(p):
-    %s''' %self.OriginFilterExpression)
-        
-        return filter
+        p = {}
+        exec('''def filter(p):%s'''%self.OriginFilterExpression, p)
+        return p["filter"]
     
     def _GetDestinationFilterFunction(self):
-        exec('''def filter(q):
-    %s''' %self.DestinationFilterExpression)
-        
-        return filter
+        q = {}
+        exec('''def filter(q):%s'''%self.DestinationFilterExpression, q)
+        return q["filter"]
     
     def _WtdStdDev(self, values, weights):
         avg = average(values, weights=weights)
