@@ -362,12 +362,12 @@ class MatrixSummary(_m.Tool()):
         return filter
     
     def _GetOriginFilterFunction(self):
-        p = locals()
+        p = {}
         exec('''def filter(p):%s'''%self.OriginFilterExpression, p)
         return p["filter"]
     
     def _GetDestinationFilterFunction(self):
-        q = locals()
+        q = {}
         exec('''def filter(q):%s'''%self.DestinationFilterExpression, q)
         return q["filter"]
     
