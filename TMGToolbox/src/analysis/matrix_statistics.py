@@ -362,14 +362,14 @@ class MatrixSummary(_m.Tool()):
         return filter
     
     def _GetOriginFilterFunction(self):
-        p = globals()
+        p = locals()
         exec('''def filter(p):%s'''%self.OriginFilterExpression, p)
-        return filter
+        return p["filter"]
     
     def _GetDestinationFilterFunction(self):
-        q = globals()
+        q = locals()
         exec('''def filter(q):%s'''%self.DestinationFilterExpression, q)
-        return filter
+        return q["filter"]
     
     def _WtdStdDev(self, values, weights):
         avg = average(values, weights=weights)
