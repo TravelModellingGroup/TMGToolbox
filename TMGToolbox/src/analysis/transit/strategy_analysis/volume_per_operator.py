@@ -39,15 +39,10 @@ import inro.modeller as _m
 
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
-from os.path import exists
-from json import loads as _parsedict
 from multiprocessing import cpu_count
-from os.path import dirname
 import tempfile as _tf
 import shutil as _shutil
 import csv
-import numpy as np
 from re import split as _regex_split
 
 _MODELLER = _m.Modeller()
@@ -62,6 +57,11 @@ matrixAggregation = _MODELLER.tool('inro.emme.matrix_calculation.matrix_aggregat
 matrixExport = _MODELLER.tool('inro.emme.data.matrix.export_matrix_to_csv')
 stratAnalysis = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -161,7 +161,7 @@ class VolumePerOperator(_m.Tool()):
 
     def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath):
         self.tool_run_msg = ""
-        print "Starting Ridership Calculations"
+        print("Starting Ridership Calculations")
 
         self.Scenarios = []
         for number in xtmf_ScenarioNumbers.split(','):
@@ -188,7 +188,7 @@ class VolumePerOperator(_m.Tool()):
                         for EmmeClass in sorted(self.results[scenario][lineFilter]):
                             writer.writerow([scenario, lineFilter, EmmeClass, self.results[scenario][lineFilter][EmmeClass]])
         
-        print "Finished Ridership calculations"
+        print("Finished Ridership calculations")
 
     def _Execute(self):
 
@@ -206,10 +206,9 @@ class VolumePerOperator(_m.Tool()):
                     self.multiclass = True
                     self.results[scenario.id][filter[1]] = {}
                     for key in demandMatrixId:
-                        managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
-                                    _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
-                                    _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]       
-                        with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
+                        with _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute") as operatorMarker, \
+                            _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL') as tempIntermediateMatrix, \
+                            _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR') as tempResultMatrix:
                             networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
                             if EMME_VERSION >= (4, 3, 2):
                                 report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key, num_processors = self.NumberOfProcessors)
