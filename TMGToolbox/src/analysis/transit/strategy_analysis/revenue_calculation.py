@@ -38,10 +38,10 @@ import inro.modeller as _m
 
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
-from os.path import exists
-from json import loads as _parsedict
-from os.path import dirname
+#from contextlib import nested
+#from os.path import exists
+#from json import loads as _parsedict
+#from os.path import dirname
 import tempfile as _tf
 import shutil as _shutil
 import csv
@@ -60,6 +60,11 @@ matrixAggregation = _MODELLER.tool('inro.emme.matrix_calculation.matrix_aggregat
 matrixExport = _MODELLER.tool('inro.emme.data.matrix.export_matrix_to_csv')
 pathAnalysis = _MODELLER.tool('inro.emme.transit_assignment.extended.path_based_analysis')
 EMME_VERSION = _util.getEmmeVersion(float)
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -158,7 +163,7 @@ class RevenueCalculation(_m.Tool()):
 
     def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath):
         self.tool_run_msg = ""
-        print "Starting Revenue Calculations"
+        print("Starting Revenue Calculations")
 
         self.Scenarios = []
         for number in xtmf_ScenarioNumbers.split(','):
@@ -171,14 +176,14 @@ class RevenueCalculation(_m.Tool()):
        
         self._Execute()
 
-        with open(filePath, 'wb') as csvfile:               
+        with open(filePath, 'w') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
             writer.writerow(["Scenario", "Line Filter", "Revenue"])
             for scenario in sorted(self.results):
                 for lineFilter in sorted(self.results[scenario]):
                     writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
         
-        print "Finished Revenue calculations"
+        print("Finished Revenue calculations")
 
     def _Execute(self):
 
