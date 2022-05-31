@@ -39,15 +39,10 @@ import inro.modeller as _m
 
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
-from os.path import exists
-from json import loads as _parsedict
 from multiprocessing import cpu_count
-from os.path import dirname
 import tempfile as _tf
 import shutil as _shutil
 import csv
-import numpy as np
 from re import split as _regex_split
 
 _MODELLER = _m.Modeller()
@@ -62,6 +57,11 @@ matrixAggregation = _MODELLER.tool('inro.emme.matrix_calculation.matrix_aggregat
 matrixExport = _MODELLER.tool('inro.emme.data.matrix.export_matrix_to_csv')
 stratAnalysis = _MODELLER.tool('inro.emme.transit_assignment.extended.strategy_based_analysis')
 EMME_VERSION = _util.getEmmeVersion(tuple) 
+
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -92,6 +92,12 @@ class VolumePerOperator(_m.Tool()):
     Scenarios = _m.Attribute(_m.ListType)
 
     #results = {"test": 1.0};
+    #Emme input parameters
+    tool_run_msg = ""
+    scenario = _m.Attribute(str)
+    LineFilter = _m.Attribute(str)
+    ReportFile = _m.Attribute(str)
+    version = '1.0.0'
             
     def __init__(self):
         #---Init internal variables
@@ -115,66 +121,52 @@ class VolumePerOperator(_m.Tool()):
                  "Hamilton: line=W_____"]
         self.multiclass = False
         self.filtersToCompute = "\n".join(lines)
-        self.results = {};     
+        self.results = {};
+       
+    def page(self):
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="Volume Per Operator",
+                     description="Volume per Operator tool",
+                     branding_text="- TMG Toolbox")
+        
+        if self.tool_run_msg != "": # to display messages in the page
+            pb.tool_run_status(self.tool_run_msg_status)
+            
+        pb.add_select_scenario(tool_attribute_name='scenario',
+                               title='Scenario:',
+                               allow_none=False)
+        pb.add_text_box(tool_attribute_name='LineFilter',
+                        size=50, title="Filter of lines use : eg Subway:mode=s ",
+                        note="")
+        pb.add_select_file(tool_attribute_name='ReportFile', title="Report File:", file_filter="*.csv",
+                           window_type='save_file')
+        
+        
+        return pb.render()
+
+    def _GetAtts(self):
+        atts = {
+                "scenario" : str(self.Scenario.id),
+                "LineFilter": str(self.LineFilter),
+                "Report File": self.ReportFile,
+                "Version": self.version,
+                "self": self.__MODELLER_NAMESPACE__
+                }
+        return atts
         
     def run(self):
-        self.tool_run_msg = ""
-        #self.TRACKER.reset()
-        """
-        try:
-            if self.ExportTransferMatrixFlag or self.ExportWalkAllWayMatrixFlag:
-                
-                if self.ExportTransferMatrixFlag and not self.VolumeMatrix:
-                    raise IOError("No transfer matrix file specified.")
-                
-                if self.ExportWalkAllWayMatrixFlag:
-                    if not self.AggregationPartition: raise TypeError("No aggregation partition specified")
-                    if not self.WalkAllWayExportFile: raise TypeError("No walk-all-way matrix file specified")
-                    
-                self._Execute()
-                _MODELLER.desktop.refresh_needed(False)
-        except Exception as e:
-            _MODELLER.desktop.refresh_needed(False)
-            self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc())
-            raise
-        
-        self.tool_run_msg = _m.PageBuilder.format_info("Done.")
-        """        
-
-        lineFilters = 'Subway:mode=s'
-
-        sc = _MODELLER.emmebank.scenario("12")
-        self.Scenarios = []
-        self.Scenarios.append(sc)
-
-
-        self.filtersToCompute = lineFilters
-        self._Execute();
-
-                
-        with open(r'C:\Users\TMG\Desktop\test.csv', 'wb') as csvfile:               
-            writer = csv.writer(csvfile, delimiter=',')
-            for line in self.results:
-                writer.writerow([line, self.results[line]])                    
-
-
-    def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath):
-        self.tool_run_msg = ""
-        print "Starting Ridership Calculations"
-
-        self.Scenarios = []
-        for number in xtmf_ScenarioNumbers.split(','):
-            sc = _MODELLER.emmebank.scenario(number)
-            if (sc is None):
-                raise Exception("Scenarios %s was not found!" %number)
+        # run from Emme
+        with _m.logbook_trace(
+                name="{classname} v{version}".format(classname=self.__class__.__name__, version=self.version),
+                attributes=self._GetAtts()):
+            lineFilters = self.LineFilter  
+            sc = _MODELLER.emmebank.scenario(self.Scenario)
+            self.Scenarios = []
             self.Scenarios.append(sc)
-
-        self.filtersToCompute = FilterString
-       
-        self._Execute()
-
-        with open(filePath, 'wb') as csvfile:               
+            
+            self.filtersToCompute = lineFilters
+            self._Execute();
+            
+        with open(self.ReportFile, 'w') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
             if self.multiclass == False:
                 writer.writerow(["Scenario", "Line Filter", "Ridership"])
@@ -188,10 +180,40 @@ class VolumePerOperator(_m.Tool()):
                         for EmmeClass in sorted(self.results[scenario][lineFilter]):
                             writer.writerow([scenario, lineFilter, EmmeClass, self.results[scenario][lineFilter][EmmeClass]])
         
-        print "Finished Ridership calculations"
+        print("Finished Ridership calculations")
+        
+    def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath):
+        self.tool_run_msg = ""
+        print("Starting Ridership Calculations")
+
+        self.Scenarios = []
+        for number in xtmf_ScenarioNumbers.split(','):
+            sc = _MODELLER.emmebank.scenario(number)
+            if (sc is None):
+                raise Exception("Scenarios %s was not found!" %number)
+            self.Scenarios.append(sc)
+
+        self.filtersToCompute = FilterString
+       
+        self._Execute()
+
+        with open(filePath, 'w') as csvfile:               
+            writer = csv.writer(csvfile, delimiter=',')
+            if self.multiclass == False:
+                writer.writerow(["Scenario", "Line Filter", "Ridership"])
+                for scenario in sorted(self.results):
+                    for lineFilter in sorted(self.results[scenario]):
+                        writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
+            elif self.multiclass == True:
+                writer.writerow(["Scenario", "Line Filter", "Class", "Ridership"])
+                for scenario in sorted(self.results):
+                    for lineFilter in sorted(self.results[scenario]):
+                        for EmmeClass in sorted(self.results[scenario][lineFilter]):
+                            writer.writerow([scenario, lineFilter, EmmeClass, self.results[scenario][lineFilter][EmmeClass]])
+        
+        print("Finished Ridership calculations")
 
     def _Execute(self):
-
         if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")      
 
         parsed_filter_list = self._ParseFilterString(self.filtersToCompute)
@@ -206,10 +228,9 @@ class VolumePerOperator(_m.Tool()):
                     self.multiclass = True
                     self.results[scenario.id][filter[1]] = {}
                     for key in demandMatrixId:
-                        managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
-                                    _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
-                                    _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]       
-                        with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
+                        with _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute") as operatorMarker, \
+                            _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL') as tempIntermediateMatrix, \
+                            _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR') as tempResultMatrix:
                             networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
                             if EMME_VERSION >= (4, 3, 2):
                                 report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId[key]), scenario=self.Scenario, class_name=key, num_processors = self.NumberOfProcessors)
@@ -321,3 +342,8 @@ class VolumePerOperator(_m.Tool()):
             filterList.append(strippedParts)
 
         return filterList
+
+    @_m.method(return_type=six.u)
+    def tool_run_msg_status(self):
+        return self.tool_run_msg
+        
