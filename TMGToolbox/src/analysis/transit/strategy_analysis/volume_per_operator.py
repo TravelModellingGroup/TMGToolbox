@@ -124,7 +124,7 @@ class VolumePerOperator(_m.Tool()):
         self.results = {};
        
     def page(self):
-        pb = _tmgTPB.TmgToolPageBuilder(self, title="Prorate Transit Line Speed v1",
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="Volume Per Operator",
                      description="Volume per Operator tool",
                      branding_text="- TMG Toolbox")
         
