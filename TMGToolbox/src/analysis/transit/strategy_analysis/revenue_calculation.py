@@ -90,6 +90,13 @@ class RevenueCalculation(_m.Tool()):
     Scenarios = _m.Attribute(_m.ListType)
 
     #results = {"test": 1.0};
+
+    #Emme input parameters
+    tool_run_msg = ""
+    scenario = _m.Attribute(_m.InstanceType) #_m.Attribute(str)
+    LineFilter = _m.Attribute(str)
+    ReportFile = _m.Attribute(str)
+    version = '1.0.0'
             
     def __init__(self):
         #---Init internal variables
@@ -113,50 +120,62 @@ class RevenueCalculation(_m.Tool()):
                  "Hamilton: line=W_____"]
 
         self.filtersToCompute = "\n".join(lines)
-        self.results = {};     
+        self.results = {}
+
+    def page(self):
+        """
+        function to build and add the inputs for the Emme Modelle Gui
+        """
+        pb = _tmgTPB.TmgToolPageBuilder(self, title="Revenue Calculation",
+                     description="Revenue Calculation Tool",
+                     branding_text="- TMG Toolbox")
+
+        if self.tool_run_msg != "": # to display messages in the page
+            pb.tool_run_status(self.tool_run_msg_status)
+
+        pb.add_select_scenario(tool_attribute_name='scenario',
+                               title='Scenario:',
+                               allow_none=False)
+        pb.add_text_box(tool_attribute_name='LineFilter',
+                        size=50, title="Filter of lines use : eg Subway:mode=s ",
+                        note="")
+        pb.add_select_file(tool_attribute_name='ReportFile', title="Report File:", file_filter="*.csv",
+                           window_type='save_file')
+            
+        return pb.render()
+
+    def _GetAtts(self):
+        atts = {
+                "scenario" : str(self.scenario.id),
+                "LineFilter": str(self.LineFilter),
+                "Report File": self.ReportFile,
+                "Version": self.version,
+                "self": self.__MODELLER_NAMESPACE__
+                }
+        return atts
         
     def run(self):
+        # run from Emme
         self.tool_run_msg = ""
-        #self.TRACKER.reset()
-        """
-        try:
-            if self.ExportTransferMatrixFlag or self.ExportWalkAllWayMatrixFlag:
-                
-                if self.ExportTransferMatrixFlag and not self.VolumeMatrix:
-                    raise IOError("No transfer matrix file specified.")
-                
-                if self.ExportWalkAllWayMatrixFlag:
-                    if not self.AggregationPartition: raise TypeError("No aggregation partition specified")
-                    if not self.WalkAllWayExportFile: raise TypeError("No walk-all-way matrix file specified")
-                    
-                self._Execute()
-                _MODELLER.desktop.refresh_needed(False)
-        except Exception as e:
-            _MODELLER.desktop.refresh_needed(False)
-            self.tool_run_msg = _m.PageBuilder.format_exception(
-                e, _traceback.format_exc())
-            raise
+        with _m.logbook_trace(
+                name="{classname} v{version}".format(classname=self.__class__.__name__, version=self.version),
+                attributes=self._GetAtts()):
+            lineFilters = self.LineFilter
+            sc = _MODELLER.emmebank.scenario(str(self.scenario.id))
+            self.Scenarios = []
+            self.Scenarios.append(sc)
+            
+            self.filtersToCompute = lineFilters
+            self._Execute();
+
+            with open(self.ReportFile, 'w') as csvfile:               
+                writer = csv.writer(csvfile, delimiter=',')
+                writer.writerow(["Scenario", "Line Filter", "Revenue"])
+                for scenario in sorted(self.results):
+                    for lineFilter in sorted(self.results[scenario]):
+                        writer.writerow([scenario, lineFilter, self.results[scenario][lineFilter]])
+        print ('function successfully ran')
         
-        self.tool_run_msg = _m.PageBuilder.format_info("Done.")
-        """        
-
-        lineFilters = 'Subway:mode=s'
-
-        sc = _MODELLER.emmebank.scenario("12")
-        self.Scenarios = []
-        self.Scenarios.append(sc)
-
-
-        self.filtersToCompute = lineFilters
-        self._Execute();
-
-                
-        with open(r'C:\Users\TMG\Desktop\test.csv', 'wb') as csvfile:               
-            writer = csv.writer(csvfile, delimiter=',')
-            for line in self.results:
-                writer.writerow([line, self.results[line]])                    
-
-
     def __call__(self, xtmf_ScenarioNumbers, FilterString, filePath):
         self.tool_run_msg = ""
         print("Starting Revenue Calculations")
@@ -186,13 +205,11 @@ class RevenueCalculation(_m.Tool()):
         if len(self.Scenarios) == 0: raise Exception("No scenarios selected.")      
 
         parsed_filter_list = self._ParseFilterString(self.filtersToCompute)
-
         for scenario in self.Scenarios:
             self.Scenario = _MODELLER.emmebank.scenario(scenario.id)
             self.results[scenario.id] = {}
             
             for filter in parsed_filter_list:
-                
                 spec = {
                     "expression": "voltr*@sfare",                    
                     "selections": {
@@ -205,7 +222,6 @@ class RevenueCalculation(_m.Tool()):
 
                 self.results[scenario.id][filter[1]] =  report['sum']                     
       
-
     def _ParseFilterString(self, filterString):
         filterList = []
         components = _regex_split('\n|,', filterString) #Supports newline and/or commas
@@ -222,13 +238,7 @@ class RevenueCalculation(_m.Tool()):
 
         return filterList
 
-    
-        
-
-            
-    
-
-
-
-
-             
+    @_m.method(return_type=six.u)
+    def tool_run_msg_status(self):
+        return self.tool_run_msg
+     
