@@ -151,13 +151,11 @@ class ExportSubareaTool(_m.Tool()):
             self._tracker.reset()
             self._checkDemandMatrices()
             
-            with self._costAttributeMANAGER() as costAttribute,self._transitTrafficAttributeMANAGER() as bgTransitAttribute,self._subareaNodeAttributeManager() as subareaNodeAttribute:
+            with self._costAttributeMANAGER() as costAttribute, self._transitTrafficAttributeMANAGER() as bgTransitAttribute,self._subareaNodeAttributeManager() as subareaNodeAttribute:
 
                 self._initResultAttributes()
-                #ToDo: NOTE THIS PIECE IS BROKEN WE WILL NEED TO SEE HOW TO UNPACK A LIST IN ANOTHER PR
-                for Demand in self.DemandMatrixIdList:
-                    with _util.tempMatrixMANAGER(description="Peak hour matrix") as peakHourMatrix:
 
+                with _util.tempMatricesMANAGER(len(self.DemandMatrixIdList)) as peakHourMatrix:
                         with _m.logbook_trace("Calculating transit background traffic"): #Do Once
                             networkCalcTool(self._getTransitBGSpec(), scenario=self.Scenario)
                             self._tracker.completeSubtask()
@@ -176,7 +174,6 @@ class ExportSubareaTool(_m.Tool()):
                                 else:
                                     matrixCalcTool(self._getPeakHourSpec(peakHourMatrix[i].id, self.DemandMatrixList[i].id), scenario = self.Scenario)                        
                             self._tracker.completeSubtask()
-
                         appliedTollFactor = self._calculateAppliedTollFactor()
 
                         SOLA_spec = self._getPrimarySOLASpec(peakHourMatrix, appliedTollFactor, self.ModeList, self.ClassResultAttributes, costAttribute)
