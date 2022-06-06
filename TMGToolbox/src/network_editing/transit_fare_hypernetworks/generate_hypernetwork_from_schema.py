@@ -87,7 +87,6 @@ _editing = _MODELLER.module('tmg.common.network_editing')
 _spindex = _MODELLER.module('tmg.common.spatial_index')
 Shapely2ESRI = _geolib.Shapely2ESRI
 GridIndex = _spindex.GridIndex
-TransitLineProxy = _editing.TransitLineProxy
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple) 
 # import six library for python2 to python3 conversion
@@ -172,6 +171,7 @@ class FBTNFromSchema(_m.Tool()):
     SegmentINodeAttributeId = _m.Attribute(str)
 
     StationConnectorFlag = _m.Attribute(bool)
+    IgnoreSameGroupsForStations = _m.Attribute(bool)
     
     __ZONE_TYPES = ['node_selection', 'from_shapefile']
     __RULE_TYPES = ['initial_boarding', 
@@ -275,6 +275,9 @@ class FBTNFromSchema(_m.Tool()):
         
         pb.add_checkbox(tool_attribute_name= 'StationConnectorFlag',
                         label= "Allow station-to-centroid connections?")                      
+
+        pb.add_checkbox(tool_attribute_name= 'IgnoreSameGroupsForStations',
+                        label= "Set false to allow transfers in the hyper-network from an agency to a station for the same agency.")           
         
         #---JAVASCRIPT
         pb.add_html("""
@@ -345,7 +348,7 @@ class FBTNFromSchema(_m.Tool()):
         
     def __call__(self, XMLSchemaFile, xtmf_BaseScenarioNumber, NewScenarioNumber,
                  TransferModeId, SegmentFareAttributeId, LinkFareAttributeId, 
-                 VirtualNodeDomain, StationConnectorFlag):
+                 VirtualNodeDomain, StationConnectorFlag, IgnoreSameGroupsForStations):
         
         #---1 Set up scenario
         self.BaseScenario = _MODELLER.emmebank.scenario(xtmf_BaseScenarioNumber)
@@ -372,6 +375,7 @@ class FBTNFromSchema(_m.Tool()):
         self.LinkFareAttributeId = LinkFareAttributeId
         self.VirtualNodeDomain = VirtualNodeDomain
         self.StationConnectorFlag = StationConnectorFlag
+        self.IgnoreSameGroupsForStations = IgnoreSameGroupsForStations
         
         try:
             self._Execute()
@@ -1210,18 +1214,29 @@ class FBTNFromSchema(_m.Tool()):
             
             for groupNumber1 in baseNode1.stopping_groups:
                 virtualNode1 = baseNode1.to_hyper_node[groupNumber1]
-                
-                for groupNumber2 in baseNode2.stopping_groups:
-                    virtualNode2 = baseNode2.to_hyper_node[groupNumber2]
-                    
-                    if groupNumber1 != groupNumber2:
+                if self.IgnoreSameGroupsForStations:
+                    for groupNumber2 in baseNode2.stopping_groups:
+                        virtualNode2 = baseNode2.to_hyper_node[groupNumber2]
+                        
+                        hyper_link = network.link(virtualNode1.number, virtualNode2.number)
+                        if groupNumber1 != groupNumber2:
+                            if hyper_link is None:
+                                #Link already exists. Index it just in case
+                                hyper_link = network.create_link(virtualNode1.number, virtualNode2.number, link.modes)
+                                for att in network.attributes('LINK'): hyper_link[att] = link[att]
+                            transferGrid[groupNumber1, groupNumber2].add(hyper_link)
+                else:
+                    for groupNumber2 in baseNode2.stopping_groups:
+                        virtualNode2 = baseNode2.to_hyper_node[groupNumber2]
+                        
                         hyper_link = network.link(virtualNode1.number, virtualNode2.number)
                         if hyper_link is None:
                             #Link already exists. Index it just in case
                             hyper_link = network.create_link(virtualNode1.number, virtualNode2.number, link.modes)
                             for att in network.attributes('LINK'): hyper_link[att] = link[att]
-                        transferGrid[groupNumber1, groupNumber2].add(hyper_link)
-                            
+                        if groupNumber1 != groupNumber2:
+                            transferGrid[groupNumber1, groupNumber2].add(hyper_link)
+                                
     
     def _ProcessTransitLine(self, lineId, network, zoneTransferGrid, saveFunction):
         line = network.transit_line(lineId)
@@ -1392,6 +1407,8 @@ class FBTNFromSchema(_m.Tool()):
             count = 0
             for link in transferGrid[fromNumber, toNumber]:
                 if checkLink(link):
+                    if link.i_node.number == 100280 and link.j_node.number == 97033:
+                                print("Got here3!")
                     link[self.LinkFareAttributeId] += cost
                     count += 1
                     links_changed[str(link.id)] = str(link[self.LinkFareAttributeId])
@@ -1399,6 +1416,8 @@ class FBTNFromSchema(_m.Tool()):
             if bidirectional:
                 for link in transferGrid[toNumber, fromNumber]:
                     if checkLink(link):
+                        if link.i_node.number == 100280 and link.j_node.number == 97033:
+                                print("Got here4!")
                         link[self.LinkFareAttributeId] += cost
                         count += 1
                         links_changed[str(link.id)] = str(link[self.LinkFareAttributeId])
