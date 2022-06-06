@@ -115,6 +115,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\network_editing\NCS11\conversion\convert_ncs16_ncs11.py" />
+    <Compile Include="src\network_editing\NCS22\convert_ncs16_ncs22.py" />
     <Compile Include="src\network_editing\remove_extra_links.py">
       <SubType>Code</SubType>
     </Compile>
@@ -218,6 +219,7 @@
     <Folder Include="src\network_editing\NCS11\conversion" />
     <Folder Include="src\network_editing\NCS11\validation" />
     <Folder Include="src\network_editing\network_comparison" />
+    <Folder Include="src\network_editing\NCS22\" />
     <Folder Include="src\network_editing\time_of_day_changes" />
     <Folder Include="src\network_editing\transit_fare_hypernetworks" />
     <Folder Include="src\XTMF_internal" />
