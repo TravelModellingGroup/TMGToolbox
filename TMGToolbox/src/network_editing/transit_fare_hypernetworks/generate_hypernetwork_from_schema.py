@@ -193,6 +193,7 @@ class FBTNFromSchema(_m.Tool()):
         self.SegmentFareAttributeId = "@sfare"
 
         self.StationConnectorFlag = True
+        self.IgnoreSameGroupsForStations = True
     
     def page(self):
         pb = _tmgTPB.TmgToolPageBuilder(self, title="FBTN From Schema v%s" %self.version,
