@@ -168,7 +168,7 @@ class RevenueCalculation(_m.Tool()):
             self.filtersToCompute = lineFilters
             self._Execute();
 
-            with open(self.ReportFile, 'w') as csvfile:               
+            with open(self.ReportFile, 'w', newline='') as csvfile:               
                 writer = csv.writer(csvfile, delimiter=',')
                 writer.writerow(["Scenario", "Line Filter", "Revenue"])
                 for scenario in sorted(self.results):
@@ -191,7 +191,7 @@ class RevenueCalculation(_m.Tool()):
        
         self._Execute()
 
-        with open(filePath, 'w') as csvfile:               
+        with open(filePath, 'w', newline='') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
             writer.writerow(["Scenario", "Line Filter", "Revenue"])
             for scenario in sorted(self.results):

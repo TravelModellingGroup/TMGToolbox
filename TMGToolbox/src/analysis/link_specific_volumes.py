@@ -99,7 +99,7 @@ class LinkSpecificVolumes(_m.Tool()):
        
         self._Execute()
 
-        with open(filePath, 'wb') as csvfile:               
+        with open(filePath, 'w', newline='') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
             if self.TransitFlag:
                 writer.writerow(["Scenario", "Link Filter", "Auto Volume", "Transit Volume"])

@@ -393,8 +393,8 @@ class ExportCountpostResults(_m.Tool()):
         return lines
     
     def _WriteReport(self, lines):
-        with open(self.ExportFile, 'w') as csv_file:
-            writer = csv.writer(csv_file)
+        with open(self.ExportFile, 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter = ',')
             #writer.writerow("Countpost,Link,Auto Volume,Additional Volume,Auto Time")
             #for line in lines:
             #    line = [str(c) for c in line]

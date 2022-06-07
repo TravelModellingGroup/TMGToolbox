@@ -1030,7 +1030,7 @@ class TransitAssignmentTool(_m.Tool()):
 
     def _WriteCSVFiles(self, iteration, network, cngap, crgap, normgapdiff):
         if iteration == 0:
-            with open(self.CSVFile, "wb") as iterationFile:
+            with open(self.CSVFile, "w", newline='') as iterationFile:
                 writer = csv.writer(iterationFile)
                 header = [
                     "iteration",
@@ -1043,7 +1043,7 @@ class TransitAssignmentTool(_m.Tool()):
                     "line speed",
                 ]
                 writer.writerow(header)
-        with open(self.CSVFile, "ab") as iterationFile:
+        with open(self.CSVFile, "a", newline='') as iterationFile:
             writer = csv.writer(iterationFile)
             for line in network.transit_lines():
                 boardings = 0.0

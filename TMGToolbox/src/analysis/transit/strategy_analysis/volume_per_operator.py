@@ -166,7 +166,7 @@ class VolumePerOperator(_m.Tool()):
             self.filtersToCompute = lineFilters
             self._Execute();
             
-        with open(self.ReportFile, 'w') as csvfile:               
+        with open(self.ReportFile, 'w', newline='') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
             if self.multiclass == False:
                 writer.writerow(["Scenario", "Line Filter", "Ridership"])
