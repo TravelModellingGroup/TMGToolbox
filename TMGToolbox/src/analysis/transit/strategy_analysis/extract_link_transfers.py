@@ -399,7 +399,7 @@ class ExtractLinkTransfers(_m.Tool()):
 		return spec
 
 	def _WriteResultsToFile(self, results):
-		with open(self.ExportFile, 'wb') as csvfile:
+		with open(self.ExportFile, 'w', newline='') as csvfile:
 			aggWrite = csv.writer(csvfile, delimiter = ',')
 			aggWrite.writerow(['label', 'volume'])
 			for item in results:

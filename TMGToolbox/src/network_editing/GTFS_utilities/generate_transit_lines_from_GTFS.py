@@ -420,7 +420,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     
     def _GenerateLines(self, routes, stops2nodes, network, writer):
         #This is the main method
-        with open (self.MappingFileName, 'wb') as csvfile:
+        with open (self.MappingFileName, 'w', newline='') as csvfile:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(["tripId", "emmeId"])
 
