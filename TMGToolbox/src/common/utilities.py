@@ -37,6 +37,7 @@ if six.PY2:
     from itertools import izip
 from json import loads as _parsedict
 from os.path import dirname
+import csv
 
 _MODELLER = _m.Modeller()
 _DATABANK = _MODELLER.emmebank
@@ -968,3 +969,12 @@ def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario):
         else: #non multiclass congested
             strats = scenario.transit_strategies
             return strats.data["demand"]
+
+@contextmanager
+def open_csv_writer(file_path):
+    if six.PY3:
+        with open(file_path, 'w', newline='') as csvfile:
+            yield csv.writer(csvfile, delimiter=',')
+    else:
+        with open(file_path, 'wb') as csvfile:
+            yield csv.writer(csvfile, delimiter=',')

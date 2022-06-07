@@ -252,8 +252,7 @@ class GTFStoEmmeMap(_m.Tool()):
                 cleanedNumber = int(nearestNode[0])
                 map.append([stop, cleanedNumber,convertedStops[stop][0],convertedStops[stop][1],nodes[cleanedNumber][0],nodes[cleanedNumber][1]])
 
-        with open(self.MappingFileName, 'w', newline='') as csvfile:
-            mapFile = csv.writer(csvfile, delimiter=',')
+        with _util.open_csv_writer(self.MappingFileName) as mapFile:
             header = ["stopID","emmeID","stop x", "stop y", "node x", "node y"]
             mapFile.writerow(header)
             for row in map:
