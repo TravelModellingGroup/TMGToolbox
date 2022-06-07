@@ -197,7 +197,7 @@ class VolumePerOperator(_m.Tool()):
        
         self._Execute()
 
-        with open(filePath, 'w') as csvfile:               
+        with open(filePath, 'w', newline='') as csvfile:               
             writer = csv.writer(csvfile, delimiter=',')
             if self.multiclass == False:
                 writer.writerow(["Scenario", "Line Filter", "Ridership"])
@@ -249,10 +249,9 @@ class VolumePerOperator(_m.Tool()):
                             self.results[scenario.id][filter[1]][key] = tempResultMatrix.data
                 else:
                     self.multiclass = False
-                    managers = [_util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute"),
-                                    _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL'),
-                                    _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR')]
-                    with nested(*managers) as (operatorMarker, tempIntermediateMatrix, tempResultMatrix):
+                    with _util.tempExtraAttributeMANAGER(self.Scenario, 'TRANSIT_LINE', description= "Extra attribute") as operatorMarker,\
+                            _util.tempMatrixMANAGER('Intermediate operator counts', 'FULL') as tempIntermediateMatrix,\
+                            _util.tempMatrixMANAGER('Aggregated operator counts', 'SCALAR') as tempResultMatrix:
                         networkCalculator(self.assign_line_filter(filter[1], operatorMarker), scenario=self.Scenario)
                         if EMME_VERSION >= (4, 3, 2):
                             report = stratAnalysis(self.count_ridership(operatorMarker, tempIntermediateMatrix, demandMatrixId), scenario=self.Scenario, num_processors = self.NumberOfProcessors)  
