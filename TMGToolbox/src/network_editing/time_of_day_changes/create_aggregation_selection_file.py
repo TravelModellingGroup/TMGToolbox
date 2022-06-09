@@ -260,8 +260,7 @@ class CreateAggregationSelectionFile(_m.Tool()):
             _m.logbook_write(msg)
 
     def _WriteAggSelections(self, network, aggTypeId):
-        with open(self.ExportFile, 'w', newline='') as csvfile:
-            aggWrite = csv.writer(csvfile, delimiter = ',')
+        with _util.open_csv_writer(self.ExportFile) as aggWrite:
             aggWrite.writerow(['emme_id', 'agg_type'])
             for line in network.transit_lines():
                 if line[aggTypeId] == 1: aggWrite.writerow([line.id, 'naive'])                    
