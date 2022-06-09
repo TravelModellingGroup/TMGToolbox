@@ -409,8 +409,7 @@ class LineSetConjoiner(_m.Tool()):
 
     def _WriteNewServiceTable(self, unchangedSched, modSched, sched, leftover):
         f = ['emme_id', 'trip_depart', 'trip_arrive']
-        with open(self.NewServiceTableFile, 'w', newline='') as csvfile:
-            tableWrite = csv.writer(csvfile, delimiter = ',')
+        with _util.open_csv_writer(self.NewServiceTableFile) as tableWrite:
             tableWrite.writerow(['emme_id', 'trip_depart', 'trip_arrive'])
             fullSched = unchangedSched.copy()
             fullSched.update(modSched)

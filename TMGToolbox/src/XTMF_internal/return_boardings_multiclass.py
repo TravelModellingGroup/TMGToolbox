@@ -276,8 +276,7 @@ class ReturnBoardings(_m.Tool()):
             fileName = self.xtmf_OutputDirectory + "\\" + re.sub(removeSpecialString, '', personClass["name"]) + ".csv"
             print(fileName)
             del personClass["name"]
-            with open(fileName, 'w', newline='') as classFile:
-                wr = csv.writer(classFile, delimiter = ',', quoting = csv.QUOTE_NONNUMERIC)
+            with _util.open_csv_writer(fileName) as wr:
                 wr.writerow(['line', 'boardings'])
                 for line in sorted(personClass.items()):
                     wr.writerow(line)

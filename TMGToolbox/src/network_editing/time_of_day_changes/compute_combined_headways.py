@@ -203,8 +203,7 @@ class ComputeCombinedHeadways(_m.Tool()):
             if totalHeadway[i] != 0:
                 totalHeadway[i] = 60 / totalHeadway[i] #converts total freq into combined headway
         
-        with open(self.ExportFile, 'w', newline='') as csvfile:
-            hdwWrite = csv.writer(csvfile, delimiter = ',')
+        with _util.open_csv_writer(self.ExportFile) as hdwWrite:
             hdwWrite.writerow(['line', 'comb_hdw'])
             for i in range(len(patternList)):
                 hdwWrite.writerow([patternList[i], totalHeadway[i]])               
