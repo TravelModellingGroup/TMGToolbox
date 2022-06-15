@@ -211,7 +211,7 @@ class ReverseTransitLines(_m.Tool()):
         copy = network.create_transit_line(newId, line.vehicle.id, newItinerary)
         for segment in copy.segments(False):
             d = segmentAttributes.pop() #Pops from the tail of the list, reversing the order
-            for attName, value in d.iteritems():
+            for attName, value in six.iteritems(d):
                 segment[attName] = value
         
         return newId

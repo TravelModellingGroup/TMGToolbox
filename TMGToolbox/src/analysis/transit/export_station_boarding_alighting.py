@@ -258,6 +258,6 @@ class ExtractStationBoardingsAlightings(_m.Tool()):
     def _OutputResults(self, valueDict):
         with _util.open_csv_writer(self.ReportFile) as nodeWrite:
             nodeWrite.writerow(['node_id', 'label', 'boardings', 'transfer_boardings', 'transfer_alightings', 'alightings'])
-            for key, values in sorted(valueDict.iteritems()):
+            for key, values in sorted(six.iteritems(valueDict)):
                 nodeWrite.writerow(values)
 

@@ -152,7 +152,7 @@ class ReturnBoardings(_m.Tool()):
         
         results = {}
         self.TRACKER.startProcess(len(lineBoardings))
-        for lineId, lineCount in lineBoardings.iteritems():
+        for lineId, lineCount in six.iteritems(lineBoardings):
             type = lineTypes[lineId]
             typeName = self.LINE_GROUP_MAP[type].name
             
@@ -200,7 +200,7 @@ class ReturnBoardings(_m.Tool()):
         
         results = _util.fastLoadSummedSegmentAttributes(scenario, ['transit_boardings'])
         retVal = {}
-        for lineId, attributes in results.iteritems():
+        for lineId, attributes in six.iteritems(results):
             id = str(lineId)
             retVal[id] = attributes['transit_boardings']
         
@@ -215,7 +215,7 @@ class ReturnBoardings(_m.Tool()):
         values = q[1]
         
         retval = {}
-        for id, index in indices.iteritems():
+        for id, index in six.iteritems(indices):
             id = str(id) #Normally stored in unicode.
             retval[id] = int(values[index])
         return retval

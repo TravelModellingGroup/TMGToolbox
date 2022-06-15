@@ -506,11 +506,11 @@ class ExtractTransitODVectors(_m.Tool()):
         zoneList = self.Scenario.zone_numbers
         probMatrix = np.zeros((len(zoneList), len(zoneList)))
         if probType == 'ORIGIN':
-            for key, probs in inputProbs.iteritems(): #iterate through the probability dictionary
+            for key, probs in six.iteritems(inputProbs): #iterate through the probability dictionary
                 location = zoneList.index(key) #index the current station parking node in the zone list
                 probMatrix[:,location] = probs[0] #insert a column (with the line group probability) at the station parking node location in the matrix
         elif probType == 'DESTINATION':
-            for key, probs in inputProbs.iteritems(): #iterate through the probability dictionary
+            for key, probs in six.iteritems(inputProbs): #iterate through the probability dictionary
                 location = zoneList.index(key) #index the current station parking node in the zone list
                 probMatrix[location, :] = probs[1] #insert a row (with the line group probability) at the station parking node location in the matrix
         else:

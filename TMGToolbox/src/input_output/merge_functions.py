@@ -225,7 +225,7 @@ class MergeFunctions(_m.Tool()):
             if self.RevertOnError:
                 for id in newFunctions:
                     emmebank.delete_function(id)
-                for id, expression in modifiedFunctions.iteritems():
+                for id, expression in six.iteritems(modifiedFunctions):
                     emmebank.function(id).expression = expression
             raise
     
@@ -402,7 +402,7 @@ class MergeFunctions(_m.Tool()):
     def update_data(self):
         # dialog = self.dialog
         acceptedChanges = self.dialog.getFunctionsToChange()
-        for fid, expression in acceptedChanges.iteritems():
+        for fid, expression in six.iteritems(acceptedChanges):
             func = _MODELLER.emmebank.function(fid)
             oldExpression = func.expression
             func.expression = expression

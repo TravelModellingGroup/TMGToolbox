@@ -241,7 +241,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
         with Shapely2ESRI(self.ShapefilePath, 'r') as reader:
             
             first = True
-            for id, data in reader.fields.iteritems():
+            for id, data in six.iteritems(reader.fields):
                 #if not data.type in validTypes: continue #Skip fields which are not of type INT or FLOAT
                 
                 text = "%s (%s)" %(id, data.type)

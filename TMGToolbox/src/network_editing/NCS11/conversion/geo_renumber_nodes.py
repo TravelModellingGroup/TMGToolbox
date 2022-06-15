@@ -270,7 +270,7 @@ class GeoRenumberNodes(_m.Tool()):
         return fixedNodeIDs
     
     def _RenumberNodes(self, network, fixedNodeIDs):
-        iterartors = dict([(key, val.__iter__()) for (key, val) in self.nodeRegions.iteritems()])
+        iterartors = dict([(key, val.__iter__()) for (key, val) in six.iteritems(self.nodeRegions)])
         mappings = {}
         
         self.TRACKER.startProcess(network.element_totals['regular_nodes'])
@@ -293,7 +293,7 @@ class GeoRenumberNodes(_m.Tool()):
     def _WriteMappingsReport(self, mappings):
         pb = _m.PageBuilder(title="Node Renumbering Report")
         
-        for tup in mappings.iteritems():
+        for tup in six.iteritems(mappings):
             pb.add_html("<p>%s: %s</p>" %tup)
         
         return pb.render()

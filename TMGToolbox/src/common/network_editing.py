@@ -449,10 +449,10 @@ def lineConcatenator(network, lineSet, newId):
         
     for num, segment in enumerate(newLine.segments(False)):
         d = combinedSegmentAttributes[num] 
-        for attName, value in d.iteritems():
+        for attName, value in six.iteritems(d):
             segment[attName] = value
         
-    for attName, value in lineAttributes.iteritems():
+    for attName, value in six.iteritems(lineAttributes):
         newLine[attName] = value
 
 #===========================================================================================
@@ -614,10 +614,10 @@ def mergeLinks(node, deleteStop= False, vertex= True, linkAggregators= {}, segme
     pairsToMerge = _getLinkPairs(incomingLinks, outgoingLinks)
     
     #Setup the aggregator functions. 
-    for key, val in __LINK_ATTRIBUTE_AGGREGATORS.iteritems():
+    for key, val in six.iteritems(__LINK_ATTRIBUTE_AGGREGATORS):
         if not key in linkAggregators: linkAggregators[key] = val
     
-    for key, val in __SEGMENT_ATTRIBUTE_AGGREGATORS.iteritems():
+    for key, val in six.iteritems(__SEGMENT_ATTRIBUTE_AGGREGATORS):
         if not key in segmentAggregators: segmentAggregators[key] = val
     
     createdLinks = []
@@ -635,7 +635,7 @@ def mergeLinks(node, deleteStop= False, vertex= True, linkAggregators= {}, segme
                 newLink.vertices = verticesList
                     #newLink.vertices.insert(len(link1.vertices), (node.x, node.y))
         
-        for line, segmentNumbersToRemove in lineQueue.iteritems():
+        for line, segmentNumbersToRemove in six.iteritems(lineQueue):
             _mergeLineSegments(network, line, segmentNumbersToRemove, segmentAggregators, lineRenamingMap)
             
     except:
@@ -827,7 +827,7 @@ class TransitLineProxy():
         self.segments = [TransitSegmentProxy(segment) for segment in line.segments(True)]
     
     def __getitem__(self, key):
-        if type(key) != str and type(key) != unicode: raise TypeError("Attribute must be a string")
+        if type(key) != str and type(key) != six.unicode: raise TypeError("Attribute must be a string")
         
         if key in self.__MAP: key = self.__MAP[key]
         if key in self.exatts:
@@ -835,7 +835,7 @@ class TransitLineProxy():
         return self.__dict__[key]
     
     def __setitem__(self, key, value):
-        if type(key) != str and type(key) != unicode: raise TypeError("Attribute must be a string")
+        if type(key) != str and type(key) != six.unicode: raise TypeError("Attribute must be a string")
         
         if key in self.__MAP: key = self.__MAP[key]
         if key in self.exatts:

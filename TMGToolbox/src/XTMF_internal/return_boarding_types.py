@@ -190,7 +190,7 @@ class ReturnBoardingTypesByLineGroup(_m.Tool()):
         values = q[1]
         
         retval = {}
-        for id, index in indices.iteritems():
+        for id, index in six.iteritems(indices):
             id = str(id) #Normally stored in unicode.
             retval[id] = int(values[index])
         return retval
@@ -227,7 +227,7 @@ class ReturnBoardingTypesByLineGroup(_m.Tool()):
         tBoardarray = q[2]
         
         retVal = []
-        for id, segmentIndices in indices.iteritems():
+        for id, segmentIndices in six.iteritems(indices):
             id = str(id) #Normally stored in unicode.
             
             valueIndices = segmentIndices[1]

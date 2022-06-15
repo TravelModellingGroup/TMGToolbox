@@ -128,7 +128,7 @@ class ReturnBoardings(_m.Tool()):
         allResults = []
         for PersonClass in lineBoardings:
             results = {}
-            for lineId, lineCount in PersonClass.iteritems():
+            for lineId, lineCount in six.iteritems(PersonClass):
                 if lineId == 'name':
                     results[lineId] = lineCount
                 else:
@@ -199,7 +199,7 @@ class ReturnBoardings(_m.Tool()):
                     results = _util.fastLoadSummedSegmentAttributes(scenario, [ClassBoardings.id])
             
                     retVal = {}
-                    for lineId, attributes in results.iteritems():
+                    for lineId, attributes in six.iteritems(results):
                         id = str(lineId)
                         retVal[id] = attributes[ClassBoardings.id]
           
@@ -225,7 +225,7 @@ class ReturnBoardings(_m.Tool()):
                 results = _util.fastLoadSummedSegmentAttributes(scenario, [ClassBoardings.id])
             
                 retVal = {}
-                for lineId, attributes in results.iteritems():
+                for lineId, attributes in six.iteritems(results):
                     id = str(lineId)
                     retVal[id] = attributes[ClassBoardings.id]
           

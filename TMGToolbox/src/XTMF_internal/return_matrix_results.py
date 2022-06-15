@@ -182,7 +182,7 @@ class SupplementalTransitMatrices(_m.Tool()):
                     else:
                         results[key].append(cell)
             resultList = []
-            for key, val in results.iteritems():
+            for key, val in six.iteritems(results):
                 origin, destination = key
                 col1 = val[0]
                 col2 = val[1]

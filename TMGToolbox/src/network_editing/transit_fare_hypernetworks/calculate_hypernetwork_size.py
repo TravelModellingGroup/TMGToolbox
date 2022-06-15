@@ -326,7 +326,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
                 raise XmlValidationError("Fare rule type '%s' not recognized." %ruleType)
             
             #Check required children
-            for name, checkFunc in requiredChildren.iteritems():
+            for name, checkFunc in six.iteritems(requiredChildren):
                 child = fareElement.find(name)
                 if child is None:
                     raise XmlValidationError("Fare element #%s of type '%s' must specify a '%s' element" %(i, ruleType, name))
@@ -335,7 +335,7 @@ class EstimateHyperNetworkSize(_m.Tool()):
                 checkFunc(text, name)
             
             #Check optional children
-            for name, checkFunc in optionalChildren.iteritems():
+            for name, checkFunc in six.iteritems(optionalChildren):
                 child = fareElement.find(name)
                 if child is None: continue
                 
