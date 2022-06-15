@@ -194,7 +194,7 @@ class ApplyBatchLineEdits(_m.Tool()):
         return instructionData
 
     def _ApplyLineChanges(self, inputData):
-        for filter, factors in inputData.iteritems():
+        for filter, factors in six.iteritems(inputData):
             if factors[0] != 1:
                 spec = {
                     "type": "NETWORK_CALCULATION",

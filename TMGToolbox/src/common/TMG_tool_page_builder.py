@@ -237,7 +237,7 @@ class TmgToolPageBuilder(_m.ToolPageBuilder):
         self.root.add_html('<div class="t_element"><b>{0}({1}) -> {2}</b></div>'.format(name, h, return_string))
         
         l = "<ul>"
-        for a in args.iteritems():
+        for a in six.iteritems(args):
             l += "<li><em>{0}: </em>{1}</li>".format(a[0], a[1])
         l += "</ul>"
         self.root.add_html('<div class="indent">{0}<br>{1}</div>'.format(description, l))           

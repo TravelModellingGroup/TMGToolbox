@@ -124,7 +124,7 @@ class CalculateStationFrequency(_m.Tool()):
         #---Save results
         File = open(FileName, "w")
         File.write("Zone,frequency,@freq,@pkcap")
-        for key, value in StationFrequency.iteritems():
+        for key, value in six.iteritems(StationFrequency):
             _pkcap = ParkingCapacity[key]
             _freq = FreqAttribute[key]
             File.write("\n%s,%s,%s,%s"% (key, value, _freq, _pkcap))

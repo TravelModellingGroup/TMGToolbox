@@ -323,7 +323,7 @@ class ExtractConstrainedLOSMatrices(_m.Tool()):
                         matrixIdsToConstrain['Cost'] = self.CostMatrixId
                     
                     self.TRACKER.startProcess(len(matrixIdsToConstrain))
-                    for (name, id) in matrixIdsToConstrain.iteritems():
+                    for (name, id) in six.iteritems(matrixIdsToConstrain):
                         if id == 'null': #Cannot return None from combobox, so need to check for string nullity
                             self.TRACKER.completeSubtask()
                         if EMME_VERSION >= (4,2,1):

@@ -468,7 +468,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
                 #Create route profile
                 branchNumber = 0
                 seqCount = 1
-                for seq, trips in tripSet.iteritems():
+                for seq, trips in six.iteritems(tripSet):
                     stop_itin = seq.split(';')
                 
                     #Get node itinerary
@@ -638,7 +638,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
         pb = _m.PageBuilder()
         stopData = []
         countData = []
-        for x, item in enumerate(skippedStopIds.iteritems()):
+        for x, item in enumerate(six.iteritems(skippedStopIds)):
             stop, count = item
             stopData.append((x, stop))
             countData.append((x, count))
@@ -701,7 +701,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             keyvals[att.id] = descr
         
         options = []
-        for tuple in keyvals.iteritems():
+        for tuple in six.iteritems(keyvals):
             html = '<option value="%s">%s</option>' %tuple
             options.append(html)
             

@@ -808,7 +808,7 @@ class CCGEN(_m.Tool()):
                     bestConfig = configuration
 
                     maxUtil = util
-                    maxComponents = dict([(key, tuple[1]) for (key, tuple) in utilComponents.iteritems()])
+                    maxComponents = dict([(key, tuple[1]) for (key, tuple) in six.iteritems(utilComponents)])
         
 
         for node in bestConfig:
@@ -862,7 +862,7 @@ class CCGEN(_m.Tool()):
                 'medianUtil' : numpy.median(utils),
                 'sDevUtil' : numpy.std(utils)}
         
-        for (key, value) in maxComponents.iteritems():
+        for (key, value) in six.iteritems(maxComponents):
             atts[key] = value
         
         return atts  
@@ -1307,7 +1307,7 @@ class SummaryReport():
     
     def _convertMapToDataSeries(self, dataMap):
         dataSeries = []
-        for tuple in dataMap.iteritems():
+        for tuple in six.iteritems(dataMap):
             dataSeries.append(tuple)
         return dataSeries
 

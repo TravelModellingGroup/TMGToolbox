@@ -697,7 +697,7 @@ class OperatorTransferMatrix(_m.Tool()):
             for className, weight in classWeights:
                 filepath = files[className]
                 classMatrix = self._ParseTraversalResults(filepath)
-                for key, value in classMatrix.iteritems():
+                for key, value in six.iteritems(classMatrix):
                     weightedValue = weight * value
                     if key in transferMatrix: transferMatrix[key] += weightedValue
                     else: transferMatrix[key] = weightedValue
@@ -805,7 +805,7 @@ class OperatorTransferMatrix(_m.Tool()):
         
         groupActivity = {}
         
-        for lineId, lineAtts in lineGroups.iteritems():
+        for lineId, lineAtts in six.iteritems(lineGroups):
             groupId = int(lineAtts[lineGroupAtributeID])
             
             if lineId in lineActivity:
@@ -822,7 +822,7 @@ class OperatorTransferMatrix(_m.Tool()):
             else:
                 groupActivity[groupId] = [initialBoardings, finalAlightings]
         
-        for groupId, activity in groupActivity.iteritems():
+        for groupId, activity in six.iteritems(groupActivity):
             initialBoardings, finalAlightings = activity
             
             transferMatrix[(0, groupId)] = initialBoardings

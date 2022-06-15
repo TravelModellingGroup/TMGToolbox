@@ -124,7 +124,7 @@ class ReturnBoardingsAndWAW(_m.Tool()):
         
         results = {}
         self.TRACKER.startProcess(len(lineBoardings))
-        for lineId, lineCount in lineBoardings.iteritems():
+        for lineId, lineCount in six.iteritems(lineBoardings):
             if not lineId in lineAggregation:
                 self.TRACKER.completeSubtask()
                 continue #Skip unmapped lines
@@ -159,7 +159,7 @@ class ReturnBoardingsAndWAW(_m.Tool()):
         
         results = _util.fastLoadSummedSegmentAttributes(scenario, ['transit_boardings'])
         retVal = {}
-        for lineId, attributes in results.iteritems():
+        for lineId, attributes in six.iteritems(results):
             id = str(lineId)
             retVal[id] = attributes['transit_boardings']
         

@@ -253,7 +253,7 @@ class Calc407ETRTolls(_m.Tool()):
             keyvals[att.id] = descr
         
         options = []
-        for tuple in keyvals.iteritems():
+        for tuple in six.iteritems(keyvals):
             html = '<option value="%s">%s</option>' %tuple
             options.append(html)
             

@@ -54,6 +54,10 @@ _util = _MODELLER.module('tmg.common.utilities')
 _netedit = _MODELLER.module('tmg.common.network_editing')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 
+import six
+
+_util.initalizeModellerTypes(_m)
+
 ##########################################################################################################
 
 class LineSetConjoiner(_m.Tool()):
@@ -318,10 +322,10 @@ class LineSetConjoiner(_m.Tool()):
                     else:
                         unchangedSched[id] = [trip]
 
-            for id, tripList in changedSched.iteritems(): #ordering the trips so that we can run through them sequentially later
+            for id, tripList in six.iteritems(changedSched): #ordering the trips so that we can run through them sequentially later
                 tripList.sort()
 
-            for id, tripList in unchangedSched.iteritems():
+            for id, tripList in six.iteritems(unchangedSched):
                 tripList.sort()
                                 
         return unchangedSched, changedSched
