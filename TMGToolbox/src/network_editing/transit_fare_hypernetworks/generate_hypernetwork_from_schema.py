@@ -792,7 +792,7 @@ class FBTNFromSchema(_m.Tool()):
                 
                 shapefiles[id] = reader
         except:
-            for reader in shapefiles.itervalues():
+            for reader in six.itervalues(shapefiles):
                 reader.close()
             raise
         

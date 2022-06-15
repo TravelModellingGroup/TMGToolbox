@@ -451,7 +451,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
             self.TRACKER.startProcess(len(routes))
             lineCount = 0
             print("Starting line itinerary generation")
-            for route in routes.itervalues():
+            for route in six.itervalues(routes):
                 baseEmmeId = route.emme_id
                 vehicle = network.transit_vehicle(route.emme_vehicle)
                 if vehicle is None:
@@ -582,7 +582,7 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     
     def _GetOrganizedTrips(self, route):
         tripSet = {}
-        for trip in route.trips.itervalues():
+        for trip in six.itervalues(route.trips):
             trip.stopTimes.sort()
             
             seq = [st[1].stop_id for st in trip.stopTimes]

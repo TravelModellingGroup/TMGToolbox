@@ -55,12 +55,15 @@ class ConvertNCS16toNCS22(_m.Tool()):
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
     # Tool Input Parameters
-    #    Only those parameters neccessary for Modeller and/or XTMF to dock with
+    #    Only those parameters necessary for Modeller and/or XTMF to dock with
     #    need to be placed here. Internal parameters (such as lists and dicts)
-    #    get intitialized during construction (__init__)
+    #    get initialized during construction (__init__)
     
     ncs16_scenario_number = _m.Attribute(_m.InstanceType) # common variable or parameter
     ncs22_scenario_number = _m.Attribute(_m.InstanceType)
+
+
+
 
     vehicle_conversion = [(1,1),
                            (2,2),
@@ -256,14 +259,14 @@ class ConvertNCS16toNCS22(_m.Tool()):
                 if network.node(centroid[0] + 100000) is not None: 
                     centroid_node = network.node(centroid[0] + 100000)
                     centroid_node.number = centroid[1]
-            ncs11_scenario = _MODELLER.emmebank.scenario(self.ncs22_scenario_number)
-            if ncs11_scenario != None:
+            ncs22_scenario = _MODELLER.emmebank.scenario(self.ncs22_scenario_number)
+            if ncs22_scenario != None:
                 _MODELLER.emmebank.delete_scenario(self.ncs22_scenario_number)
-            ncs11_scenario = _MODELLER.emmebank.copy_scenario(self.ncs16_scenario_number, self.ncs22_scenario_number)
-            ncs11_scenario.publish_network(network)
-            title = str(ncs11_scenario.title)
+            ncs22_scenario = _MODELLER.emmebank.copy_scenario(self.ncs16_scenario_number, self.ncs22_scenario_number)
+            ncs22_scenario.publish_network(network)
+            title = str(ncs22_scenario.title)
             title=title[0:50].strip()+" - NCS11"
-            ncs11_scenario.title = title
+            ncs22_scenario.title = title
 
 
     ##########################################################################################################
