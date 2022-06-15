@@ -107,7 +107,7 @@ class ReturnBoardings(_m.Tool()):
         lineAggregation = self._LoadLineAggregationFile()
         
         lineBoardings = self._GetLineResults(scenario)
-        netSet = set([key for key in lineBoardings.iterkeys()])
+        netSet = set([key for key in six.iterkeys(lineBoardings)])
         if self.xtmf_CheckAggregationFlag:
             self._CheckAggregationFile(netSet, lineAggregation)
         self.TRACKER.completeTask()
@@ -151,7 +151,7 @@ class ReturnBoardings(_m.Tool()):
         return retVal
         
     def _CheckAggregationFile(self, netSet, lineAggregation):
-        aggSet = set([key for key in lineAggregation.iterkeys()])
+        aggSet = set([key for key in six.iterkeys(lineAggregation)])
         
         linesInNetworkButNotMapped = [id for id in (netSet - aggSet)]
         linesMappedButNotInNetwork = [id for id in (aggSet - netSet)]

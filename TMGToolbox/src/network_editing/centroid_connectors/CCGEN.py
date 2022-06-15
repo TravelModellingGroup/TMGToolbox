@@ -1159,9 +1159,9 @@ class CCGEN(_m.Tool()):
     
     def _calculateDistanceMatrix(self, zone):
         dm = {}
-        for iNode in zone._candidateNodes.iterkeys():
+        for iNode in six.iterkeys(zone._candidateNodes):
             im = {}
-            for jNode in zone._candidateNodes.iterkeys():
+            for jNode in six.iterkeys(zone._candidateNodes):
                 if iNode == jNode:
                     continue
                 
@@ -1329,7 +1329,7 @@ class FullReport():
     
     def addZoneData(self, zoneId, atts):
         line = str(zoneId)
-        for key in atts.iterkeys():
+        for key in six.iterkeys(atts):
             if not key in self.header:
                 self.header.append(key)
         for i in range(1, len(self.header)):

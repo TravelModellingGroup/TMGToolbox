@@ -69,7 +69,7 @@ class Index(_m.Tool()):
                 alphabetizedToolNames[firstChar].append((name, namespacce))
             else:
                 alphabetizedToolNames[firstChar] = [(name, namespacce)]
-        orderedKeys = [key for key in alphabetizedToolNames.iterkeys()]
+        orderedKeys = [key for key in six.iterkeys(alphabetizedToolNames)]
         orderedKeys.sort()
         
         for firstChar in orderedKeys:
