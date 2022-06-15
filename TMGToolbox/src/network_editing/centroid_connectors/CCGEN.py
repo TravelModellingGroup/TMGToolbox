@@ -801,7 +801,7 @@ class CCGEN(_m.Tool()):
         for setSize in range(2, min(self.MaxConnectors, len(zone._candidateNodes)) + 1):
             for configuration in combinations(zone._candidateNodes, setSize):
                 utilComponents = self._calculateUtility(zone, configuration, distanceMatrix)
-                util = sum([beta * param for (beta, param) in utilComponents.itervalues()])
+                util = sum([beta * param for (beta, param) in six.itervalues(utilComponents)])
                 utils.append(util)
                 
                 if util > maxUtil: #Pick the configuration with the highest utility

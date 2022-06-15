@@ -396,7 +396,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
         linkAttributes = _util.fastLoadLinkAttributes(self.Scenario, linkAtts)
         
         counts = {}
-        for attributes in linkAttributes.itervalues():
+        for attributes in six.itervalues(linkAttributes):
             voltrLink = attributes[linkSumAttId]
                         
             post1 = int(attributes[self.CountpostFlagAttribute])

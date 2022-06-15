@@ -221,7 +221,7 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
             
             maxDescription = 10
             maxName = 10
-            for stop in stops.itervalues():
+            for stop in six.itervalues(stops):
                 nameLen = len(stop.name)
                 desLen= len(stop.description)
                 
@@ -244,7 +244,7 @@ class ExportGtfsStopsAsShapefile(_m.Tool()):
                     s += c
                 return s
             
-            for stop in stops.itervalues():
+            for stop in six.itervalues(stops):
                 point = _geo.Point(stop.lon, stop.lat)
                 point["StopID"] = stop.id
                 point["Name"] = stop.name
