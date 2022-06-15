@@ -288,8 +288,8 @@ class MergeFunctions(_m.Tool()):
         emmebank = _MODELLER.emmebank
         
         
-        databaseIds = set([key for key in databaseFunctions.iterkeys()])
-        fileIds = set([key for key in fileFunctions.iterkeys()])
+        databaseIds = set([key for key in six.iterkeys(databaseFunctions)])
+        fileIds = set([key for key in six.iterkeys(fileFunctions)])
         
         newFunctions = []
         modifiedFunctions = {}

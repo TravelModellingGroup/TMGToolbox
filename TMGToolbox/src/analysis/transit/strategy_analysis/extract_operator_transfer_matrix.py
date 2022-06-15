@@ -897,7 +897,7 @@ class OperatorTransferMatrix(_m.Tool()):
     def _WriteExportFile(self, transferMatrix):
         with open(self.TransferMatrixFile, 'w') as writer:
             headerSet = set()
-            for origin, destination in transferMatrix.iterkeys():
+            for origin, destination in six.iterkeys(transferMatrix):
                 headerSet.add(origin)
                 headerSet.add(destination)
             headers = [h for h in headerSet]

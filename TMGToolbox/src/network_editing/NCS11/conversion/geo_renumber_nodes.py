@@ -188,7 +188,7 @@ class GeoRenumberNodes(_m.Tool()):
             self.TRACKER.completeTask()
             _m.logbook_write("%s boundary shapes loaded." %len(reader))
             
-            defaultSet = set([key for key in self.nodeRegions.iterkeys()])
+            defaultSet = set([key for key in six.iterkeys(self.nodeRegions)])
             diff = countyNames.symmetric_difference(defaultSet)
             
             if diff:
