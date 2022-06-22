@@ -110,6 +110,8 @@ class MultiClassRoadAssignment(_m.Tool()):
     xtmf_MultiplyPathPropByDemand = _m.Attribute(str)
     xtmf_MultiplyPathPropByValue = _m.Attribute(str)
     xtmf_BackgroundTransit = _m.Attribute(str)
+    OnRoadTTFRanges = _m.Attribute(str)
+    
 
     NumberOfProcessors = _m.Attribute(int)
     
@@ -130,6 +132,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.LinkTollAttributeId = "@toll"
 
         self.NumberOfProcessors = multiprocessing.cpu_count()
+        self.OnRoadTTFRanges = "3-128"
         
              
     def page(self):
@@ -146,12 +149,12 @@ class MultiClassRoadAssignment(_m.Tool()):
                  RunTitle, LinkTollAttributeId, xtmf_NameString, ResultAttributes, xtmf_AnalysisAttributes, 
                  xtmf_AnalysisAttributesMatrixId, xtmf_AggregationOperator, xtmf_LowerBound,
                  xtmf_UpperBound, xtmf_PathSelection, xtmf_MultiplyPathPropByDemand, xtmf_MultiplyPathPropByValue,
-                 xtmf_BackgroundTransit):
+                 xtmf_BackgroundTransit, OnRoadTTFRanges):
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario is None):
             raise Exception("Scenario %s was not found!" %xtmf_ScenarioNumber)
-        
+        self.on_road_ttfs = self.convert_to_ranges(OnRoadTTFRanges)
         #:List will be passed as follows: xtmf_Demand_String = "mf10,mf11,mf12", Will be parsed into a list
          
         self.Demand_List = xtmf_Demand_String.split(",")
@@ -606,11 +609,28 @@ class MultiClassRoadAssignment(_m.Tool()):
                 "self": self.__MODELLER_NAMESPACE__}
             
         return atts       
+
+    def convert_to_ranges(self, range_str):
+        '''
+        This function converts a range string to a list of tuples of (start, end) pairs, inclusive, of ranges.
+
+        Returns: list of tuples (start, end) inclusive
+        '''
+        def process_term(term):
+            parts = term.split('-')
+            if len(parts) == 1:
+                value = int(term)
+                return (value, value)
+            else:
+                return (int(parts[0]), int(parts[1]))
+               
+        return [process_term(x) for x in range_str.split(',')]
         
     def _getTransitBGSpec(self):
+        ttf_terms = str.join(" + ", ["(ttf >="+str(x[0])+" * ttf <= "+str(x[1])+")" for x in self.on_road_ttfs])
         return {
                 "result": "@tvph",
-                "expression": "(60 / hdw) * (vauteq) * (ttf >= 3)",
+                "expression": "(60 / hdw) * (vauteq) * ("+ttf_terms+")",
                 "aggregation": "+",
                 "selections": {
                                 "link": "all",

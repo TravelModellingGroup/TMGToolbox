@@ -156,6 +156,8 @@ class TollBasedRoadAssignment(_m.Tool()):
     PathAnalysisFlag = _m.Attribute(bool)
 
     NumberOfProcessors = _m.Attribute(int)
+
+    OnRoadTTFRanges = _m.Attribute(str)
     
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -185,6 +187,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         self.AnalyzedDemandMatrix = None
         self.LinkVolResults = -1
         self.TurnVolResults = -1
+        self.OnRoadTTFRanges = "3-128"
 
         if EMME_VERSION >= (4,1):
             self.SOLAFlag = True
@@ -429,6 +432,11 @@ class TollBasedRoadAssignment(_m.Tool()):
                 pb.add_select(tool_attribute_name='TurnVolResults',
                         keyvalues=turnKV,
                         title="Selected turn volumes")
+            t.new_row()
+            with t.table_cell():
+                pb.add_text_box(tool_attribute_name='OnRoadTTFRanges',
+                                size=12,
+                                title="On Road TTF Ranges")
 
         pb.add_html("""
 <script type="text/javascript">
@@ -478,7 +486,7 @@ class TollBasedRoadAssignment(_m.Tool()):
         if self.rGap is None: raise NullPointerException("Relative gap not specified")
         if self.brGap is None: raise NullPointerException("Best relative gap not specified")
         if self.normGap is None: raise NullPointerException("Normalized gap not specified")
-        
+        self.on_road_ttfs = self.convert_to_ranges(self.OnRoadTTFRanges)
         try:
             self._execute()
         except Exception as e:
@@ -491,7 +499,8 @@ class TollBasedRoadAssignment(_m.Tool()):
     def __call__(self, xtmf_ScenarioNumber, xtmf_DemandMatrixNumber, TimesMatrixId, CostMatrixId, TollsMatrixId,
                  PeakHourFactor, LinkCost, TollWeight, Iterations, rGap, brGap, normGap, PerformanceFlag,
                  RunTitle, LinkTollAttributeId, SOLAFlag, PathAnalysisFlag, LinkComponent, TurnComponent, OperatorForPathAnaysis, 
-                 LowerBound, UpperBound, PathToODAggregation, AnalyzedDemandMatrix, ODValueResults, LinkVolResults, TurnVolResults):
+                 LowerBound, UpperBound, PathToODAggregation, AnalyzedDemandMatrix, ODValueResults, LinkVolResults, TurnVolResults,
+                 OnRoadTTFRanges):
         
         #---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -540,6 +549,8 @@ class TollBasedRoadAssignment(_m.Tool()):
             self.ODValueResults = ODValueResults
             self.LinkVolResults = LinkVolResults
             self.TurnVolResults = TurnVolResults
+
+        self.on_road_ttfs = self.convert_to_ranges(OnRoadTTFRanges)
 
         #---3. Run
         try:
@@ -834,12 +845,29 @@ class TollBasedRoadAssignment(_m.Tool()):
                 "Iterations" : str(self.Iterations),
                 "self": self.__MODELLER_NAMESPACE__}
             
-        return atts       
+        return atts
+    
+    def convert_to_ranges(self, range_str):
+        '''
+        This function converts a range string to a list of tuples of (start, end) pairs, inclusive, of ranges.
+
+        Returns: list of tuples (start, end) inclusive
+        '''
+        def process_term(term):
+            parts = term.split('-')
+            if len(parts) == 1:
+                value = int(term)
+                return (value, value)
+            else:
+                return (int(parts[0]), int(parts[1]))
+               
+        return [process_term(x) for x in range_str.split(',')]
         
     def _getTransitBGSpec(self):
+        ttf_terms = str.join(" + ", ["(ttf >="+str(x[0])+" * ttf <= "+str(x[1])+")" for x in self.on_road_ttfs])
         return {
                 "result": "@tvph",
-                "expression": "(60 / hdw) * (vauteq) * (ttf >= 3)",
+                "expression": "(60 / hdw) * (vauteq) * ("+ttf_terms+")",
                 "aggregation": "+",
                 "selections": {
                                 "link": "all",
