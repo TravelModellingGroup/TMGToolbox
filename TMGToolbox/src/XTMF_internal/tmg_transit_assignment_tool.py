@@ -947,7 +947,6 @@ class TransitAssignmentTool(_m.Tool()):
         return assignedDemand
 
     def _PrepareNetwork(self, stsu_att):
-        # network = self.Scenario.get_network()
         network = self.Scenario.get_partial_network(
             ["LINK", "TRANSIT_SEGMENT", "TRANSIT_LINE", "TRANSIT_VEHICLE"], include_attributes=False
         )
@@ -1087,8 +1086,9 @@ class TransitAssignmentTool(_m.Tool()):
     def _SurfaceTransitSpeedUpdate(self, network, lambdaK, stsu_att, final):
         if "transit_alightings" not in network.attributes("TRANSIT_SEGMENT"):
             network.create_attribute("TRANSIT_SEGMENT", "transit_alightings", 0.0)
+        has_doors = self.Scenario.extra_attribute("@doors") is not None
         for line in network.transit_lines():
-            prevVolume = 0.0
+            prev_volume = 0.0
             headway = line.headway
             number_of_trips = self.AssignmentPeriod * 60.0 / headway
 
@@ -1103,42 +1103,28 @@ class TransitAssignmentTool(_m.Tool()):
             default_duration = model["default_duration"]
             correlation = model["correlation"]
             mode_filter = model["mode_filter"]
-
-            try:
-                doors = segment.line["@doors"]
-                if doors == 0.0:
-                    number_of_door_pairs = 1.0
-                else:
-                    number_of_door_pairs = doors / 2.0
-            except:
-                number_of_door_pairs = 1.0
-
-            for segment in line.segments(include_hidden=True):
+            door_pairs = line["@doors"] / 2.0 if has_doors and line["@doors"] != 0.0 else 1.0
+            inv_door_pair_runs = 1.0 / (door_pairs * number_of_trips)
+            for segment in line.segments(include_hidden=False):
                 segment_number = segment.number
                 if segment_number > 0 and segment.j_node is not None:
                     segment.transit_alightings = max(
-                        prevVolume + segment.transit_boardings - segment.transit_volume, 0.0
+                        prev_volume + segment.transit_boardings - segment.transit_volume, 0.0
                     )
                 else:
                     continue
-                # prevVolume is used above for the previous segments volume, the first segment is always ignored.
-                prevVolume = segment.transit_volume
-
-                boarding = segment.transit_boardings / number_of_trips / number_of_door_pairs
-                alighting = segment.transit_alightings / number_of_trips / number_of_door_pairs
-
-                old_dwell = segment.dwell_time
-                segment_dwell_time = (
-                    (boarding_duration * boarding)
-                    + (alighting_duration * alighting)
-                    + (segment["@tstop"] * default_duration)
-                )  # seconds
-                segment_dwell_time /= 60  # minutes
-                if segment_dwell_time >= 99.99:
-                    segment_dwell_time = 99.98
-
-                alpha = 1 - lambdaK
-                segment.dwell_time = old_dwell * alpha + segment_dwell_time * lambdaK
+                # prev_volume is used above for the previous segments volume, the first segment is always ignored.
+                prev_volume = segment.transit_volume
+                segment_dwell_time = min(
+                    99.8,
+                    (
+                        (boarding_duration * segment.transit_boardings * inv_door_pair_runs)
+                        + (alighting_duration * segment.transit_alightings * inv_door_pair_runs)
+                        + (segment["@tstop"] * default_duration)
+                    )
+                    / 60,
+                )
+                segment.dwell_time = segment.dwell_time * (1 - lambdaK) + segment_dwell_time * lambdaK
         data = network.get_attribute_values("TRANSIT_SEGMENT", ["dwell_time", "transit_time_func"])
         self.Scenario.set_attribute_values("TRANSIT_SEGMENT", ["dwell_time", "transit_time_func"], data)
         return network
@@ -1467,27 +1453,6 @@ class TransitAssignmentTool(_m.Tool()):
             if self.xtmf_congestedAssignment == True:
                 if self.CongestionMatrixList[i] is not None:
                     self._ExtractCongestionMatrix(self.CongestionMatrixList[i], i)
-            """if self.xtmf_congestedAssignment==True:
-                if not self.CongestionMatrixList[i] and self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag:
-
-                    def congestionMatrixManager():
-                        return _util.tempMatrixMANAGER()
-
-                else:
-
-                    @contextmanager
-                    def congestionMatrixManager():
-                        try:
-                            yield _bank.matrix(self.CongestionMatrixList[i])
-                        finally:
-                            pass
-
-            
-                if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag or self.CongestionMatrixList[i]:
-                    with congestionMatrixManager() as congestionMatrix:
-                        self._ExtractCongestionMatrix(congestionMatrix.id, i)
-                    if self.InVehicleTimeMatrixList[i] and not self.CalculateCongestedIvttFlag:
-                        self._FixRawIVTT(congestionMatrix.id, i)"""
             if self.FareMatrixList[i]:
                 self._ExtractCostMatrix(i)
 
