@@ -169,7 +169,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
             
             $("#AlternateFlagAttribute")
                 .empty()
-                .append(tool._GetSelectAttributeOptionsHTML())
+                .append(tool.preload_scenario_attributes())
             inro.modeller.page.preload("#AlternateFlagAttribute");
             $("#AlternateFlagAttribute").trigger('change');
         });
@@ -221,7 +221,7 @@ class ExportTransitScreenlineResults(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
@@ -231,8 +231,17 @@ class ExportTransitScreenlineResults(_m.Tool()):
     
     def short_description(self):
         return "<em>Exports transit results for screenlines defined by multiple count posts.</em>"
-    
-    @_m.method(return_type=six.u)
+
+    @_m.method(return_type=six.text_type)
+    def preload_scenario_attributes(self):
+        list = []  
+        for att in self.Scenario.extra_attributes():
+            label = "{id} - {name}".format(id=att.name, name=att.description)
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
+            list.append(html)
+        return "\n".join(list)
+  
+    @_m.method(return_type=six.text_type)
     def preload_screenline_definitions(self):
         atts = [self.CountpostFlagAttribute]
         if self.AlternateFlagAttribute: atts.append(self.AlternateFlagAttribute)

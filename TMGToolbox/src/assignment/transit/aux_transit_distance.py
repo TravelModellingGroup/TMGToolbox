@@ -83,7 +83,7 @@ class AuxTransitDistance(m.Tool()):
         </script>""" % pb.tool_proxy_tag)
         return pb.render()
 
-    @m.method(argument_types=[bool], return_type=six.u)
+    @m.method(argument_types=[bool], return_type=six.text_type)
     def populate_mode_list(self, as_html=False):
         allowed_modes = []
         for mode in self.Scenario.modes():

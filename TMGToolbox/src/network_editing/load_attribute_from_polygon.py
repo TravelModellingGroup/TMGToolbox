@@ -232,7 +232,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
         
         return pb.render()
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_fields(self):
         options = []
         self.__loadedFields = []
@@ -255,7 +255,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
                 
         return "\n".join(options)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_attributes(self):
         options = []
         for exatt in self.Scenario.extra_attributes():
@@ -277,7 +277,7 @@ class LoadAttributeFromPolygon(_m.Tool()):
     def is_shapefile_loaded(self):
         return bool(self.__loadedFields)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

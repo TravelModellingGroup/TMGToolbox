@@ -494,25 +494,25 @@ class CheckNetworkConnectivity(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_auto_modes(self):
         options = []
-        h = HTML()
         for id, type, description in _util.getScenarioModes(self.Scenario,  ['AUTO', 'AUX_AUTO']):
-            text = "%s - %s" %(id, description)
-            options.append(str(h.option(text, value= id)))
+            label = "{id} - {name}".format(id=id, name=description)
+            html = '<option value="{id}">{text}</option>'.format(id=id, text=label)
+            options.append(html)
         return "\n".join(options)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_transit_modes(self):
         options = []
-        h = HTML()
         for id, type, description in _util.getScenarioModes(self.Scenario,  ['AUX_TRANSIT', 'TRANSIT']):
-            text = "%s - %s" %(id, description)
-            options.append(str(h.option(text, value= id)))
+            label = "{id} - {name}".format(id=id, name=description)
+            html = '<option value="{id}">{text}</option>'.format(id=id, text=label)
+            options.append(html)
         return "\n".join(options)
         

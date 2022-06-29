@@ -367,11 +367,11 @@ class ImportNetworkUpdate(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_file_info(self):
         '''
         Reads the info file with which accompanies the update. The first

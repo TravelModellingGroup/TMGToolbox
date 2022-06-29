@@ -46,7 +46,6 @@ Line Set Conjoiner
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 import csv
 from operator import itemgetter
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
@@ -168,25 +167,25 @@ class LineSetConjoiner(_m.Tool()):
                                      attributes=self._GetAtts()):
             
             network = self.BaseScenario.get_network()
-            print "Loaded network"
+            print("Loaded network")
 
             lineIds, lineList = self._ReadSetFile()
-            print "Loaded lines"
+            print("Loaded lines")
 
             unchangedSched, changedSched = self._LoadServiceTable(lineList)
-            print "Loaded service table"
+            print("Loaded service table")
 
             #newLineIds = self._ConcatenateLines(network, lineIds)
             #print "Lines concatenated"    
                                 
             moddedSched, removedSched, leftoverSched = self._ModifySched(network, lineIds, changedSched)
             self._WriteNewServiceTable(unchangedSched, moddedSched, removedSched, leftoverSched)
-            print "Created modified service table"
+            print("Created modified service table")
             
             #self._WriteUnusedTrips()
             #print "Created unused trip table"
 
-            print "Publishing network"
+            print("Publishing network")
             self.BaseScenario.publish_network(network)
             self.TRACKER.completeTask()
 
@@ -432,25 +431,10 @@ class LineSetConjoiner(_m.Tool()):
                     value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
                     tableWrite.writerow(value)
 
-    #def _WriteUnusedTrips(self, sched, leftover):
-    #    f = ['emme_id', 'trip_depart', 'trip_arrive']
-    #    with open(self.UnusedTripTableFile, 'wb') as csvfile:
-    #        tableWrite = csv.writer(csvfile, delimiter = ',')
-    #        tableWrite.writerow(['emme_id', 'trip_depart', 'trip_arrive'])
-    #        # can't use update() to combine the two dictionaries, since we may have overlapping keys
-    #        for schedKey in sorted(sched):
-    #            for item in sorted(sched[schedKey]): 
-    #                value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
-    #                tableWrite.writerow(value)
-    #        for schedKey in sorted(leftover):
-    #            for item in sorted(leftover[schedKey]): 
-    #                value = [schedKey, self._RevertToString(item[0]),self._RevertToString(item[1])]
-    #                tableWrite.writerow(value)
-
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg

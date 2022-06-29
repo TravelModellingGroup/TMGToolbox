@@ -404,7 +404,7 @@ class CheckNetworkIntegrity(_m.Tool()):
         _m.logbook_write("%s problems found" %errCount, value= pb.render())
         print ("Done.")
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def _GetLinkExtraAttributes(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
@@ -420,7 +420,7 @@ class CheckNetworkIntegrity(_m.Tool()):
             
         return "\n".join(options)
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def _GetLineExtraAttribute(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
@@ -436,7 +436,7 @@ class CheckNetworkIntegrity(_m.Tool()):
             
         return "\n".join(options)
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def _GetSegExtraAttributes(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():
@@ -456,7 +456,7 @@ class CheckNetworkIntegrity(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

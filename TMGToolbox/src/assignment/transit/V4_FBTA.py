@@ -1384,7 +1384,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
     def short_description(self):
         return "Fare-based transit assignment tool for GTAModel V4"
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_scenario_node_attributes(self):
         options = ["<option value='-1'>None</option>"]
         for exatt in self.Scenario.extra_attributes():
@@ -1392,7 +1392,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
         return "\n".join(options)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_scenario_link_attributes(self, include_none= True):
         options = []
         if include_none:
@@ -1402,7 +1402,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
                 options.append('<option value="%s">%s - %s</option>' %(exatt.id, exatt.id, exatt.description))
         return "\n".join(options)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_scenario_segment_attribtues(self):
         options = []
         for exatt in self.Scenario.extra_attributes():
@@ -1414,7 +1414,7 @@ def calc_segment_cost(transit_volume, capacity, segment): """
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

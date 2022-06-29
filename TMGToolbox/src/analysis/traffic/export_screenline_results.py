@@ -181,14 +181,24 @@ class ExportScreenlineResults(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
     def short_description(self):
         return "<em>Exports traffic results for screenlines defined by multiple count posts.</em>"
+
+    @_m.method(return_type=six.text_type)
+    def preload_scenario_attributes(self):
+        list = []
+        
+        for att in self.Scenario.extra_attributes():
+            label = "{id} - {name}".format(id=att.name, name=att.description)
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
+            list.append(html)
+        return "\n".join(list)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_screenline_definitions(self):
         atts = [self.CountpostFlagAttribute]
         if self.AlternateFlagAttribute: atts.append(self.AlternateFlagAttribute)
@@ -235,6 +245,17 @@ class ExportScreenlineResults(_m.Tool()):
         lines.sort()
         lines.insert(0, "Screenline ID\tnStations\tnMissing\tStatus")
         return "\n".join(lines)
+
+    @_m.method(return_type=six.text_type)
+    def _GetSelectAttributeOptionsHTML(self):
+        list = []
+        
+        for att in self.Scenario.extra_attributes():
+            if not att.type == 'LINK': continue
+            label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
+            list.append(html)
+        return "\n".join(list)
     
     #---
     #---XTMF INTERFACE METHODS

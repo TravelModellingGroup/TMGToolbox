@@ -414,7 +414,7 @@ class ModifyWalkModes(_m.Tool()):
         self.scenario.publish_network(network)
         _m.logbook_write("Created %s new links in the network. Click for report." %counter, value=report)
             
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

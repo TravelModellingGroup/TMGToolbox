@@ -99,7 +99,7 @@ class CheckLinkTypes(_m.Tool()):
         typeValues.sort()
         return typeValues
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

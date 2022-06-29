@@ -19,12 +19,15 @@
 
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 import inro.modeller as _m
 import os
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 class ExportSubareaTool(_m.Tool()):
     version = '1.1.1'
@@ -64,9 +67,9 @@ class ExportSubareaTool(_m.Tool()):
 
        
         try:
-            print "Adding Toolbox"
+            print("Adding Toolbox")
             self._execute()
-            print "Toolbox added"
+            print("Toolbox added")
         except Exception as e:
             raise Exception(_util.formatReverseStack())
 

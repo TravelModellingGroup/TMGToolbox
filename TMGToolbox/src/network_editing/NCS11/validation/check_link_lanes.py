@@ -32,7 +32,7 @@ class CheckLinkLanes(_m.Tool()):
     Scenario = _m.Attribute(_m.InstanceType)
     tool_run_msg = ""
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

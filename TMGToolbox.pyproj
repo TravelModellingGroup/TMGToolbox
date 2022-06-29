@@ -62,6 +62,7 @@
     <Compile Include="src\assignment\preprocessing\check_scenario_functions.py" />
     <Compile Include="src\assignment\preprocessing\flag_premium_buses.py" />
     <Compile Include="src\assignment\preprocessing\import_v3_boarding_penalty.py" />
+    <Compile Include="src\assignment\preprocessing\remove_redundant_functions.py" />
     <Compile Include="src\assignment\preprocessing\set_walk_speed.py" />
     <Compile Include="src\assignment\road\tolled\toll_attribute.py" />
     <Compile Include="src\assignment\road\tolled\toll_attribute_transit_background.py" />
@@ -83,7 +84,6 @@
     <Compile Include="src\common\utilities.py" />
     <Compile Include="src\execute_python_script.py" />
     <Compile Include="src\input_output\export_binary_matrix.py" />
-    <Compile Include="src\input_output\export_distance_matrix.py" />
     <Compile Include="src\input_output\export_network_package.py" />
     <Compile Include="src\input_output\import_binary_matrix.py" />
     <Compile Include="src\input_output\import_network_package.py" />
@@ -99,6 +99,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\license.py" />
+    <Compile Include="src\logbook\search_logbook_attributes.py" />
     <Compile Include="src\network_editing\calculate_station_frequencies.py" />
     <Compile Include="src\network_editing\centroid_connectors\CCGEN.py" />
     <Compile Include="src\network_editing\centroid_connectors\copy_zone_system.py" />
@@ -111,9 +112,7 @@
     <Compile Include="src\network_editing\GTFS_utilities\GTFS_EMME_node_map.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\network_editing\attribute_changer.py">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="src\network_editing\line_set_conjoiner.py" />
     <Compile Include="src\network_editing\NCS11\conversion\convert_ncs16_ncs11.py" />
     <Compile Include="src\network_editing\NCS22\convert_between_ncs_scenarios.py" />
     <Compile Include="src\network_editing\remove_extra_links.py">
@@ -212,6 +211,7 @@
     <Folder Include="src\assignment\transit" />
     <Folder Include="src\common" />
     <Folder Include="src\input_output" />
+    <Folder Include="src\logbook\" />
     <Folder Include="src\network_editing" />
     <Folder Include="src\network_editing\centroid_connectors" />
     <Folder Include="src\network_editing\GTFS_utilities" />

@@ -281,7 +281,7 @@ class ConvertVehicles(_m.Tool()):
         _m.logbook_write("Changed mode of vehicle {0} \
                 from {1} to {2}.".format(vehicle.id, oldMode, modeChar))
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

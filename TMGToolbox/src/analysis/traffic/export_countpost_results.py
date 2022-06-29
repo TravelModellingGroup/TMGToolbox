@@ -160,17 +160,17 @@ class ExportCountpostResults(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_scenario_attributes(self):
         list = []
         
         for att in self.Scenario.extra_attributes():
             label = "{id} - {name}".format(id=att.name, name=att.description)
-            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
             list.append(html)
         return "\n".join(list)
     

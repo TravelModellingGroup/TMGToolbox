@@ -192,6 +192,6 @@ class FlagPremiumBusLines(_m.Tool()):
     def _flagZumBuses(self, line):
         raise Exception("Flagging of ZUM lines is currently unsupported.")
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg

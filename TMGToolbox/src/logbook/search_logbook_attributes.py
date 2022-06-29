@@ -30,12 +30,16 @@
     
 '''
 import traceback as _traceback
-from html import HTML
 
 import inro.modeller as _m
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
+# import six library for python2 to python3 conversion
+import six 
+# initalize python3 types
+_util.initalizeModellerTypes(_m)
+
 
 ##########################################################################################################
 
@@ -82,16 +86,12 @@ class SearchLogbookAttribtues(_m.Tool()):
             
         if self.matches:
             with pb.section('Search Results'):
-                h = HTML()
-                l = h.ul()
+                html = "<ul>"
                 for timestamp, element_id, title in self.matches:
-                    description = "%s: %s" %(title, timestamp)
-                    
-                    a = self._render_entry_link(element_id, description)
-                    
-                    l.li(a, escape= False)
-                
-                pb.wrap_html(body= str(l))
+                    description = "%s: %s" %(title, timestamp)                    
+                    html += "<li>" + self._render_entry_link(element_id, description) + "</li>"
+                html = "</ul>"
+                pb.wrap_html(body= html)
         
         pb.add_text_box(tool_attribute_name= 'AttributeName',
                         title= "Attribute",
@@ -168,11 +168,11 @@ class SearchLogbookAttribtues(_m.Tool()):
             AND name = '{begin}';'''.format(id= elemnt_id, begin= self.BEGIN_KEY)
         
         timestamp = _m.logbook_query(sql)[0][0]
-        print timestamp
+        print(timestamp)
         
         sql = '''SELECT tag FROM elements WHERE element_id= %s''' %elemnt_id
         title = _m.logbook_query(sql)[0][0]
-        print title
+        print(title)
         
         return timestamp, title
     
@@ -182,7 +182,7 @@ class SearchLogbookAttribtues(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
