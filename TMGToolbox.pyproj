@@ -115,7 +115,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\network_editing\NCS11\conversion\convert_ncs16_ncs11.py" />
-    <Compile Include="src\network_editing\NCS22\convert_ncs16_ncs22.py" />
+    <Compile Include="src\network_editing\NCS22\convert_between_ncs_scenarios.py" />
     <Compile Include="src\network_editing\remove_extra_links.py">
       <SubType>Code</SubType>
     </Compile>
