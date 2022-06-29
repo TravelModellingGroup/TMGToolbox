@@ -357,19 +357,19 @@ class ExportNetworkPackage(m.Tool()):
             keyval[att.name] = label
         return keyval
     
-    @m.method(return_type=six.u)
+    @m.method(return_type=six.text_type)
     def _get_select_attribute_options_html(self):
         list_ = []
         for att in self.Scenario.extra_attributes():
             label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
-            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
             list_.append(html)
-        return "\n".join(list_)
+        return six.u("\n".join(list_))
 
     @m.method(return_type=m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
     
-    @m.method(return_type=six.u)
+    @m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
