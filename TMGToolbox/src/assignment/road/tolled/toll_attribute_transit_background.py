@@ -1537,28 +1537,28 @@ class TollBasedRoadAssignment(_m.Tool()):
     def percent_completed(self):
         return self._tracker.getProgress()
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def _GetSelectAttributeOptionsHTML(self):
         list = []
         
         for att in self.Scenario.extra_attributes():
             if not att.type == 'LINK': continue
             label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
-            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
             list.append(html)
         return "\n".join(list)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def _GetSelectTurnAttributeOptionsHTML(self):
         list = []
         
         for att in self.Scenario.extra_attributes():
             if not att.type == 'TURN': continue
             label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
-            html = unicode('<option value="{id}">{text}</option>'.format(id=att.name, text=label))
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
             list.append(html)
         return "\n".join(list)

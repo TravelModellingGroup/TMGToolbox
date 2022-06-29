@@ -434,7 +434,7 @@ class OperatorTransferMatrix(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
@@ -442,7 +442,7 @@ class OperatorTransferMatrix(_m.Tool()):
     def class_name_is_required(self):
         return self._GetAssignmentType() == 'MULTICLASS_TRANSIT_ASSIGNMENT'
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_class_names(self):
         classInfo = self._LoadClassInfo()
         options = []
@@ -450,7 +450,7 @@ class OperatorTransferMatrix(_m.Tool()):
             options.append("<option value='%s'>%s</option>" %(name, name))
         return "\n".join(options)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_line_group_options(self):
         options = [(1, "<em>Pre-built:</em> NCS11 operator codes"),
                    (2, "<em>Pre-built:</em> Alphabetical by operator"),

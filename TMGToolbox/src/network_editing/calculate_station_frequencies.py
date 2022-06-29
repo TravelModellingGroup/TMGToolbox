@@ -132,7 +132,7 @@ class CalculateStationFrequency(_m.Tool()):
         
         return "Tool complete. %i out of %i lines were selected." %(_i, _total_lines)
         
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

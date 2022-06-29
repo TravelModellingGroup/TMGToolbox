@@ -1502,68 +1502,64 @@ class FBTNFromSchema(_m.Tool()):
             print("WARNING: Found %s links and %s segments with negative fares" %(len(negativeLinks), len(negativeSegments)))
             
             pb = _m.PageBuilder(title="Negative Fares Report")
-            h = HTML()
-            h.h2("Links with negative fares")
-            t = h.table()
-            r = t.tr()
-            r.th("link")
-            r.th("cost")
+            
+            ret = "<h2>Links with negative fares</h2>"
+            ret += "<table><tr>"
+            ret += "<th>link</th>"
+            ret += "<th>cost</th>"
             for link in negativeLinks:
-                r = t.tr()
-                r.td(str(link))
-                r.td(str(link[self.LinkFareAttributeId]))
-            
-            h.h2("Segments with negative fares")
-            t = h.table()
-            r = t.tr()
-            r.th("segment")
-            r.th("cost")
+                ret += "<tr>"
+                ret += "<td>"+str(link)+"</td>"
+                ret += "<td>"+str(link[self.LinkFareAttributeId])+"</td>"
+                ret += "</tr>"
+            ret += "</table>"
+            ret += "<h2>Segments with negative fares</h2>"
+            ret += "<table><tr>"
+            ret += "<th>segment</th>"
+            ret += "<th>cost</th></tr>"
             for segment in negativeSegments:
-                r = t.tr()
-                r.td(segment.id)
-                r.td(segment[self.SegmentFareAttributeId])
-            
-            pb.wrap_html(body=str(h))
-            
+                ret += "<tr>"
+                ret += "<td>" + segment.id + "</td>"
+                ret += "<td>" + segment[self.SegmentFareAttributeId] + "</td>"
+                ret += "</tr>"
+            ret += "</table>"
+            pb.wrap_html(body=ret)
             _m.logbook_write("LINKS AND SEGMENTS WITH NEGATIVE FARES", value=pb.render())
 
     #---              
     #---MODELLER INTERFACE FUNCTIONS----------------------------------------------------------------------      
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_auxtr_modes(self):
         options = []
-        h = HTML()
         for id, type, description in _util.getScenarioModes(self.BaseScenario,  ['AUX_TRANSIT']):
             text = "%s - %s" %(id, description)
-            options.append(str(h.option(text, value= id)))
+            options.append("<option value=\""+id+"\">"+text+"</option>")
         return "\n".join(options)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_scenario_link_attributes(self):
         options = []
-        h = HTML()
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type != 'LINK': continue
             text = "%s - %s" %(exatt.name, exatt.description)
-            options.append(str(h.option(text, value= exatt.name)))
+            options.append("<option value=\""+exatt.name+"\">"+text+"</option>")
         return "\n".join(options)
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def preload_scenario_segment_attributes(self):
         options = []
-        h = HTML()
         for exatt in self.BaseScenario.extra_attributes():
             if exatt.type != 'TRANSIT_SEGMENT': continue
             text = "%s - %s" %(exatt.name, exatt.description)
-            options.append(str(h.option(text, value= exatt.name)))
+            options.append("<option value=\""+exatt.name+"\">"+text+"</option>")
         return "\n".join(options)
     
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
         

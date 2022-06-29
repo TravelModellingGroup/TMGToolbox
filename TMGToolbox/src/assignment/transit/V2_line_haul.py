@@ -429,7 +429,7 @@ class Station2StationAssignment(_m.Tool()):
             print(_traceback.format_exc())
             raise
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     

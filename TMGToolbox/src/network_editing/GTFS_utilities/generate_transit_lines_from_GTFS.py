@@ -687,11 +687,11 @@ class GenerateTransitLinesFromGTFS(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
     
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def getExtraAttributes(self):
         keyvals = {}
         for att in self.Scenario.extra_attributes():

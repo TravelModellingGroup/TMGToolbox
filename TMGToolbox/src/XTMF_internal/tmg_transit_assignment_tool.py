@@ -1886,7 +1886,7 @@ class TransitAssignmentTool(_m.Tool()):
             if self.ttfs_changed == True:
                 self.Scenario.set_attribute_values("TRANSIT_SEGMENT", ["transit_time_func"], self.orig_ttf_values)
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_scenario_node_attributes(self):
         options = ["<option value='-1'>None</option>"]
         for exatt in self.Scenario.extra_attributes():
@@ -1895,7 +1895,7 @@ class TransitAssignmentTool(_m.Tool()):
 
         return "\n".join(options)
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_scenario_link_attributes(self, include_none=True):
         options = []
         if include_none:
@@ -1906,7 +1906,7 @@ class TransitAssignmentTool(_m.Tool()):
 
         return "\n".join(options)
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def get_scenario_segment_attribtues(self):
         options = []
         for exatt in self.Scenario.extra_attributes():
@@ -1919,6 +1919,6 @@ class TransitAssignmentTool(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=six.u)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg

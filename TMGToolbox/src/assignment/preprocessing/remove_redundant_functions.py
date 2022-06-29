@@ -40,12 +40,15 @@ Remove Redundant Functions
 import inro.modeller as _m
 import traceback as _traceback
 from contextlib import contextmanager
-from contextlib import nested
 _M = _m.Modeller() 
 _ExportFunctions = _M.tool('inro.emme.data.function.export_functions')
 _DeleteFunctions = _M.tool('inro.emme.data.function.delete_function')
 _util = _M.module('tmg.common.utilities')
 _tmgTPB = _M.module('tmg.common.TMG_tool_page_builder')
+
+import six 
+#initalize python3 types
+_util.initalizeModellerTypes(_m)
 
 ##########################################################################################################
 
@@ -168,10 +171,10 @@ class RemoveRedundantFunctions(_m.Tool()):
         database_fp = list(map(int, database_fp_str))
         database_fo = list(map(int, database_fo_str))
 
-        print "There are %s Auto Volume Delay (fd) functions in the database." %len(database_fd)
-        print "There are %s Transit Time (ft) functions in the database." %len(database_ft)
-        print "There are %s Turn Penalty (fp) functions in the database." %len(database_fp)
-        print "There are %s other types of functions in the database." %len(database_fo)
+        print("There are %s Auto Volume Delay (fd) functions in the database." %len(database_fd))
+        print("There are %s Transit Time (ft) functions in the database." %len(database_ft))
+        print("There are %s Turn Penalty (fp) functions in the database." %len(database_fp))
+        print("There are %s other types of functions in the database." %len(database_fo))
 
         return database_fd, database_ft, database_fp, database_fo
 
@@ -194,9 +197,9 @@ class RemoveRedundantFunctions(_m.Tool()):
             for r in network.turns():
                 self.unique_append(contained_fp, r.penalty_func)
                         
-        print "There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(contained_fd)
-        print "There are %s Transit Time (ft) functions used in all scenarios/networks." %len(contained_ft)
-        print "There are %s Turn Penalty (fp) functions used in all scenarios/networks." %len(contained_fp)
+        print("There are %s Auto Volume Delay (fd) functions used in all scenarios/networks." %len(contained_fd))
+        print("There are %s Transit Time (ft) functions used in all scenarios/networks." %len(contained_ft))
+        print("There are %s Turn Penalty (fp) functions used in all scenarios/networks." %len(contained_fp))
 
         return contained_fd, contained_ft, contained_fp
 
@@ -215,7 +218,7 @@ class RemoveRedundantFunctions(_m.Tool()):
 
         ## export redundant functions
         if len(Redun_functions) == 0:
-            print "No redundant function is found."
+            print("No redundant function is found.")
         elif DeletedFunctionsFile is not None:
             _ExportFunctions(functions = Redun_functions, export_file = DeletedFunctionsFile, append_to_file = False)
         else:
@@ -226,7 +229,7 @@ class RemoveRedundantFunctions(_m.Tool()):
             if redun_i is not None:
                 _DeleteFunctions(redun_i)
 
-        print "Removed %s functions from the database." %(len(Redun_functions))
+        print("Removed %s functions from the database." %(len(Redun_functions)))
 
     def compare_append(self, type, functionlist, database_functions, contained_functions):
         functionlist += map(lambda f: type + str(f), list(set(database_functions) - set(contained_functions)))
@@ -235,6 +238,6 @@ class RemoveRedundantFunctions(_m.Tool()):
     def percent_completed(self):
         return self.TRACKER.getProgress()
                 
-    @_m.method(return_type=unicode)
+    @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
