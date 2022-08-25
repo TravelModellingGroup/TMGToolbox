@@ -627,7 +627,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         return [process_term(x) for x in range_str.split(',')]
         
     def _getTransitBGSpec(self):
-        ttf_terms = str.join(" + ", ["(ttf >="+str(x[0])+" * ttf <= "+str(x[1])+")" for x in self.on_road_ttfs])
+        ttf_terms = str.join(" + ", ["((ttf >="+str(x[0])+") * (ttf <= "+str(x[1])+"))" for x in self.on_road_ttfs])
         return {
                 "result": "@tvph",
                 "expression": "(60 / hdw) * (vauteq) * ("+ttf_terms+")",
