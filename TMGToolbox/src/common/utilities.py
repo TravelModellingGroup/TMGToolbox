@@ -1,4 +1,4 @@
-﻿'''
+﻿"""
     Copyright 2015 Travel Modelling Group, Department of Civil Engineering, University of Toronto
 
     This file is part of the TMG Toolbox.
@@ -15,13 +15,13 @@
 
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
-'''
-'''
+"""
+"""
 Contains a bunch of Python utility functions commonly used in TMG tools
 and products. Set up as a non-runnable (e.g. private) Emme module so that
 it can be distributed in the TMG toolbox
 
-'''
+"""
 
 import inro.modeller as _m
 import math
@@ -33,6 +33,7 @@ import traceback as _tb
 import subprocess as _sp
 import six
 from six.moves import range
+
 if six.PY2:
     from itertools import izip
 from json import loads as _parsedict
@@ -41,17 +42,27 @@ import csv
 
 _MODELLER = _m.Modeller()
 _DATABANK = _MODELLER.emmebank
+_TRACE = _m.logbook_trace
+_WRITE = _m.logbook_write
+
+
 class Face(_m.Tool()):
     def page(self):
-        pb = _m.ToolPageBuilder(self, runnable=False, title="Utilities",
-                                description="Collection of private utilities",
-                                branding_text="- TMG Toolbox")
-        
-        pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" %str(self))
-        
+        pb = _m.ToolPageBuilder(
+            self,
+            runnable=False,
+            title="Utilities",
+            description="Collection of private utilities",
+            branding_text="- TMG Toolbox",
+        )
+
+        pb.add_text_element("To import, call inro.modeller.Modeller().module('%s')" % str(self))
+
         return pb.render()
 
-#-------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------
+
 
 def initalizeModellerTypes(modeller):
     """
@@ -63,50 +74,56 @@ def initalizeModellerTypes(modeller):
         modeller.TupleType = object
         modeller.ListType = list
 
+
 def formatReverseStack():
     eType, eVal, eTb = _sys.exc_info()
     stackList = _tb.extract_tb(eTb)
-    msg = "%s: %s\n\n\Stack trace below:" %(eVal.__class__.__name__, str(eVal))
+    msg = "%s: %s\n\n\Stack trace below:" % (eVal.__class__.__name__, str(eVal))
     stackList.reverse()
     for file, line, func, text in stackList:
-        msg += "\n  File '%s', line %s, in %s" %(file, line, func)
+        msg += "\n  File '%s', line %s, in %s" % (file, line, func)
     return msg
 
-#-------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------
+
 
 def iterpairs(iterable):
-    '''
+    """
     Iterates through two subsequent elements in any iterable.
-    Example: 
+    Example:
         x = [1,2,3,4,5]
         for (val1, val2) in iterpairs(x): print "1=%s 2=%s" %(val1, val2)
         >>> 1=1 2=2
         >>> 1=2 2=3
         >>> 1=3 2=4
         >>> 1=4 2=5
-    '''
-    
+    """
+
     iterator = iterable.__iter__()
-    
-    try: prev = six.next(iterator)
-    except StopIteration: return
-    
+
+    try:
+        prev = six.next(iterator)
+    except StopIteration:
+        return
+
     for val in iterator:
         yield prev, val
         prev = val
 
 
-#-------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
+
 
 def itersync(list1, list2):
-    '''
+    """
     Iterates through tuples of corresponding values for
     lists of the same length.
-    
+
     Example:
         list1 = [1,2,3,4,5]
         list2 = [6,7,8,9,10]
-        
+
         for a, b in itersync(list1, list2):
             print a,b
         >>>1 6
@@ -114,41 +131,45 @@ def itersync(list1, list2):
         >>>3 8
         >>>4 9
         >>>5 10
-    '''
+    """
     # izip is no longer included in Python 3
-    if(six.PY2):
+    if six.PY2:
         return izip(list1, list2)
     else:
         return zip(list1, list2)
 
-#-------------------------------------------------------------------------------------------
 
-def equap(number1, number2, precision= 0.00001):
-    '''
+# -------------------------------------------------------------------------------------------
+
+
+def equap(number1, number2, precision=0.00001):
+    """
     Tests for shallow floating point approximate equality.
-    
+
     Args:
         - number 1: The first float
         - number 2: The second float
         - precision (=0.00001): The maximum allowed error.
-    '''
+    """
     diff = abs(float(number1), float(number2))
     return diff < precision
 
-#-------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------
+
 
 def databankHasDifferentZones(emmebank):
-    '''
+    """
     Checks that all scenarios have the same zone system.
-    
+
     Args:
         - emmebank: The Emmebank object to test
-    
+
     Returns:
         - True if all of the scenarios have the same zone system,
                 False otherwise.
-    '''
-    
+    """
+
     scenarioZones = [set(sc.zone_numbers) for sc in emmebank.scenarios()]
     differentZones = False
     for nZones1, nZones2 in iterpairs(scenarioZones):
@@ -157,14 +178,16 @@ def databankHasDifferentZones(emmebank):
             break
     return differentZones
 
-#-------------------------------------------------------------------------------------------
 
-def getScenarioModes(scenario, types=['AUTO', 'AUX_AUTO', 'TRANSIT', 'AUX_TRANSIT']):
-    '''
-    Returns a list of mode tuples [(id, type, description)] for a given Scenario object, 
+# -------------------------------------------------------------------------------------------
+
+
+def getScenarioModes(scenario, types=["AUTO", "AUX_AUTO", "TRANSIT", "AUX_TRANSIT"]):
+    """
+    Returns a list of mode tuples [(id, type, description)] for a given Scenario object,
     bypassing the need to load the Network first.
-    '''
-    '''
+    """
+    """
     IMPLEMENTATION NOTE: This currently uses an *undocumented* function for the
     Scenario object (scenario.modes()). I can confirm that this function exists
     in Emme 4.0.3 - 4.0.8, and is supported in the 4.1 Beta versions (4.1.0.7 and
@@ -173,19 +196,19 @@ def getScenarioModes(scenario, types=['AUTO', 'AUX_AUTO', 'TRANSIT', 'AUX_TRANSI
     scenario.get_partial_network(...) which is included in 4.1.0.7 but also
     currently undocumented).
         - @pkucirek 11/03/2014
-    '''
+    """
     return [(mode.id, mode.type, mode.description) for mode in scenario.modes() if mode.type in types]
 
-#-------------------------------------------------------------------------------------------
 
-_mtxNames = {'FULL' : 'mf',
-             'DESTINATION' : 'md',
-             'ORIGIN' : 'mo',
-             'SCALAR' : 'ms'}
+# -------------------------------------------------------------------------------------------
 
-def initializeMatrix(id=None, default=0, name="", description="", matrix_type='FULL', \
-                     preserve_description= False, preserve_data= False):
-    '''
+_mtxNames = {"FULL": "mf", "DESTINATION": "md", "ORIGIN": "mo", "SCALAR": "ms"}
+
+
+def initializeMatrix(
+    id=None, default=0, name="", description="", matrix_type="FULL", preserve_description=False, preserve_data=False
+):
+    """
     Utility function for creation and initialization of matrices. Only works
     for the current Emmebank.
 
@@ -212,72 +235,78 @@ def initializeMatrix(id=None, default=0, name="", description="", matrix_type='F
             description.
 
     Returns: The Emme Matrix object created or initialized.
-    '''
+    """
 
     if id is None:
-        #Get an available matrix
+        # Get an available matrix
         id = _DATABANK.available_matrix_identifier(matrix_type)
     elif isinstance(id, int):
-        #If the matrix id is given as an integer
+        # If the matrix id is given as an integer
         try:
-            id = "%s%s" %(_mtxNames[matrix_type],id)
+            id = "%s%s" % (_mtxNames[matrix_type], id)
         except KeyError:
-            raise TypeError("Matrix type '%s' is not a valid matrix type." %matrix_type)
-    elif 'type' in dir(id):
-        #If the matrix id is given as a matrix object
+            raise TypeError("Matrix type '%s' is not a valid matrix type." % matrix_type)
+    elif "type" in dir(id):
+        # If the matrix id is given as a matrix object
         t = id.type
         if not t in _mtxNames:
-            raise TypeError("Assumed id was a matrix, but its type value was not recognized %s" %type(id))
-        id = id.id #Set the 'id' variable to the matrix's 'id' property.
+            raise TypeError("Assumed id was a matrix, but its type value was not recognized %s" % type(id))
+        id = id.id  # Set the 'id' variable to the matrix's 'id' property.
     elif not isinstance(id, six.string_types):
-        raise TypeError("Id is not a supported type: %s" %type(id))
+        raise TypeError("Id is not a supported type: %s" % type(id))
 
     mtx = _DATABANK.matrix(id)
 
     if mtx is None:
-        #Matrix does not exist, so create it.
+        # Matrix does not exist, so create it.
         mtx = _DATABANK.create_matrix(id, default_value=default)
-        if name: mtx.name = name[:40]
-        if description:  mtx.description = description[:80]
-        _m.logbook_write("Created new matrix %s: '%s' (%s)." %(id, mtx.name, mtx.description))
+        if name:
+            mtx.name = name[:40]
+        if description:
+            mtx.description = description[:80]
+        _m.logbook_write("Created new matrix %s: '%s' (%s)." % (id, mtx.name, mtx.description))
     else:
-        if mtx.read_only: raise _excep.ProtectionError("Cannot modify matrix '%s' as it is protected against modifications." %id)
+        if mtx.read_only:
+            raise _excep.ProtectionError("Cannot modify matrix '%s' as it is protected against modifications." % id)
 
-        if not preserve_data: mtx.initialize(value=default)
-        if name: mtx.name = name[:6]
-        if description and not preserve_description:  mtx.description = description[:80]
-        _m.logbook_write("Initialized existing matrix %s: '%s' (%s)." %(id, mtx.name, mtx.description))
-        
+        if not preserve_data:
+            mtx.initialize(value=default)
+        if name:
+            mtx.name = name[:6]
+        if description and not preserve_description:
+            mtx.description = description[:80]
+        _m.logbook_write("Initialized existing matrix %s: '%s' (%s)." % (id, mtx.name, mtx.description))
+
     return mtx
 
-#-------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------
+
 
 def getAvailableScenarioNumber():
-    '''
+    """
     Returns: The number of an available scenario. Raises an exception
     if the _DATABANK is full.
-    '''
-    for i in range(0, _m.Modeller().emmebank.dimensions['scenarios']):
+    """
+    for i in range(0, _m.Modeller().emmebank.dimensions["scenarios"]):
         if _m.Modeller().emmebank.scenario(i + 1) is None:
-            return (i + 1)
-    
+            return i + 1
+
     raise inro.emme.core.exception.CapacityError("No new scenarios are available: databank is full!")
 
-#-------------------------------------------------------------------------------------------
 
-TEMP_ATT_PREFIXES = {'NODE': 'ti',
-                     'LINK': 'tl',
-                     'TURN': 'tp',
-                     'TRANSIT_LINE': 'tt',
-                     'TRANSIT_SEGMENT': 'ts'}
+# -------------------------------------------------------------------------------------------
+
+TEMP_ATT_PREFIXES = {"NODE": "ti", "LINK": "tl", "TURN": "tp", "TRANSIT_LINE": "tt", "TRANSIT_SEGMENT": "ts"}
+
 
 @contextmanager
-def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None, returnId= False):
-    '''
+def tempExtraAttributeMANAGER(scenario, domain, default=0.0, description=None, returnId=False):
+    """
     Creates a temporary extra attribute in a given scenario, yield-returning the
     attribute object. Designed to be used as a context manager, for cleanup
     after a run.
-    
+
     Extra attributes are labeled thusly:
         - Node: @ti123
         - Link: @tl123
@@ -285,127 +314,130 @@ def tempExtraAttributeMANAGER(scenario, domain, default= 0.0, description= None,
         - Transit Line: @tt123
         - Transit Segment: @ts123
         (where 123 is replaced by a number)
-        
+
     Args: (scenario, domain, default= 0.0, description= None)
         - scenario= The Emme scenario object in which to create the extra attribute
         - domain= One of 'NODE', 'LINK', 'TURN', 'TRANSIT_LINE', 'TRANSIT_SEGMENT'
         - default= The default value of the extra attribute
         - description= An optional description for the attribute
         - returnId (=False): Flag to return either the Extra Attribute object, or its ID
-        
+
     Yields: The Extra Attribute object created (or its ID as indicated by the returnId arg).
-    '''
-    
+    """
+
     domain = str(domain).upper()
     if not domain in TEMP_ATT_PREFIXES:
-        raise TypeError("Domain '%s' is not a recognized extra attribute domain." %domain)
+        raise TypeError("Domain '%s' is not a recognized extra attribute domain." % domain)
     prefix = TEMP_ATT_PREFIXES[domain]
-    
+
     existingAttributeSet = set([att.name for att in scenario.extra_attributes() if att.type == domain])
-    
+
     index = 1
-    id = "@%s%s" %(prefix, index)
+    id = "@%s%s" % (prefix, index)
     while id in existingAttributeSet:
         index += 1
-        id = "@%s%s" %(prefix, index)
+        id = "@%s%s" % (prefix, index)
         if index > 999:
-            raise Exception("Scenario %s already has 999 temporary extra attributes" %scenario)
+            raise Exception("Scenario %s already has 999 temporary extra attributes" % scenario)
     tempAttribute = scenario.create_extra_attribute(domain, id, default)
-    msg = "Created temporary extra attribute %s in scenario %s" %(id, scenario)
+    msg = "Created temporary extra attribute %s in scenario %s" % (id, scenario)
     if description:
         tempAttribute.description = description
-        msg += ": %s" %description
+        msg += ": %s" % description
     _m.logbook_write(msg)
-    
+
     if returnId:
         retval = tempAttribute.id
     else:
         retval = tempAttribute
-    
+
     try:
         yield retval
     finally:
         scenario.delete_extra_attribute(id)
-        _m.logbook_write("Deleted extra attribute %s" %id)
+        _m.logbook_write("Deleted extra attribute %s" % id)
 
-#-------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------
+
 
 @contextmanager
-def tempMatrixMANAGER(description="[No description]", matrix_type='FULL', default=0.0):
-    '''
+def tempMatrixMANAGER(description="[No description]", matrix_type="FULL", default=0.0):
+    """
     Creates a temporary matrix in a context manager.
-    
+
     Args:
         - description (="[No description]"): The description of the temporary matrix.
-        - matrix_type (='FULL'): The type of temporary matrix to create. One of 
+        - matrix_type (='FULL'): The type of temporary matrix to create. One of
             'SCALAR', 'ORIGIN', 'DESTINATION', or 'FULL'.
         - default (=0.0): The matrix's default value.
-    '''
-    
-    mtx = initializeMatrix(default=default, description= 'Temporary %s' %description, \
-                           matrix_type=matrix_type)
-    
+    """
+
+    mtx = initializeMatrix(default=default, description="Temporary %s" % description, matrix_type=matrix_type)
+
     if mtx is None:
-        raise Exception("Could not create temporary matrix: %s" %description)
-    
+        raise Exception("Could not create temporary matrix: %s" % description)
+
     try:
         yield mtx
     finally:
         _DATABANK.delete_matrix(mtx.id)
-        
-        s = "Deleted matrix %s." %mtx.id
+
+        s = "Deleted matrix %s." % mtx.id
         _m.logbook_write(s)
 
+
 @contextmanager
-def tempMatricesMANAGER(number_of_matrices, description="[No description]", matrix_type='FULL', default=0.0):
-    '''
+def tempMatricesMANAGER(number_of_matrices, description="[No description]", matrix_type="FULL", default=0.0):
+    """
     Creates a temporary matrix in a context manager.
     Throws Exception if it was unable to create one of the matrices.
     Args:
         - number_of_matrices: The number of matrices to create
         - description (="[No description]"): The description of the temporary matrix.
-        - matrix_type (='FULL'): The type of temporary matrix to create. One of 
+        - matrix_type (='FULL'): The type of temporary matrix to create. One of
             'SCALAR', 'ORIGIN', 'DESTINATION', or 'FULL'.
         - default (=0.0): The matrix's default value.
-    '''
+    """
     matrices = []
     try:
         for i in range(0, number_of_matrices):
-            matrix = initializeMatrix(default=default, description= 'Temporary %s' %description, \
-                           matrix_type=matrix_type)
+            matrix = initializeMatrix(
+                default=default, description="Temporary %s" % description, matrix_type=matrix_type
+            )
             if matrix is None:
-                raise Exception("Could not create temporary matrix: %s" %description)
+                raise Exception("Could not create temporary matrix: %s" % description)
             matrices.append(matrix)
         yield matrices
     finally:
         for matrix in matrices:
             _DATABANK.delete_matrix(matrix.id)
-            _m.logbook_write("Deleted matrix %s." %matrix.id)
+            _m.logbook_write("Deleted matrix %s." % matrix.id)
     return
 
 
-#-------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
 
-#@deprecated: In Emme 4.1.2 the indices have been changed
+# @deprecated: In Emme 4.1.2 the indices have been changed
 def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
-    '''
+    """
     BROEKN SINCE EMME 4.1.2. Use fastLoadSummedSegmentAttributes instead
-    
+
     Performs a fast partial read of transit segment attributes,
     using scenario.get_attribute_values.
-    
+
     Args:
         - scenario: The Emme Scenario object to load from
         - list_of_attributes: A list of TRANSIT SEGMENT attribute names to load.
-    
+
     Returns: A dictionary, where the keys are transit line IDs.
         Each key is mapped to a list of attribute dictionaries.
-        
+
         Example:
-            {'TS01a': [{'number': 0, 'transit_volume': 200.0}, 
-                        {'number': 1, 'transit_volume': 210.0} ...] ...} 
-    '''
-    '''
+            {'TS01a': [{'number': 0, 'transit_volume': 200.0},
+                        {'number': 1, 'transit_volume': 210.0} ...] ...}
+    """
+    """
     Implementation note: The scenario method 'get_attribute_vlues' IS documented,
     however the return value is NOT. I've managed to decipher its structure
     but since it is not documented by INRO it could be changed.
@@ -413,230 +445,250 @@ def fastLoadTransitSegmentAttributes(scenario, list_of_attribtues):
         
     IMPORTANT: This function is currently broken for version 4.1.2! An error
     will be raised if tried. - pkucirek June 2014
-    '''
+    """
     major, minor, release = getEmmeVersion(tuple)
-    if (major, minor, release) >= (4,1,2):
+    if (major, minor, release) >= (4, 1, 2):
         raise Exception("fastLoadTransitSegmentAttributes is deprecated in Emme 4.1.2 or newer versions!")
-    
+
     retval = {}
-    root_data = scenario.get_attribute_values('TRANSIT_SEGMENT', list_of_attribtues)
+    root_data = scenario.get_attribute_values("TRANSIT_SEGMENT", list_of_attribtues)
     indices = root_data[0]
     values = root_data[1:]
-    
+
     for lineId, segmentIndices in six.iteritems(indices):
         segments = []
-        
+
         for number, dataIndex in enumerate(segmentIndices[1]):
-            segment = {'number': number}
+            segment = {"number": number}
             for attIndex, attName in enumerate(list_of_attribtues):
                 segment[attName] = values[attIndex][dataIndex]
             segments.append(segment)
         retval[lineId] = segments
-    
+
     return retval
 
-#-------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------
+
 
 def fastLoadSummedSegmentAttributes(scenario, list_of_attributes):
-    '''
+    """
     Performs a fast partial read of transit segment attributes, aggregated to each line,
     using scenario.get_attribute_values.
-    
+
     Args:
         - scenario: The Emme Scenario object to load from
         - list_of_attributes: A list of TRANSIT SEGMENT attribute names to load.
-        
+
     Returns: A dictionary whose keys are transit line IDs and whose values
         are dictionaries of attributes.
-    '''
+    """
     retval = {}
-    root_data = scenario.get_attribute_values('TRANSIT_SEGMENT', list_of_attributes)
+    root_data = scenario.get_attribute_values("TRANSIT_SEGMENT", list_of_attributes)
     indices = root_data[0]
     values = root_data[1:]
-   
+
     major, minor, release, beta = getEmmeVersion(tuple)
-    if (major,minor,release) >= (4,1,2):
+    if (major, minor, release) >= (4, 1, 2):
         get_iter = lambda segmentIndices: six.iteritems(segmentIndices)
     else:
         get_iter = lambda segmentIndices: itersync(*segmentIndices)
-    
+
     for lineId, segmentIndices in six.iteritems(indices):
-        line = {'id': lineId}
-        
+        line = {"id": lineId}
+
         for iNode, dataRow in get_iter(segmentIndices):
             for attName, dataColumn in itersync(list_of_attributes, values):
                 value = dataColumn[dataRow]
 
-                if attName in line: line[attName] += value
-                else: line[attName] = value
-        
+                if attName in line:
+                    line[attName] += value
+                else:
+                    line[attName] = value
+
         retval[lineId] = line
-    
+
     return retval
-        
-#-------------------------------------------------------------------------------------------
+
+
+# -------------------------------------------------------------------------------------------
+
 
 def fastLoadTransitLineAttributes(scenario, list_of_attributes):
-    '''
+    """
     Performs a fast partial read of transit line attributes,
     using scenario.get_attribute_values.
-    
+
     Args:
         - scenario: The Emme Scenario object to load from
         - list_of_attributes: A list of TRANSIT LINE attribute names to load.
-    
+
     Returns: A dictionary, where the keys are transit line IDs.
         Each key is mapped to a dictionary of attributes (one for
         each attribute in the list_of_attributes arg) plus 'id'.
-        
+
         Example:
             {'TS01a': {'id': 'TS01a', 'headway': 2.34, 'speed': 52.22 } ...}
-    ''' 
-    
+    """
+
     retval = {}
-    root_data = scenario.get_attribute_values('TRANSIT_LINE', list_of_attributes)
+    root_data = scenario.get_attribute_values("TRANSIT_LINE", list_of_attributes)
     indices = root_data[0]
     values = root_data[1:]
-    
+
     for lineId, dataIndex in six.iteritems(indices):
-        line = {'id': lineId}
-        
+        line = {"id": lineId}
+
         for attIndex, attName in enumerate(list_of_attributes):
             line[attName] = values[attIndex][dataIndex]
         retval[lineId] = line
     return retval
 
-#-------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------
+
 
 def fastLoadLinkAttributes(scenario, list_of_attributes):
-    '''
+    """
     Performs a fast partial read of link attributes, using
     scenario.get_attribute_values.
-    
+
     Args:
         - scenario: The scenario to load from
         - list_of_attributes: A list of attributes to load.
-    
+
     Returns:
         A dictionary, where the keys are (i_node, j_node) tuples
         (link IDs), and whose values are dictionaries of
         attribute : values.
-        
+
         Example: {(10001, 10002): {'i_node': 10001, 'j_node': 10002, 'length': 1.002} ...}
-    '''
-    
-    package = scenario.get_attribute_values('LINK', list_of_attributes)
+    """
+
+    package = scenario.get_attribute_values("LINK", list_of_attributes)
     indices = package[0]
     attribute_tables = package[1:]
-    
+
     retval = {}
     for i_node, outgoing_links in six.iteritems(indices):
         for j_node, index in six.iteritems(outgoing_links):
             link = i_node, j_node
-            attributes = {'i_node': i_node, 'j_node': j_node}
+            attributes = {"i_node": i_node, "j_node": j_node}
             for att_name, table in itersync(list_of_attributes, attribute_tables):
                 attributes[att_name] = table[index]
             retval[link] = attributes
     return retval
 
 
-#-------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
 
-def getEmmeVersion(returnType= str):
-    '''
+
+def getEmmeVersion(returnType=str):
+    """
     Gets the version of Emme that is currently running, as a string. For example,
     'Emme 4.0.8', or 'Emme 4.1.0 32-bit'.
-    
+
     Args & returns:
         - returnType (=str): The desired Python type to return. Accepted types are:
             str: Returns in the form "Emme 4.1.0 32-bit". This is the most verbose.
             tuple: Returns in the form (4, 1, 0) tuple of integers.
             float: Returns in the form 4.1
             int: Return in the form 4
-            
+
         - asTuple (=False): Boolean flag to return the version number as a string, or
                 as a tuple of ints (e.g., [4,1,0] for Emme 4.1.0)
-    '''
+    """
 
     app = _MODELLER.desktop
-    if hasattr(app, 'version'):
+    if hasattr(app, "version"):
         return _getVersionNew(app, returnType)
     else:
         return _getVersionOld(returnType)
 
+
 def _getVersionNew(app, returnType):
-    '''
+    """
     Available in versions 4.1.3 and newer
-    '''
-    
+    """
+
     if returnType == str:
         return str(app.version)
-    
+
     version_tuple = app.version_info
-    
+
     if returnType == tuple:
-       # Test for a beta-version of EMME
-       if version_tuple[0] <= 2:
-            return (9,9,9,0)
-       return version_tuple
-    
-    if returnType == float: 
+        # Test for a beta-version of EMME
+        if version_tuple[0] <= 2:
+            return (9, 9, 9, 0)
+        return version_tuple
+
+    if returnType == float:
         # Test for a beta-version of EMME
         if version_tuple[0] <= 2:
             return 9.0
         return version_tuple[0] + version_tuple[1] * 0.1
-    
-    if returnType == int: 
+
+    if returnType == int:
         # Test for a beta-version of EMME
         if version_tuple[0] <= 2:
             return 9
         return version_tuple[0]
-    
-    raise TypeError("Type %s not accepted for getting Emme version" %returnType)
+
+    raise TypeError("Type %s not accepted for getting Emme version" % returnType)
+
 
 def _getVersionOld(returnType):
-    '''
+    """
     Implementation note: For the string-to-int-tuple conversion, I've assumed the
     string version is of the form ['Emme', '4.x.x', ...] (i.e., the version string
     is the second item in the space-separated list). -pkucirek April 2014
-    '''
-    #The following is code directly from INRO
-    emmeProcess = _sp.Popen(['Emme', '-V'], stdout= _sp.PIPE, stderr= _sp.PIPE)
+    """
+    # The following is code directly from INRO
+    emmeProcess = _sp.Popen(["Emme", "-V"], stdout=_sp.PIPE, stderr=_sp.PIPE)
     output = emmeProcess.communicate()[0]
-    retval = output.split(',')[0]
-    if returnType == str: return retval
-    
-    #The following is my own code
-    components = retval.split(' ')
-    version = components[1].split('.')
-    versionTuple = [int(n) for n in version]
-    if returnType == tuple: return versionTuple
-    
-    if returnType == float: return versionTuple[0] + versionTuple[1] * 0.1
-    
-    if returnType == int: return versionTuple[0]
-    
-    raise TypeError("Type %s not accepted for getting Emme version" %returnType)
-#-------------------------------------------------------------------------------------------
+    retval = output.split(",")[0]
+    if returnType == str:
+        return retval
 
-EMME_INFINITY = float('1E+20')
-def isEmmeInfinity(number, precision= 0.001):
-    '''
-    Tests if a matrix value is equal to "Emme infinity" or 1E+20 using approximate equality. 
-    '''
+    # The following is my own code
+    components = retval.split(" ")
+    version = components[1].split(".")
+    versionTuple = [int(n) for n in version]
+    if returnType == tuple:
+        return versionTuple
+
+    if returnType == float:
+        return versionTuple[0] + versionTuple[1] * 0.1
+
+    if returnType == int:
+        return versionTuple[0]
+
+    raise TypeError("Type %s not accepted for getting Emme version" % returnType)
+
+
+# -------------------------------------------------------------------------------------------
+
+EMME_INFINITY = float("1E+20")
+
+
+def isEmmeInfinity(number, precision=0.001):
+    """
+    Tests if a matrix value is equal to "Emme infinity" or 1E+20 using approximate equality.
+    """
     return equap(number, EMME_INFINITY, precision)
 
-#-------------------------------------------------------------------------------------------
 
-#@deprecated: 
+# -------------------------------------------------------------------------------------------
+
+# @deprecated:
 def getExtents(network):
-    '''
+    """
     Creates an Extents object from the given Network.
-    '''
-    minX = float('inf')
-    maxX = - float('inf')
-    minY = float('inf')
-    maxY = - float('inf')
+    """
+    minX = float("inf")
+    maxX = -float("inf")
+    minY = float("inf")
+    maxY = -float("inf")
     for node in network.nodes():
         minX = min(minX, node.x)
         maxX = max(maxX, node.x)
@@ -644,18 +696,410 @@ def getExtents(network):
         maxY = max(maxY, node.y)
     return Extents(minX - 1.0, minY - 1.0, maxX + 1.0, maxY + 1.0)
 
-#-------------------------------------------------------------------------------------------
 
-class IntRange():
-    '''
+# -------------------------------------------------------------------------------------------
+class RoadAssignmentUtil:
+    @contextmanager
+    def _timeAttributeMANAGER(self, Scenario, Demand_List):
+        # Code here is executed upon entry
+        timeAttributes = []
+        attributes = {}
+        for i in range(len(Demand_List)):
+            attributeCreated = False
+            at = "@ltime" + str(i + 1)
+            timeAttribute = Scenario.extra_attribute(at)
+            if timeAttribute is None:
+                # @ltime hasn't been defined
+                _WRITE("Creating temporary link cost attribute '@ltime" + str(i + 1) + "'.")
+                timeAttribute = Scenario.create_extra_attribute("LINK", at, default_value=0)
+                timeAttributes.append(timeAttribute)
+                attributeCreated = True
+                attributes[timeAttribute.id] = attributeCreated
+            elif Scenario.extra_attribute(at).type != "LINK":
+                # for some reason '@ltime' exists, but is not a link attribute
+                _WRITE("Creating temporary link cost attribute '@ltim" + str(i + 2) + "'.")
+                at = "@ltim" + str(i + 2)
+                timeAttribute = Scenario.create_extra_attribute("LINK", at, default_value=0)
+                timeAttributes.append(timeAttribute)
+                attributeCreated = True
+                attributes[timeAttribute.id] = attributeCreated
+
+            if not attributeCreated:
+                timeAttribute.initialize()
+                timeAttributes.append(timeAttribute)
+                attributes[timeAttribute.id] = attributeCreated
+                _WRITE("Initialized link cost attribute to 0.")
+
+        try:
+            yield timeAttributes
+            # Code here is executed upon clean exit
+        finally:
+            # Code here is executed in all cases.
+            for key in attributes:
+                if attributes[key] is True:
+                    _WRITE("Deleting temporary link cost attribute.")
+                    Scenario.delete_extra_attribute(key)
+                    # Delete the extra cost attribute only if it didn't exist before.
+
+    @contextmanager
+    def _costAttributeMANAGER(self, Scenario, Demand_List):
+        # Code here is executed upon entry
+        costAttributes = []
+        attributes = {}
+        for i in range(len(Demand_List)):
+            attributeCreated = False
+            at = "@lkcst" + str(i + 1)
+            costAttribute = Scenario.extra_attribute(at)
+            if costAttribute is None:
+                # @lkcst hasn't been defined
+                _WRITE("Creating temporary link cost attribute '@lkcst" + str(i + 1) + "'.")
+                costAttribute = Scenario.create_extra_attribute("LINK", at, default_value=0)
+                costAttributes.append(costAttribute)
+                attributeCreated = True
+                attributes[costAttribute.id] = attributeCreated
+
+            elif Scenario.extra_attribute(at).type != "LINK":
+                # for some reason '@lkcst' exists, but is not a link attribute
+                _WRITE("Creating temporary link cost attribute '@lcost" + str(i + 2) + "'.")
+                at = "@lcost" + str(i + 2)
+                costAttribute = Scenario.create_extra_attribute("LINK", at, default_value=0)
+                costAttributes.append(costAttribute)
+                attributeCreated = True
+                attributes[costAttribute.id] = attributeCreated
+
+            if not attributeCreated:
+                costAttribute.initialize()
+                costAttributes.append(costAttribute)
+                attributes[costAttribute.id] = attributeCreated
+                _WRITE("Initialized link cost attribute to 0.")
+
+        try:
+            yield costAttributes
+            # Code here is executed upon clean exit
+        finally:
+            # Code here is executed in all cases.
+            for key in attributes:
+                if attributes[key] is True:
+                    _WRITE("Deleting temporary link cost attribute.")
+                    Scenario.delete_extra_attribute(key)
+                    # Delete the extra cost attribute only if it didn't exist before.
+
+    @contextmanager
+    def _transitTrafficAttributeMANAGER(self, Scenario, EMME_VERSION, BackgroundTransit):
+
+        attributeCreated = False
+        bgTrafficAttribute = Scenario.extra_attribute("@tvph")
+
+        if bgTrafficAttribute is None:
+            bgTrafficAttribute = Scenario.create_extra_attribute("LINK", "@tvph", 0)
+            attributeCreated = True
+            _WRITE("Created extra attribute '@tvph'")
+        else:
+            bgTrafficAttribute.initialize(0)
+            _WRITE("Initialized existing extra attribute '@tvph' to 0.")
+
+        if EMME_VERSION >= (4,):
+            extraParameterTool = _MODELLER.tool("inro.emme.traffic_assignment.set_extra_function_parameters")
+        else:
+            extraParameterTool = _MODELLER.tool("inro.emme.standard.traffic_assignment.set_extra_function_parameters")
+        if BackgroundTransit is True:
+            extraParameterTool(el1="@tvph")
+
+        try:
+            yield
+        finally:
+            if attributeCreated:
+                Scenario.delete_extra_attribute("@tvph")
+                _WRITE("Deleted extra attribute '@tvph'")
+            extraParameterTool(el1="0")
+
+    # ----SUB FUNCTIONS---------------------------------------------------------------------------------
+
+    def _getAtts(
+        self,
+        Scenario,
+        RunTitle,
+        TimesMatrixId,
+        PeakHourFactor,
+        LinkCost,
+        Iterations,
+        MODELLER_NAMESPACE,
+    ):
+        atts = {
+            "Run Title": RunTitle,
+            "Scenario": str(Scenario.id),
+            "Times Matrix": str(TimesMatrixId),
+            "Peak Hour Factor": str(PeakHourFactor),
+            "Link Cost": str(LinkCost),
+            "Iterations": str(Iterations),
+            "self": MODELLER_NAMESPACE,
+        }
+
+        return atts
+
+    def convert_to_ranges(self, range_str):
+        """
+        This function converts a range string to a list of tuples of (start, end) pairs, inclusive, of ranges.
+
+        Returns: list of tuples (start, end) inclusive
+        """
+
+        def process_term(term):
+            parts = term.split("-")
+            if len(parts) == 1:
+                value = int(term)
+                return (value, value)
+            else:
+                return (int(parts[0]), int(parts[1]))
+
+        return [process_term(x) for x in range_str.split(",")]
+
+    def _getTransitBGSpec(self, on_road_ttfs):
+        ttf_terms = str.join(" + ", ["((ttf >=" + str(x[0]) + ") * (ttf <= " + str(x[1]) + "))" for x in on_road_ttfs])
+        return {
+            "result": "@tvph",
+            "expression": "(60 / hdw) * (vauteq) * (" + ttf_terms + ")",
+            "aggregation": "+",
+            "selections": {"link": "all", "transit_line": "all"},
+            "type": "NETWORK_CALCULATION",
+        }
+
+    @contextmanager
+    def _initOutputMatrices(
+        self,
+        Demand_List,
+        CostMatrixId,
+        ClassNames,
+        TollsMatrixId,
+        TimesMatrixId,
+        ClassAnalysisAttributesMatrix,
+        ClassAnalysisAttributes,
+    ):
+        with _TRACE("Initializing output matrices:"):
+            created = [False] * len(Demand_List)
+            for i in range(len(Demand_List)):
+                if CostMatrixId[i] == "mf0":
+                    CostMatrixId[i] = None
+                else:
+                    initializeMatrix(
+                        CostMatrixId[i], name="acost", description="AUTO COST FOR CLASS: %s" % ClassNames[i]
+                    )
+                if TimesMatrixId[i] == "mf0":
+                    TimesMatrixId[i] = None
+                else:
+                    if CostMatrixId[i] == None:
+                        mtx = initializeMatrix(
+                            description="temp cost matrix for class %s" % ClassNames[i],
+                            matrix_type="FULL",
+                            default=0.0,
+                        )
+                        CostMatrixId[i] = mtx.id
+                        created[i] = True
+                    initializeMatrix(
+                        TimesMatrixId[i], name="aivtt", description="AUTO TIME FOR CLASS: %s" % ClassNames[i]
+                    )
+                if TollsMatrixId[i] == "mf0":
+                    TollsMatrixId[i] = None
+                else:
+                    initializeMatrix(
+                        TollsMatrixId[i], name="atoll", description="AUTO TOLL FOR CLASS: %s" % ClassNames[i]
+                    )
+            for i in range(len(ClassAnalysisAttributesMatrix)):
+                for j in range(len(ClassAnalysisAttributesMatrix[i])):
+                    if ClassAnalysisAttributesMatrix[i][j] is not None:
+                        initializeMatrix(
+                            ClassAnalysisAttributesMatrix[i][j],
+                            name=ClassAnalysisAttributes[i][j],
+                            description="Aggregate Attribute %s Matrix" % ClassAnalysisAttributes[i][j],
+                        )
+        try:
+            yield CostMatrixId
+        finally:
+            for i in range(0, len(created)):
+                if created[i] == True:
+                    _MODELLER.emmebank.delete_matrix(CostMatrixId[i])
+
+    def _getLinkCostCalcSpec(self, costAttributeId, linkCost, linkTollAttributeId, perception):
+        return {
+            "result": costAttributeId,
+            "expression": "(length * %f + %s)*%f" % (linkCost, linkTollAttributeId, perception),
+            "aggregation": None,
+            "selections": {"link": "all"},
+            "type": "NETWORK_CALCULATION",
+        }
+
+    def _getPeakHourSpec(
+        self, peakHourMatrixId, Demand_MatrixId, PeakHourFactor
+    ):  # Was passed the matrix id VALUE, but here it uses it as a parameter
+        return {
+            "expression": Demand_MatrixId + "*" + str(PeakHourFactor),
+            "result": peakHourMatrixId,
+            "constraint": {"by_value": None, "by_zone": None},
+            "aggregation": {"origins": None, "destinations": None},
+            "type": "MATRIX_CALCULATION",
+        }
+
+    def _calculateAppliedTollFactor(self, TollWeight):
+        appliedTollFactor = []
+        if TollWeight is not None:
+            for i in range(0, len(TollWeight)):
+                # Toll weight is in $/hr, needs to be converted to min/$
+                appliedTollFactor.append(60.0 / TollWeight[i])
+        return appliedTollFactor
+
+    def _getSaveAutoTimesSpec(self, timeAttribute):
+        return {
+            "result": timeAttribute,
+            "expression": "timau",
+            "aggregation": None,
+            "selections": {"link": "all"},
+            "type": "NETWORK_CALCULATION",
+        }
+
+    def _getPrimarySOLASpec(
+        self,
+        Demand_List,
+        peakHourMatrixId,
+        appliedTollFactor,
+        Mode_List,
+        classVolumeAttributes,
+        costAttribute,
+        attributes,
+        matrices,
+        operators,
+        lowerBounds,
+        upperBounds,
+        selectors,
+        multiplyPathDemand,
+        multiplyPathValue,
+        multiprocessing,
+        Iterations,
+        rGap,
+        brGap,
+        normGap,
+        PerformanceFlag,
+        TimesMatrixId,
+    ):
+
+        if PerformanceFlag:
+            numberOfProcessors = multiprocessing.cpu_count()
+        else:
+            numberOfProcessors = max(multiprocessing.cpu_count() - 1, 1)
+
+        # Generic Spec for SOLA
+        SOLA_spec = {
+            "type": "SOLA_TRAFFIC_ASSIGNMENT",
+            "classes": [],
+            "path_analysis": None,
+            "cutoff_analysis": None,
+            "traversal_analysis": None,
+            "performance_settings": {"number_of_processors": numberOfProcessors},
+            "background_traffic": None,
+            "stopping_criteria": {
+                "max_iterations": Iterations,
+                "relative_gap": rGap,
+                "best_relative_gap": brGap,
+                "normalized_gap": normGap,
+            },
+        }
+        # defines the aggregator
+        SOLA_path_analysis = []
+        for i in range(0, len(Demand_List)):
+            SOLA_path_analysis.append([])
+            if attributes[i] is not None:
+                allNone = True
+                for j in range(len(attributes[i])):
+                    if attributes[i][j] is None:
+                        continue
+                    allNone = False
+                    path = {
+                        "link_component": attributes[i][j],
+                        "turn_component": None,
+                        "operator": operators[i][j],
+                        "selection_threshold": {"lower": lowerBounds[i][j], "upper": upperBounds[i][j]},
+                        "path_to_od_composition": {
+                            "considered_paths": selectors[i][j],
+                            "multiply_path_proportions_by": {
+                                "analyzed_demand": multiplyPathDemand[i][j],
+                                "path_value": multiplyPathValue[i][j],
+                            },
+                        },
+                        "results": {"od_values": matrices[i][j]},
+                        "analyzed_demand": None,
+                    }
+                    SOLA_path_analysis[i].append(path)
+                if allNone is True:
+                    SOLA_path_analysis[i] = []
+
+        # Creates a list entry for each mode specified in the Mode List and its associated Demand Matrix
+
+        SOLA_spec["classes"] = [
+            {
+                "mode": Mode_List[i],
+                "demand": peakHourMatrixId[i].id,
+                "generalized_cost": {"link_costs": costAttribute[i].id, "perception_factor": 1},
+                "results": {
+                    "link_volumes": classVolumeAttributes[i],
+                    "turn_volumes": None,
+                    "od_travel_times": {"shortest_paths": TimesMatrixId[i]},
+                },
+                "path_analyses": SOLA_path_analysis[i],
+            }
+            for i in range(len(Mode_List))
+        ]
+
+        return SOLA_spec
+
+    def _CorrectTimesMatrixSpec(self, timeMatrix, costMatrix):
+        spec = {
+            "expression": "%s-%s" % (timeMatrix, costMatrix),
+            "result": "%s" % timeMatrix,
+            "constraint": {"by_value": None, "by_zone": None},
+            "aggregation": {"origins": None, "destinations": None},
+            "type": "MATRIX_CALCULATION",
+        }
+        return spec
+
+    def _CorrectCostMatrixSpec(self, costMatrix, perception):
+        spec = {
+            "expression": "%s/%f" % (costMatrix, perception),
+            "result": "%s" % costMatrix,
+            "constraint": {"by_value": None, "by_zone": None},
+            "aggregation": {"origins": None, "destinations": None},
+            "type": "MATRIX_CALCULATION",
+        }
+        return spec
+
+    def _modifyFunctionForAoNAssignment(self):
+        allOrNothingFunc = _MODELLER.emmebank.function("fd98")
+        if allOrNothingFunc is None:
+            allOrNothingFunc = _MODELLER.emmebank.create_function("fd98", "ul2")
+        else:
+            allOrNothingFunc.expression = "ul2"
+
+    def _getChangeLinkVDFto98Spec(self):
+        return {
+            "result": "vdf",
+            "expression": "98",
+            "aggregation": None,
+            "selections": {"link": "all"},
+            "type": "NETWORK_CALCULATION",
+        }
+
+
+# -------------------------------------------------------------------------------------------
+
+
+class IntRange:
+    """
     A smaller object to represent a range of integer values.
     Does NOT simplify to a list!
-    '''
-       
+    """
+
     def __init__(self, min, max):
         min = int(min)
         max = int(max)
-        
+
         if min > max:
             self.__reversed = True
             self.min = max
@@ -664,254 +1108,260 @@ class IntRange():
             self.__reversed = False
             self.min = min
             self.max = max
-    
+
     def __contains__(self, val):
-        return (val >= self.min and val < self.max)
-    
+        return val >= self.min and val < self.max
+
     def __str__(self):
-        return "%s - %s" %(self.min, self.max)
-    
+        return "%s - %s" % (self.min, self.max)
+
     def __iter__(self):
         i = self.min
-        while (i < self.max):
+        while i < self.max:
             yield i
-            i += 1 - 2 * self.__reversed #Count down if reversed
-    
+            i += 1 - 2 * self.__reversed  # Count down if reversed
+
     def __len__(self):
         return abs(self.max - self.min)
-    
+
     def contains(self, val):
         return val in self
-    
+
     def length(self):
         return len(self)
-    
+
     def overlaps(self, otherRange):
         return otherRange.min in self or otherRange.max in self or self.max in otherRange or self.min in otherRange
-    
-#-------------------------------------------------------------------------------------------
 
-class FloatRange():
-    '''
+
+# -------------------------------------------------------------------------------------------
+
+
+class FloatRange:
+    """
     Represents a range of float values. Supports containment and
     overlapping boolean operations.
-    '''
-    
+    """
+
     def __init__(self, min, max):
-        self.min = (float) (min)
-        self.max = (float) (max)
+        self.min = (float)(min)
+        self.max = (float)(max)
 
     def __contains__(self, val):
         return self.contains(val)
-    
+
     def contains(self, val):
-        return (val >= self.min and val < self.max)
-    
+        return val >= self.min and val < self.max
+
     def length(self):
         return abs(self.max - self.min)
-    
+
     def overlaps(self, otherRange):
         return otherRange.min in self or otherRange.max in self or self.max in otherRange or self.min in otherRange
-    
+
     def __str__(self):
-        return "%s - %s" %(self.min, self.max)
+        return "%s - %s" % (self.min, self.max)
 
-#-------------------------------------------------------------------------------------------
 
-class ProgressTracker():
-    
-    '''
+# -------------------------------------------------------------------------------------------
+
+
+class ProgressTracker:
+
+    """
     Convenience class for tracking and reporting progress. Also
     captures the progress from other Emme Tools (such as those
     provided by INRO), and combines with a total progress.
-    
+
     Handles progress at two levels: Tasks and Subtasks. Running
-    an Emme Tool counts as a Task. The total number of tasks 
+    an Emme Tool counts as a Task. The total number of tasks
     must be known at initialization.
-    
+
     Update April 2014: Can be 'reset' with a new number of tasks,
     for when two task-levels are needed but the number of full
     tasks are not known at initialization.
-    '''
-    
+    """
+
     def __init__(self, numberOfTasks):
-        self._taskIncr = 1000.0 / numberOfTasks #floating point number
+        self._taskIncr = 1000.0 / numberOfTasks  # floating point number
         self.reset()
         self._errorTools = set()
-    
+
     def reset(self, numberOfTasks=None):
         self._subTasks = 0
         self._completedSubtasks = 0
-        self._progress = 0.0 #floating point number
+        self._progress = 0.0  # floating point number
         self._toolIsRunning = False
         self._processIsRunning = False
         self._activeTool = None
-        
-        if numberOfTasks is not None: #Can be reset with a new number of tasks
+
+        if numberOfTasks is not None:  # Can be reset with a new number of tasks
             self._taskIncr = 1000.0 / numberOfTasks
-    
+
     def completeTask(self):
-        '''
+        """
         Call to indicate a Task is complete.
-        
+
         This function is called automatically
         at the end of a Subtask and at the end
         of a Tool run.
-        '''
+        """
         if self._processIsRunning:
-            self._processIsRunning =False
+            self._processIsRunning = False
             self._subTasks = 0
             self._completedSubtasks = 0
         self._progress += self._taskIncr
-    
+
     def runTool(self, tool, *args, **kwargs):
-        '''
+        """
         Launches another Emme Tool, 'capturing' its progress
         to report a combined overall progress.
-        
+
         Args:
             - tool: The Emme Tool to run
             - *args, **kwargs: The arguments & keyword arguments
                 to be passed to the Emme Tool.
-        '''
+        """
         self._activeTool = tool
         self._toolIsRunning = True
-        #actually run the tool. no knowledge of the arguments is required.
-        ret = self._activeTool(*args, **kwargs) 
+        # actually run the tool. no knowledge of the arguments is required.
+        ret = self._activeTool(*args, **kwargs)
         self._toolIsRunning = False
         self._activeTool = None
         self.completeTask()
         return ret
-    
+
     def startProcess(self, numberOfSubtasks):
-        '''
+        """
         Tells the Tracker to start up a new Task
         with a given number of Subtasks.
-        '''
+        """
         if numberOfSubtasks <= 0:
             raise Exception("A new process requires at least one task!")
-        
+
         self._subTasks = numberOfSubtasks
         self._completedSubtasks = 0
-        self._processIsRunning = True            
-    
+        self._processIsRunning = True
+
     def completeSubtask(self):
-        '''
+        """
         Call to indicate that a Subtask is complete.
-        '''
-        
+        """
+
         if not self._processIsRunning:
             return
-        
+
         if self._completedSubtasks >= self._subTasks:
-            self._processIsRunning =False
+            self._processIsRunning = False
             self._subTasks = 0
             self._completedSubtasks = 0
             self.completeTask()
         else:
             self._completedSubtasks += 1
-    
-    #@_m.method(return_type=_m.TupleType)
+
+    # @_m.method(return_type=_m.TupleType)
     def getProgress(self):
-        '''
+        """
         Call inside a Tool's percent_completed method
         in order to report that Tool's progress.
-        '''
-        
+        """
+
         if self._toolIsRunning:
             tup = self._activeTool.percent_completed()
-            if tup[2] is None: # Tool is returning the 'marquee' display option
-                #Just return the current progress. The task will be completed by the other thread.
-                self._toolIsRunning = False 
+            if tup[2] is None:  # Tool is returning the 'marquee' display option
+                # Just return the current progress. The task will be completed by the other thread.
+                self._toolIsRunning = False
                 return (0, 1000, self._progress)
             toolProg = (float(tup[2]) - tup[0]) / (tup[1] - tup[0])
-            return (0,1000, self._progress + toolProg * self._taskIncr)
+            return (0, 1000, self._progress + toolProg * self._taskIncr)
         elif self._processIsRunning:
             return (0, 1000, self._progress + self._taskIncr * float(self._completedSubtasks) / float(self._subTasks))
         else:
             return (0, 1000, self._progress)
 
-class CSVReader():
+
+class CSVReader:
     def __init__(self, filepath, append_blanks=True):
         self.filepath = filepath
         self.header = None
         self.append_blanks = append_blanks
-    
+
     def open(self):
         self.__peek()
-        self.__reader = open(self.filepath, 'r')
-        self.header = self.__reader.readline().strip().split(',')
-        
-        #Clean up special characters
-        for i in range(len(self.header)):
-            self.header[i] = self.header[i].replace(' ', '_').replace("@", '').replace('+', '').replace('*', '')
+        self.__reader = open(self.filepath, "r")
+        self.header = self.__reader.readline().strip().split(",")
 
-        self.__lincount = 1 
-    
+        # Clean up special characters
+        for i in range(len(self.header)):
+            self.header[i] = self.header[i].replace(" ", "_").replace("@", "").replace("+", "").replace("*", "")
+
+        self.__lincount = 1
+
     def __peek(self):
         count = 0
-        with open(self.filepath, 'r') as reader:
+        with open(self.filepath, "r") as reader:
             for l in reader:
                 count += 1
         self.__count = count
-    
+
     def __enter__(self):
         self.open()
         return self
-    
+
     def close(self):
         self.__reader.close()
         del self.__reader
         self.header = None
-        
+
     def __exit__(self, *args, **kwargs):
         self.close()
-    
+
     def __len__(self):
         return self.__count
-    
+
     def readline(self):
         try:
-            cells = self.__reader.readline().strip().split(',')
+            cells = self.__reader.readline().strip().split(",")
             self.__lincount += 1
             if not self.append_blanks and len(cells) < len(self.header):
                 raise IOError("Fewer records than header")
-            
+
             while len(cells) < len(self.header) and self.append_blanks:
-                cells.append('')
-                
+                cells.append("")
+
             atts = {}
             for i, column_label in enumerate(self.header):
                 atts[column_label] = cells[i]
             return Record(atts)
-            
+
         except Exception as e:
-            raise IOError("Error reading line %s: %s" %(self.__lincount, e))
-    
+            raise IOError("Error reading line %s: %s" % (self.__lincount, e))
+
     def readlines(self):
         try:
             for line in self.__reader.readlines():
                 self.__lincount += 1
                 if not (line):
                     continue
-                cells = line.strip().split(',')
+                cells = line.strip().split(",")
                 if not self.append_blanks and len(cells) < len(self.header):
                     raise IOError("Fewer records than header")
-                
+
                 while len(cells) < len(self.header) and self.append_blanks:
-                    cells.append('')
-                
+                    cells.append("")
+
                 yield Record(self.header, cells)
         except Exception as e:
-            raise IOError("Error reading line %s: %s" %(self.__lincount, e))
+            raise IOError("Error reading line %s: %s" % (self.__lincount, e))
 
-class Record():
+
+class Record:
     def __init__(self, header, cells):
         self.__dic = {}
         self.__hdr = header
         for i, head in enumerate(header):
             self.__dic[header[i]] = cells[i]
-    
+
     def __getitem__(self, key):
         if type(key) == int:
             return self.__dic[self.__hdr[key]]
@@ -919,62 +1369,66 @@ class Record():
             return self.__dic[key]
         else:
             raise Exception()
-    
+
     def __setitem__(self, key, val):
         self.__hdr.append(key)
         self.__dic[key] = val
-    
+
     def __len__(self):
         return len(self.__hdr)
-    
+
     def __str__(self):
         s = self[0]
         for i in range(1, len(self)):
             s += "," + self[i]
         return s
 
+
 class NullPointerException(Exception):
     pass
 
-'''
+
+"""
 Gets the demand matrix name (mfxx) that was used during the
 previous transit assignment for the given scenario.
 
 EMME_VERSION is a tuple, scenario is the scenario object.
-'''
+"""
+
+
 def DetermineAnalyzedTransitDemandId(EMME_VERSION, scenario):
-    configPath = dirname(_MODELLER.desktop.project_file_name()) \
-                    + "/Database/STRATS_s%s/config" %scenario 
+    configPath = dirname(_MODELLER.desktop.project_file_name()) + "/Database/STRATS_s%s/config" % scenario
     with open(configPath) as reader:
         config = _parsedict(reader.read())
-        
-        data = config['data']
-        if 'multi_class' in data:
-            if data['multi_class'] == True:
+
+        data = config["data"]
+        if "multi_class" in data:
+            if data["multi_class"] == True:
                 multiclass = "yes"
             else:
                 multiclass = "no"
         else:
             multiclass = "no"
-        strat = config['strat_files']
+        strat = config["strat_files"]
         demandMatrices = {}
-        if data['type'] == "MULTICLASS_TRANSIT_ASSIGNMENT": # multiclass extended transit assignment
+        if data["type"] == "MULTICLASS_TRANSIT_ASSIGNMENT":  # multiclass extended transit assignment
             for i in range(len(strat)):
                 demandMatrices[strat[i]["name"]] = strat[i]["data"]["demand"]
             return demandMatrices
-        elif multiclass == "yes": # multiclass congested assignment
+        elif multiclass == "yes":  # multiclass congested assignment
             for i in range(len(data["classes"])):
                 demandMatrices[data["classes"][i]["name"]] = data["classes"][i]["demand"]
             return demandMatrices
-        else: #non multiclass congested
+        else:  # non multiclass congested
             strats = scenario.transit_strategies
             return strats.data["demand"]
+
 
 @contextmanager
 def open_csv_writer(file_path):
     if six.PY3:
-        with open(file_path, 'w', newline='') as csvfile:
-            yield csv.writer(csvfile, delimiter=',')
+        with open(file_path, "w", newline="") as csvfile:
+            yield csv.writer(csvfile, delimiter=",")
     else:
-        with open(file_path, 'wb') as csvfile:
-            yield csv.writer(csvfile, delimiter=',')
+        with open(file_path, "wb") as csvfile:
+            yield csv.writer(csvfile, delimiter=",")
