@@ -205,9 +205,7 @@ def getScenarioModes(scenario, types=["AUTO", "AUX_AUTO", "TRANSIT", "AUX_TRANSI
 _mtxNames = {"FULL": "mf", "DESTINATION": "md", "ORIGIN": "mo", "SCALAR": "ms"}
 
 
-def initializeMatrix(
-    id=None, default=0, name="", description="", matrix_type="FULL", preserve_description=False, preserve_data=False
-):
+def initializeMatrix(id=None, default=0, name="", description="", matrix_type="FULL", preserve_description=False, preserve_data=False):
     """
     Utility function for creation and initialization of matrices. Only works
     for the current Emmebank.
@@ -402,9 +400,7 @@ def tempMatricesMANAGER(number_of_matrices, description="[No description]", matr
     matrices = []
     try:
         for i in range(0, number_of_matrices):
-            matrix = initializeMatrix(
-                default=default, description="Temporary %s" % description, matrix_type=matrix_type
-            )
+            matrix = initializeMatrix(default=default, description="Temporary %s" % description, matrix_type=matrix_type)
             if matrix is None:
                 raise Exception("Could not create temporary matrix: %s" % description)
             matrices.append(matrix)
@@ -815,16 +811,7 @@ class RoadAssignmentUtil:
 
     # ----SUB FUNCTIONS---------------------------------------------------------------------------------
 
-    def _getAtts(
-        self,
-        Scenario,
-        RunTitle,
-        TimesMatrixId,
-        PeakHourFactor,
-        LinkCost,
-        Iterations,
-        MODELLER_NAMESPACE,
-    ):
+    def _getAtts(self, Scenario, RunTitle, TimesMatrixId, PeakHourFactor, LinkCost, Iterations, MODELLER_NAMESPACE):
         atts = {
             "Run Title": RunTitle,
             "Scenario": str(Scenario.id),
@@ -865,25 +852,14 @@ class RoadAssignmentUtil:
         }
 
     @contextmanager
-    def _initOutputMatrices(
-        self,
-        Demand_List,
-        CostMatrixId,
-        ClassNames,
-        TollsMatrixId,
-        TimesMatrixId,
-        ClassAnalysisAttributesMatrix,
-        ClassAnalysisAttributes,
-    ):
+    def _initOutputMatrices(self, Demand_List, CostMatrixId, ClassNames, TollsMatrixId, TimesMatrixId, ClassAnalysisAttributesMatrix, ClassAnalysisAttributes):
         with _TRACE("Initializing output matrices:"):
             created = [False] * len(Demand_List)
             for i in range(len(Demand_List)):
                 if CostMatrixId[i] == "mf0":
                     CostMatrixId[i] = None
                 else:
-                    initializeMatrix(
-                        CostMatrixId[i], name="acost", description="AUTO COST FOR CLASS: %s" % ClassNames[i]
-                    )
+                    initializeMatrix(CostMatrixId[i], name="acost", description="AUTO COST FOR CLASS: %s" % ClassNames[i])
                 if TimesMatrixId[i] == "mf0":
                     TimesMatrixId[i] = None
                 else:
@@ -895,15 +871,11 @@ class RoadAssignmentUtil:
                         )
                         CostMatrixId[i] = mtx.id
                         created[i] = True
-                    initializeMatrix(
-                        TimesMatrixId[i], name="aivtt", description="AUTO TIME FOR CLASS: %s" % ClassNames[i]
-                    )
+                    initializeMatrix(TimesMatrixId[i], name="aivtt", description="AUTO TIME FOR CLASS: %s" % ClassNames[i])
                 if TollsMatrixId[i] == "mf0":
                     TollsMatrixId[i] = None
                 else:
-                    initializeMatrix(
-                        TollsMatrixId[i], name="atoll", description="AUTO TOLL FOR CLASS: %s" % ClassNames[i]
-                    )
+                    initializeMatrix(TollsMatrixId[i], name="atoll", description="AUTO TOLL FOR CLASS: %s" % ClassNames[i])
             for i in range(len(ClassAnalysisAttributesMatrix)):
                 for j in range(len(ClassAnalysisAttributesMatrix[i])):
                     if ClassAnalysisAttributesMatrix[i][j] is not None:
@@ -928,9 +900,7 @@ class RoadAssignmentUtil:
             "type": "NETWORK_CALCULATION",
         }
 
-    def _getPeakHourSpec(
-        self, peakHourMatrixId, Demand_MatrixId, PeakHourFactor
-    ):  # Was passed the matrix id VALUE, but here it uses it as a parameter
+    def _getPeakHourSpec(self, peakHourMatrixId, Demand_MatrixId, PeakHourFactor):  # Was passed the matrix id VALUE, but here it uses it as a parameter
         return {
             "expression": Demand_MatrixId + "*" + str(PeakHourFactor),
             "result": peakHourMatrixId,
