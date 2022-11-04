@@ -140,6 +140,7 @@ class MultiClassRoadAssignment(_m.Tool()):
 
         self.NumberOfProcessors = multiprocessing.cpu_count()
         self.OnRoadTTFRanges = "3-128"
+        self._RoadAssignmentUtil = _util.RoadAssignmentUtil()
 
     def page(self):
         pb = _m.ToolPageBuilder(
@@ -187,7 +188,8 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if self.Scenario is None:
             raise Exception("Scenario %s was not found!" % xtmf_ScenarioNumber)
-        self.on_road_ttfs = self.convert_to_ranges(OnRoadTTFRanges)
+        self.OnRoadTTFRanges = OnRoadTTFRanges
+        self.on_road_ttfs = self._RoadAssignmentUtil.convert_to_ranges(self.OnRoadTTFRanges)
         #:List will be passed as follows: xtmf_Demand_String = "mf10,mf11,mf12", Will be parsed into a list
 
         self.Demand_List = xtmf_Demand_String.split(",")
@@ -203,7 +205,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.LinkCost = [float(x) for x in LinkCost.split(",")]
         self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
         AnalysisAttributes = [x for x in xtmf_AnalysisAttributes.split("|")]
-        AnalysisAttributessMatrixId = [x for x in xtmf_AnalysisAttributesMatrixId.split("|")]
+        AnalysisAttributesMatrixId = [x for x in xtmf_AnalysisAttributesMatrixId.split("|")]
         operators = [x for x in xtmf_AggregationOperator.split("|")]
         lowerBounds = [x for x in xtmf_LowerBound.split("|")]
         upperBounds = [x for x in xtmf_UpperBound.split("|")]
@@ -221,7 +223,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         operatorList = ["+", "-", "*", "/", "%", ".max.", ".min."]
         for i in range(len(self.Demand_List)):
             self.ClassAnalysisAttributes.append([x for x in AnalysisAttributes[i].split(",")])
-            self.ClassAnalysisAttributesMatrix.append([x for x in AnalysisAttributessMatrixId[i].split(",")])
+            self.ClassAnalysisAttributesMatrix.append([x for x in AnalysisAttributesMatrixId[i].split(",")])
             self.ClassAnalysisOperators.append([x for x in operators[i].split(",")])
             self.ClassAnalysisLowerBounds.append([x for x in lowerBounds[i].split(",")])
             self.ClassAnalysisUpperBounds.append([x for x in upperBounds[i].split(",")])
@@ -332,7 +334,7 @@ class MultiClassRoadAssignment(_m.Tool()):
 
         with _m.logbook_trace(
             name="%s (%s v%s)" % (self.RunTitle, self.__class__.__name__, self.version),
-            attributes=self._getAtts(
+            attributes=self._RoadAssignmentUtil._getAtts(
                 self.Scenario,
                 self.RunTitle,
                 self.TimesMatrixId,
@@ -351,7 +353,7 @@ class MultiClassRoadAssignment(_m.Tool()):
 
             self._tracker.startProcess(5)
 
-            with self._initOutputMatrices(
+            with self._RoadAssignmentUtil._initOutputMatrices(
                 self.Demand_List,
                 self.CostMatrixId,
                 self.ClassNames,
@@ -363,13 +365,13 @@ class MultiClassRoadAssignment(_m.Tool()):
 
                 self._tracker.completeSubtask()
 
-                with self._costAttributeMANAGER(
+                with self._RoadAssignmentUtil._costAttributeMANAGER(
                     self.Scenario, self.Demand_List
-                ) as costAttribute, self._transitTrafficAttributeMANAGER(
+                ) as costAttribute, self._RoadAssignmentUtil._transitTrafficAttributeMANAGER(
                     self.Scenario,
                     EMME_VERSION,
                     self.BackgroundTransit,
-                ) as bgTransitAttribute, self._timeAttributeMANAGER(
+                ) as bgTransitAttribute, self._RoadAssignmentUtil._timeAttributeMANAGER(
                     self.Scenario, self.Demand_List
                 ) as timeAttribute:
                     # bgTransitAttribute is None
@@ -402,16 +404,17 @@ class MultiClassRoadAssignment(_m.Tool()):
                             ):  # only do if there are actually transit lines present in the network
                                 with _m.logbook_trace("Calculating transit background traffic"):  # Do Once
                                     networkCalculationTool(
-                                        self._getTransitBGSpec(self.on_road_ttfs), scenario=self.Scenario
+                                        self._RoadAssignmentUtil._getTransitBGSpec(self.on_road_ttfs),
+                                        scenario=self.Scenario,
                                     )
                                     self._tracker.completeSubtask()
 
-                        appliedTollFactor = self._calculateAppliedTollFactor(self.TollWeight)
+                        appliedTollFactor = self._RoadAssignmentUtil._calculateAppliedTollFactor(self.TollWeight)
 
                         with _m.logbook_trace("Calculating link costs"):  # Do for each class
                             for i in range(len(self.Demand_List)):
                                 networkCalculationTool(
-                                    self._getLinkCostCalcSpec(
+                                    self._RoadAssignmentUtil._getLinkCostCalcSpec(
                                         costAttribute[i].id,
                                         self.LinkCost[i],
                                         self.LinkTollAttributeId[i],
@@ -425,7 +428,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             for i in range(len(self.Demand_List)):
                                 if EMME_VERSION >= (4, 2, 1):
                                     matrixCalcTool(
-                                        self._getPeakHourSpec(
+                                        self._RoadAssignmentUtil._getPeakHourSpec(
                                             peakHourMatrix[i].id, self.Demand_List[i], self.PeakHourFactor
                                         ),
                                         scenario=self.Scenario,
@@ -433,7 +436,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     )
                                 else:
                                     matrixCalcTool(
-                                        self._getPeakHourSpec(
+                                        self._RoadAssignmentUtil._getPeakHourSpec(
                                             peakHourMatrix[i].id, self.Demand_List[i].id, self.PeakHourFactor
                                         ),
                                         scenario=self.Scenario,
@@ -508,7 +511,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     else:
                                         allAttributes[i].append(None)
                             if attributeDefined is True:
-                                spec = self._getPrimarySOLASpec(
+                                spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
                                     self.Demand_List,
                                     peakHourMatrix,
                                     appliedTollFactor,
@@ -538,7 +541,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     self.TimesMatrixId[i] is not None
                                 ):  # check to see if any time matrices defined to fix the times matrix for that class
                                     matrixCalcTool(
-                                        self._CorrectTimesMatrixSpec(self.TimesMatrixId[i], self.CostMatrixId[i]),
+                                        self._RoadAssignmentUtil._CorrectTimesMatrixSpec(
+                                            self.TimesMatrixId[i], self.CostMatrixId[i]
+                                        ),
                                         scenario=self.Scenario,
                                         num_processors=self.NumberOfProcessors,
                                     )
@@ -546,7 +551,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     self.CostMatrixId[i] is not None
                                 ):  # check to see if any cost matrices defined to fix the cost matrix for that class
                                     matrixCalcTool(
-                                        self._CorrectCostMatrixSpec(self.CostMatrixId[i], appliedTollFactor[i]),
+                                        self._RoadAssignmentUtil._CorrectCostMatrixSpec(
+                                            self.CostMatrixId[i], appliedTollFactor[i]
+                                        ),
                                         scenario=self.Scenario,
                                         num_processors=self.NumberOfProcessors,
                                     )
@@ -555,7 +562,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                 attributes = []
                                 for i in range(len(self.Demand_List)):
                                     attributes.append(None)
-                                spec = self._getPrimarySOLASpec(
+                                spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
                                     self.Demand_List,
                                     peakHourMatrix,
                                     appliedTollFactor,
