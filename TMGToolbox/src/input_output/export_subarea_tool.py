@@ -17,18 +17,12 @@
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from contextlib import contextmanager
-from multiprocessing import cpu_count
 import multiprocessing
 import inro.modeller as _m
-import traceback as _traceback
 import multiprocessing
 
-
-_trace = _m.logbook_trace
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module("tmg.common.utilities")
-_tmgTPB = _MODELLER.module("tmg.common.TMG_tool_page_builder")
 _geolib = _MODELLER.module("tmg.common.geometry")
 Shapely2ESRI = _geolib.Shapely2ESRI
 networkCalcTool = _MODELLER.tool("inro.emme.network_calculation.network_calculator")
@@ -69,14 +63,6 @@ class ExportSubareaTool(_m.Tool()):
     SOLAFlag = _m.Attribute(bool)
     xtmf_NameString = _m.Attribute(str)
     ResultAttributes = _m.Attribute(str)
-    xtmf_AnalysisAttributes = _m.Attribute(str)
-    xtmf_AnalysisAttributesMatrixId = _m.Attribute(str)
-    xtmf_AggregationOperator = _m.Attribute(str)
-    xtmf_LowerBound = _m.Attribute(str)
-    xtmf_UpperBound = _m.Attribute(str)
-    xtmf_PathSelection = _m.Attribute(str)
-    xtmf_MultiplyPathPropByDemand = _m.Attribute(str)
-    xtmf_MultiplyPathPropByValue = _m.Attribute(str)
     xtmf_BackgroundTransit = _m.Attribute(str)
     OnRoadTTFRanges = _m.Attribute(str)
     NumberOfProcessors = _m.Attribute(int)
@@ -107,7 +93,6 @@ class ExportSubareaTool(_m.Tool()):
             runnable=False,
             branding_text="XTMF",
         )
-
         return pb.render()
 
     def __call__(
@@ -125,19 +110,10 @@ class ExportSubareaTool(_m.Tool()):
         rGap,
         brGap,
         normGap,
-        PerformanceFlag,
         RunTitle,
         LinkTollAttributeId,
         xtmf_NameString,
         ResultAttributes,
-        xtmf_AnalysisAttributes,
-        xtmf_AnalysisAttributesMatrixId,
-        xtmf_AggregationOperator,
-        xtmf_LowerBound,
-        xtmf_UpperBound,
-        xtmf_PathSelection,
-        xtmf_MultiplyPathPropByDemand,
-        xtmf_MultiplyPathPropByValue,
         xtmf_BackgroundTransit,
         OnRoadTTFRanges,
     ):
@@ -159,14 +135,6 @@ class ExportSubareaTool(_m.Tool()):
         self.TollWeight = [float(x) for x in TollWeight.split(",")]
         self.LinkCost = [float(x) for x in LinkCost.split(",")]
         self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
-        AnalysisAttributes = [x for x in xtmf_AnalysisAttributes.split("|")]
-        AnalysisAttributesMatrixId = [x for x in xtmf_AnalysisAttributesMatrixId.split("|")]
-        operators = [x for x in xtmf_AggregationOperator.split("|")]
-        lowerBounds = [x for x in xtmf_LowerBound.split("|")]
-        upperBounds = [x for x in xtmf_UpperBound.split("|")]
-        selectors = [x for x in xtmf_PathSelection.split("|")]
-        multiplyPathDemand = [x for x in xtmf_MultiplyPathPropByDemand.split("|")]
-        mulitplyPathValue = [x for x in xtmf_MultiplyPathPropByValue.split("|")]
         self.ClassAnalysisAttributes = []
         self.ClassAnalysisAttributesMatrix = []
         self.ClassAnalysisOperators = []
@@ -175,63 +143,6 @@ class ExportSubareaTool(_m.Tool()):
         self.ClassAnalysisSelectors = []
         self.ClassAnalysisMultiplyPathDemand = []
         self.ClassAnalysisMultiplyPathValue = []
-        operatorList = ["+", "-", "*", "/", "%", ".max.", ".min."]
-        for i in range(len(self.Demand_List)):
-            self.ClassAnalysisAttributes.append([x for x in AnalysisAttributes[i].split(",")])
-            self.ClassAnalysisAttributesMatrix.append([x for x in AnalysisAttributesMatrixId[i].split(",")])
-            self.ClassAnalysisOperators.append([x for x in operators[i].split(",")])
-            self.ClassAnalysisLowerBounds.append([x for x in lowerBounds[i].split(",")])
-            self.ClassAnalysisUpperBounds.append([x for x in upperBounds[i].split(",")])
-            self.ClassAnalysisSelectors.append([x for x in selectors[i].split(",")])
-            self.ClassAnalysisMultiplyPathDemand.append([x for x in multiplyPathDemand[i].split(",")])
-            self.ClassAnalysisMultiplyPathValue.append([x for x in mulitplyPathValue[i].split(",")])
-            for j in range(len(self.ClassAnalysisAttributes[i])):
-                if self.ClassAnalysisAttributes[i][j] == "":
-                    # make the blank attributes None for better use in spec
-                    self.ClassAnalysisAttributes[i][j] = None
-                if self.ClassAnalysisAttributesMatrix[i][j] == "mf0" or self.ClassAnalysisAttributesMatrix[i][j] == "":
-                    # make mf0 matrices None for better use in spec
-                    self.ClassAnalysisAttributesMatrix[i][j] = None
-                try:
-                    self.ClassAnalysisLowerBounds[i][j] = float(self.ClassAnalysisLowerBounds[i][j])
-                    self.ClassAnalysisUpperBounds[i][j] = float(self.ClassAnalysisUpperBounds[i][j])
-                except:
-                    if self.ClassAnalysisLowerBounds[i][j].lower() == "none" or self.ClassAnalysisLowerBounds[i][j].lower() == "":
-                        self.ClassAnalysisLowerBounds[i][j] = None
-                    else:
-                        raise Exception("Lower bound not specified correct for attribute  %s" % self.ClassAnalysisAttributes[i][j])
-                    if self.ClassAnalysisUpperBounds[i][j].lower() == "none" or self.ClassAnalysisUpperBounds[i][j].lower() == "":
-                        self.ClassAnalysisUpperBounds[i][j] = None
-                    else:
-                        raise Exception("Upper bound not specified correct for attribute  %s" % self.ClassAnalysisAttributes[i][j])
-                if self.ClassAnalysisSelectors[i][j].lower() == "all":
-                    self.ClassAnalysisSelectors[i][j] = "ALL"
-                elif self.ClassAnalysisSelectors[i][j].lower() == "selected":
-                    self.ClassAnalysisSelectors[i][j] = "SELECTED"
-                else:
-                    self.ClassAnalysisSelectors[i][j] = None
-                if self.ClassAnalysisOperators[i][j] not in operatorList:
-                    if self.ClassAnalysisOperators[i][j].lower() == "max":
-                        self.ClassAnalysisOperators[i][j] = ".max."
-                    elif self.ClassAnalysisOperators[i][j].lower() == "min":
-                        self.ClassAnalysisOperators[i][j] = ".min."
-                    elif self.ClassAnalysisOperators[i][j].lower() == "none" or self.ClassAnalysisOperators[i][j].strip(" ") == "":
-                        self.ClassAnalysisOperators[i][j] = None
-                    else:
-                        raise Exception("The Path operator for the %s attribute is not specified correctly. It needs to be a binary operator" % self.ClassAnalysisAttributes[i][j])
-                if str(self.ClassAnalysisMultiplyPathDemand[i][j]).lower() == "true":
-                    self.ClassAnalysisMultiplyPathDemand[i][j] = True
-                elif str(self.ClassAnalysisMultiplyPathDemand[i][j]).lower() == "false":
-                    self.ClassAnalysisMultiplyPathDemand[i][j] = False
-                else:
-                    self.ClassAnalysisMultiplyPathDemand[i][j] = None
-
-                if str(self.ClassAnalysisMultiplyPathValue[i][j]).lower() == "true":
-                    self.ClassAnalysisMultiplyPathValue[i][j] = True
-                elif str(self.ClassAnalysisMultiplyPathValue[i][j]).lower() == "false":
-                    self.ClassAnalysisMultiplyPathValue[i][j] = False
-                else:
-                    self.ClassAnalysisMultiplyPathValue[i][j] = None
         self.DemandMatrixList = []
         for i in range(0, len(self.Demand_List)):
             demandMatrix = self.Demand_List[i]
@@ -350,71 +261,29 @@ class ExportSubareaTool(_m.Tool()):
                             self._tracker.completeSubtask()
 
                         self._tracker.completeTask()
-
                         with _m.logbook_trace("Running Road Assignments."):
                             # init assignment flag. if assignment done, then trip flag
                             assignmentComplete = False
-                            # init attribute flag. if list has something defined, then trip flag
-                            attributeDefined = False
-                            allAttributes = []
-                            allMatrices = []
-                            operators = []
-                            lowerBounds = []
-                            upperBounds = []
-                            pathSelectors = []
-                            multiplyPathDemand = []
-                            multiplyPathValue = []
-                            # check to see if any cost matrices defined
                             for i in range(len(self.Demand_List)):
-                                allAttributes.append([])
-                                allMatrices.append([])
-                                operators.append([])
-                                lowerBounds.append([])
-                                upperBounds.append([])
-                                pathSelectors.append([])
-                                multiplyPathDemand.append([])
-                                multiplyPathValue.append([])
+                                # check to see if any time matrices defined to fix the times matrix for that class
+                                if self.TimesMatrixId[i] is not None:
+                                    matrixCalcTool(
+                                        self._RoadAssignmentUtil._CorrectTimesMatrixSpec(self.TimesMatrixId[i], self.CostMatrixId[i]),
+                                        scenario=self.Scenario,
+                                        num_processors=self.NumberOfProcessors,
+                                    )
+                                # check to see if any cost matrices defined to fix the cost matrix for that class
                                 if self.CostMatrixId[i] is not None:
-                                    _m.logbook_write("Cost matrix defined for class %s" % self.ClassNames[i])
-                                    allAttributes[i].append(costAttribute[i].id)
-                                    allMatrices[i].append(self.CostMatrixId[i])
-                                    operators[i].append("+")
-                                    lowerBounds[i].append(None)
-                                    upperBounds[i].append(None)
-                                    pathSelectors[i].append("ALL")
-                                    multiplyPathDemand[i].append(False)
-                                    multiplyPathValue[i].append(True)
-                                    attributeDefined = True
-                                else:
-                                    allAttributes[i].append(None)
-                                if self.TollsMatrixId[i] is not None:
-                                    _m.logbook_write("Toll matrix defined for class %s" % self.ClassNames[i])
-                                    allAttributes[i].append(self.LinkTollAttributeId[i])
-                                    allMatrices[i].append(self.TollsMatrixId[i])
-                                    operators[i].append("+")
-                                    lowerBounds[i].append(None)
-                                    upperBounds[i].append(None)
-                                    pathSelectors[i].append("ALL")
-                                    multiplyPathDemand[i].append(False)
-                                    multiplyPathValue[i].append(True)
-                                    attributeDefined = True
-                                else:
-                                    allAttributes[i].append(None)
-                                for j in range(len(self.ClassAnalysisAttributes[i])):
-                                    if self.ClassAnalysisAttributes[i][j] is not None:
-                                        _m.logbook_write("Additional matrix for attribute %s defined for class %s" % (self.ClassAnalysisAttributes[i][j], self.ClassNames[i]))
-                                        allAttributes[i].append(self.ClassAnalysisAttributes[i][j])
-                                        allMatrices[i].append(self.ClassAnalysisAttributesMatrix[i][j])
-                                        operators[i].append(self.ClassAnalysisOperators[i][j])
-                                        lowerBounds[i].append(self.ClassAnalysisLowerBounds[i][j])
-                                        upperBounds[i].append(self.ClassAnalysisUpperBounds[i][j])
-                                        pathSelectors[i].append(self.ClassAnalysisSelectors[i][j])
-                                        multiplyPathDemand[i].append(self.ClassAnalysisMultiplyPathDemand[i][j])
-                                        multiplyPathValue[i].append(self.ClassAnalysisMultiplyPathValue[i][j])
-                                        attributeDefined = True
-                                    else:
-                                        allAttributes[i].append(None)
-                            if attributeDefined is True:
+                                    matrixCalcTool(
+                                        self._RoadAssignmentUtil._CorrectCostMatrixSpec(self.CostMatrixId[i], appliedTollFactor[i]),
+                                        scenario=self.Scenario,
+                                        num_processors=self.NumberOfProcessors,
+                                    )
+                            # if no assignment has been done, do an assignment
+                            if assignmentComplete is False:
+                                attributes = []
+                                for i in range(len(self.Demand_List)):
+                                    attributes.append(None)
                                 spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
                                     self.Demand_List,
                                     peakHourMatrix,
@@ -422,14 +291,14 @@ class ExportSubareaTool(_m.Tool()):
                                     self.Mode_List_Split,
                                     classVolumeAttributes,
                                     costAttribute,
-                                    allAttributes,
-                                    allMatrices,
-                                    operators,
-                                    lowerBounds,
-                                    upperBounds,
-                                    pathSelectors,
-                                    multiplyPathDemand,
-                                    multiplyPathValue,
+                                    attributes,
+                                    None,
+                                    None,
+                                    None,
+                                    None,
+                                    None,
+                                    None,
+                                    None,
                                     multiprocessing,
                                     self.Iterations,
                                     self.rGap,
@@ -438,3 +307,4 @@ class ExportSubareaTool(_m.Tool()):
                                     self.PerformanceFlag,
                                     self.TimesMatrixId,
                                 )
+                                report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
