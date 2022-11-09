@@ -66,6 +66,15 @@ class ExportSubareaTool(_m.Tool()):
     xtmf_BackgroundTransit = _m.Attribute(str)
     OnRoadTTFRanges = _m.Attribute(str)
     NumberOfProcessors = _m.Attribute(int)
+    xtmf_shapeFileLocation = _m.Attribute(str)
+    xtmf_iSubareaLinkSelection = _m.Attribute(str)
+    xtmf_jSubareaLinkSelection = _m.Attribute(str)
+    xtmf_subareaGateAttribute = _m.Attribute(str)
+    xtmf_subareaNodeAttribute = _m.Attribute(str)
+    xtmf_createNodeFlagFromShapeFile = _m.Attribute(bool)
+    xtmf_createGateAttrib = _m.Attribute(bool)
+    xtmf_extractTransit = _m.Attribute(bool)
+    xtmf_outputFolder = _m.Attribute(str)
 
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -110,12 +119,22 @@ class ExportSubareaTool(_m.Tool()):
         rGap,
         brGap,
         normGap,
+        PerformanceFlag,
         RunTitle,
         LinkTollAttributeId,
         xtmf_NameString,
         ResultAttributes,
         xtmf_BackgroundTransit,
         OnRoadTTFRanges,
+        xtmf_shapeFileLocation,
+        xtmf_iSubareaLinkSelection,
+        xtmf_jSubareaLinkSelection,
+        xtmf_subareaGateAttribute,
+        xtmf_subareaNodeAttribute,
+        xtmf_createNodeFlagFromShapeFile,
+        xtmf_createGateAttrib,
+        xtmf_extractTransit,
+        xtmf_outputFolder,
     ):
         # ---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -137,12 +156,6 @@ class ExportSubareaTool(_m.Tool()):
         self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
         self.ClassAnalysisAttributes = []
         self.ClassAnalysisAttributesMatrix = []
-        self.ClassAnalysisOperators = []
-        self.ClassAnalysisLowerBounds = []
-        self.ClassAnalysisUpperBounds = []
-        self.ClassAnalysisSelectors = []
-        self.ClassAnalysisMultiplyPathDemand = []
-        self.ClassAnalysisMultiplyPathValue = []
         self.DemandMatrixList = []
         for i in range(0, len(self.Demand_List)):
             demandMatrix = self.Demand_List[i]
@@ -165,10 +178,20 @@ class ExportSubareaTool(_m.Tool()):
         self.brGap = brGap
         self.normGap = normGap
         self.RunTitle = RunTitle[:25]
+        self.PerformanceFlag = PerformanceFlag
         if str(xtmf_BackgroundTransit).lower() == "true":
             self.BackgroundTransit = True
         else:
             self.BackgroundTransit = False
+        self.ShapeFileLocation = xtmf_shapeFileLocation
+        self.ISubareaLinkSelection = xtmf_iSubareaLinkSelection
+        self.JSubareaLinkSelection = xtmf_jSubareaLinkSelection
+        self.SubareaGateAttribute = xtmf_subareaGateAttribute
+        self.SubareaNodeAttribute = xtmf_subareaNodeAttribute
+        self.CreateNodeFlagFromShapeFile = xtmf_createNodeFlagFromShapeFile
+        self.CreateGateAttrib = xtmf_createGateAttrib
+        self.ExtractTransit = xtmf_extractTransit
+        self.OutputFolder = xtmf_outputFolder
         # ---3. Run
         try:
             print("Starting assignment.")
@@ -284,7 +307,7 @@ class ExportSubareaTool(_m.Tool()):
                                 attributes = []
                                 for i in range(len(self.Demand_List)):
                                     attributes.append(None)
-                                spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
+                                SOLA_spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
                                     self.Demand_List,
                                     peakHourMatrix,
                                     appliedTollFactor,
@@ -307,4 +330,61 @@ class ExportSubareaTool(_m.Tool()):
                                     self.PerformanceFlag,
                                     self.TimesMatrixId,
                                 )
-                                report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
+
+                                if self.CreateGateAttrib:
+                                    self._CreateSubareaExtraAttribute(self.SubareaGateAttribute, "LINK")
+                                    self._TagSubareaCentroids()
+
+                                if self.CreateNodeFlagFromShapeFile:
+                                    self._CreateSubareaExtraAttribute(self.SubareaNodeAttribute, "NODE")
+                                    network = self.Scenario.get_network()
+                                    subareaNodes = self._LoadShapeFIle(network)
+                                    for node in subareaNodes:
+                                        node[self.SubareaNodeAttribute] = 1
+                                    self.Scenario.publish_network(network)
+
+                                self._tracker.runTool(
+                                    subareaAnalysisTool,
+                                    subarea_nodes=self.SubareaNodeAttribute,
+                                    subarea_folder=self.OutputFolder,
+                                    traffic_assignment_spec=SOLA_spec,
+                                    extract_transit=self.ExtractTransit,
+                                    overwrite=True,
+                                    gate_labels=self.SubareaGateAttribute,
+                                    scenario=self.Scenario,
+                                )
+
+    def _CreateSubareaExtraAttribute(self, attribID, attribType):
+        if self.Scenario.extra_attribute(attribID) is None:
+            self.Scenario.create_extra_attribute(
+                attribType,
+                attribID,
+            )
+
+    def _TagSubareaCentroids(self):
+        iSpec = {
+            "type": "NETWORK_CALCULATION",
+            "result": self.SubareaGateAttribute,
+            "expression": "i",
+            "selections": {"link": self.ISubareaLinkSelection},
+        }
+        jSpec = {
+            "type": "NETWORK_CALCULATION",
+            "result": self.SubareaGateAttribute,
+            "expression": "-j",
+            "selections": {"link": self.JSubareaLinkSelection},
+        }
+        networkCalcTool([iSpec, jSpec], self.Scenario)
+
+    def _LoadShapeFIle(self, network):
+        with Shapely2ESRI(self.ShapeFileLocation, mode="read") as reader:
+            if int(reader._size) != 1:
+                raise Exception("Shapefile has invalid number of features. There should only be one 1 polygon in the shapefile")
+            SubareaNodes = []
+            for node in network.nodes():
+                for border in reader.readThrough():
+                    if node not in SubareaNodes:
+                        point = _geolib.nodeToShape(node)
+                        if border.contains(point) == True:
+                            SubareaNodes.append(node)
+        return SubareaNodes
