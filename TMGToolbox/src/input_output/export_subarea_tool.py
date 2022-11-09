@@ -380,11 +380,11 @@ class ExportSubareaTool(_m.Tool()):
         with Shapely2ESRI(self.ShapeFileLocation, mode="read") as reader:
             if int(reader._size) != 1:
                 raise Exception("Shapefile has invalid number of features. There should only be one 1 polygon in the shapefile")
-            SubareaNodes = []
+            subareaNodes = []
             for node in network.nodes():
                 for border in reader.readThrough():
-                    if node not in SubareaNodes:
+                    if node not in subareaNodes:
                         point = _geolib.nodeToShape(node)
-                        if border.contains(point) == True:
-                            SubareaNodes.append(node)
-        return SubareaNodes
+                        if border.contains(point):
+                            subareaNodes.append(node)
+        return subareaNodes
