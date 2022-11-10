@@ -60,7 +60,6 @@ class ExportSubareaTool(_m.Tool()):
     brGap = _m.Attribute(float)
     normGap = _m.Attribute(float)
     PerformanceFlag = _m.Attribute(bool)
-    SOLAFlag = _m.Attribute(bool)
     xtmf_NameString = _m.Attribute(str)
     ResultAttributes = _m.Attribute(str)
     xtmf_BackgroundTransit = _m.Attribute(str)
@@ -89,7 +88,6 @@ class ExportSubareaTool(_m.Tool()):
         self.PerformanceFlag = False
         self.RunTitle = ""
         self.LinkTollAttributeId = "@toll"
-
         self.NumberOfProcessors = multiprocessing.cpu_count()
         self.OnRoadTTFRanges = "3-128"
         self._RoadAssignmentUtil = _util.RoadAssignmentUtil()
@@ -119,13 +117,6 @@ class ExportSubareaTool(_m.Tool()):
         rGap,
         brGap,
         normGap,
-        PerformanceFlag,
-        RunTitle,
-        LinkTollAttributeId,
-        xtmf_NameString,
-        ResultAttributes,
-        xtmf_BackgroundTransit,
-        OnRoadTTFRanges,
         xtmf_shapeFileLocation,
         xtmf_iSubareaLinkSelection,
         xtmf_jSubareaLinkSelection,
@@ -135,6 +126,13 @@ class ExportSubareaTool(_m.Tool()):
         xtmf_createGateAttrib,
         xtmf_extractTransit,
         xtmf_outputFolder,
+        PerformanceFlag,
+        RunTitle,
+        LinkTollAttributeId,
+        xtmf_NameString,
+        ResultAttributes,
+        xtmf_BackgroundTransit,
+        OnRoadTTFRanges,
     ):
         # ---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
@@ -388,3 +386,23 @@ class ExportSubareaTool(_m.Tool()):
                         if border.contains(point):
                             subareaNodes.append(node)
         return subareaNodes
+
+    @_m.method(return_type=_m.TupleType)
+    def percent_completed(self):
+        return self._tracker.getProgress()
+
+    @_m.method(return_type=six.text_type)
+    def tool_run_msg_status(self):
+        return self.tool_run_msg
+
+    @_m.method(return_type=six.text_type)
+    def _GetSelectAttributeOptionsHTML(self):
+        list = []
+
+        for att in self.Scenario.extra_attributes():
+            if not att.type == "LINK":
+                continue
+            label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
+            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
+            list.append(html)
+        return "\n".join(list)
