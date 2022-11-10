@@ -93,7 +93,6 @@ class MultiClassRoadAssignment(_m.Tool()):
     xtmf_Demand_String = _m.Attribute(str)
     # The Demand Matrix List
     Demand_List = _m.Attribute(str)
-
     PeakHourFactor = _m.Attribute(float)
     LinkCost = _m.Attribute(str)
     TollWeight = _m.Attribute(str)
@@ -101,9 +100,7 @@ class MultiClassRoadAssignment(_m.Tool()):
     rGap = _m.Attribute(float)
     brGap = _m.Attribute(float)
     normGap = _m.Attribute(float)
-
     PerformanceFlag = _m.Attribute(bool)
-    SOLAFlag = _m.Attribute(bool)
     xtmf_NameString = _m.Attribute(str)
     ResultAttributes = _m.Attribute(str)
     xtmf_AnalysisAttributes = _m.Attribute(str)
@@ -116,7 +113,6 @@ class MultiClassRoadAssignment(_m.Tool()):
     xtmf_MultiplyPathPropByValue = _m.Attribute(str)
     xtmf_BackgroundTransit = _m.Attribute(str)
     OnRoadTTFRanges = _m.Attribute(str)
-
     NumberOfProcessors = _m.Attribute(int)
 
     def __init__(self):
@@ -315,17 +311,13 @@ class MultiClassRoadAssignment(_m.Tool()):
             name="%s (%s v%s)" % (self.RunTitle, self.__class__.__name__, self.version),
             attributes=self._RoadAssignmentUtil._getAtts(self.Scenario, self.RunTitle, self.TimesMatrixId, self.PeakHourFactor, self.LinkCost, self.Iterations, self.__MODELLER_NAMESPACE__),
         ):
-
             self._tracker.reset()
-
             matrixCalcTool = _MODELLER.tool("inro.emme.matrix_calculation.matrix_calculator")
             networkCalculationTool = _MODELLER.tool("inro.emme.network_calculation.network_calculator")
             trafficAssignmentTool = _MODELLER.tool("inro.emme.traffic_assignment.sola_traffic_assignment")
-
             self._tracker.startProcess(5)
 
             with self._RoadAssignmentUtil._initOutputMatrices(self.Demand_List, self.CostMatrixId, self.ClassNames, self.TollsMatrixId, self.TimesMatrixId, self.ClassAnalysisAttributesMatrix, self.ClassAnalysisAttributes) as OutputMatrices:
-
                 self._tracker.completeSubtask()
 
                 with self._RoadAssignmentUtil._costAttributeMANAGER(self.Scenario, self.Demand_List) as costAttribute, self._RoadAssignmentUtil._transitTrafficAttributeMANAGER(
