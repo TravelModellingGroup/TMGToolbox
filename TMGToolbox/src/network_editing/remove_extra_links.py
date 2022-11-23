@@ -337,12 +337,18 @@ class RemoveExtraLinks(_m.Tool()):
     def _RemoveStrandedNodes(self,network):
         #removes nodes not connected to any links
         for node in network.nodes():
+            if node.is_centroid:
+                continue
             is_stranded = True
             for link in node.outgoing_links():
                 is_stranded = False
+                break
+            if not is_stranded:
+                continue
             for link in node.incoming_links():
                 is_stranded = False
-            if is_stranded == True:
+                break
+            if is_stranded:
                 network.delete_node(node.id)
        
     @_m.method(return_type= bool)

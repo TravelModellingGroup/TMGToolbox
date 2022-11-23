@@ -307,26 +307,16 @@ class RemoveExtraNodes(_m.Tool()):
             self.TRACKER.completeTask()
             
             nodesToDelete = self._GetCandidateNodes(network)
+            if len(nodesToDelete) > 0:               
+                if self.ConnectorFilterAttributeId:
+                    self._RemoveCandidateCentroidConnectors(nodesToDelete)            
+                log = self._RemoveNodes(network, nodesToDelete)
+                self._WriteReport(log)
+                self.TRACKER.completeTask()
+                self.TRACKER.startProcess(2)
+                self.BaseScenario.publish_network(network, True)
+                self.TRACKER.completeSubtask()
             
-            if len(nodesToDelete) == 0:
-                raise Exception("Found zero nodes to delete.") 
-            
-            if self.ConnectorFilterAttributeId:
-                self._RemoveCandidateCentroidConnectors(nodesToDelete)
-            
-            log = self._RemoveNodes(network, nodesToDelete)
-
-            
-            self.TRACKER.completeTask()
-            
-            self._WriteReport(log)
-            
-            self.TRACKER.startProcess(2)
-
-            bank = _MODELLER.emmebank 
-            self.BaseScenario.publish_network(network, True)
-            self.TRACKER.completeSubtask()
-                
             _MODELLER.desktop.refresh_needed(True)
             self.TRACKER.completeTask()
 

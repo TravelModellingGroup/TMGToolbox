@@ -495,7 +495,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             headway = aggregator(departures, start, end) / 60.0 #Convert from seconds to minutes
             
             if not headway in bounds: 
-                print("%s: %s" %(line.id, headway))
+                print("%s: Headway = %s" %(line.id, headway))
             line.headway = headway
             
             #Calc line speed
@@ -505,7 +505,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             length = sum([seg.link.length for seg in line.segments()]) #Given in km
             speed = length / avgTime #km/hr
             if not speed in bounds:
-               print("%s: %s" %(line.id, speed))
+               print("%s: Speed = %s" %(line.id, speed))
             line.speed = speed
             
             self.TRACKER.completeSubtask()
