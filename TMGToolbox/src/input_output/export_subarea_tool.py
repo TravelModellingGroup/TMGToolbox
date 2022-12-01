@@ -20,6 +20,7 @@
 import multiprocessing
 import inro.modeller as _m
 import multiprocessing
+import os
 
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module("tmg.common.utilities")
@@ -340,7 +341,16 @@ class ExportSubareaTool(_m.Tool()):
                                     for node in subareaNodes:
                                         node[self.SubareaNodeAttribute] = 1
                                     self.Scenario.publish_network(network)
-
+                                d = _MODELLER.desktop.data_explorer()
+                                remove = None
+                                for db in d.databases():
+                                    db_path = os.path.abspath(db.path)
+                                    output_path = os.path.join(os.path.abspath(self.OutputFolder), "emmebank")
+                                    if db_path == output_path:
+                                        remove = db
+                                        break
+                                if remove is not None:
+                                    d.remove_database(remove)
                                 self._tracker.runTool(
                                     subareaAnalysisTool,
                                     subarea_nodes=self.SubareaNodeAttribute,
