@@ -343,9 +343,9 @@ class ExportSubareaTool(_m.Tool()):
                                     self.Scenario.publish_network(network)
                                 d = _MODELLER.desktop.data_explorer()
                                 remove = None
-                                db_path = os.path.abspath(db.path)
                                 output_path = os.path.join(os.path.abspath(self.OutputFolder), "emmebank")
                                 for db in d.databases():
+                                    db_path = os.path.abspath(db.path)
                                     if db_path == output_path:
                                         remove = db
                                         break
