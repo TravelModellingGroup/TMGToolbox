@@ -149,6 +149,7 @@
     <Compile Include="src\network_editing\time_of_day_changes\compute_combined_headways.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\network_editing\transit_fare_hypernetworks\add_transfer_time_adjustments.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\calculate_hypernetwork_size.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\generate_hypernetwork_from_schema.py" />
     <Compile Include="src\network_editing\transit_fare_hypernetworks\Hypernetwork_Volume_Importer.py" />
@@ -224,6 +225,10 @@
     <Folder Include="src\network_editing\time_of_day_changes" />
     <Folder Include="src\network_editing\transit_fare_hypernetworks" />
     <Folder Include="src\XTMF_internal" />
+    <Folder Include="TMGToolbox\" />
+    <Folder Include="TMGToolbox\src\" />
+    <Folder Include="TMGToolbox\src\network_editing\" />
+    <Folder Include="TMGToolbox\src\network_editing\transit_fare_hypernetworks\" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|2.7" />

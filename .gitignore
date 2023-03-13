@@ -210,3 +210,4 @@ ModelManifest.xml
 
 # PyCharm settings
 .idea
+/TMGToolbox/BuildRelease.bat
