@@ -56,6 +56,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
     NumberOfExtraTimeIntervals = _m.Attribute(int)
     BackgroundTraffic = _m.Attribute(bool)
     LinkComponentAttribute = _m.Attribute(str)
+    CreateLinkComponentAttribute = _m.Attribute(bool)
     StartIndex = _m.Attribute(int)
     VariableTopology = _m.Attribute(str)
     InnerIterations = _m.Attribute(int)
@@ -115,6 +116,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         NumberOfExtraTimeIntervals,
         BackgroundTraffic,
         LinkComponentAttribute,
+        CreateLinkComponentAttribute,
         StartIndex,
         VariableTopology,
         InnerIterations,
@@ -164,6 +166,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 NumberOfExtraTimeIntervals,
                 BackgroundTraffic,
                 LinkComponentAttribute,
+                CreateLinkComponentAttribute,
                 StartIndex,
                 VariableTopology,
                 InnerIterations,
@@ -191,6 +194,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         NumberOfExtraTimeIntervals,
         BackgroundTraffic,
         LinkComponentAttribute,
+        CreateLinkComponentAttribute,
         StartIndex,
         VariableTopology,
         InnerIterations,
@@ -241,7 +245,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             self._tracker.reset()
             with self.temporaryMatricesManager() as temporaryMatrixList:
                 # initialize input matrices
-                self._init_input_matrices(allMatrixDictsList, temporaryMatrixList, input_matrix_name="demand_matrix")
+                self._init_input_matrices(allMatrixDictsList, temporaryMatrixList, inputMatrixName="demand_matrix")
                 # initialize output matrices
                 self._init_output_matrices(allMatrixDictsList, temporaryMatrixList, outputMatrixName="cost_matrix", description="")
                 self._init_output_matrices(allMatrixDictsList, temporaryMatrixList, outputMatrixName="time_matrix", description="")
@@ -262,7 +266,8 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                     timeAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentTimeAttributeLists, tempAttributeList, "LINK", "traffic")
                     costAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentCostAttributeLists, tempAttributeList, "LINK", "traffic")
                     tollAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentLinkTollAttributeLists, tempAttributeList, "LINK", "traffic", is_temp_attribute=False)
-                    linkComponentAttributeList = self._create_transit_traffic_attribute_list(Scenario, timeDependentComponentAttributeList, tempAttributeList)
+                    if CreateLinkComponentAttribute:
+                        linkComponentAttributeList = self._create_transit_traffic_attribute_list(Scenario, timeDependentComponentAttributeList, tempAttributeList)
                     self._tracker.completeSubtask()
                     # Calculate applied toll factor
                     appliedTollFactorLists = self._calculate_applied_toll_factor(Parameters)
@@ -290,10 +295,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                                 FineBRGap,
                                 NormalizedGap,
                                 Parameters,
-                                multiprocessing,
+                                PerformanceFlag,
                                 linkComponentAttributeList,
                             )
-                            print(stta_spec)
                             report = self._tracker.runTool(trafficAssignmentTool, stta_spec, scenario=Scenario)
                         checked = self._load_stopping_criteria(report)
                         number = checked[0]
@@ -331,7 +335,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         matrix_indices_used_list,
         interval_length_list,
         input_matrix_number,
-        input_matrix_name,
+        inputMatrixName,
         output_matrix_name_list,
     ):
         """
@@ -341,7 +345,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         """
         all_matrix_dict = {}
         # add all matrix names to be created to dict
-        all_matrix_dict[input_matrix_name] = ""
+        all_matrix_dict[inputMatrixName] = ""
         for i in range(0, len(output_matrix_name_list)):
             all_matrix_dict[output_matrix_name_list[i][0]] = ""
         #   add input matrix list
@@ -352,7 +356,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             else:
                 input_matrix_list.append("mf" + str(input_matrix_number + i))
                 matrix_indices_used_list.append(input_matrix_number + i)
-        all_matrix_dict[input_matrix_name] = input_matrix_list
+        all_matrix_dict[inputMatrixName] = input_matrix_list
         for output_matrix in output_matrix_name_list:
             matrix_name = output_matrix[0]
             matrix_number = output_matrix[1]
@@ -366,7 +370,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             all_matrix_dict[matrix_name] = output_matrix_list
         return all_matrix_dict
 
-    def _load_input_matrices(self, allMatrixDictsList, input_matrix_name):
+    def _load_input_matrices(self, allMatrixDictsList, inputMatrixName):
         """
         Load input matrices creates and returns a list of (input) matrices based on matrix_name supplied.
         E.g of matrix_name: "demand_matrix", matrix_id: "mf2"
@@ -376,11 +380,11 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             raise Exception('Matrix %s with matrix name "%s" was not found!' % (mtx_id, mtx_name))
 
         for matrix_list in allMatrixDictsList:
-            for i, mtx in enumerate(matrix_list[input_matrix_name]):
+            for i, mtx in enumerate(matrix_list[inputMatrixName]):
                 if mtx == "mf0" or self._get_or_create(mtx).id == mtx:
-                    matrix_list[input_matrix_name][i] = _bank.matrix(mtx)
+                    matrix_list[inputMatrixName][i] = _bank.matrix(mtx)
                 else:
-                    exception(mtx, input_matrix_name)
+                    exception(mtx, inputMatrixName)
 
     def _load_output_matrices(self, allMatrixDictsList, matrix_name_list):
         for matrix_list in allMatrixDictsList:
@@ -512,15 +516,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                     applied_toll_factor_list.append(toll_weight_list)
         return applied_toll_factor_list
 
-    def _createTimeDependentAttributeLists(
-        self,
-        Scenario,
-        timeDependentTimeAttributeLists,
-        tempAttributeList,
-        attribute_type,
-        assignment_type,
-        is_temp_attribute=True,
-    ):
+    def _createTimeDependentAttributeLists(self, Scenario, timeDependentTimeAttributeLists, tempAttributeList, attribute_type, assignment_type, is_temp_attribute=True):
         timeAttributeLists = []
         for time_dependent_attribute_list in timeDependentTimeAttributeLists:
             time_attribute_list = []
@@ -534,7 +530,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
 
     def _calculateLinkCost(self, Scenario, Parameters, appliedTollFactorLists, costAttributeLists, tollAttributeLists):
         with _trace("Calculating link costs"):
-
             for i, cost_attribute_list in enumerate(costAttributeLists):
                 for j in range(0, len(cost_attribute_list)):
                     networkCalcTool(
