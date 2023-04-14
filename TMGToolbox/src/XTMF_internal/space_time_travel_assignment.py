@@ -56,6 +56,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
     NumberOfExtraTimeIntervals = _m.Attribute(int)
     BackgroundTraffic = _m.Attribute(bool)
     LinkComponentAttribute = _m.Attribute(str)
+    CreateLinkComponentAttribute = _m.Attribute(bool)
     StartIndex = _m.Attribute(int)
     VariableTopology = _m.Attribute(str)
     InnerIterations = _m.Attribute(int)
@@ -115,6 +116,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         NumberOfExtraTimeIntervals,
         BackgroundTraffic,
         LinkComponentAttribute,
+        CreateLinkComponentAttribute,
         StartIndex,
         VariableTopology,
         InnerIterations,
@@ -164,6 +166,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 NumberOfExtraTimeIntervals,
                 BackgroundTraffic,
                 LinkComponentAttribute,
+                CreateLinkComponentAttribute,
                 StartIndex,
                 VariableTopology,
                 InnerIterations,
@@ -191,6 +194,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         NumberOfExtraTimeIntervals,
         BackgroundTraffic,
         LinkComponentAttribute,
+        CreateLinkComponentAttribute,
         StartIndex,
         VariableTopology,
         InnerIterations,
@@ -241,7 +245,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             self._tracker.reset()
             with self.temporaryMatricesManager() as temporaryMatrixList:
                 # initialize input matrices
-                self._init_input_matrices(allMatrixDictsList, temporaryMatrixList, input_matrix_name="demand_matrix")
+                self._init_input_matrices(allMatrixDictsList, temporaryMatrixList, inputMatrixName="demand_matrix")
                 # initialize output matrices
                 self._init_output_matrices(allMatrixDictsList, temporaryMatrixList, outputMatrixName="cost_matrix", description="")
                 self._init_output_matrices(allMatrixDictsList, temporaryMatrixList, outputMatrixName="time_matrix", description="")
@@ -262,7 +266,8 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                     timeAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentTimeAttributeLists, tempAttributeList, "LINK", "traffic")
                     costAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentCostAttributeLists, tempAttributeList, "LINK", "traffic")
                     tollAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentLinkTollAttributeLists, tempAttributeList, "LINK", "traffic", is_temp_attribute=False)
-                    linkComponentAttributeList = self._create_transit_traffic_attribute_list(Scenario, timeDependentComponentAttributeList, tempAttributeList)
+                    if CreateLinkComponentAttribute:
+                        linkComponentAttributeList = self._create_transit_traffic_attribute_list(Scenario, timeDependentComponentAttributeList, tempAttributeList)
                     self._tracker.completeSubtask()
                     # Calculate applied toll factor
                     appliedTollFactorLists = self._calculate_applied_toll_factor(Parameters)
@@ -290,10 +295,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                                 FineBRGap,
                                 NormalizedGap,
                                 Parameters,
-                                multiprocessing,
+                                PerformanceFlag,
                                 linkComponentAttributeList,
                             )
-                            print(stta_spec)
                             report = self._tracker.runTool(trafficAssignmentTool, stta_spec, scenario=Scenario)
                         checked = self._load_stopping_criteria(report)
                         number = checked[0]
@@ -331,7 +335,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         matrix_indices_used_list,
         interval_length_list,
         input_matrix_number,
-        input_matrix_name,
+        inputMatrixName,
         output_matrix_name_list,
     ):
         """
@@ -341,7 +345,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         """
         all_matrix_dict = {}
         # add all matrix names to be created to dict
-        all_matrix_dict[input_matrix_name] = ""
+        all_matrix_dict[inputMatrixName] = ""
         for i in range(0, len(output_matrix_name_list)):
             all_matrix_dict[output_matrix_name_list[i][0]] = ""
         #   add input matrix list
@@ -352,7 +356,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             else:
                 input_matrix_list.append("mf" + str(input_matrix_number + i))
                 matrix_indices_used_list.append(input_matrix_number + i)
-        all_matrix_dict[input_matrix_name] = input_matrix_list
+        all_matrix_dict[inputMatrixName] = input_matrix_list
         for output_matrix in output_matrix_name_list:
             matrix_name = output_matrix[0]
             matrix_number = output_matrix[1]
@@ -366,7 +370,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             all_matrix_dict[matrix_name] = output_matrix_list
         return all_matrix_dict
 
-    def _load_input_matrices(self, allMatrixDictsList, input_matrix_name):
+    def _load_input_matrices(self, allMatrixDictsList, inputMatrixName):
         """
         Load input matrices creates and returns a list of (input) matrices based on matrix_name supplied.
         E.g of matrix_name: "demand_matrix", matrix_id: "mf2"
@@ -376,11 +380,11 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             raise Exception('Matrix %s with matrix name "%s" was not found!' % (mtx_id, mtx_name))
 
         for matrix_list in allMatrixDictsList:
-            for i, mtx in enumerate(matrix_list[input_matrix_name]):
+            for i, mtx in enumerate(matrix_list[inputMatrixName]):
                 if mtx == "mf0" or self._get_or_create(mtx).id == mtx:
-                    matrix_list[input_matrix_name][i] = _bank.matrix(mtx)
+                    matrix_list[inputMatrixName][i] = _bank.matrix(mtx)
                 else:
-                    exception(mtx, input_matrix_name)
+                    exception(mtx, inputMatrixName)
 
     def _load_output_matrices(self, allMatrixDictsList, matrix_name_list):
         for matrix_list in allMatrixDictsList:
@@ -512,15 +516,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                     applied_toll_factor_list.append(toll_weight_list)
         return applied_toll_factor_list
 
-    def _createTimeDependentAttributeLists(
-        self,
-        Scenario,
-        timeDependentTimeAttributeLists,
-        tempAttributeList,
-        attribute_type,
-        assignment_type,
-        is_temp_attribute=True,
-    ):
+    def _createTimeDependentAttributeLists(self, Scenario, timeDependentTimeAttributeLists, tempAttributeList, attribute_type, assignment_type, is_temp_attribute=True):
         timeAttributeLists = []
         for time_dependent_attribute_list in timeDependentTimeAttributeLists:
             time_attribute_list = []
@@ -534,7 +530,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
 
     def _calculateLinkCost(self, Scenario, Parameters, appliedTollFactorLists, costAttributeLists, tollAttributeLists):
         with _trace("Calculating link costs"):
-
             for i, cost_attribute_list in enumerate(costAttributeLists):
                 for j in range(0, len(cost_attribute_list)):
                     networkCalcTool(
@@ -693,3 +688,88 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
     @_m.method(return_type=str)
     def tool_run_msg_status(self):
         return self.tool_run_msg
+
+
+links407 = [
+    "22398-32945",
+    "22399-23189",
+    "22400-22398",
+    "22512-22400",
+    "22514-22512",
+    "23189-22513",
+    "31984-32924",
+    "31996-22399",
+    "32483-32891",
+    "32484-32888",
+    "32518-32885",
+    "32520-32894",
+    "32775-33213",
+    "32778-32779",
+    "32779-32784",
+    "32780-32887",
+    "32781-32780",
+    "32784-32889",
+    "32785-32483",
+    "32786-32890",
+    "32787-32786",
+    "32788-32892",
+    "32789-32788",
+    "32793-32893",
+    "32795-32793",
+    "32796-32797",
+    "32797-32923",
+    "32884-32886",
+    "32885-32484",
+    "32887-32775",
+    "32888-32778",
+    "32889-32785",
+    "32890-32781",
+    "32891-32520",
+    "32892-32787",
+    "32893-32789",
+    "32894-32796",
+    "32923-32931",
+    "32924-32795",
+    "32930-31984",
+    "32931-32937",
+    "32937-32938",
+    "32938-32944",
+    "32939-32940",
+    "32940-32930",
+    "32944-31996",
+    "32945-32939",
+    "33213-32884",
+]
+
+
+ramps = [
+    "22491-22512",
+    "22494-22516",
+    "22495-22514",
+    "22496-22513",
+    "31433-22398",
+    "31439-32945",
+    "31440-31996",
+    "31442-22399",
+    "31966-31984",
+    "32022-32778",
+    "32023-32890",
+    "32024-32520",
+    "32025-32796",
+    "32521-32793",
+    "32592-32889",
+    "32731-32779",
+    "32749-32780",
+    "32763-32887",
+    "32782-32785",
+    "32783-32786",
+    "32790-32892",
+    "32791-32788",
+    "32792-32891",
+    "32798-32797",
+    "32799-32893",
+    "32926-32931",
+    "32929-32924",
+    "32935-32938",
+    "32936-32940",
+]
