@@ -54,11 +54,14 @@ class XTMFNetworkCalculator(_m.Tool()):
     link_selection = _m.Attribute(str)
     transit_line_selection = _m.Attribute(str)
     result = _m.Attribute(str)
+    aggregation = _m.Attribute(int)
 
     def __init__(self):
         self.Scenario = _MODELLER.scenario
 
-    def __call__(self, xtmf_ScenarioNumber, domain, expression, node_selection, link_selection, transit_line_selection, result):
+    def __call__(self, xtmf_ScenarioNumber, domain, expression, node_selection, link_selection,
+                transit_line_selection, result,
+                aggregation):
 
         self.Scenario = _MODELLER.emmebank.scenario(xtmf_ScenarioNumber)
         if (self.Scenario is None):
@@ -70,23 +73,26 @@ class XTMFNetworkCalculator(_m.Tool()):
             self.result = result
         else:
             self.result = None
-        
-        if self.domain == "0": #link
-            self.node_selection = None
-            self.link_selection = link_selection
-            self.transit_line_selection = None
-        elif self.domain == "1": #node
-            self.node_selection = node_selection
-            self.link_selection = None
-            self.transit_line_selection = None
-        elif self.domain == "2": #transit line
-            self.node_selection = None
-            self.link_selection = None
-            self.transit_line_selection = transit_line_selection
-        elif self.domain == "3": #transit segment
-            self.node_selection = None
-            self.link_selection = link_selection
-            self.transit_line_selection = transit_line_selection
+        # If we have aggregations we need to specify the 
+        # selections manually, if left empty then they will
+        # be set to None when building the spec.
+        if self.aggregation == 0:
+            if self.domain == "0": #link
+                self.node_selection = None
+                self.link_selection = link_selection
+                self.transit_line_selection = None
+            elif self.domain == "1": #node
+                self.node_selection = node_selection
+                self.link_selection = None
+                self.transit_line_selection = None
+            elif self.domain == "2": #transit line
+                self.node_selection = None
+                self.link_selection = None
+                self.transit_line_selection = transit_line_selection
+            elif self.domain == "3": #transit segment
+                self.node_selection = None
+                self.link_selection = link_selection
+                self.transit_line_selection = transit_line_selection
 
 
         spec = self.network_calculator_spec()
@@ -97,22 +103,56 @@ class XTMFNetworkCalculator(_m.Tool()):
         return ""
 
     def network_calculator_spec(self):
+        aggregation = self.get_aggregation()
         spec = {
             "result": self.result,
             "expression": self.expression,
-            "aggregation": None,
+            "aggregation": aggregation,
             "type": "NETWORK_CALCULATION"            
             }
+        
+        # So we have an issue here where in the original definition for most
+        # of the selection functionality defaults everything to all
+        # but as soon as we allow aggregation then the standard logic no longer applies.
+        # Instead if an aggregation is specified we need to allow the user to manually set
+        # the aggregations and ignore ones that are blank.
+        def set_if_not_null(dictionary, attribute, value):
+            if value:
+                dictionary[attribute] = value
+
         selections = {}
-        if self.node_selection is not None:
-            selections["node"] = self.node_selection
-        if self.link_selection is not None:
-            selections["link"] = self.link_selection
-        if self.transit_line_selection is not None:
-            selections["transit_line"] = self.transit_line_selection
-        if len(selections) == 0:
+        set_if_not_null(selections, "node", self.node_selection)
+        set_if_not_null(selections, "link", self.link_selection)
+        set_if_not_null(selections, "transit_line", self.transit_line_selection)
+        if self.aggregation == 0 and len(selections) == 0:
             selections["node"] = "all"
+
         spec["selections"] = selections
         return spec
-
+    
+    def get_aggregation(self):
+        
+        # None = 0,
+        # Sum = 1,
+        # Average = 2,
+        # Min = 3,
+        # Max = 4,
+        # BitwiseAnd = 5,
+        # BitwiseOr = 6,
+        
+        if self.aggregation == 0:
+            return None
+        elif self.aggregation == 1:
+            return '+'
+        elif self.aggregation == 2:
+            return 'average'
+        elif self.aggregation == 3:
+            return ".min."
+        elif self.aggregation == 4:
+            return ".max."
+        elif self.aggregation == 5:
+            return "&"
+        elif self.aggregation == 6:
+            return "|"
+        return None
 
