@@ -45,11 +45,13 @@ import shutil
 import os
 import gzip
 import six
-import numpy as np
+import io
 if six.PY3:
     _m.InstanceType = object
     _m.TupleType = object
     _m.ListType = object
+else:
+    import tempfile
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -269,8 +271,19 @@ class ImportBinaryMatrix(_m.Tool()):
                     matrix.description = self.MatrixDescription
 
             if str(self.ImportFile)[-2:] == "gz":
-                with gzip.open(self.ImportFile, 'rb') as f:
-                    data = self._load_matrix_from_stream(f)
+                if six.PY3:
+                    with gzip.open(self.ImportFile, 'rb') as f:
+                        data = self._load_matrix_from_stream(f)
+                else:
+                    # Support the slower path for python2
+                    (temp_file_fd, new_file) = tempfile.mkstemp()
+                    os.close(temp_file_fd)
+                    try:
+                        with gzip.open(self.ImportFile, 'rb') as zip_file, open (new_file, 'wb') as non_zip_file:
+                            shutil.copyfileobj(zip_file, non_zip_file)
+                        data = _MatrixData.load(new_file)
+                    finally:
+                        os.remove(new_file)
                 
             else:
                 with open(self.ImportFile, 'rb') as f:
