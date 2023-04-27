@@ -38,13 +38,14 @@ Import Binary Matrix
 '''
 
 import inro.modeller as _m
+import array as _array
 import traceback as _traceback
 from inro.emme.matrix import MatrixData as _MatrixData
 import shutil
 import os
 import gzip
 import six
-import tempfile
+import numpy as np
 if six.PY3:
     _m.InstanceType = object
     _m.TupleType = object
@@ -217,6 +218,44 @@ class ImportBinaryMatrix(_m.Tool()):
             raise Exception(msg)
     
     #---MAIN EXECUTION CODE
+
+    def _load_matrix_from_stream(self, matrix_file):
+        header = _array.array("I")
+        header.fromfile(matrix_file, 4)     # read first 4 integers from file
+        magic, version, data_type, num_dims = header
+        
+        # the first three numbers can be used for validation
+        if (magic != 0xC4D4F1B2 or version != 1 or not(0 < data_type <= 4)
+                  or not(0 < num_dims <= 2)):
+            raise Exception("Unexpected file header: magic number: %X, version:"
+                            " %d, data type: %d, dimensions: %d." % tuple(header))
+        
+        # read number of indices
+        shape = _array.array("I")
+        shape.fromfile(matrix_file, num_dims)
+        
+        data_char = {1: "f", 2: "d", 3: "i", 4: "I"}[data_type]
+        # read origin / destination vector
+        if num_dims == 1:
+            indices = [_array.array("i")]
+            indices[0].fromfile(matrix_file, shape[0])
+            data = _array.array(data_char)
+            data.fromfile(matrix_file, shape[0])
+        # read full matrix
+        else:
+            indices = [_array.array("i"), _array.array("i")]
+            indices[0].fromfile(matrix_file, shape[0])
+            indices[1].fromfile(matrix_file, shape[1])
+            data = []
+            for i in range(shape[0]):
+                row = _array.array(data_char)
+                row.fromfile(matrix_file, shape[1])
+                data.append(row)
+
+        # example, create a MatrixData object with this data
+        matrix_data = _MatrixData(indices, type=data_char)
+        matrix_data.raw_data = data
+        return matrix_data
     
     def _Execute(self):
         with _m.logbook_trace(name="%s v%s" %(self.__class__.__name__, self.version), \
@@ -230,16 +269,12 @@ class ImportBinaryMatrix(_m.Tool()):
                     matrix.description = self.MatrixDescription
 
             if str(self.ImportFile)[-2:] == "gz":
-                (temp_file_fd, new_file) = tempfile.mkstemp()
-                os.close(temp_file_fd)
-                try:
-                    with gzip.open(self.ImportFile, 'rb') as zip_file, open (new_file, 'wb') as non_zip_file:
-                        shutil.copyfileobj(zip_file, non_zip_file)
-                    data = _MatrixData.load(new_file)
-                finally:
-                    os.remove(new_file)
+                with gzip.open(self.ImportFile, 'rb') as f:
+                    data = self._load_matrix_from_stream(f)
+                
             else:
-                data = _MatrixData.load(self.ImportFile)
+                with open(self.ImportFile, 'rb') as f:
+                    data = self._load_matrix_from_stream(f)
             
             self.MatrixType = matrix.type
             # 2D matrix
