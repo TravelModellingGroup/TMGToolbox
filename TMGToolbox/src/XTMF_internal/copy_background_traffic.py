@@ -80,7 +80,6 @@ class CalculateBackgroundTraffic(_m.Tool()):
         ToNetwork = ToScenario.get_network()
         attribute_in_from = self._createAttributesNotInToScenario("LINK", ToNetwork, ToScenario, FromScenarioList, timeDependentComponentAttributeList)
         self._copyAttributesBetweenScenarions("LINK", attribute_in_from, ToScenario, FromScenarioList)
-        print("done!")
 
     def _createAttributesNotInToScenario(self, attrib_type, ToNetwork, ToScenario, FromScenarioList, timeDependentComponentAttributeList):
         attribute_in_from = []
