@@ -46,6 +46,8 @@ import gzip
 import shutil
 import os
 import tempfile
+import six
+import array as _array
 _MODELLER = _m.Modeller() #Instantiate Modeller once.
 _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
@@ -188,6 +190,24 @@ class ExportBinaryMatrix(_m.Tool()):
     
     ##########################################################################################################    
     
+    def _save_matrix_data(self, file_stream, matrix_data):
+
+        matrix_type_index = {"f" : 1, "d" : 2, 'i' : 3, 'I' : 4}[matrix_data.type]
+        intBuff = _array.array("I")
+        intBuff.append(0xC4D4F1B2) # magic number
+        intBuff.append(1) # version number
+        intBuff.append(matrix_type_index)
+        intBuff.append(matrix_data.num_dimensions)
+        for dim in matrix_data.indices:
+            intBuff.append(len(dim))
+        for dim in matrix_data.indices:
+            for entry in dim:
+                intBuff.append(entry)
+        intBuff.tofile(file_stream)
+        for data_array in matrix_data.raw_data:
+            data_array.tofile(file_stream)
+        return
+
     #---
     #---MAIN EXECUTION CODE
     
@@ -202,16 +222,21 @@ class ExportBinaryMatrix(_m.Tool()):
             else:
                 data = matrix.get_data()
             if self.ExportFile[-2:] == "gz":
-                (temp_file_fd, new_file) = tempfile.mkstemp()
-                os.close(temp_file_fd)
-                try:
-                    data.save(new_file)
-                    with open (new_file, 'rb') as in_file, gzip.open(self.ExportFile, 'wb') as out_file:
-                        shutil.copyfileobj(in_file, out_file)
-                finally:
-                    os.remove(new_file)
+                if six.PY3:
+                    with gzip.open(self.ExportFile, 'wb') as out_file:
+                        self._save_matrix_data(out_file, data)
+                else:
+                    (temp_file_fd, new_file) = tempfile.mkstemp()
+                    os.close(temp_file_fd)
+                    try:
+                        data.save(new_file)
+                        with open (new_file, 'rb') as in_file, gzip.open(self.ExportFile, 'wb') as out_file:
+                            shutil.copyfileobj(in_file, out_file)
+                    finally:
+                        os.remove(new_file)
             else:
-                data.save(self.ExportFile)
+                with open(self.ExportFile, 'wb') as out_file:
+                    self._save_matrix_data(out_file, data)
             
             self.TRACKER.completeTask()
 
