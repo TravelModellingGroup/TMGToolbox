@@ -173,6 +173,7 @@
     <Compile Include="src\XTMF_internal\export_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_network_batch_file.py" />
     <Compile Include="src\XTMF_internal\export_worksheet.py" />
+    <Compile Include="src\XTMF_internal\has_transit_traffic_results.py" />
     <Compile Include="src\XTMF_internal\import_matrix_batch_file.py" />
     <Compile Include="src\XTMF_internal\import_from_database.py">
       <SubType>Code</SubType>

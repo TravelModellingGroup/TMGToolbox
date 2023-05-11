@@ -54,11 +54,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
     StartTime = _m.Attribute(str)
     ExtraTimeInterval = _m.Attribute(float)
     NumberOfExtraTimeIntervals = _m.Attribute(int)
-    BackgroundTraffic = _m.Attribute(bool)
     LinkComponentAttribute = _m.Attribute(str)
     CreateLinkComponentAttribute = _m.Attribute(bool)
     StartIndex = _m.Attribute(int)
-    VariableTopology = _m.Attribute(str)
     InnerIterations = _m.Attribute(int)
     OuterIterations = _m.Attribute(int)
     CoarseRGap = _m.Attribute(float)
@@ -92,10 +90,10 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         self.brGap = 0.1
         self.normGap = 0.05
         self.PerformanceFlag = False
+        self.CreateLinkComponentAttribute = False
         self.RunTitle = ""
         self.LinkTollAttributeID = "@toll"
         self.NumberOfProcessors = multiprocessing.cpu_count()
-        self.OnRoadTTFRanges = "3-128"
 
     def page(self):
         pb = _m.ToolPageBuilder(
@@ -114,11 +112,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         StartTime,
         ExtraTimeInterval,
         NumberOfExtraTimeIntervals,
-        BackgroundTraffic,
         LinkComponentAttribute,
         CreateLinkComponentAttribute,
         StartIndex,
-        VariableTopology,
         InnerIterations,
         OuterIterations,
         CoarseRGap,
@@ -128,7 +124,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         NormalizedGap,
         PerformanceFlag,
         RunTitle,
-        OnRoadTTFRanges,
         TrafficClasses,
     ):
         print("starting...")
@@ -136,7 +131,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         Scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
         if Scenario is None:
             raise Exception("Scenario %s was not found!" % ScenarioNumber)
-        OnRoadTTFRanges = OnRoadTTFRanges
         InnerIterations = InnerIterations
         OuterIterations = OuterIterations
         CoarseRGap = CoarseRGap
@@ -151,7 +145,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         ExtraTimeInterval = ExtraTimeInterval
         NumberOfExtraTimeIntervals = NumberOfExtraTimeIntervals
         StartIndex = StartIndex
-        VariableTopology = VariableTopology
         Parameters = json.loads(TrafficClasses)
         for tc in Parameters["TrafficClasses"]:
             tc["TollWeightList"] = [float(x) for x in tc["TollWeightList"].split(",")]
@@ -164,11 +157,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 StartTime,
                 ExtraTimeInterval,
                 NumberOfExtraTimeIntervals,
-                BackgroundTraffic,
                 LinkComponentAttribute,
                 CreateLinkComponentAttribute,
                 StartIndex,
-                VariableTopology,
                 InnerIterations,
                 OuterIterations,
                 CoarseRGap,
@@ -178,7 +169,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 NormalizedGap,
                 PerformanceFlag,
                 RunTitle,
-                OnRoadTTFRanges,
                 Parameters,
             )
             print("Assignment complete.")
@@ -192,11 +182,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         StartTime,
         ExtraTimeInterval,
         NumberOfExtraTimeIntervals,
-        BackgroundTraffic,
         LinkComponentAttribute,
         CreateLinkComponentAttribute,
         StartIndex,
-        VariableTopology,
         InnerIterations,
         OuterIterations,
         CoarseRGap,
@@ -206,7 +194,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         NormalizedGap,
         PerformanceFlag,
         RunTitle,
-        OnRoadTTFRanges,
         Parameters,
     ):
         for tc in Parameters["TrafficClasses"]:
@@ -260,14 +247,17 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                         timeDependentTimeAttributeLists.append(self._create_time_dependent_attribute_list("ltime", IntervalLengthList, tc["AttributeStartIndex"]))
                         timeDependentCostAttributeLists.append(self._create_time_dependent_attribute_list("lkcst", IntervalLengthList, tc["AttributeStartIndex"]))
                         timeDependentLinkTollAttributeLists.append(self._create_time_dependent_attribute_list(tc["LinkTollAttributeID"], IntervalLengthList, tc["AttributeStartIndex"]))
-
                     volumeAttributeLists = self._create_volume_attribute(Scenario, timeDependentVolumeAttributeLists)
-                    timeDependentComponentAttributeList = self._create_time_dependent_attribute_list(LinkComponentAttribute, IntervalLengthList, StartIndex)
                     timeAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentTimeAttributeLists, tempAttributeList, "LINK", "traffic")
                     costAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentCostAttributeLists, tempAttributeList, "LINK", "traffic")
                     tollAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentLinkTollAttributeLists, tempAttributeList, "LINK", "traffic", is_temp_attribute=False)
+                    linkComponentAttributeList = []
                     if CreateLinkComponentAttribute:
+                        timeDependentComponentAttributeList = self._create_time_dependent_attribute_list(LinkComponentAttribute, IntervalLengthList, StartIndex)
                         linkComponentAttributeList = self._create_transit_traffic_attribute_list(Scenario, timeDependentComponentAttributeList, tempAttributeList)
+                    timeDependentTimeResultAttributeList = self._create_time_dependent_attribute_list("@timeau", IntervalLengthList, StartIndex)
+                    timeResultAttributeList = self._create_transit_traffic_attribute_list(Scenario, timeDependentTimeResultAttributeList, tempAttributeList, is_temp_attribute=False)
+
                     self._tracker.completeSubtask()
                     # Calculate applied toll factor
                     appliedTollFactorLists = self._calculate_applied_toll_factor(Parameters)
@@ -297,6 +287,10 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                                 Parameters,
                                 PerformanceFlag,
                                 linkComponentAttributeList,
+                                CreateLinkComponentAttribute,
+                                LinkComponentAttribute,
+                                StartIndex,
+                                timeResultAttributeList,
                             )
                             report = self._tracker.runTool(trafficAssignmentTool, stta_spec, scenario=Scenario)
                         checked = self._load_stopping_criteria(report)
@@ -439,13 +433,15 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 Scenario.create_extra_attribute("LINK", volume_attribute, default_value=0)
         return volumeAttributeLists
 
-    def _create_transit_traffic_attribute_list(self, Scenario, linkComponentAttributeList, tempAttributeList):
+    def _create_transit_traffic_attribute_list(self, Scenario, linkComponentAttributeList, tempAttributeList, is_temp_attribute=True):
         # extra_parameter_tool(el1="0")
         transit_traffic_attribute_list = []
         for transit_traffic_att in linkComponentAttributeList:
             t_traffic_attribute = self._create_temp_attribute(Scenario, transit_traffic_att, "LINK", default_value=0.0, assignment_type="traffic")
-            tempAttributeList.append(t_traffic_attribute)
             transit_traffic_attribute_list.append(t_traffic_attribute)
+            if is_temp_attribute:
+                tempAttributeList.append(t_traffic_attribute)
+
         return transit_traffic_attribute_list
 
     def _create_temp_attribute(self, Scenario, attribute_id, attribute_type, description=None, default_value=0.0, assignment_type=None):
@@ -575,6 +571,10 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         Parameters,
         PerformanceFlag,
         linkComponentAttributeList,
+        CreateLinkComponentAttribute,
+        LinkComponentAttribute,
+        StartIndex,
+        timeResultAttributeList,
     ):
         if PerformanceFlag == True:
             number_of_processors = multiprocessing.cpu_count()
@@ -590,7 +590,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 "number_of_extra_time_intervals": NumberOfExtraTimeIntervals,
             },
             "background_traffic": {
-                "link_component": linkComponentAttributeList[0].id,
+                "link_component": linkComponentAttributeList[0].id if CreateLinkComponentAttribute else str(LinkComponentAttribute) + str(StartIndex),
                 "turn_component": None,
             },
             "variable_topology": None,
@@ -599,8 +599,8 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             "cutoff_analysis": None,
             "traversal_analysis": None,
             "results": {
-                "link_volumes": volumeAttributeLists[0][0],
-                "link_costs": None,
+                "link_volumes": None,
+                "link_costs": timeResultAttributeList[0].id,
                 "turn_volumes": None,
                 "turn_costs": None,
             },
@@ -626,13 +626,13 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                     "link_volumes": volumeAttributeLists[i][0],
                     "turn_volumes": None,
                     "od_travel_times": matrix_dict["time_matrix"][0].id,
-                    "od_travel_times": None,
                     "vehicle_count": None,
                 },
                 "analysis": None,
             }
             STTA_class_generator.append(stta_class)
         STTA_spec["classes"] = STTA_class_generator
+
         return STTA_spec
 
     def _load_stopping_criteria(self, report):
