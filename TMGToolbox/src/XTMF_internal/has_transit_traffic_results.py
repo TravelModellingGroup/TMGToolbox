@@ -29,38 +29,38 @@ _util = _MODELLER.module("tmg.common.utilities")
 class SetTrafficTransitResults(_m.Tool()):
     # ---Parameters---
     ScenarioNumber = _m.Attribute(int)
-    HasTraffic = _m.Attribute(int)
-    HasTransit = _m.Attribute(int)
+    HasTraffic = _m.Attribute(str)
+    HasTransit = _m.Attribute(str)
 
     def __init__(self):
         self.Scenario = _MODELLER.scenario
-        self.HasTraffic = 0
-        self.HasTransit = 0
 
     def __call__(self, ScenarioNumber, HasTraffic, HasTransit):
         Scenario = _m.Modeller().emmebank.scenario(ScenarioNumber)
         if Scenario is None:
             raise Exception("Scenario %s was not found!" % ScenarioNumber)
+
         try:
             self._execute(Scenario, HasTraffic, HasTransit)
         except Exception as e:
             raise Exception(_util.formatReverseStack())
 
     def _execute(self, Scenario, HasTraffic, HasTransit):
-        if HasTraffic != 0:
+        print(HasTraffic, HasTransit)
+        if HasTraffic != "DoNothing":
             self._set_has_traffic(Scenario, HasTraffic)
-        if HasTransit != 0:
+        if HasTransit != "DoNothing":
             self._set_has_transit(Scenario, HasTransit)
 
     def _set_has_traffic(self, Scenario, HasTraffic):
-        if HasTraffic == 1:
+        if HasTraffic == "Assign":
             Scenario.has_traffic_results = True
             print("just finished setting traffic result to zero")
-        elif HasTraffic == 2:
+        elif HasTraffic == "UnAssign":
             Scenario.has_traffic_results = False
 
     def _set_has_transit(self, Scenario, HasTransit):
-        if HasTransit == 1:
+        if HasTransit == "Assign":
             Scenario.has_traffic_results = True
-        elif HasTransit == 2:
+        elif HasTransit == "UnAssign":
             Scenario.has_traffic_results = False
