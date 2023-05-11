@@ -50,11 +50,12 @@ class SetTrafficTransitResults(_m.Tools()):
         if HasTraffic != 0:
             self._set_has_traffic(Scenario, HasTraffic)
         if HasTransit != 0:
-            self._set_has_traffic(Scenario, HasTransit)
+            self._set_has_transit(Scenario, HasTransit)
 
     def _set_has_traffic(self, Scenario, HasTraffic):
         if HasTraffic == 1:
             Scenario.has_traffic_results = True
+            print("just finished setting traffic result to zero")
         elif HasTraffic == 2:
             Scenario.has_traffic_results = False
 
