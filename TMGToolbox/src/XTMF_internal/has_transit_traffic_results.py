@@ -28,9 +28,9 @@ _util = _MODELLER.module("tmg.common.utilities")
 
 class SetTrafficTransitResults(_m.Tool()):
     # ---Parameters---
-    Scenario = _m.Attribute(str)
-    has_traffic = _m.Attribute(int)
-    has_transit = _m.Attribute(int)
+    ScenarioNumber = _m.Attribute(int)
+    HasTraffic = _m.Attribute(int)
+    HasTransit = _m.Attribute(int)
 
     def __init__(self):
         self.Scenario = _MODELLER.scenario
