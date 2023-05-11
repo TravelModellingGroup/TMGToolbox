@@ -54,11 +54,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
     StartTime = _m.Attribute(str)
     ExtraTimeInterval = _m.Attribute(float)
     NumberOfExtraTimeIntervals = _m.Attribute(int)
-    # BackgroundTraffic = _m.Attribute(bool)
     LinkComponentAttribute = _m.Attribute(str)
     CreateLinkComponentAttribute = _m.Attribute(bool)
     StartIndex = _m.Attribute(int)
-    # VariableTopology = _m.Attribute(str)
     InnerIterations = _m.Attribute(int)
     OuterIterations = _m.Attribute(int)
     CoarseRGap = _m.Attribute(float)
@@ -96,7 +94,6 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         self.RunTitle = ""
         self.LinkTollAttributeID = "@toll"
         self.NumberOfProcessors = multiprocessing.cpu_count()
-        # self.OnRoadTTFRanges = "3-128"
 
     def page(self):
         pb = _m.ToolPageBuilder(
