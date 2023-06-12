@@ -190,6 +190,7 @@ class ExportNetworkPackage(m.Tool()):
                 self._batchout_lines(temp_folder, zf)
                 self._batchout_turns(temp_folder, zf)
                 self._batchout_functions(temp_folder, zf)
+                self._batchout_network_fields(temp_folder, zf)
 
                 if len(self.AttributeIdsToExport) > 0:
                     self._batchout_extra_attributes(temp_folder, zf)
@@ -270,6 +271,35 @@ class ExportNetworkPackage(m.Tool()):
         export_file = path.join(temp_folder, 'functions.411')
         self.TRACKER.runTool(_export_functions, export_file=export_file)
         zf.write(export_file, arcname='functions.411')
+
+    @m.logbook_trace('Exporting Network Fields')
+    def _batchout_network_fields(self, temp_folder, zf):
+        version = _util.getEmmeVersion(returnType=tuple)
+        # we only can try to export fields if the EMME version is over 4.3
+        if version >= (4, 3, 0) and len(self.Scenario.network_fields()) > 0:
+            tool = mm.tool('inro.emme.data.network_field.export_network_fields')
+            tool(network_fields="ALL",
+                export_path=temp_folder,
+                field_separator=',',
+                scenario=self.Scenario,
+                export_definitions=True
+                )
+            def write_if_exists(zf, directory_name, local_name, scenario_number):
+                # The scenario number is appended as X_1.csv for scenario 1
+                exported_file = path.join(directory_name, local_name + "_" + str(scenario_number) + ".csv")
+                if path.isfile(exported_file):
+                    zf.write(exported_file, arcname=local_name + ".csv")
+                return
+            scenario = self.Scenario.number
+            write_if_exists(zf, temp_folder, "netfield_links", scenario)
+            write_if_exists(zf, temp_folder, "netfield_modes", scenario)
+            write_if_exists(zf, temp_folder, "netfield_nodes", scenario)
+            write_if_exists(zf, temp_folder, "netfield_segments", scenario)
+            write_if_exists(zf, temp_folder, "netfield_transit_lines", scenario)
+            write_if_exists(zf, temp_folder, "netfield_turns", scenario)
+            write_if_exists(zf, temp_folder, "netfield_vehicles", scenario)
+        return
+
 
     @m.logbook_trace('Exporting extra attributes')
     def _batchout_extra_attributes(self, temp_folder, zf):

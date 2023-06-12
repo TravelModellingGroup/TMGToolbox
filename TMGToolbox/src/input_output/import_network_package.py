@@ -518,6 +518,7 @@ class ImportNetworkPackage(_m.Tool()):
                 self._batchin_link_shapes(scenario, temp_folder, zf)
                 self._batchin_lines(scenario, temp_folder, zf)
                 self._batchin_turns(scenario, temp_folder, zf)
+                self._batchin_network_fields(scenario, temp_folder, zf)
 
                 if self._components.traffic_results_files is not None:
                     self._batchin_traffic_results(scenario, temp_folder, zf)
@@ -590,6 +591,32 @@ class ImportNetworkPackage(_m.Tool()):
             self.TRACKER.runTool(import_turns,
                              transaction_file=_path.join(temp_folder, self._components.turns_file),
                              scenario=scenario)
+
+    @_m.logbook_trace("Reading Network Fields")
+    def _batchin_network_fields(self, scenario, temp_folder, zf):
+        # We can only load in network fields if the version number is over 4.3
+        if _util.getEmmeVersion(tuple) < (4,3,0):
+            return
+        tool = _MODELLER.tool("inro.emme.data.network_field.import_network_fields")
+        def read_file_if_exists(zf, folder, file):
+            if not file in zf.namelist():
+                return
+            file_to_read = _path.join(folder, file)
+            zf.extract(file, folder)
+            tool(file_to_read,
+                scenario=scenario,
+                field_separator=",",
+                import_definitions = True,
+                revert_on_error=False)
+            return
+        read_file_if_exists(zf, temp_folder, "netfield_links.csv")
+        read_file_if_exists(zf, temp_folder, "netfield_modes.csv")
+        read_file_if_exists(zf, temp_folder, "netfield_nodes.csv")
+        read_file_if_exists(zf, temp_folder, "netfield_segments.csv")
+        read_file_if_exists(zf, temp_folder, "netfield_transit_lines.csv")
+        read_file_if_exists(zf, temp_folder, "netfield_turns.csv")
+        read_file_if_exists(zf, temp_folder, "netfield_vehicles.csv")
+        return
 
     @_m.logbook_trace("Reading extra attributes")
     def _batchin_extra_attributes(self, scenario, temp_folder, zf):
