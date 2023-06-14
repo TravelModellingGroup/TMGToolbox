@@ -1108,18 +1108,12 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
 
         if EMME_VERSION >= (4,2,1):
             if self.UseBoardingLevelFlag:
-                modeList = []
                 partialNetwork = self.Scenario.get_partial_network(['MODE'], True)
-        
-                for mode in partialNetwork.modes():
-                    if mode.type != 'TRANSIT': continue
-                    modeList.append({"mode": mode.id, "next_journey_level": 1})
-                
                 baseSpec["journey_levels"] = [
                 {
                     "description": "Walking",
                     "destinations_reachable": False,
-                    "transition_rules": modeList,
+                    "transition_rules": self._create_journey_level_modes(partialNetwork, 0),
                     "boarding_time": None,
                     "boarding_cost": None,
                     "waiting_time": None
@@ -1127,7 +1121,7 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
                 {
                     "description": "Transit",
                     "destinations_reachable": True,
-                    "transition_rules": modeList,
+                    "transition_rules": self._create_journey_level_modes(partialNetwork, 1),
                     "boarding_time": None,
                     "boarding_cost": None,
                     "waiting_time": None
@@ -1135,6 +1129,15 @@ class V4_FareBaseTransitAssignment(_m.Tool()):
             ]
         
         return baseSpec
+    
+    def _create_journey_level_modes(self, partialNetwork, level):
+        modeList = []
+        for mode in partialNetwork.modes():
+                if mode.type == "TRANSIT":
+                    modeList.append({"mode": mode.id, "next_journey_level": 1})
+                elif six.PY3 and mode.type == "AUX_TRANSIT":
+                    modeList.append({"mode": mode.id, "next_journey_level": level})
+        return modeList
     
     def _GetFuncSpec(self):
 
