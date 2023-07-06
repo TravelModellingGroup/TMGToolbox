@@ -458,7 +458,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
         toDelete = set()
         if altData is not None:
-            for k, v in altData.items(): #check if any headways or speeds are zero. Allow those lines to be deletable
+            for k, v in [x for x in six.iteritems(altData)]: #check if any headways or speeds are zero. Allow those lines to be deletable
                 if v[0] == 0 or v[1] == 0:
                     del altData[k]
                 #if v[0] == 9999: #prep an unused line for deletion
