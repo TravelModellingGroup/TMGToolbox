@@ -419,7 +419,7 @@ class TransitAssignmentTool(_m.Tool()):
                         ) as trace:
                             with _dbUtils.congested_transit_temp_funcs(self.Scenario, self.usedFunctions, False, "us3"):
                                 with _dbUtils.backup_and_restore(self.Scenario, {"TRANSIT_SEGMENT": ["data3"]}):
-                                    self.ttfDict = self._ParseExponentString()
+                                    self.ttfDict = self._ParseExponentString(False)
                                     for iteration in range(0, self.Iterations + 1):
                                         with _trace("Iteration %d" % iteration):
                                             print("Starting Iteration %d" % iteration)
@@ -1487,7 +1487,7 @@ class TransitAssignmentTool(_m.Tool()):
             perceptionList.append(strippedParts[0:2])
         return perceptionList
 
-    def _ParseExponentString(self):
+    def _ParseExponentString(self, healFunctions = True):
         exponentList = {}
         components = self.CongestionExponentString.split(",")
         for component in components:
@@ -1523,7 +1523,8 @@ class TransitAssignmentTool(_m.Tool()):
             strippedParts[1] = perception
             strippedParts[2] = exponent
             exponentList[strippedParts[0]] = strippedParts[0:3]
-            self._HealTravelTimeFunction(ttf)
+            if healFunctions:
+                self._HealTravelTimeFunction(ttf)
         return exponentList
 
     def _GetFuncSpec(self):
