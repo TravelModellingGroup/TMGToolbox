@@ -178,10 +178,7 @@ class ExportSubareaTool(_m.Tool()):
         self.normGap = normGap
         self.RunTitle = RunTitle[:25]
         self.PerformanceFlag = PerformanceFlag
-        if str(xtmf_BackgroundTransit).lower() == "true":
-            self.BackgroundTransit = True
-        else:
-            self.BackgroundTransit = False
+        self.BackgroundTransit = str(xtmf_BackgroundTransit).lower() == "true"
         self.ShapeFileLocation = xtmf_shapeFileLocation
         self.ISubareaLinkSelection = xtmf_iSubareaLinkSelection
         self.JSubareaLinkSelection = xtmf_jSubareaLinkSelection
@@ -285,7 +282,6 @@ class ExportSubareaTool(_m.Tool()):
                         self._tracker.completeTask()
                         with _m.logbook_trace("Running Road Assignments."):
                             # init assignment flag. if assignment done, then trip flag
-                            assignmentComplete = False
                             for i in range(len(self.Demand_List)):
                                 # check to see if any time matrices defined to fix the times matrix for that class
                                 if self.TimesMatrixId[i] is not None:
@@ -302,65 +298,65 @@ class ExportSubareaTool(_m.Tool()):
                                         num_processors=self.NumberOfProcessors,
                                     )
                             # if no assignment has been done, do an assignment
-                            if assignmentComplete is False:
-                                attributes = []
-                                for i in range(len(self.Demand_List)):
-                                    attributes.append(None)
-                                SOLA_spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
-                                    self.Demand_List,
-                                    peakHourMatrix,
-                                    appliedTollFactor,
-                                    self.Mode_List_Split,
-                                    classVolumeAttributes,
-                                    costAttribute,
-                                    attributes,
-                                    None,
-                                    None,
-                                    None,
-                                    None,
-                                    None,
-                                    None,
-                                    None,
-                                    multiprocessing,
-                                    self.Iterations,
-                                    self.rGap,
-                                    self.brGap,
-                                    self.normGap,
-                                    self.PerformanceFlag,
-                                    self.TimesMatrixId,
-                                )
+                            
+                            attributes = []
+                            for i in range(len(self.Demand_List)):
+                                attributes.append(None)
+                            SOLA_spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
+                                self.Demand_List,
+                                peakHourMatrix,
+                                appliedTollFactor,
+                                self.Mode_List_Split,
+                                classVolumeAttributes,
+                                costAttribute,
+                                attributes,
+                                None,
+                                None,
+                                None,
+                                None,
+                                None,
+                                None,
+                                None,
+                                multiprocessing,
+                                self.Iterations,
+                                self.rGap,
+                                self.brGap,
+                                self.normGap,
+                                self.PerformanceFlag,
+                                self.TimesMatrixId,
+                            )
 
-                                if self.CreateGateAttrib:
-                                    self._CreateSubareaExtraAttribute(self.SubareaGateAttribute, "LINK")
-                                    self._TagSubareaCentroids()
+                            if self.CreateGateAttrib:
+                                self._CreateSubareaExtraAttribute(self.SubareaGateAttribute, "LINK")
+                                self._TagSubareaCentroids()
 
-                                if self.CreateNodeFlagFromShapeFile:
-                                    self._CreateSubareaExtraAttribute(self.SubareaNodeAttribute, "NODE")
-                                    network = self.Scenario.get_network()
-                                    subareaNodes = self._LoadShapeFIle(network)
-                                    for node in subareaNodes:
-                                        node[self.SubareaNodeAttribute] = 1
-                                    self.Scenario.publish_network(network)
-                                d = _MODELLER.desktop.data_explorer()
-                                remove = None
-                                output_path = os.path.join(os.path.abspath(self.OutputFolder), "emmebank")
-                                for db in d.databases():
-                                    db_path = os.path.abspath(db.path)
-                                    if db_path == output_path:
-                                        remove = db
-                                        break
-                                if remove is not None:
-                                    d.remove_database(remove)
-                                self._tracker.runTool(
-                                    subareaAnalysisTool,
-                                    subarea_nodes=self.SubareaNodeAttribute,
-                                    subarea_folder=self.OutputFolder,
-                                    traffic_assignment_spec=SOLA_spec,
-                                    extract_transit=self.ExtractTransit,
-                                    overwrite=True,
-                                    gate_labels=self.SubareaGateAttribute,
-                                    scenario=self.Scenario,
-                                )
+                            if self.CreateNodeFlagFromShapeFile:
+                                self._CreateSubareaExtraAttribute(self.SubareaNodeAttribute, "NODE")
+                                network = self.Scenario.get_network()
+                                subareaNodes = self._LoadShapeFIle(network)
+                                for node in subareaNodes:
+                                    node[self.SubareaNodeAttribute] = 1
+                                self.Scenario.publish_network(network)
+                            d = _MODELLER.desktop.data_explorer()
+                            remove = None
+                            output_path = os.path.join(os.path.abspath(self.OutputFolder), "emmebank")
+                            for db in d.databases():
+                                db_path = os.path.abspath(db.path)
+                                if db_path == output_path:
+                                    remove = db
+                                    break
+                            if remove is not None:
+                                d.remove_database(remove)
+                            self._tracker.runTool(
+                                subareaAnalysisTool,
+                                subarea_nodes=self.SubareaNodeAttribute,
+                                subarea_folder=self.OutputFolder,
+                                traffic_assignment_spec=SOLA_spec,
+                                extract_transit=self.ExtractTransit,
+                                overwrite=True,
+                                gate_labels=self.SubareaGateAttribute,
+                                scenario=self.Scenario,
+                            )
 
     def _CreateSubareaExtraAttribute(self, attribID, attribType):
         if self.Scenario.extra_attribute(attribID) is None:
@@ -395,6 +391,10 @@ class ExportSubareaTool(_m.Tool()):
                         point = _geolib.nodeToShape(node)
                         if border.contains(point):
                             subareaNodes.append(node)
+            # Make sure that we read in at least one node!
+            if len(subareaNodes) == 0:
+                raise Exception("No nodes were contained within the Shapefile's polygon to use for the subarea network!\r\n" + \
+                                "Make sure that the ShapeFile is in the same projection as the EMME project!")
         return subareaNodes
 
     @_m.method(return_type=_m.TupleType)
