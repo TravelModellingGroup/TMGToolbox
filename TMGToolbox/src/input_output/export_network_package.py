@@ -276,7 +276,7 @@ class ExportNetworkPackage(m.Tool()):
     def _batchout_network_fields(self, temp_folder, zf):
         version = _util.getEmmeVersion(returnType=tuple)
         # we only can try to export fields if the EMME version is over 4.3
-        if version >= (4, 3, 0) and len(self.Scenario.network_fields()) > 0:
+        if version >= (4, 4, 0) and len(self.Scenario.network_fields()) > 0:
             tool = mm.tool('inro.emme.data.network_field.export_network_fields')
             tool(network_fields="ALL",
                 export_path=temp_folder,

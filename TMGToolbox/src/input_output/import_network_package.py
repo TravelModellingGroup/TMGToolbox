@@ -595,7 +595,7 @@ class ImportNetworkPackage(_m.Tool()):
     @_m.logbook_trace("Reading Network Fields")
     def _batchin_network_fields(self, scenario, temp_folder, zf):
         # We can only load in network fields if the version number is over 4.3
-        if _util.getEmmeVersion(tuple) < (4,3,0):
+        if _util.getEmmeVersion(tuple) < (4,4,0):
             return
         tool = _MODELLER.tool("inro.emme.data.network_field.import_network_fields")
         def read_file_if_exists(zf, folder, file):
