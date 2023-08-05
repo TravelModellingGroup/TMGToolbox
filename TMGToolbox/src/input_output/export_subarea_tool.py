@@ -29,6 +29,8 @@ Shapely2ESRI = _geolib.Shapely2ESRI
 networkCalcTool = _MODELLER.tool("inro.emme.network_calculation.network_calculator")
 matrixCalcTool = _MODELLER.tool("inro.emme.matrix_calculation.matrix_calculator")
 subareaAnalysisTool = _MODELLER.tool("inro.emme.subarea.subarea")
+trafficAssignmentTool = _MODELLER.tool('inro.emme.traffic_assignment.sola_traffic_assignment')
+
 NullPointerException = _util.NullPointerException
 EMME_VERSION = _util.getEmmeVersion(tuple)
 
@@ -75,6 +77,7 @@ class ExportSubareaTool(_m.Tool()):
     xtmf_createGateAttrib = _m.Attribute(bool)
     xtmf_extractTransit = _m.Attribute(bool)
     xtmf_outputFolder = _m.Attribute(str)
+    MaxCores = _m.Attribute(int)
 
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -134,13 +137,16 @@ class ExportSubareaTool(_m.Tool()):
         ResultAttributes,
         xtmf_BackgroundTransit,
         OnRoadTTFRanges,
+        MaxCores,
     ):
         # ---1 Set up Scenario
         self.Scenario = _m.Modeller().emmebank.scenario(xtmf_ScenarioNumber)
         if self.Scenario is None:
             raise Exception("Scenario %s was not found!" % xtmf_ScenarioNumber)
         self.OnRoadTTFRanges = OnRoadTTFRanges
-        self.on_road_ttfs = self._RoadAssignmentUtil.convert_to_ranges(self.OnRoadTTFRanges)
+        self.on_road_ttfs = self._RoadAssignmentUtil.convert_to_ranges(
+            self.OnRoadTTFRanges
+        )
         #:List will be passed as follows: xtmf_Demand_String = "mf10,mf11,mf12", Will be parsed into a list
         self.Demand_List = xtmf_Demand_String.split(",")
         # Splitting the Time, Cost and Toll string into Lists, and Modes for denoting results
@@ -156,15 +162,21 @@ class ExportSubareaTool(_m.Tool()):
         self.ClassAnalysisAttributes = []
         self.ClassAnalysisAttributesMatrix = []
         self.DemandMatrixList = []
+        self.MaxCores = MaxCores
         for i in range(0, len(self.Demand_List)):
             demandMatrix = self.Demand_List[i]
             if _MODELLER.emmebank.matrix(demandMatrix) is None:
                 if str(demandMatrix).lower() == "mf0":
                     dm = _util.initializeMatrix(matrix_type="FULL")
                     demandMatrix = dm.id
-                    print("Assigning a Zero Demand matrix for class '%s' on scenario %d" % (str(self.ClassNames[i]), int(self.Scenario.number)))
+                    print(
+                        "Assigning a Zero Demand matrix for class '%s' on scenario %d"
+                        % (str(self.ClassNames[i]), int(self.Scenario.number))
+                    )
                     self.Demand_List[i] = dm.id
-                    self.DemandMatrixList.append(_MODELLER.emmebank.matrix(demandMatrix))
+                    self.DemandMatrixList.append(
+                        _MODELLER.emmebank.matrix(demandMatrix)
+                    )
                 else:
                     raise Exception("Matrix %s was not found!" % demandMatrix)
             else:
@@ -199,164 +211,161 @@ class ExportSubareaTool(_m.Tool()):
     ##########################################################################################################
 
     def _execute(self):
-
         with _m.logbook_trace(
             name="%s (%s v%s)" % (self.RunTitle, self.__class__.__name__, self.version),
-            attributes=self._RoadAssignmentUtil._getAtts(self.Scenario, self.RunTitle, self.TimesMatrixId, self.PeakHourFactor, self.LinkCost, self.Iterations, self.__MODELLER_NAMESPACE__),
+            attributes=self._RoadAssignmentUtil._getAtts(
+                self.Scenario,
+                self.RunTitle,
+                self.TimesMatrixId,
+                self.PeakHourFactor,
+                self.LinkCost,
+                self.Iterations,
+                self.__MODELLER_NAMESPACE__,
+            ),
+        ), self._RoadAssignmentUtil._initOutputMatrices(
+            self.Demand_List,
+            self.CostMatrixId,
+            self.ClassNames,
+            self.TollsMatrixId,
+            self.TimesMatrixId,
+            self.ClassAnalysisAttributesMatrix,
+            self.ClassAnalysisAttributes,
+        ) as OutputMatrices, self._RoadAssignmentUtil._costAttributeMANAGER(
+            self.Scenario, self.Demand_List
+        ) as costAttribute, self._RoadAssignmentUtil._transitTrafficAttributeMANAGER(
+            self.Scenario,
+            EMME_VERSION,
+            self.BackgroundTransit,
+        ) as bgTransitAttribute, self._RoadAssignmentUtil._timeAttributeMANAGER(
+            self.Scenario, self.Demand_List
+        ) as timeAttribute, _util.tempMatricesMANAGER(
+            len(self.Demand_List), description="Peak hour matrix"
+        ) as peakHourMatrix:
+
+            self._ApplyBackgroundTraffic()
+            appliedTollFactor = self._RoadAssignmentUtil._calculateAppliedTollFactor(
+                self.TollWeight
+            )
+            classVolumeAttributes = self._CreateClassVolumeAttribute()
+            self._ComputeLinkClass(costAttribute, appliedTollFactor)
+            self._ComputePeakHourMatrices(peakHourMatrix)
+            
+            with _m.logbook_trace("Running Road Assignments."):
+                self._CorrectMatrices(appliedTollFactor)
+            
+                # We don't need any path analyses do we can just pass null for each one
+                attributes = [None for x in self.DemandMatrixList]
+                
+            
+                if self.CreateGateAttrib:
+                    self._CreateSubareaExtraAttribute(self.SubareaGateAttribute, "LINK")
+                    #self._TagSubareaCentroids()
+            
+                if self.CreateNodeFlagFromShapeFile:
+                    self._CreateSubareaExtraAttribute(self.SubareaNodeAttribute, "NODE")
+                    network = self.Scenario.get_network()
+                    subareaNodes = self._LoadShapeFIle(network)
+                    for node in subareaNodes:
+                        node[self.SubareaNodeAttribute] = 1
+                    self.Scenario.publish_network(network)
+            
+                self._ClearPreviousDatabank()
+                self._RunSubarea(peakHourMatrix, appliedTollFactor, classVolumeAttributes, costAttribute, attributes)
+        return
+
+    def _ApplyBackgroundTraffic(self):
+        # only do if you want background transit
+        if (
+            self.BackgroundTransit == True
+            and int(self.Scenario.element_totals["transit_lines"]) > 0
         ):
+            # only do if there are actually transit lines present in the network
+            with _m.logbook_trace("Calculating transit background traffic"):
+                spec = self._RoadAssignmentUtil._getTransitBGSpec(self.on_road_ttfs)
+                networkCalcTool(spec, scenario=self.Scenario)
+        return
 
-            self._tracker.reset()
+    def _CreateClassVolumeAttribute(self):
+        def get_attribute_name(at):
+            if at.startswith("@"):
+                return at
+            else:
+                return "@" + at
 
-            matrixCalcTool = _MODELLER.tool("inro.emme.matrix_calculation.matrix_calculator")
-            networkCalculationTool = _MODELLER.tool("inro.emme.network_calculation.network_calculator")
-            trafficAssignmentTool = _MODELLER.tool("inro.emme.traffic_assignment.sola_traffic_assignment")
+        classVolumeAttributes = [
+            get_attribute_name(at) for at in self.ResultAttributes.split(",")
+        ]
 
-            self._tracker.startProcess(5)
+        for name in classVolumeAttributes:
+            if name == "@None" or name == "@none":
+                name = None
+                continue
+            if self.Scenario.extra_attribute(name) is not None:
+                _m.logbook_write("Deleting Previous Extra Attributes.")
+                self.Scenario.delete_extra_attribute(name)
+            _m.logbook_write("Creating link cost attribute '@(mode)'.")
+            self.Scenario.create_extra_attribute("LINK", name, default_value=0)
+        return classVolumeAttributes
 
-            with self._RoadAssignmentUtil._initOutputMatrices(self.Demand_List, self.CostMatrixId, self.ClassNames, self.TollsMatrixId, self.TimesMatrixId, self.ClassAnalysisAttributesMatrix, self.ClassAnalysisAttributes) as OutputMatrices:
+    def _ComputeLinkClass(self, costAttribute, appliedTollFactor):
+        # Do for each class
+        with _m.logbook_trace("Calculating link costs"):
+            networkCalcTool(
+                [
+                    self._RoadAssignmentUtil._getLinkCostCalcSpec(
+                        costAttribute[i].id,
+                        self.LinkCost[i],
+                        self.LinkTollAttributeId[i],
+                        appliedTollFactor[i],
+                    )
+                    for i in range(len(self.Demand_List))
+                ],
+                scenario=self.Scenario,
+            )
+        return
 
-                self._tracker.completeSubtask()
+    def _ComputePeakHourMatrices(self, peakHourMatrix):
+        # For each class
+        with _m.logbook_trace("Calculating peak hour matrix"):
+            for i in range(len(self.Demand_List)):
+                spec = self._RoadAssignmentUtil._getPeakHourSpec(
+                    peakHourMatrix[i].id,
+                    self.Demand_List[i],
+                    self.PeakHourFactor,
+                )
+                if EMME_VERSION >= (4, 2, 1):
+                    matrixCalcTool(
+                        spec,
+                        scenario=self.Scenario,
+                        num_processors=self.NumberOfProcessors,
+                    )
+                else:
+                    matrixCalcTool(spec, scenario=self.Scenario)
 
-                with self._RoadAssignmentUtil._costAttributeMANAGER(self.Scenario, self.Demand_List) as costAttribute, self._RoadAssignmentUtil._transitTrafficAttributeMANAGER(
-                    self.Scenario,
-                    EMME_VERSION,
-                    self.BackgroundTransit,
-                ) as bgTransitAttribute, self._RoadAssignmentUtil._timeAttributeMANAGER(self.Scenario, self.Demand_List) as timeAttribute:
-                    # bgTransitAttribute is None
-                    # Adding @ for the process of generating link cost attributes and declaring list variables
+        return
 
-                    def get_attribute_name(at):
-                        if at.startswith("@"):
-                            return at
-                        else:
-                            return "@" + at
-
-                    classVolumeAttributes = [get_attribute_name(at) for at in self.ResultAttributes.split(",")]
-
-                    for name in classVolumeAttributes:
-                        if name == "@None" or name == "@none":
-                            name = None
-                            continue
-                        if self.Scenario.extra_attribute(name) is not None:
-                            _m.logbook_write("Deleting Previous Extra Attributes.")
-                            self.Scenario.delete_extra_attribute(name)
-                        _m.logbook_write("Creating link cost attribute '@(mode)'.")
-                        self.Scenario.create_extra_attribute("LINK", name, default_value=0)
-
-                    with (_util.tempMatricesMANAGER(len(self.Demand_List), description="Peak hour matrix")) as peakHourMatrix:
-                        # only do if you want background transit
-                        if self.BackgroundTransit == True:
-                            # only do if there are actually transit lines present in the network
-                            if int(self.Scenario.element_totals["transit_lines"]) > 0:
-                                # Do Once
-                                with _m.logbook_trace("Calculating transit background traffic"):
-                                    networkCalculationTool(
-                                        self._RoadAssignmentUtil._getTransitBGSpec(self.on_road_ttfs),
-                                        scenario=self.Scenario,
-                                    )
-                                    self._tracker.completeSubtask()
-
-                        appliedTollFactor = self._RoadAssignmentUtil._calculateAppliedTollFactor(self.TollWeight)
-                        # Do for each class
-                        with _m.logbook_trace("Calculating link costs"):
-                            for i in range(len(self.Demand_List)):
-                                networkCalculationTool(
-                                    self._RoadAssignmentUtil._getLinkCostCalcSpec(
-                                        costAttribute[i].id,
-                                        self.LinkCost[i],
-                                        self.LinkTollAttributeId[i],
-                                        appliedTollFactor[i],
-                                    ),
-                                    scenario=self.Scenario,
-                                )
-                                self._tracker.completeSubtask()
-                        # For each class
-                        with _m.logbook_trace("Calculating peak hour matrix"):
-                            for i in range(len(self.Demand_List)):
-                                if EMME_VERSION >= (4, 2, 1):
-                                    matrixCalcTool(self._RoadAssignmentUtil._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i], self.PeakHourFactor), scenario=self.Scenario, num_processors=self.NumberOfProcessors)
-                                else:
-                                    matrixCalcTool(self._RoadAssignmentUtil._getPeakHourSpec(peakHourMatrix[i].id, self.Demand_List[i].id, self.PeakHourFactor), scenario=self.Scenario)
-                            self._tracker.completeSubtask()
-
-                        self._tracker.completeTask()
-                        with _m.logbook_trace("Running Road Assignments."):
-                            # init assignment flag. if assignment done, then trip flag
-                            for i in range(len(self.Demand_List)):
-                                # check to see if any time matrices defined to fix the times matrix for that class
-                                if self.TimesMatrixId[i] is not None:
-                                    matrixCalcTool(
-                                        self._RoadAssignmentUtil._CorrectTimesMatrixSpec(self.TimesMatrixId[i], self.CostMatrixId[i]),
-                                        scenario=self.Scenario,
-                                        num_processors=self.NumberOfProcessors,
-                                    )
-                                # check to see if any cost matrices defined to fix the cost matrix for that class
-                                if self.CostMatrixId[i] is not None:
-                                    matrixCalcTool(
-                                        self._RoadAssignmentUtil._CorrectCostMatrixSpec(self.CostMatrixId[i], appliedTollFactor[i]),
-                                        scenario=self.Scenario,
-                                        num_processors=self.NumberOfProcessors,
-                                    )
-                            # if no assignment has been done, do an assignment
-                            
-                            attributes = []
-                            for i in range(len(self.Demand_List)):
-                                attributes.append(None)
-                            SOLA_spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
-                                self.Demand_List,
-                                peakHourMatrix,
-                                appliedTollFactor,
-                                self.Mode_List_Split,
-                                classVolumeAttributes,
-                                costAttribute,
-                                attributes,
-                                None,
-                                None,
-                                None,
-                                None,
-                                None,
-                                None,
-                                None,
-                                multiprocessing,
-                                self.Iterations,
-                                self.rGap,
-                                self.brGap,
-                                self.normGap,
-                                self.PerformanceFlag,
-                                self.TimesMatrixId,
-                            )
-
-                            if self.CreateGateAttrib:
-                                self._CreateSubareaExtraAttribute(self.SubareaGateAttribute, "LINK")
-                                self._TagSubareaCentroids()
-
-                            if self.CreateNodeFlagFromShapeFile:
-                                self._CreateSubareaExtraAttribute(self.SubareaNodeAttribute, "NODE")
-                                network = self.Scenario.get_network()
-                                subareaNodes = self._LoadShapeFIle(network)
-                                for node in subareaNodes:
-                                    node[self.SubareaNodeAttribute] = 1
-                                self.Scenario.publish_network(network)
-                            d = _MODELLER.desktop.data_explorer()
-                            remove = None
-                            output_path = os.path.join(os.path.abspath(self.OutputFolder), "emmebank")
-                            for db in d.databases():
-                                db_path = os.path.abspath(db.path)
-                                if db_path == output_path:
-                                    remove = db
-                                    break
-                            if remove is not None:
-                                d.remove_database(remove)
-                            self._tracker.runTool(
-                                subareaAnalysisTool,
-                                subarea_nodes=self.SubareaNodeAttribute,
-                                subarea_folder=self.OutputFolder,
-                                traffic_assignment_spec=SOLA_spec,
-                                extract_transit=self.ExtractTransit,
-                                overwrite=True,
-                                gate_labels=self.SubareaGateAttribute,
-                                scenario=self.Scenario,
-                            )
+    def _CorrectMatrices(self, appliedTollFactor):
+        # initialize assignment flag. if assignment done, then trip flag
+        for i in range(len(self.Demand_List)):
+            # check to see if any time matrices defined to fix the times matrix for that class
+            if self.TimesMatrixId[i] is not None:
+                matrixCalcTool(
+                    self._RoadAssignmentUtil._CorrectTimesMatrixSpec(
+                        self.TimesMatrixId[i], self.CostMatrixId[i]
+                    ),
+                    scenario=self.Scenario,
+                    num_processors=self.NumberOfProcessors,
+                )
+            # check to see if any cost matrices defined to fix the cost matrix for that class
+            if self.CostMatrixId[i] is not None:
+                matrixCalcTool(
+                    self._RoadAssignmentUtil._CorrectCostMatrixSpec(
+                        self.CostMatrixId[i], appliedTollFactor[i]
+                    ),
+                    scenario=self.Scenario,
+                    num_processors=self.NumberOfProcessors,
+                )
+        return
 
     def _CreateSubareaExtraAttribute(self, attribID, attribType):
         if self.Scenario.extra_attribute(attribID) is None:
@@ -364,6 +373,7 @@ class ExportSubareaTool(_m.Tool()):
                 attribType,
                 attribID,
             )
+        return
 
     def _TagSubareaCentroids(self):
         iSpec = {
@@ -379,11 +389,14 @@ class ExportSubareaTool(_m.Tool()):
             "selections": {"link": self.JSubareaLinkSelection},
         }
         networkCalcTool([iSpec, jSpec], self.Scenario)
+        return
 
     def _LoadShapeFIle(self, network):
         with Shapely2ESRI(self.ShapeFileLocation, mode="read") as reader:
             if int(reader._size) != 1:
-                raise Exception("Shapefile has invalid number of features. There should only be one 1 polygon in the shapefile")
+                raise Exception(
+                    "Shapefile has invalid number of features. There should only be one 1 polygon in the shapefile"
+                )
             subareaNodes = []
             for node in network.nodes():
                 for border in reader.readThrough():
@@ -393,9 +406,65 @@ class ExportSubareaTool(_m.Tool()):
                             subareaNodes.append(node)
             # Make sure that we read in at least one node!
             if len(subareaNodes) == 0:
-                raise Exception("No nodes were contained within the Shapefile's polygon to use for the subarea network!\r\n" + \
-                                "Make sure that the ShapeFile is in the same projection as the EMME project!")
+                raise Exception(
+                    "No nodes were contained within the Shapefile's polygon to use for the subarea network!\r\n"
+                    + "Make sure that the ShapeFile is in the same projection as the EMME project!"
+                )
         return subareaNodes
+
+    def _ClearPreviousDatabank(self):
+        d = _MODELLER.desktop.data_explorer()
+        remove = None
+        output_path = os.path.join(os.path.abspath(self.OutputFolder), "emmebank")
+        for db in d.databases():
+            db_path = os.path.abspath(db.path)
+            if db_path == output_path:
+                remove = db
+                break
+        if remove is not None:
+            d.remove_database(remove)
+        return
+    
+    def _RunSubarea(self, peakHourMatrix, appliedTollFactor, classVolumeAttributes, costAttribute, attributes):
+        SOLA_spec = self._RoadAssignmentUtil._getPrimarySOLASpec(
+            self.Demand_List,
+            peakHourMatrix,
+            appliedTollFactor,
+            self.Mode_List_Split,
+            classVolumeAttributes,
+            costAttribute,
+            attributes,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            multiprocessing, # TODO: we shouldn't be passing a module in a function
+            self.Iterations,
+            self.rGap,
+            self.brGap,
+            self.normGap,
+            self.PerformanceFlag,
+            self.TimesMatrixId,
+        )
+        
+        # Apply a maximum number of cores to help with performance
+        SOLA_spec["performance_settings"]["number_of_processors"] = min(SOLA_spec["performance_settings"]["number_of_processors"], self.MaxCores)
+        
+        # Second, do the subarea because integrating it is REALLY slow
+        subareaAnalysisTool(
+            scenario=self.Scenario,
+            subarea_nodes=self.SubareaNodeAttribute,
+            subarea_folder=self.OutputFolder,
+            traffic_assignment_spec=SOLA_spec,
+            extract_transit = self.ExtractTransit,
+            overwrite=True,
+            gate_labels= self.SubareaGateAttribute if self.SubareaGateAttribute else None,
+        )
+        return
+             
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
@@ -412,7 +481,11 @@ class ExportSubareaTool(_m.Tool()):
         for att in self.Scenario.extra_attributes():
             if not att.type == "LINK":
                 continue
-            label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
-            html = '<option value="{id}">{text}</option>'.format(id=att.name, text=label)
+            label = "{id} ({domain}) - {name}".format(
+                id=att.name, domain=att.type, name=att.description
+            )
+            html = '<option value="{id}">{text}</option>'.format(
+                id=att.name, text=label
+            )
             list.append(html)
         return "\n".join(list)
