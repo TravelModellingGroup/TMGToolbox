@@ -259,7 +259,7 @@ class ExportSubareaTool(_m.Tool()):
             
                 if self.CreateGateAttrib:
                     self._CreateSubareaExtraAttribute(self.SubareaGateAttribute, "LINK")
-                    #self._TagSubareaCentroids()
+                    self._TagSubareaCentroids()
             
                 if self.CreateNodeFlagFromShapeFile:
                     self._CreateSubareaExtraAttribute(self.SubareaNodeAttribute, "NODE")
@@ -376,19 +376,23 @@ class ExportSubareaTool(_m.Tool()):
         return
 
     def _TagSubareaCentroids(self):
-        iSpec = {
-            "type": "NETWORK_CALCULATION",
-            "result": self.SubareaGateAttribute,
-            "expression": "i",
-            "selections": {"link": self.ISubareaLinkSelection},
-        }
-        jSpec = {
-            "type": "NETWORK_CALCULATION",
-            "result": self.SubareaGateAttribute,
-            "expression": "-j",
-            "selections": {"link": self.JSubareaLinkSelection},
-        }
-        networkCalcTool([iSpec, jSpec], self.Scenario)
+        to_run = []
+        if self.ISubareaLinkSelection:
+            to_run.append({
+                "type": "NETWORK_CALCULATION",
+                "result": self.SubareaGateAttribute,
+                "expression": "i",
+                "selections": {"link": self.ISubareaLinkSelection},
+            })
+        if self.JSubareaLinkSelection:
+            to_run.append({
+                "type": "NETWORK_CALCULATION",
+                "result": self.SubareaGateAttribute,
+                "expression": "-j",
+                "selections": {"link": self.JSubareaLinkSelection},
+            })
+        if to_run:
+            networkCalcTool(to_run, self.Scenario)
         return
 
     def _LoadShapeFIle(self, network):
