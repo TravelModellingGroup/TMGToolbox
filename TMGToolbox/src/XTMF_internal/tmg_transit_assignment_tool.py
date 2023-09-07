@@ -333,6 +333,8 @@ class TransitAssignmentTool(_m.Tool()):
 
         if self.AutoTimeAttributeId != "" and self.Scenario.extra_attribute(self.AutoTimeAttributeId) is None:
             raise Exception("Auto Time Attribute %s does not exist" % self.AutoTimeAttributeId)
+        elif self.AutoTimeAttributeId == "":
+            self.AutoTimeAttributeId = "auto_time"
         
         for id in self.LinkFareAttributeIdList:
             if self.Scenario.extra_attribute(id) is None:
@@ -729,12 +731,7 @@ class TransitAssignmentTool(_m.Tool()):
 
                 segment_number = segment.number
                 segment.transit_time_func = self.stsu_ttf_map[segment.transit_time_func]
-                
-                if self.AutoTimeAttributeId == "":
-                    self.AutoTimeAttributeId = "auto_time"
-                    time = segment.link[self.AutoTimeAttributeId]
-                else:
-                    time = segment.link[self.AutoTimeAttributeId]
+                time = segment.link[self.AutoTimeAttributeId]
                 
                 if time > 0.0:
                     if segment.transit_time_func in self.ttfs_xrow:
