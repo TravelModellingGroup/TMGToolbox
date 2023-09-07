@@ -332,7 +332,7 @@ class TransitAssignmentTool(_m.Tool()):
             raise Exception("Effective headway attribute %s does not exist" % self.EffectiveHeadwayAttributeId)
 
         if self.AutoTimeAttributeId != "" and self.Scenario.extra_attribute(self.AutoTimeAttributeId) is None:
-            raise Exception("Effective headway attribute %s does not exist" % self.AutoTimeAttributeId)
+            raise Exception("Auto Time Attribute %s does not exist" % self.AutoTimeAttributeId)
         
         for id in self.LinkFareAttributeIdList:
             if self.Scenario.extra_attribute(id) is None:
