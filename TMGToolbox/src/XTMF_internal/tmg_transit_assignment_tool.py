@@ -64,6 +64,7 @@ class TransitAssignmentTool(_m.Tool()):
     ClassNames = _m.Attribute(list)
     HeadwayFractionAttributeId = _m.Attribute(str)
     EffectiveHeadwayAttributeId = _m.Attribute(str)
+    AutoTimeAttributeId = _m.Attribute(str)
     WalkSpeed = _m.Attribute(float)
 
     # ---- class-specific inputs
@@ -145,6 +146,7 @@ class TransitAssignmentTool(_m.Tool()):
         self.SegmentFareAttributeIdList = ["@sfare"]
         self.HeadwayFractionAttributeId = "@frac"
         self.EffectiveHeadwayAttributeId = "@ehdw"
+        self.AutoTimeAttributeId = ""
         self.WalkAttributeIdList = ["@walkp"]
 
         self.CalculateCongestedIvttFlag = True
@@ -218,6 +220,7 @@ class TransitAssignmentTool(_m.Tool()):
         xtmf_LinkFareAttributeIdString,
         xtmf_SegmentFareAttributeIdString,
         EffectiveHeadwayAttributeId,
+        AutoTimeAttributeId,
         EffectiveHeadwaySlope,
         AssignmentPeriod,
         Iterations,
@@ -245,6 +248,7 @@ class TransitAssignmentTool(_m.Tool()):
             raise Exception("Tool not compatible. Please upgrade to version 4.1.5+")
 
         self.EffectiveHeadwayAttributeId = EffectiveHeadwayAttributeId
+        self.AutoTimeAttributeId = AutoTimeAttributeId
         self.HeadwayFractionAttributeId = HeadwayFractionAttributeId
         self.CalculateCongestedIvttFlag = CalculateCongestedIvttFlag
         self.EffectiveHeadwaySlope = EffectiveHeadwaySlope
@@ -326,6 +330,12 @@ class TransitAssignmentTool(_m.Tool()):
             raise Exception("Headway fraction attribute %s does not exist" % self.HeadwayFractionAttributeId)
         if self.Scenario.extra_attribute(self.EffectiveHeadwayAttributeId) is None:
             raise Exception("Effective headway attribute %s does not exist" % self.EffectiveHeadwayAttributeId)
+
+        if self.AutoTimeAttributeId != "" and self.Scenario.extra_attribute(self.AutoTimeAttributeId) is None:
+            raise Exception("Auto Time Attribute %s does not exist" % self.AutoTimeAttributeId)
+        elif self.AutoTimeAttributeId == "":
+            self.AutoTimeAttributeId = "auto_time"
+        
         for id in self.LinkFareAttributeIdList:
             if self.Scenario.extra_attribute(id) is None:
                 raise Exception("Link fare attribute %s does not exist" % id)
@@ -721,8 +731,8 @@ class TransitAssignmentTool(_m.Tool()):
 
                 segment_number = segment.number
                 segment.transit_time_func = self.stsu_ttf_map[segment.transit_time_func]
-                time = segment.link["auto_time"]
-
+                time = segment.link[self.AutoTimeAttributeId]
+                
                 if time > 0.0:
                     if segment.transit_time_func in self.ttfs_xrow:
                         if erow_defined == True and segment["@erow_speed"] > 0.0:
@@ -953,7 +963,7 @@ class TransitAssignmentTool(_m.Tool()):
         attributes_to_copy = {
             "TRANSIT_VEHICLE": ["total_capacity"],
             "NODE": ["initial_boardings", "final_alightings"],
-            "LINK": ["length", "aux_transit_volume", "auto_time"],
+            "LINK": ["length", "aux_transit_volume", self.AutoTimeAttributeId],
             "TRANSIT_LINE": ["headway", str(stsu_att.id), "data2", "@doors"],
             "TRANSIT_SEGMENT": [
                 "dwell_time",
@@ -971,9 +981,9 @@ class TransitAssignmentTool(_m.Tool()):
                 raise Exception(
                     "@tstop attribute needs to be defined. @tstop is an integer that shows how many transit stops are on each transit segment."
                 )
-        if "auto_time" not in self.Scenario.attributes("LINK"):
+        if self.AutoTimeAttributeId not in self.Scenario.attributes("LINK"):
             if self.SurfaceTransitSpeed == False:
-                attributes_to_copy["LINK"].remove("auto_time")
+                attributes_to_copy["LINK"].remove(self.AutoTimeAttributeId)
             else:
                 raise Exception("An auto assignment needs to be present on the scenario")
         if self.Scenario.extra_attribute("@doors") is None:
@@ -1327,6 +1337,8 @@ class TransitAssignmentTool(_m.Tool()):
                 """if self._useLogitAuxTrChoice:
                     raise NotImplementedError()"""
                 if self.Scenario.extra_attribute("@node_logit") != None:
+
+                    
                     baseSpec[i]["flow_distribution_at_regular_nodes_with_aux_transit_choices"] = {
                         "choices_at_regular_nodes": {
                             "choice_points": "@node_logit",
