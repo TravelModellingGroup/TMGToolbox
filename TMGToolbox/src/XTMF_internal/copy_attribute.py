@@ -52,11 +52,11 @@ class CopyAttribute(_m.Tool()):
 
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
-        self.link = 0
-        self.node = 1
-        self.transit_line = 2
-        self.turn = 3
-        self.transit_segment = 4
+        self.link = "LINK"
+        self.node = "NODE"
+        self.transit_line = "TRANSIT_LINE"
+        self.turn = "TURN"
+        self.transit_segment = "TRANSIT_SEGMENT"
 
     def page(self):
         pb = _m.ToolPageBuilder(
@@ -88,70 +88,77 @@ class CopyAttribute(_m.Tool()):
         if from_scenario is None:
             raise Exception("Scenario %s was not found!" % from_scenario_numbers)
 
-        if domain == self.link:
-            self.node_selector = None
-            self.transit_line_selector = None
-            self.incoming_link_selector = None
-            self.outgoing_link_selector = None
-            self.link_selector = link_selector
-        elif domain == self.node:
-            self.link_selector = None
-            self.transit_line_selector = None
-            self.incoming_link_selector = None
-            self.outgoing_link_selector = None
-            self.node_selector = node_selector
-        elif domain == self.transit_line:
-            self.link_selector = None
-            self.node_selector = None
-            self.incoming_link_selector = None
-            self.outgoing_link_selector = None
-            self.transit_line_selector = transit_line_selector
-        elif domain == self.turn:
-            self.link_selector = None
-            self.node_selector = None
-            self.transit_line_selector = None
-            self.incoming_link_selector = incoming_link_selector
-            self.outgoing_link_selector = outgoing_link_selector
-        elif domain == self.transit_segment:
-            self.node_selector = None
-            self.incoming_link_selector = None
-            self.outgoing_link_selector = None
-            self.link_selector = link_selector
-            self.transit_line_selector = transit_line_selector
-
         try:
             self._execute(
-                to_scenario, from_scenario, to_attribute, from_attribute, domain
+                to_scenario,
+                from_scenario,
+                to_attribute,
+                from_attribute,
+                domain,
+                node_selector,
+                link_selector,
+                transit_line_selector,
+                incoming_link_selector,
+                outgoing_link_selector,
             )
         except Exception as e:
             raise Exception(_util.formatReverseStack())
 
     def _execute(
-        self, to_scenario, from_scenario, to_attribute, from_attribute, domain
+        self,
+        to_scenario,
+        from_scenario,
+        to_attribute,
+        from_attribute,
+        domain,
+        node_selector,
+        link_selector,
+        transit_line_selector,
+        incoming_link_selector,
+        outgoing_link_selector,
     ):
-        attribute_type = self._get_attribute_type(domain)
+        attribute_type = domain
         to_attribute = self._create_attributes_not_in_to_scenario(
             attribute_type, to_attribute, to_scenario
         )
-        selection = self._create_selection_spec()
-
+        selection = self._create_selection_spec(
+            domain,
+            link_selector,
+            node_selector,
+            transit_line_selector,
+            incoming_link_selector,
+            outgoing_link_selector,
+        )
         copy_attribute_tool(
             from_scenario=from_scenario,
             to_scenario=to_scenario,
             from_attribute_name=from_attribute,
-            to_attribute_name=to_attribute.id,
+            to_attribute_name=to_attribute,
             selection=selection,
         )
 
-    def _create_selection_spec(self):
-        selection = {
-            "node": str(self.node_selector),
-            "link": str(self.link_selector),
-            "incoming_link": str(self.incoming_link_selector),
-            "outgoing_link": str(self.outgoing_link_selector),
-            "transit_line": str(self.transit_line_selector),
-        }
-        return selection
+    def _create_selection_spec(
+        self,
+        domain,
+        link_selector,
+        node_selector,
+        transit_line_selector,
+        incoming_link_selector,
+        outgoing_link_selector,
+    ):
+        if domain == self.link:
+            return {"link": link_selector}
+        elif domain == self.node:
+            return {"node": node_selector}
+        elif domain == self.transit_line:
+            return {"transit_line": transit_line_selector}
+        elif domain == self.turn:
+            return {
+                "incoming_link": incoming_link_selector,
+                "outgoing_link": outgoing_link_selector,
+            }
+        elif domain == self.transit_segment:
+            return {"link": link_selector, "transit_line": transit_line_selector}
 
     def _create_attributes_not_in_to_scenario(self, attrib_type, attribute, scenario):
         def check_att_name(at):
@@ -160,26 +167,14 @@ class CopyAttribute(_m.Tool()):
             else:
                 return "@" + at
 
-        attribute_in_from = scenario.attributes(attrib_type)
-        if attribute not in attribute_in_from:
-            attribute_in_from = scenario.create_extra_attribute(
+        att = attribute
+        if attribute not in scenario.attributes(attrib_type):
+            att = scenario.create_extra_attribute(
                 attrib_type, check_att_name(attribute), default_value=0
             )
             print("attribute %s created" % attribute)
 
-        return attribute_in_from
-
-    def _get_attribute_type(self, domain):
-        if domain == self.link:
-            return "LINK"
-        elif domain == self.node:
-            return "NODE"
-        elif domain == self.transit_line:
-            return "TRANSIT_LINE"
-        elif domain == self.turn:
-            return "TURN"
-        elif domain == self.transit_segment:
-            return "TRANSIT_SEGMENT"
+        return att
 
     @_m.method(return_type=_m.TupleType)
     def percent_completed(self):
