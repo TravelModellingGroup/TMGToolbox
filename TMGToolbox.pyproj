@@ -161,6 +161,7 @@
     <Compile Include="src\XTMF_internal\attach_centroids_to_nodes.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\XTMF_internal\copy_attribute.py" />
     <Compile Include="src\XTMF_internal\copy_scenario.py">
       <SubType>Code</SubType>
     </Compile>
