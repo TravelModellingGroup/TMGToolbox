@@ -41,6 +41,8 @@ Copy Transit Lines
 
     1.2.0 Added the function to only match nodes with target modes or add modes to target links if not existed.
     
+    1.2.1 Fixed sorting of closest nodes.
+    
 '''
 
 import inro.modeller as _m
@@ -73,7 +75,7 @@ ItineraryData = namedtuple('ItineraryData', "succeeded path_data skipped_stops e
 
 class CopyTransitLines(_m.Tool()):
     
-    version = '1.2.0'
+    version = '1.2.1'
     tool_run_msg = ""
     number_of_tasks = 2 # For progress reporting, enter the integer number of tasks here
     
@@ -602,10 +604,9 @@ class CopyTransitLines(_m.Tool()):
 
             for line in reader:
                 cells = line.strip().split(',')
-
                 if len(cells) < 2:
                     continue
-
+                print("Processed columns")
                 if cells[0].isdigit() and cells[1].isdigit():
                     sourceVehicleId = cells[0]
                     targetVehicleId = cells[1]
@@ -624,7 +625,6 @@ class CopyTransitLines(_m.Tool()):
                                       %tup)
                 
                     resultDictionary[sourceVehicleId] = targetVehicleId
-            
             return resultDictionary
 
     def _GetShortestPathCalculators(self, network):
@@ -698,7 +698,10 @@ class CopyTransitLines(_m.Tool()):
             #Check the candidate nodes for a symmetrical match
             #For the match to be symmetrical, both the target AND source nodes
             #must be the closest to each other. 
-            ranking.sort()
+            def get_key(item):
+                return item[0]
+                
+            ranking.sort(key=get_key)
             for currentDistance, targetNode in ranking:
                 tx, ty = targetNode.x, targetNode.y
                 symmetricMatch = True
@@ -806,6 +809,7 @@ class CopyTransitLines(_m.Tool()):
             shapefileWriter.writeNext(geometry)
         
         self.TRACKER.startProcess(len(linesToProcess))
+        
         for sourceLine in linesToProcess:
             
             if targetNetwork.transit_line(sourceLine.id) is not None:
@@ -814,8 +818,11 @@ class CopyTransitLines(_m.Tool()):
                     continue
                 else:
                     targetNetwork.delete_transit_line(sourceLine.id)
-
-            targetVehicle = targetNetwork.transit_vehicle(vehicleTable[sourceLine.vehicle.id])
+            try:
+                targetVehicle = targetNetwork.transit_vehicle(vehicleTable[sourceLine.vehicle.id])
+            except:
+                raise Exception("The vehicle id " + sourceLine.vehicle.id + " was either not found in the translation table or " + 
+                                "the vehicle it was to be transformed to does not exist in the destination network scenario.")
             pathBuilder = pathBuilders[targetVehicle.mode.id]
             
             lineId = sourceLine.id
@@ -1124,33 +1131,22 @@ class CopyTransitLines(_m.Tool()):
                 segment.allow_alightings = isStop
 
     def _WriteErrorReport(self, errorTable):
-        h = HTML()
-        
-        t = h.table()
-        tr = t.tr()
-        tr.th("Line ID")
-        tr.th("Error Message")
-        tr.th("Error Details")
+        body = "<html><table><tr><th>Line ID</th><th>Error Message</th><th>Error Details</th></tr>"
         
         for lineId, errorMsg, errorDetail in errorTable:
-            tr = t.tr()
-            tr.td(lineId)
-            tr.td(errorMsg)
-            tr.td(str(errorDetail))
-        
+            body += '<tr>'
+            body += '<td>' + lineId + '</td>'
+            body += '<td>' + errorMsg + '</td>'
+            body += '<td>' + str(errorDetail) + '</td>'
+            body += '</tr>'
         pb = _m.PageBuilder(title= "Error Report")
-        
         headerText = "<b>Source Emmebank:</b> %s" %self.SourceEmmebankPath +\
                     "<br><b>Source Scenario:</b> %s" %self.SourceScenarioId +\
                     "<br><b>Target Scenario:</b> %s" %self.TargetScenario
-        
         pb.add_text_element(headerText)
-        
-        pb.wrap_html(body= str(t))
-        
+        pb.wrap_html(body= body)
         _m.logbook_write("Error report", value= pb.render())
-        
-        pass
+        return
           
     def _CheckModeOnNode(self, network, nodeID):
 
