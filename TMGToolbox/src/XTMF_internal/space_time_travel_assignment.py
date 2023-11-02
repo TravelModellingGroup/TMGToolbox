@@ -394,11 +394,13 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
     def _init_analysis_matrices(self, parameters, time_period_count):
         number_of_time_periods = time_period_count
         for tc in parameters['TrafficClasses']:
-            if len(tc['PathAnalyses']) > 0:
+            if 'PathAnalyses' in tc:
                 # Currently only 1 PAth Analysis is supported per class
-                if(len(tc['PathAnalyses']) > 1):
-                    raise Exception("Only one Path Analysis is currently supported per traffic class!")
-                matrix_number = tc['PathAnalyses'][0]['StartMatrixNumber']
+                matrix_number = tc['PathAnalyses']['StartMatrixNumber']
+                for inc in range(0, 24):
+                    _ = self._get_or_create("mf" + str(matrix_number + inc))
+            elif 'traversal_analysis' in tc:
+                matrix_number = tc['traversal_analysis']['StartMatrixNumber']
                 for inc in range(0, 24):
                     _ = self._get_or_create("mf" + str(matrix_number + inc))
         return 
@@ -632,36 +634,55 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
             return None if bound_str == "None" else float(bound_str)
         
         def append_path_analyes(stta_class, parameters, i):
-            ret = []
-            paths = Parameters['TrafficClasses'][i]['PathAnalyses']
-            for j in range(len(paths)):
-                analysis = {
-                    "link_component": paths[j]['AttributeId'],
-                    # There is no turn component for STTA
-                    "operator": paths[j]['AggregationOperator'],
-                    "selection_threshold": {
-                        "lower": convert_bound(paths[j]['LowerBound']),
-                        "upper":  convert_bound(paths[j]['UpperBound'])
+            tc = Parameters['TrafficClasses']
+            if not('PathAnalyses' in tc):
+                return
+            
+            path = tc['PathAnalyses']
+            analysis = {
+                "link_component": path['AttributeId'],
+                # There is no turn component for STTA
+                "operator": path['AggregationOperator'],
+                "selection_threshold": {
+                        "lower": convert_bound(path['LowerBound']),
+                        "upper":  convert_bound(path['UpperBound'])
                         },
-                    "path_to_od_composition": {
-                        "considered_paths": paths[j]['PathSelection'],
-                        "multiply_path_proportions_by": {
-                            "analyzed_demand": paths[j]['MultiplyPathByDemand'],
-                            "path_value": paths[j]['MultiplyPathByValue'],
-                        },
+                "path_to_od_composition": {
+                    "considered_paths": path['PathSelection'],
+                    "multiply_path_proportions_by": {
+                          "analyzed_demand": path['MultiplyPathByDemand'],
+                        "path_value": path['MultiplyPathByValue'],
                     },
+                },
+            }
+            stta_class['path_analysis'] = analysis
+            stta_class['analysis'] = {
+                    'analyzed_demand' : None,
+                    'results': {
+                        "od_values": 'mf' + str(path['StartMatrixNumber']),
+                        "selected_link_volumes": None
+                    }
+            }     
+            return
+        
+        def append_traversal_analysis(stta_class, parameters, i):
+            tc = Parameters['TrafficClasses'][i]
+            # if there is no traversal analysis to run, just continue on
+            if not ('traversal_analysis' in tc):
+                return 0
+            traversal_spec = tc['traversal_analysis']
+            stta_class['traversal_analysis'] = {
+                    'link_gates' : traversal_spec['link_gates'],
+                    'gate_pairs_threshold' : traversal_spec['gate_pairs_threshold'],
                 }
-                ret.append(analysis)
-            if ret:
-                stta_class['path_analysis'] = ret[0]
-                stta_class['analysis'] = {
+            stta_class['analysis'] = {
                         'analyzed_demand' : None,
                         "results": {
-                            "od_values": 'mf' + str(paths[0]['StartMatrixNumber']),
+                            "od_values": 'mf' + str(traversal_spec['StartMatrixNumber']),
                             "selected_link_volumes": None
                         }
                     }
-            return
+            return traversal_spec['MaxCPUCores']
 
         STTA_class_generator = []
         for i, matrix_dict in enumerate(allMatrixDictsList):
@@ -680,6 +701,12 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 },
             }
             append_path_analyes(stta_class, Parameters, i)
+            max_cores = append_traversal_analysis(stta_class, Parameters, i)
+            # We need this logic because traversal analyses do not spread across different CCXs efficiently
+            # in the Zen architecture leading to performance degradation.
+            if max_cores > 0:
+                current_cores = STTA_spec['performance_settings']['number_of_processors']
+                STTA_spec['performance_settings']['number_of_processors'] = min(max_cores, current_cores)
             STTA_class_generator.append(stta_class)
         STTA_spec["classes"] = STTA_class_generator
 
