@@ -47,6 +47,7 @@ Full Network Set Generator
         requiring all edits to be in the same document.  Typically this will get used by having
         a master alt file, and then an additional one containing scenario specific changes.
     0.3.1 Added call to remove_extra_links tool. 2016-08-24
+    0.3.2 Added a check to not run the cleaning algorithm if the cleaned scenario number is zero.
     
 '''
 
@@ -73,7 +74,7 @@ _util.initalizeModellerTypes(_m)
 ##########################################################################################################
 class FullNetworkSetGenerator(_m.Tool()):
     
-    version = '0.3.1'
+    version = '0.3.2'
     tool_run_msg = ""
     number_of_tasks = 1 # For progress reporting, enter the integer number of tasks here
     
@@ -948,9 +949,10 @@ class FullNetworkSetGenerator(_m.Tool()):
             print("Prorated transit speeds")
 
             for scenarios in scenarioSet:
-                removeExtraLinks(scenarios[0], self.TransferModesString, True, scenarios[1], scenarios[3])
-                
-                removeExtraNodes(scenarios[1], self.NodeFilterAttributeId, self.StopFilterAttributeId, self.ConnectorFilterAttributeId, self.AttributeAggregatorString)
+                # If the scenario number is 0 then don't clean the network.
+                if scenarios[1] > 0:
+                    removeExtraLinks(scenarios[0], self.TransferModesString, True, scenarios[1], scenarios[3])
+                    removeExtraNodes(scenarios[1], self.NodeFilterAttributeId, self.StopFilterAttributeId, self.ConnectorFilterAttributeId, self.AttributeAggregatorString)
             print("Cleaned networks")
                 
             self.BaseScenario.publish_network(network)
@@ -976,7 +978,7 @@ class FullNetworkSetGenerator(_m.Tool()):
         for items in scenarios:
             if bank.scenario(items[0]):
                 bank.delete_scenario(items[0])
-            if bank.scenario(items[1]):
+            if items[1] > 0 and bank.scenario(items[1]):
                 bank.delete_scenario(items[1])
 
     def _ParseCustomScenarioSet(self):
@@ -988,19 +990,19 @@ class FullNetworkSetGenerator(_m.Tool()):
             parts = component.split(':')
             if len(parts) not in [6,7]:
                 if len(parts) == 8:
-                	checkPath = parts[6] + ":" + parts[7]
-                	if os.path.exists(os.path.dirname(checkPath)):
-                		parts[6] = checkPath
-                		del parts[7]
-                	else:				
-                		msg = "Please verify that your scenario set is separated correctly and/or that the .nup file has a valid path"
-                		msg += ". [%s]" % component 
-                		raise SyntaxError(msg)
+                    checkPath = parts[6] + ":" + parts[7]
+                    if os.path.exists(os.path.dirname(checkPath)):
+                        parts[6] = checkPath
+                        del parts[7]
+                    else:				
+                        msg = "Please verify that your scenario set is separated correctly and/or that the .nup file has a valid path"
+                        msg += ". [%s]" % component 
+                        raise SyntaxError(msg)
                 else:
-                	msg = "Error parsing scenario set: Separate components with colons \
-                			Uncleaned scenario number:Cleaned scenario number:Uncleaned scenario description:Cleaned scenario description:Scenario start:Scenario End:.nup file"
-                	msg += ". [%s]" % component 
-                	raise SyntaxError(msg)
+                    msg = "Error parsing scenario set: Separate components with colons \
+                        Uncleaned scenario number:Cleaned scenario number:Uncleaned scenario description:Cleaned scenario description:Scenario start:Scenario End:.nup file"
+                    msg += ". [%s]" % component 
+                    raise SyntaxError(msg)
             partsList = [int(parts[0]), int(parts[1]), parts[2], parts[3], int(parts[4]), int(parts[5])]
             if len(parts) == 7:
                 if parts[6].lower() == 'none':
