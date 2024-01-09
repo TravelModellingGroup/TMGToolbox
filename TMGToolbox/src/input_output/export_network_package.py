@@ -423,25 +423,27 @@ class ExportNetworkPackage(m.Tool()):
     # region Snapshot and stateful interfaces
 
     def to_snapshot(self):
+        att_ids = None if len(self.AttributeIdsToExport) == 0 else self.AttributeIdsToExport
         snapshot = {
             "Scenario": self.Scenario.id,
             "ExportFile": self.ExportFile,
             "ExportToEmmeOldVersion": self.ExportToEmmeOldVersion,
             "ExportAllFlag": self.ExportAllFlag,
-            "AttributeIdsToExport": self.AttributeIdsToExport,
+            "AttributeIdsToExport": att_ids,
             "ExportMetadata": self.ExportMetadata
         }
         return json.dumps(snapshot)
 
     def from_snapshot(self, snapshot):
         snapshot = json.loads(snapshot)
+        att_ids = [] if snapshot["AttributeIdsToExport"] is None else snapshot["AttributeIdsToExport"]
 
         emmebank = mm.emmebank
         self.Scenario = emmebank.scenario(snapshot["Scenario"])
         self.ExportFile = snapshot["ExportFile"]
         self.ExportToEmmeOldVersion = bool(snapshot["ExportToEmmeOldVersion"])
         self.ExportAllFlag = bool(snapshot["ExportAllFlag"])
-        self.AttributeIdsToExport = snapshot["AttributeIdsToExport"]
+        self.AttributeIdsToExport = att_ids
         self.ExportMetadata = snapshot["ExportMetadata"]
 
     def __getitem__(self, key):
