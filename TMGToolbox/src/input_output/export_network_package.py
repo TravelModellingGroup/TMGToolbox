@@ -13,14 +13,16 @@
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from contextlib import contextmanager
-from datetime import datetime
-import inro.modeller as m
-from os import path
+import json
 import shutil
 import tempfile
 import traceback
 import zipfile
+from contextlib import contextmanager
+from datetime import datetime
+from os import path
+
+import inro.modeller as m
 
 mm = m.Modeller()
 _util = mm.module('tmg.common.utilities')
@@ -36,12 +38,14 @@ _export_functions = mm.tool('inro.emme.data.function.export_functions')
 _pdu = mm.module('tmg.common.pandas_utils')
 
 # import six library for python2 to python3 conversion
-import six 
+import six
+
 # initalize python3 types
 _util.initalizeModellerTypes(m)
 
+
 class ExportNetworkPackage(m.Tool()):
-    version = '1.2.2'
+    version = '1.2.3'
     tool_run_msg = ''
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
@@ -160,7 +164,19 @@ class ExportNetworkPackage(m.Tool()):
             'Scenario': str(self.Scenario.id), 'Export File': path.splitext(self.ExportFile)[0],
             'Version': self.version, 'self': self.__MODELLER_NAMESPACE__
         }
-        with m.logbook_trace(name='%s v%s' % (self.__class__.__name__, self.version), attributes=logbook_attributes):
+        logbook_entry_name = '%s v%s' % (self.__class__.__name__, self.version)
+        with m.logbook_trace(name=logbook_entry_name, attributes=logbook_attributes):
+            # Save a snapshot of the inputs in the logbook
+            snapshot = {
+                "Scenario": self.Scenario.id,
+                "ExportFile": self.ExportFile,
+                "ExportToEmmeOldVersion": self.ExportToEmmeOldVersion,
+                "ExportAllFlag": self.ExportAllFlag,
+                "AttributeIdsToExport": self.AttributeIdsToExport,
+                "ExportMetadata": self.ExportMetadata
+            }
+            m.logbook_snapshot(name=logbook_entry_name, comment='', namespace=str(self), value=json.dumps(snapshot))
+
             # Due to the dynamic nature of the selection process, it could happen that attributes are
             # selected which don't exist in the current scenario. The method checks early to catch
             # any problems
@@ -386,7 +402,7 @@ class ExportNetworkPackage(m.Tool()):
             label = "{id} ({domain}) - {name}".format(id=att.name, domain=att.type, name=att.description)
             keyval[att.name] = label
         return keyval
-    
+
     @m.method(return_type=six.text_type)
     def _get_select_attribute_options_html(self):
         list_ = []
@@ -399,7 +415,51 @@ class ExportNetworkPackage(m.Tool()):
     @m.method(return_type=m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
-    
+
     @m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
+
+    # region Snapshot and stateful interfaces
+
+    def to_snapshot(self):
+        snapshot = {
+            "Scenario": self.Scenario.id,
+            "ExportFile": self.ExportFile,
+            "ExportToEmmeOldVersion": self.ExportToEmmeOldVersion,
+            "ExportAllFlag": self.ExportAllFlag,
+            "AttributeIdsToExport": self.AttributeIdsToExport,
+            "ExportMetadata": self.ExportMetadata
+        }
+        return json.dumps(snapshot)
+
+    def from_snapshot(self, snapshot):
+        snapshot = json.loads(snapshot)
+
+        emmebank = mm.emmebank
+        self.Scenario = emmebank.scenario(snapshot["Scenario"])
+        self.ExportFile = snapshot["ExportFile"]
+        self.ExportToEmmeOldVersion = bool(snapshot["ExportToEmmeOldVersion"])
+        self.ExportAllFlag = bool(snapshot["ExportAllFlag"])
+        self.AttributeIdsToExport = snapshot["AttributeIdsToExport"]
+        self.ExportMetadata = snapshot["ExportMetadata"]
+
+    def __getitem__(self, key):
+        value = getattr(self, key)
+        return value
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def get_state(self):
+        state = {
+            "Scenario": self.Scenario,
+            "ExportFile": self.ExportFile,
+            "ExportToEmmeOldVersion": self.ExportToEmmeOldVersion,
+            "ExportAllFlag": self.ExportAllFlag,
+            "AttributeIdsToExport": self.AttributeIdsToExport,
+            "ExportMetadata": self.ExportMetadata
+        }
+        return state
+
+    # endregion
