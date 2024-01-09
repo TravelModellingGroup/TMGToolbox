@@ -17,27 +17,28 @@
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import inro.modeller as _m
-import traceback as _traceback
-from contextlib import contextmanager
-import zipfile as _zipfile
+import json
 import os
-from os import path as _path
 import shutil as _shutil
 import tempfile as _tf
+import traceback as _traceback
+import zipfile as _zipfile
+from contextlib import contextmanager
+from os import path as _path
+
+import inro.modeller as m
 import six
 
-_MODELLER = _m.Modeller()  # Instantiate Modeller once.
-_bank = _MODELLER.emmebank
-_util = _MODELLER.module('tmg.common.utilities')
-_tmg_tpb = _MODELLER.module('tmg.common.TMG_tool_page_builder')
-import_modes = _MODELLER.tool('inro.emme.data.network.mode.mode_transaction')
-import_vehicles = _MODELLER.tool('inro.emme.data.network.transit.vehicle_transaction')
-import_base = _MODELLER.tool('inro.emme.data.network.base.base_network_transaction')
-import_link_shape = _MODELLER.tool('inro.emme.data.network.base.link_shape_transaction')
-import_lines = _MODELLER.tool('inro.emme.data.network.transit.transit_line_transaction')
-import_turns = _MODELLER.tool('inro.emme.data.network.turn.turn_transaction')
-import_attributes = _MODELLER.tool('inro.emme.data.network.import_attribute_values')
+mm = m.Modeller()
+_util = mm.module('tmg.common.utilities')
+_tmg_tpb = mm.module('tmg.common.TMG_tool_page_builder')
+import_modes = mm.tool('inro.emme.data.network.mode.mode_transaction')
+import_vehicles = mm.tool('inro.emme.data.network.transit.vehicle_transaction')
+import_base = mm.tool('inro.emme.data.network.base.base_network_transaction')
+import_link_shape = mm.tool('inro.emme.data.network.base.link_shape_transaction')
+import_lines = mm.tool('inro.emme.data.network.transit.transit_line_transaction')
+import_turns = mm.tool('inro.emme.data.network.turn.turn_transaction')
+import_attributes = mm.tool('inro.emme.data.network.import_attribute_values')
 
 
 class ComponentContainer(object):
@@ -74,32 +75,23 @@ class ComponentContainer(object):
         self.transit_results_files = None
 
 
-class ImportNetworkPackage(_m.Tool()):
-    version = '1.2.2'
+class ImportNetworkPackage(m.Tool()):
+    version = '1.2.3'
     tool_run_msg = ""
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
 
-    # Tool Input Parameters
-    #    Only those parameters necessary for Modeller and/or XTMF to dock with
-    #    need to be placed here. Internal parameters (such as lists and dicts)
-    #    get initialized during construction (__init__)
-
-    ScenarioId = _m.Attribute(int)  # common variable or parameter
-    NetworkPackageFile = _m.Attribute(str)
-    ScenarioDescription = _m.Attribute(str)
-    OverwriteScenarioFlag = _m.Attribute(bool)
-    ConflictOption = _m.Attribute(str)
-    AddFunction = _m.Attribute(bool)
-    ScenarioName = _m.Attribute(str)
-    SkipMergingFunctions = _m.Attribute(bool)
+    ScenarioId = m.Attribute(int)
+    NetworkPackageFile = m.Attribute(str)
+    ScenarioDescription = m.Attribute(str)
+    OverwriteScenarioFlag = m.Attribute(bool)
+    ConflictOption = m.Attribute(str)
+    AddFunction = m.Attribute(bool)
+    ScenarioName = m.Attribute(str)
+    SkipMergingFunctions = m.Attribute(bool)
 
     def __init__(self):
-
-
-        # ---Init internal variables
         self.TRACKER = _util.ProgressTracker(self.number_of_tasks)  # init the ProgressTracker
 
-        # ---Set the defaults of parameters used by Modeller
         self.ScenarioDescription = ""
         self.OverwriteScenarioFlag = False
         self.ConflictOption = "PRESERVE"
@@ -110,112 +102,99 @@ class ImportNetworkPackage(_m.Tool()):
         self.SkipMergingFunctions = False
 
     def page(self):
-        merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
-        pb = _tmg_tpb.TmgToolPageBuilder(self, title="Import Network Package v%s" % self.version,
-                                         description="Imports a new scenario from a compressed network package \
-                             (*.nwp) file.",
-                                         branding_text="- TMG Toolbox")
+        merge_functions = mm.tool('tmg.input_output.merge_functions')
+        pb = _tmg_tpb.TmgToolPageBuilder(
+            self,
+            title="Import Network Package v%s" % self.version,
+            description="Imports a new scenario from a compressed network package (*.nwp) file.",
+            branding_text="- TMG Toolbox"
+        )
 
-        if self.tool_run_msg != "":  # to display messages in the page
+        if self.tool_run_msg:
             pb.tool_run_status(self.tool_run_msg_status)
 
-        pb.add_select_file(tool_attribute_name='NetworkPackageFile',
-                           window_type='file',
-                           title="Network Package File",
-                           file_filter='*.nwp')
+        pb.add_select_file(
+            tool_attribute_name='NetworkPackageFile', window_type='file', title="Network Package File",
+            file_filter='*.nwp'
+        )
 
-        pb.add_html("""<div class="t_element" id="NetworkPackageInfoDiv" style="padding: 0px inherit;">
-        </div>""")
+        pb.add_html("""<div class="t_element" id="NetworkPackageInfoDiv" style="padding: 0px inherit;"></div>""")
 
-        pb.add_text_box(tool_attribute_name='ScenarioId',
-                        size=5,
-                        title="New Scenario Number",
-                        note="Enter a new or existing scenario")
-        '''
-        pb.add_new_scenario_select(tool_attribute_name='ScenarioId',
-                                  title="New Scenario Number",
-                                  note="'Next' picks the next available scenario.")
-        '''
+        pb.add_text_box(
+            tool_attribute_name='ScenarioId', size=5, title="New Scenario Number",
+            note="Enter a new or existing scenario"
+        )
 
-        pb.add_text_box(tool_attribute_name='ScenarioDescription',
-                        size=60,
-                        title="Scenario description")
-        
-        pb.add_checkbox(tool_attribute_name='SkipMergingFunctions',
-                        label="Skip the merging of functions?",
-                        note="Set as TRUE to unchange the functional definitions in current Emmebank.")
+        pb.add_text_box(tool_attribute_name='ScenarioDescription', size=60, title="Scenario description")
 
-        pb.add_select(tool_attribute_name='ConflictOption',
-                      keyvalues=merge_functions.OPTIONS_LIST,
-                      title="(Optional) Function Conflict Option",
-                      note="Select an action to take if there are conflicts found \
-                      between the package and the current Emmebank. \
-                      Ignore if 'SkipMergingFunctions' is checked.")
+        pb.add_checkbox(
+            tool_attribute_name='SkipMergingFunctions', label="Skip the merging of functions?",
+            note="Set as TRUE to unchange the functional definitions in current Emmebank."
+        )
+
+        pb.add_select(
+            tool_attribute_name='ConflictOption', keyvalues=merge_functions.OPTIONS_LIST,
+            title="(Optional) Function Conflict Option",
+            note="Select an action to take if there are conflicts found between the package and the current Emmebank. \
+                  Ignore if 'SkipMergingFunctions' is checked."
+        )
 
         pb.add_html("""
 
-       <div id="modal" class="modal">
-
+        <div id="modal" class="modal">
           <div class="modal-content">
             <span id="modal-close" class="close">&times;</span>
             <p>Conflicts detected between the database and the network package file for the following functions(s). Please resolve these conflicts
             by indicating which version(s) to save in the database.</p>
 
             <table id="conflicts-table">
-            <thead>
-            <tr>
-            <td>Id</td>
-            <td>Database</td>
-            <td>File</td>
-            <td>Other</td>
-            <td>Expression</td>
-            </tr>
-            </thead>
-            <tbody>
-            </tbody>
+              <thead>
+                <tr>
+                  <td>Id</td>
+                  <td>Database</td>
+                  <td>File</td>
+                  <td>Other</td>
+                  <td>Expression</td>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
             </table>
             <div class="all-select">
-          <input id="typeselectdatabase" type="radio" name="typeselect" value="alldatabase" checked><label for="typeselectdatabase">Database</label>
-            
-            <input id="typeselectfile" type="radio" name="typeselect" value="allfile"><label for="typeselectdatabase">File</label>
+              <input id="typeselectdatabase" type="radio" name="typeselect" value="alldatabase" checked><label for="typeselectdatabase">Database</label>
+              <input id="typeselectfile" type="radio" name="typeselect" value="allfile"><label for="typeselectdatabase">File</label>
             </div>
-              <div class="footer">
-          <button id="modal-save-button">Save</button>
-          <button id="modal-cancel-button">Cancel</button>
+            <div class="footer">
+              <button id="modal-save-button">Save</button>
+              <button id="modal-cancel-button">Cancel</button>
+            </div>
           </div>
-          </div>
-
-        
-
         </div>
 
         <style>
-
-            .all-select
-            {
+            .all-select {
                 padding-left:15px;
                 padding-top:10px;
                 padding-bottom:10px;
             }
 
-            .modal thead td{
-
+            .modal thead td {
                 font-weight:bold;
             }
-             .modal {
-                display: none; 
-                position: fixed; 
-                z-index: 10; 
-                padding-top: 30px; 
+
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 10;
+                padding-top: 30px;
                 left: 0;
                 top: 0;
-                width: 100%; 
-                height: 100%; 
-                overflow: auto; 
-                background-color: rgb(0,0,0); 
-                background-color: rgba(0,0,0,0.4); 
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgb(0,0,0);
+                background-color: rgba(0,0,0,0.4);
             }
-
 
             .modal-content {
                 background-color: #fefefe;
@@ -239,26 +218,21 @@ class ImportNetworkPackage(_m.Tool()):
                 cursor: pointer;
             }
 
-            td.radio, thead td
-            {
+            td.radio, thead td {
                 text-align:center;
             }
 
-            #conflicts-table
-            {
+            #conflicts-table {
                 width: 100%;
             }
 
-            #conflicts-table tbody tr:nth-child(odd)
-            {
+            #conflicts-table tbody tr:nth-child(odd) {
                 background-color:#eaeae8;
             }
-            
-            .expression_input
-            {
+
+            .expression_input {
                 width: 100%;
             }
-        }
         </style>
 
         """)
@@ -266,185 +240,135 @@ class ImportNetworkPackage(_m.Tool()):
         # ---JAVASCRIPT
         pb.add_html("""
 <script type="text/javascript">
-    $(document).ready( function ()
-    {
-
+        $(document).ready(function () {
             var conflicts = [];
-
             var modal = document.getElementById('modal');
-      
             var tool = new inro.modeller.util.Proxy(%s) ;
-
             window.inp_tool = tool;
-
             window.con = [];
 
             $('#typeselectfile').on('change',function() {
-
-               
-                if($(this).prop('checked'))
-                {
+                if($(this).prop('checked')) {
                   $('input[value="file"]').prop('checked',true).change();
                 }
             });
 
             $('#typeselectfile').on('click',function() {
-
-               
-                if($(this).prop('checked'))
-                {
+                if($(this).prop('checked')) {
                   $('input[value="file"]').prop('checked',true).change();
                 }
             });
 
             $('#typeselectdatabase').on('change',function() {
-
-               
-                if($(this).prop('checked'))
-                {
+                if($(this).prop('checked')) {
                   $('input[value="database"]').prop('checked',true).change();
                 }
             });
 
             $('#typeselectdatabase').on('click',function() {
-
-               
-                if($(this).prop('checked'))
-                {
+                if($(this).prop('checked')) {
                   $('input[value="database"]').prop('checked',true).change();
                 }
             });
 
             var intervalFunction = function() {
+                if(tool.should_show_merge_edit_dialog()) {
+                    modal.style.display = "block";
+                    clearInterval(dialogPollingInterval);
 
-              if(tool.should_show_merge_edit_dialog())
-            {
-               modal.style.display = "block";
-               clearInterval(dialogPollingInterval);
+                    var conflictsString = tool.get_function_conflicts().replace(/'/g,'"');
+                    window.con = JSON.parse(conflictsString);
 
-               var conflictsString = tool.get_function_conflicts().replace(/'/g,'"');
-               window.con = JSON.parse(conflictsString);
-
-               
-               for(var i = 0; i < con.length; i++)
-               {
-                   window.con[i]['resolve'] = 'database';
-                  $('#conflicts-table tbody').append('<tr><td>'+con[i]['id'].toUpperCase()+'</td><td class="radio"><input type="radio" name="'+i+'" value="database" checked></td>' +
-                  '<td class="radio">'+
-                  '<input type="radio" name="'+i+'" value="file"></td><td class="radio">'+
-                  '<input type="radio" name="'+i+'" value="other"></td><td><input class="expression_input" type="text" id="exp_'+i+'" name="expression" value="'+con[i]['database_expression']+'"></td></tr>');
-               }
-
-
-               $('#conflicts-table input').on('change', function() {
-                    var idx = parseInt($(this)[0].name);
-
-
-                    if($(this)[0].value == 'database')
-                    {
-                        $('#exp_'+idx).val(window.con[idx]['database_expression']);
-                        window.con[idx]['resolve'] = 'database';
-                        window.con[idx]['expression'] = window.con[idx]['database_expression'];
+                    for(var i = 0; i < con.length; i++) {
+                        window.con[i]['resolve'] = 'database';
+                        $('#conflicts-table tbody').append('<tr><td>'+con[i]['id'].toUpperCase()+'</td><td class="radio"><input type="radio" name="'+i+'" value="database" checked></td>' +
+                        '<td class="radio">'+
+                        '<input type="radio" name="'+i+'" value="file"></td><td class="radio">'+
+                        '<input type="radio" name="'+i+'" value="other"></td><td><input class="expression_input" type="text" id="exp_'+i+'" name="expression" value="'+con[i]['database_expression']+'"></td></tr>');
                     }
-                     else if($(this)[0].value == 'file')
-                     {
-                        $('#exp_'+idx).val(window.con[idx]['file_expression']);
-                        window.con[idx]['resolve'] = 'file';
-                        window.con[idx]['expression'] = window.con[idx]['file_expression'];
-                     }
-                     else if($(this)[0].value == 'other')
-                     {
-                        window.con[idx]['resolve'] = 'expression';
-                        window.con[idx]['expression'] = $('#exp_'+idx).val()
-                     }
-               });
 
-            };
+                    $('#conflicts-table input').on('change', function() {
+                        var idx = parseInt($(this)[0].name);
 
+                        if($(this)[0].value == 'database') {
+                            $('#exp_'+idx).val(window.con[idx]['database_expression']);
+                            window.con[idx]['resolve'] = 'database';
+                            window.con[idx]['expression'] = window.con[idx]['database_expression'];
+                        } else if($(this)[0].value == 'file') {
+                            $('#exp_'+idx).val(window.con[idx]['file_expression']);
+                            window.con[idx]['resolve'] = 'file';
+                            window.con[idx]['expression'] = window.con[idx]['file_expression'];
+                        } else if($(this)[0].value == 'other') {
+                            window.con[idx]['resolve'] = 'expression';
+                            window.con[idx]['expression'] = $('#exp_'+idx).val()
+                        }
+                    });
+                };
             }
 
             var dialogPollingInterval = setInterval(intervalFunction,200);
 
-        $('#modal-save-button').bind('click',function(evt) {
-
-            for(var i = 0; i < window.con.length; i++)
-            {
-                if(window.con[i]['resolve'] == 'expression')
-                {
-                    window.con[i]['expression'] = $('#exp_'+i).val()
-                }
-            }
-            
-            tool.set_function_conflict(JSON.stringify(window.con));
-             window.con = [];
-            $('#conflicts-table tbody').empty();
-            modal.style.display = "none";
-            tool.reset_tool();
-        });
-        
-
-        $('#modal-close,#modal-cancel-button').bind('click',function(evt) {
-            window.con = [];
-            $('#conflicts-table tbody').empty();
-             modal.style.display = "none";
-             tool.reset_tool();
-        });
-        
-
-
-        $("#NetworkPackageFile").bind('change', function()
-        {
-            $(this).commit();
-            
-            //Change the scenario description
-            $("#ScenarioDescription")
-                .val(tool.get_description_from_file())
-            $("#ScenarioDescription").trigger('change');
-            
-            //Change the package info
-            var info = tool.get_file_info();
-            $("#NetworkPackageInfoDiv").removeAttr( 'style' );
-            $("#NetworkPackageInfoDiv").html(info);
-                
-        });
-        
-        //$(this).parent().siblings(".t_after_widget").html(s);
-        
-        $("#ScenarioId").bind('change', function()
-        {
-            $(this).commit();
-            
-            var toolNote = $(this).parent().siblings(".t_after_widget");
-            
-            if (tool.check_scenario_exists())
-            {    
-                //Scenario exists
-                var h = "Scenario already exists. Overwrite? <input type='checkbox' id='ScenarioOverwrite' />"
-                toolNote.html(h);
-                
-                $("#ScenarioOverwrite").prop('checked', false)
-                    .bind('change', function()
-                {
-                    $(this).commit();
-                    
-                    if ($(this).prop('checked'))
-                    {
-                        tool.set_overwrite_scenario_flag_true();
-                    } else {
-                        tool.set_overwrite_scenario_flag_false();
+            $('#modal-save-button').bind('click', function(evt) {
+                for(var i = 0; i < window.con.length; i++) {
+                    if(window.con[i]['resolve'] == 'expression') {
+                        window.con[i]['expression'] = $('#exp_'+i).val()
                     }
-                });
-                
-                $("#ScenarioDescription").val(tool.get_existing_scenario_title())
-                                        .trigger('change');
-                
-            } else {
-                toolNote.html("Select an existing or new scenario.");
-            }
+                }
+                tool.set_function_conflict(JSON.stringify(window.con));
+                window.con = [];
+                $('#conflicts-table tbody').empty();
+                modal.style.display = "none";
+                tool.reset_tool();
+            });
+
+            $('#modal-close, #modal-cancel-button').bind('click', function(evt) {
+                window.con = [];
+                $('#conflicts-table tbody').empty();
+                modal.style.display = "none";
+                tool.reset_tool();
+            });
+
+            $("#NetworkPackageFile").bind('change', function() {
+                $(this).commit();
+
+                //Change the scenario description
+                $("#ScenarioDescription").val(tool.get_description_from_file())
+                $("#ScenarioDescription").trigger('change');
+
+                //Change the package info
+                var info = tool.get_file_info();
+                $("#NetworkPackageInfoDiv").removeAttr('style');
+                $("#NetworkPackageInfoDiv").html(info);
+            });
+
+            //$(this).parent().siblings(".t_after_widget").html(s);
+
+            $("#ScenarioId").bind('change', function() {
+                $(this).commit();
+
+                var toolNote = $(this).parent().siblings(".t_after_widget");
+                if (tool.check_scenario_exists()) {
+                    // Scenario exists
+                    var h = "Scenario already exists. Overwrite? <input type='checkbox' id='ScenarioOverwrite' />"
+                    toolNote.html(h);
+
+                    $("#ScenarioOverwrite").prop('checked', false).bind('change', function() {
+                        $(this).commit();
+                        if ($(this).prop('checked')) {
+                            tool.set_overwrite_scenario_flag_true();
+                        } else {
+                            tool.set_overwrite_scenario_flag_false();
+                        }
+                    });
+
+                    $("#ScenarioDescription").val(tool.get_existing_scenario_title()).trigger('change');
+                } else {
+                    toolNote.html("Select an existing or new scenario.");
+                }
+            });
+
+            $("#ScenarioId").trigger('change');
         });
-        
-        $("#ScenarioId").trigger('change');
-    });
 </script>""" % pb.tool_proxy_tag)
 
         return pb.render()
@@ -462,22 +386,23 @@ class ImportNetworkPackage(_m.Tool()):
         try:
             self._execute()
         except Exception as e:
-            self.tool_run_msg = _m.PageBuilder.format_exception(e, _traceback.format_exc())
+            self.tool_run_msg = m.PageBuilder.format_exception(e, _traceback.format_exc())
             raise
 
-        self.tool_run_msg = _m.PageBuilder.format_info("Done. Scenario %s created." % self.ScenarioId)
+        self.tool_run_msg = m.PageBuilder.format_info("Done. Scenario %s created." % self.ScenarioId)
 
     def __call__(self, NetworkPackageFile, ScenarioId, ConflictOption, AddFunction = True, ScenarioName = " "):
-
         self.NetworkPackageFile = NetworkPackageFile
         self.ScenarioId = ScenarioId
         self.OverwriteScenarioFlag = True
         self.ConflictOption = ConflictOption
         self.AddFunction = AddFunction
+
         if ScenarioName == " ":
             self.ScenarioDescription = ""
         else:
             self.ScenarioDescription = ScenarioName
+
         try:
             self._execute()
         except Exception as e:
@@ -485,31 +410,36 @@ class ImportNetworkPackage(_m.Tool()):
             raise Exception(msg)
 
     def _execute(self):
-        with _m.logbook_trace(
-                name="{classname} v{version}".format(classname=self.__class__.__name__, version=self.version),
-                attributes=self._get_logbook_attributes()):
+        emmebank = mm.emmebank
+        logbook_attributes = {
+            "Scenario": self.ScenarioId,
+            "Import File": self.NetworkPackageFile,
+            "Version": self.version,
+            "self": self.__MODELLER_NAMESPACE__
+        }
+        logbook_entry_name = "{classname} v{version}".format(classname=self.__class__.__name__, version=self.version)
+        with m.logbook_trace(name=logbook_entry_name, attributes=logbook_attributes):
 
-            if _bank.scenario(self.ScenarioId) is not None and not self.OverwriteScenarioFlag:
+            if emmebank.scenario(self.ScenarioId) is not None and not self.OverwriteScenarioFlag:
                 self.has_exception = True
                 raise IOError("Scenario %s exists and overwrite flag is set to false." % self.ScenarioId)
 
             self._components.reset()  # Clear any held-over contents from previous run
 
             with _zipfile.ZipFile(self.NetworkPackageFile) as zf, self._temp_file() as temp_folder:
-
                 self._check_network_package(zf)  # Check the file format.
 
-                if _bank.scenario(self.ScenarioId) is not None:
+                if emmebank.scenario(self.ScenarioId) is not None:
                     if not self.OverwriteScenarioFlag:
                         raise IOError("Scenario %s already exists." % self.ScenarioId)
-                    sc = _bank.scenario(self.ScenarioId)
+                    sc = emmebank.scenario(self.ScenarioId)
                     if sc.modify_protected or sc.delete_protected:
                         raise IOError("Scenario %s is protected against modifications" % self.ScenarioId)
-                    _bank.delete_scenario(self.ScenarioId)
-                scenario = _bank.create_scenario(self.ScenarioId)
+                    emmebank.delete_scenario(self.ScenarioId)
+                scenario = emmebank.create_scenario(self.ScenarioId)
                 scenario.title = self.ScenarioDescription
 
-                _m.logbook_write("Created new scenario %s" % self.ScenarioId)
+                m.logbook_write("Created new scenario %s" % self.ScenarioId)
                 self.TRACKER.completeTask()
 
                 self._batchin_modes(scenario, temp_folder, zf)
@@ -534,45 +464,39 @@ class ImportNetworkPackage(_m.Tool()):
                     self._batchin_functions(temp_folder, zf)
                 self.TRACKER.completeTask()
 
-    @_m.method(return_type=bool)
+    @m.method(return_type=bool)
     def tool_exit_test(self):
         self.event.set()
         return True
 
-    @_m.method(return_type=six.text_type)
+    @m.method(return_type=six.text_type)
     def tool_get_conflicts(self):
         return self.merge_functions.function_conflicts
-        #return True
 
-    @_m.logbook_trace("Reading modes")
+    @m.logbook_trace("Reading modes")
     def _batchin_modes(self, scenario, temp_folder, zf):
         fileName = zf.extract(self._components.mode_file, temp_folder)
-        self.TRACKER.runTool(import_modes,
-                             transaction_file=fileName,
-                             scenario=scenario)
+        self.TRACKER.runTool(import_modes, transaction_file=fileName, scenario=scenario)
 
-    @_m.logbook_trace("Reading vehicles")
+    @m.logbook_trace("Reading vehicles")
     def _batchin_vehicles(self, scenario, temp_folder, zf):
         zf.extract(self._components.vehicles_file, temp_folder)
-        self.TRACKER.runTool(import_vehicles,
-                             transaction_file=_path.join(temp_folder, self._components.vehicles_file),
+        self.TRACKER.runTool(import_vehicles, transaction_file=_path.join(temp_folder, self._components.vehicles_file),
                              scenario=scenario)
 
-    @_m.logbook_trace("Reading base network")
+    @m.logbook_trace("Reading base network")
     def _batchin_base(self, scenario, temp_folder, zf):
-            zf.extract(self._components.base_file, temp_folder)
-            self.TRACKER.runTool(import_base,
-                                 transaction_file=_path.join(temp_folder, self._components.base_file),
-                                 scenario=scenario)
+        zf.extract(self._components.base_file, temp_folder)
+        self.TRACKER.runTool(import_base, transaction_file=_path.join(temp_folder, self._components.base_file),
+                                scenario=scenario)
 
-    @_m.logbook_trace("Reading link shapes")
+    @m.logbook_trace("Reading link shapes")
     def _batchin_link_shapes(self, scenario, temp_folder, zf):
         zf.extract(self._components.shape_file, temp_folder)
-        self.TRACKER.runTool(import_link_shape,
-                             transaction_file=_path.join(temp_folder, self._components.shape_file),
+        self.TRACKER.runTool(import_link_shape, transaction_file=_path.join(temp_folder, self._components.shape_file),
                              scenario=scenario)
 
-    @_m.logbook_trace("Reading transit lines")
+    @m.logbook_trace("Reading transit lines")
     def _batchin_lines(self, scenario, temp_folder, zf):
         # Check to see if there are any transit vehicles before loading the transit lines otherwise it will crash
         partial_network = scenario.get_partial_network(['TRANSIT_VEHICLE'], False)
@@ -580,34 +504,28 @@ class ImportNetworkPackage(_m.Tool()):
             zf.extract(self._components.lines_file, temp_folder)
             if self.transit_file_change is True:
                 self._transit_line_file_update(temp_folder)
-            self.TRACKER.runTool(import_lines,
-                                 transaction_file=_path.join(temp_folder, self._components.lines_file),
+            self.TRACKER.runTool(import_lines, transaction_file=_path.join(temp_folder, self._components.lines_file),
                                  scenario=scenario)
 
-    @_m.logbook_trace("Reading turns")
+    @m.logbook_trace("Reading turns")
     def _batchin_turns(self, scenario, temp_folder, zf):
         if self._components.turns_file is not None and (self._components.turns_file in zf.namelist()):
             zf.extract(self._components.turns_file, temp_folder)
-            self.TRACKER.runTool(import_turns,
-                             transaction_file=_path.join(temp_folder, self._components.turns_file),
-                             scenario=scenario)
+            self.TRACKER.runTool(import_turns, transaction_file=_path.join(temp_folder, self._components.turns_file),
+                                 scenario=scenario)
 
-    @_m.logbook_trace("Reading Network Fields")
+    @m.logbook_trace("Reading Network Fields")
     def _batchin_network_fields(self, scenario, temp_folder, zf):
         # We can only load in network fields if the version number is over 4.3
-        if _util.getEmmeVersion(tuple) < (4,4,0):
+        if _util.getEmmeVersion(tuple) < (4, 4, 0):
             return
-        tool = _MODELLER.tool("inro.emme.data.network_field.import_network_fields")
+        tool = mm.tool("inro.emme.data.network_field.import_network_fields")
         def read_file_if_exists(zf, folder, file):
             if not file in zf.namelist():
                 return
             file_to_read = _path.join(folder, file)
             zf.extract(file, folder)
-            tool(file_to_read,
-                scenario=scenario,
-                field_separator=",",
-                import_definitions = True,
-                revert_on_error=False)
+            tool(file_to_read, scenario=scenario, field_separator=",", import_definitions=True, revert_on_error=False)
             return
         read_file_if_exists(zf, temp_folder, "netfield_links.csv")
         read_file_if_exists(zf, temp_folder, "netfield_modes.csv")
@@ -618,7 +536,7 @@ class ImportNetworkPackage(_m.Tool()):
         read_file_if_exists(zf, temp_folder, "netfield_vehicles.csv")
         return
 
-    @_m.logbook_trace("Reading extra attributes")
+    @m.logbook_trace("Reading extra attributes")
     def _batchin_extra_attributes(self, scenario, temp_folder, zf):
         types = self._load_extra_attributes(zf, temp_folder, scenario)
         contents = zf.namelist()
@@ -627,21 +545,23 @@ class ImportNetworkPackage(_m.Tool()):
         for t in types:
             if t == "TRANSIT_SEGMENT":
                 filename = "exatt_segments.241"
-            else:            
+            else:
                 filename = "exatt_%ss.241" % t.lower()
             newfilename = self._getZipOriginalString(processed, contents, filename)
             if newfilename is not None:
                 try:
-                    import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
-                                  field_separator=",",
-                                  scenario=scenario)
+                    import_attributes(
+                        file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)), field_separator=",",
+                        scenario=scenario
+                    )
                 except:
-                    import_attributes(file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)),
-                                  field_separator=" ",
-                                  scenario=scenario)
+                    import_attributes(
+                        file_path=_path.join(temp_folder, zf.extract(newfilename, temp_folder)), field_separator=" ",
+                        scenario=scenario
+                    )
                 self.TRACKER.completeSubtask()
 
-    @_m.logbook_trace("Reading functions")
+    @m.logbook_trace("Reading functions")
     def _batchin_functions(self, temp_folder, zf):
         zf.extract(self._components.functions_file, temp_folder)
         extracted_function_file_name = _path.join(temp_folder, self._components.functions_file)
@@ -649,7 +569,7 @@ class ImportNetworkPackage(_m.Tool()):
         if self.ConflictOption == 'OVERWRITE':
             # Replicate Overwrite here so that consoles won't crash with references to a GUI
             functions = self._LoadFunctionFile(extracted_function_file_name)
-            emmebank = _MODELLER.emmebank
+            emmebank = mm.emmebank
             for (id, expression) in six.iteritems(functions):
                 func = emmebank.function(id)
                 if func is None:
@@ -657,7 +577,7 @@ class ImportNetworkPackage(_m.Tool()):
                 else:
                     func.expression = expression
         elif self.ConflictOption == 'EDIT' or self.ConflictOption == 'RAISE' or self.ConflictOption == 'PRESERVE':
-            merge_functions = _MODELLER.tool('tmg.input_output.merge_functions')
+            merge_functions = mm.tool('tmg.input_output.merge_functions')
             merge_functions.FunctionFile = extracted_function_file_name
             merge_functions.ConflictOption = self.ConflictOption
             import threading
@@ -673,12 +593,12 @@ class ImportNetworkPackage(_m.Tool()):
             expressionBuffer = ""
             trecord = False
             currentId = None
-            
+
             for line in reader:
                 line = line.rstrip()
                 linecode = line[0]
                 record = line[2:]
-                
+
                 if linecode == 'c':
                     pass
                 elif linecode == 't':
@@ -701,22 +621,23 @@ class ImportNetworkPackage(_m.Tool()):
                     currentId = None
                     expressionBuffer = ""
                 else: raise KeyError(linecode)
-                    
+
         return functions
-    
+
     def _getZipFileName(self, zipPath):
         try:
             indexOfLastSlash = zipPath[::-1].index("/")
             return zipPath[len(zipPath) - indexOfLastSlash:]
         except:
             return zipPath
-    
-    @_m.logbook_trace("Importing traffic results")
+
+    @m.logbook_trace("Importing traffic results")
     def _batchin_traffic_results(self, scenario, temp_folder, zf):
         scenario.has_traffic_results = True
 
         links_filename, turns_filename = self._components.traffic_results_files
-        zf.extract(links_filename, temp_folder); zf.extract(turns_filename, temp_folder)
+        zf.extract(links_filename, temp_folder)
+        zf.extract(turns_filename, temp_folder)
 
         links_filepath = _path.join(temp_folder, links_filename)
         turns_filepath = _path.join(temp_folder, turns_filename)
@@ -749,7 +670,7 @@ class ImportNetworkPackage(_m.Tool()):
                 tables.append(table)
         scenario.set_attribute_values('TURN', attribute_names, [index] + tables)
 
-    @_m.logbook_trace("Importing transit results")
+    @m.logbook_trace("Importing transit results")
     def _batchin_transit_results(self, scenario, temp_folder, zf):
         scenario.has_transit_results = True
 
@@ -797,12 +718,12 @@ class ImportNetworkPackage(_m.Tool()):
     @contextmanager
     def _temp_file(self):
         foldername = _tf.mkdtemp()
-        _m.logbook_write("Created temporary directory at '%s'" % foldername)
+        m.logbook_write("Created temporary directory at '%s'" % foldername)
         try:
             yield foldername
         finally:
             _shutil.rmtree(foldername, True)
-            _m.logbook_write("Deleted temporary directory at '%s'" % foldername)
+            m.logbook_write("Deleted temporary directory at '%s'" % foldername)
 
     def _getZipOriginalString(self, processed, contents, objective):
         for i in range(len(processed)):
@@ -811,16 +732,12 @@ class ImportNetworkPackage(_m.Tool()):
         return None
 
     def _check_network_package(self, package):
-        """"""
-
-        '''
-        This method reads the NWP's version number and sets up the list of
-        component files to extract. It also handles backwards compatibility.
-        '''
+        """This method reads the NWP's version number and sets up the list of component files to extract. It also
+        handles backwards compatibility."""
 
         contents = package.namelist()
         processed = [self._getZipFileName(x) for x in contents]
-        self.transit_file_change = False 
+        self.transit_file_change = False
 
         if 'version.txt' in processed:
             self._components.mode_file = self._getZipOriginalString(processed, contents, 'modes.201')
@@ -831,20 +748,20 @@ class ImportNetworkPackage(_m.Tool()):
             self._components.shape_file = self._getZipOriginalString(processed, contents, 'shapes.251')
             s = self._getZipOriginalString(processed, contents, 'version.txt')
             if s is not None:
-                 vf = package.open(s)
-                 NWPversion = float(vf.readline())
-                 if NWPversion >= 3:
-                     self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
-                 self.transit_file_change = (NWPversion >= 4.0)
+                vf = package.open(s)
+                NWPversion = float(vf.readline())
+                if NWPversion >= 3:
+                    self._components.functions_file = self._getZipOriginalString(processed, contents, 'functions.411')
+                self.transit_file_change = (NWPversion >= 4.0)
 
-                 s = self._getZipOriginalString(processed, contents, 'link_results.csv')
-                 s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
-                 if s is not None and s2 is not None:
-                     self._components.traffic_results_files = s, s2
-                 self._components.transit_results_files = self._getZipOriginalString(processed, contents, 'segment_results.csv')
-                 self._components.aux_transit_results_file = self._getZipOriginalString(processed, contents, 'aux_transit_results.csv')	     
-                 self._components.attribute_header_file = self._getZipOriginalString(processed, contents, "exatts.241")		     
-                 return NWPversion
+                s = self._getZipOriginalString(processed, contents, 'link_results.csv')
+                s2 = self._getZipOriginalString(processed, contents, 'turn_results.csv')
+                if s is not None and s2 is not None:
+                    self._components.traffic_results_files = s, s2
+                self._components.transit_results_files = self._getZipOriginalString(processed, contents, 'segment_results.csv')
+                self._components.aux_transit_results_file = self._getZipOriginalString(processed, contents, 'aux_transit_results.csv')
+                self._components.attribute_header_file = self._getZipOriginalString(processed, contents, "exatts.241")
+                return NWPversion
 
         renumber_count = 0
         for component in contents:
@@ -870,15 +787,6 @@ class ImportNetworkPackage(_m.Tool()):
             raise IOError("File appears to be missing some components. Please contact TMG for assistance.")
 
         return 1.0
-
-    def _get_logbook_attributes(self):
-        atts = {
-            "Scenario": self.ScenarioId,
-            "Import File": self.NetworkPackageFile,
-            "Version": self.version,
-            "self": self.__MODELLER_NAMESPACE__}
-
-        return atts
 
     def _load_extra_attributes(self, zf, temp_folder, scenario):
         zf.extract(self._components.attribute_header_file, temp_folder)
@@ -949,7 +857,7 @@ class ImportNetworkPackage(_m.Tool()):
 
                     if inner_text is None:
                         raise IOError("Incorrect transit line file format: Line Mod Veh Headwy Speed Description Data1 Data2 Data3")
-                    
+
                     # Parse the description string
                     description = None
                     if line[pos] == '\'':
@@ -998,15 +906,15 @@ class ImportNetworkPackage(_m.Tool()):
         os.renames(_path.join(temp_folder, 'temp.221'),_path.join(temp_folder, self._components.lines_file))
         return None
 
-    #@_m.method(return_type=_m.TupleType)
+    #@m.method(return_type=m.TupleType)
     def percent_completed(self):
         return self.TRACKER.getProgress()
 
-    @_m.method(return_type=six.text_type)
+    @m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
 
-    @_m.method(return_type=six.text_type)
+    @m.method(return_type=six.text_type)
     def get_description_from_file(self):
         if self.NetworkPackageFile:
             if not self.ScenarioDescription:
@@ -1014,7 +922,7 @@ class ImportNetworkPackage(_m.Tool()):
             else:
                 return self.ScenarioDescription
 
-    @_m.method(return_type=six.text_type)
+    @m.method(return_type=six.text_type)
     def get_file_info(self):
         with _zipfile.ZipFile(self.NetworkPackageFile) as zf:
             nl = zf.namelist()
@@ -1048,38 +956,36 @@ class ImportNetworkPackage(_m.Tool()):
 
             return "<table border='1' width='90&#37'><tbody><tr><td valign='top'>%s</td></tr></tbody></table>" % cell
 
-    @_m.method()
+    @m.method()
     def set_overwrite_scenario_flag_true(self):
         self.OverwriteScenarioFlag = True
 
-    @_m.method()
+    @m.method()
     def set_overwrite_scenario_flag_false(self):
         self.OverwriteScenarioFlag = False
 
-    @_m.method(return_type=bool)
+    @m.method(return_type=bool)
     def check_scenario_exists(self):
-        return _bank.scenario(self.ScenarioId) is not None
+        return mm.emmebank.scenario(self.ScenarioId) is not None
 
-    @_m.method(return_type=str)
+    @m.method(return_type=str)
     def get_existing_scenario_title(self):
-        return _bank.scenario(self.ScenarioId).title
+        return mm.emmebank.scenario(self.ScenarioId).title
 
-    @_m.method(return_type=bool)
+    @m.method(return_type=bool)
     def should_show_merge_edit_dialog(self):
         return False if self.merge_functions is None or self.exception else self.merge_functions.show_edit_dialog
 
-    @_m.method(return_type=str)
+    @m.method(return_type=str)
     def get_function_conflicts(self):
         return self.merge_functions.function_conflicts
 
-    @_m.method(argument_types=[str])
+    @m.method(argument_types=[str])
     def set_function_conflict(self,data):
-        import json
         data_eval = json.loads(data)
         self.merge_functions.merge_changes(data_eval)
 
-    @_m.method()
+    @m.method()
     def reset_tool(self):
         self.OverwriteScenarioFlag = False
         self.has_exception = False
-        
