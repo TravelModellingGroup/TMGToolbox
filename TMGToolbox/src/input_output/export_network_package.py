@@ -1,14 +1,18 @@
 """
     Copyright 2014 Travel Modelling Group, Department of Civil Engineering, University of Toronto
+
     This file is part of the TMG Toolbox.
+
     The TMG Toolbox is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
+
     The TMG Toolbox is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License
     along with the TMG Toolbox.  If not, see <http://www.gnu.org/licenses/>.
 """
@@ -23,6 +27,7 @@ from datetime import datetime
 from os import path
 
 import inro.modeller as m
+import six
 
 mm = m.Modeller()
 _util = mm.module('tmg.common.utilities')
@@ -37,16 +42,13 @@ _export_attributes = mm.tool('inro.emme.data.extra_attribute.export_extra_attrib
 _export_functions = mm.tool('inro.emme.data.function.export_functions')
 _pdu = mm.module('tmg.common.pandas_utils')
 
-# import six library for python2 to python3 conversion
-import six
-
 # initalize python3 types
 _util.initalizeModellerTypes(m)
 
 
 class ExportNetworkPackage(m.Tool()):
     version = '1.2.3'
-    tool_run_msg = ''
+    tool_run_msg = ""
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
     Scenario = m.Attribute(m.InstanceType)
@@ -141,7 +143,6 @@ class ExportNetworkPackage(m.Tool()):
         return self.ExportAllFlag
 
     def __call__(self, scenario_number, ExportFile, export_attributes):
-
         self.Scenario = mm.emmebank.scenario(scenario_number)
         if self.Scenario is None:
             raise Exception('Scenario %s was not found!' % scenario_number)
