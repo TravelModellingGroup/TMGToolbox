@@ -947,10 +947,10 @@ class ImportNetworkPackage(m.Tool()):
                     subsequent comment lines]
             '''
             package_version = "<b>NWP Version:</b> %s" % version
-            project_name = "<b>Project:</b> %s" % lines[0].strip()
-            scenario_title = "<b>Scenario:</b> %s" % lines[2].strip()
-            export_date = "<b>Export Date:</b> %s" % lines[3].strip()
-            comment_lines = ["<b>User Comments:</b>"] + [l.strip() for l in lines[4:]]
+            project_name = "<b>Project:</b> %s" % lines[0].decode().strip()
+            scenario_title = "<b>Scenario:</b> %s" % lines[2].decode().strip()
+            export_date = "<b>Export Date:</b> %s" % lines[3].decode().strip()
+            comment_lines = ["<b>User Comments:</b>"] + [l.decode().strip() for l in lines[4:]]
             html_lines = [package_version, project_name, scenario_title, export_date, ''] + comment_lines
             cell = "<br>".join(html_lines)
 
