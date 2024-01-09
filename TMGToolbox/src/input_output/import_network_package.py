@@ -249,25 +249,25 @@ class ImportNetworkPackage(m.Tool()):
 
             $('#typeselectfile').on('change',function() {
                 if($(this).prop('checked')) {
-                  $('input[value="file"]').prop('checked',true).change();
+                  $('input[value="file"]').prop('checked', true).change();
                 }
             });
 
             $('#typeselectfile').on('click',function() {
                 if($(this).prop('checked')) {
-                  $('input[value="file"]').prop('checked',true).change();
+                  $('input[value="file"]').prop('checked', true).change();
                 }
             });
 
             $('#typeselectdatabase').on('change',function() {
                 if($(this).prop('checked')) {
-                  $('input[value="database"]').prop('checked',true).change();
+                  $('input[value="database"]').prop('checked', true).change();
                 }
             });
 
             $('#typeselectdatabase').on('click',function() {
                 if($(this).prop('checked')) {
-                  $('input[value="database"]').prop('checked',true).change();
+                  $('input[value="database"]').prop('checked', true).change();
                 }
             });
 
@@ -989,3 +989,46 @@ class ImportNetworkPackage(m.Tool()):
     def reset_tool(self):
         self.OverwriteScenarioFlag = False
         self.has_exception = False
+
+    # region Snapshot and stateful interfaces
+
+    def to_snapshot(self):
+        snapshot = {
+            "NetworkPackageFile": self.NetworkPackageFile,
+            "ScenarioId": self.ScenarioId,
+            "ScenarioDescription": self.ScenarioDescription,
+            "SkipMergingFunctions": bool(self.SkipMergingFunctions),
+            "ConflictOption": self.ConflictOption,
+            "OverwriteScenarioFlag": bool(self.OverwriteScenarioFlag)
+        }
+        return json.dumps(snapshot)
+
+    def from_snapshot(self, snapshot):
+        snapshot = json.loads(snapshot)
+
+        self.NetworkPackageFile = snapshot["NetworkPackageFile"]
+        self.ScenarioId = snapshot["ScenarioId"]
+        self.ScenarioDescription = snapshot["ScenarioDescription"]
+        self.SkipMergingFunctions = bool(snapshot["SkipMergingFunctions"])
+        self.ConflictOption = snapshot["ConflictOption"]
+        self.OverwriteScenarioFlag = bool(snapshot["OverwriteScenarioFlag"])
+
+    def __getitem__(self, key):
+        value = getattr(self, key)
+        return value
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def get_state(self):
+        state = {
+            "NetworkPackageFile": self.NetworkPackageFile,
+            "ScenarioId": self.ScenarioId,
+            "ScenarioDescription": self.ScenarioDescription,
+            "SkipMergingFunctions": bool(self.SkipMergingFunctions),
+            "ConflictOption": self.ConflictOption,
+            "OverwriteScenarioFlag": bool(self.OverwriteScenarioFlag)
+        }
+        return state
+
+    # endregion
