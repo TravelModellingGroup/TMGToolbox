@@ -23,11 +23,11 @@
 #
 #     Author: pkucirek
 #
-#     This script builds a full, unconsolidated MTBX file (Emme Modeller Toolbox), by analyzing
+#     This script builds a full, unconsolidated MTBX file (EMME Modeller Toolbox), by analyzing
 #     the source code from the working directory. It is intended to be run as a standalone script
 #     from the Python console. It makes use of the EMMEPATH environment variable to determine the
-#     current version of Emme being used (in order to build the correct version of the Toolbox
-#     file). Emme is a product of INRO Consultants Inc.
+#     current version of EMME being used (in order to build the correct version of the Toolbox
+#     file). EMME is a product of INRO Consultants Inc.
 #
 #     Usage: build_toolbox.py [-p toolbox_path] [-t toolbox_title] [-n toolbox_namespace] [-s source_folder]
 #             [-c]
@@ -36,7 +36,7 @@
 #             defaults to 'TMG_Toolbox.mtbx' inside the working directory.
 #
 #         [-t toolbox_title]: Optional argument. Specifies the title of the MTBX file, as it will
-#             appear in Emme Modeller. If omitted, defaults to 'TMG Toolbox'
+#             appear in EMME Modeller. If omitted, defaults to 'TMG Toolbox'
 #
 #         [-n toolbox_namespace]: Optional argument. Specifies the initial namespace of all tools
 #             in the toolbox. If omitted, defaults to 'tmg'
@@ -50,13 +50,14 @@
 #
 
 from __future__ import print_function
-import os
+
 import base64
-from datetime import datetime
+import os
 import pickle
 import py_compile
 import sqlite3.dbapi2 as sqllib
 import subprocess
+from datetime import datetime
 
 import inro.director.util.ucs as ucslib
 
@@ -98,10 +99,10 @@ def check_namespace(ns):
 
 
 def get_emme_version(return_type=str):
-    """Gets the version information out of Emme"""
+    """Gets the version information out of EMME"""
 
     temp_env = {'PATH': os.getenv('PATH') + '%s\\programs;' % os.getenv('EMMEPATH')}
-    emme_process = subprocess.Popen(['Emme', '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=temp_env)
+    emme_process = subprocess.Popen(['emme', '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=temp_env)
     output = emme_process.communicate()[0].decode('utf-8')
     retval = output.split(',')[0]
     if return_type == str:
@@ -117,7 +118,7 @@ def get_emme_version(return_type=str):
     elif return_type == int:
         return version_tuple[0]
     else:
-        raise TypeError("Type %s not accepted for getting Emme version" % return_type)
+        raise TypeError("Type %s not accepted for getting EMME version" % return_type)
 
 
 class InvalidNamespaceError(Exception):
@@ -144,9 +145,9 @@ class ElementTree(object):
         self.parent = None
         self.children = []
 
-        # Version is of the form "Emme 4.x.x"
+        # Version is of the form "EMME x.x.x"
         version = get_emme_version(str)
-        self.version = "Emme %s" % version
+        self.version = "EMME %s" % version
 
     def next_id(self):
         self.next_element_id += 1
@@ -255,10 +256,10 @@ class MTBXDatabase(object):
 
     def __init__(self, fp, title):
         if os.path.exists(fp):  # Remove the file if it already exists
-            # Check if the MTBX file is in use by Emme
+            # Check if the MTBX file is in use by EMME
             check_file = '%s-wal' % fp
             if os.path.exists(check_file):
-                raise RuntimeError('`%s` is currently in use by Emme. Please close Emme before running this script.')
+                raise RuntimeError('`%s` is currently in use by EMME. Please close EMME before running this script.' % fp)
             os.remove(fp)
 
         self.db = sqllib.connect(fp)
