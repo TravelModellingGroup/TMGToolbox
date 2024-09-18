@@ -949,6 +949,7 @@ class RoadAssignmentUtil:
         normGap,
         PerformanceFlag,
         TimesMatrixId,
+        selectedLinkVolumes = None,
     ):
 
         if PerformanceFlag:
@@ -994,7 +995,10 @@ class RoadAssignmentUtil:
                                 "path_value": multiplyPathValue[i][j],
                             },
                         },
-                        "results": {"od_values": matrices[i][j]},
+                        "results": {
+                            "od_values": matrices[i][j],
+                            "selected_link_volumes": (selectedLinkVolumes[i][j] if selectedLinkVolumes is not None else None)
+                            },
                         "analyzed_demand": None,
                     }
                     SOLA_path_analysis[i].append(path)
