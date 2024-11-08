@@ -319,6 +319,7 @@ class Shapely2ESRI():
         self._shape_file_path = filepath
         self._records = {}
         self._fields = {}
+        self._properties = {}
         if mode[0].lower() == 'w':
             self._sf = None
             self._canread = False
@@ -349,6 +350,15 @@ class Shapely2ESRI():
         properties = item['properties']
         
         return None
+
+    def get_properties_by_fid(self, fid):
+        return self._properties[fid]
+
+    def get_properties_by_geomerty(self, geom):
+        for fid, geometry in self._records.items():
+            if geometry is geom:
+                return self._properties[fid]
+        return None
        
     def _load(self):
         self._sf = fiona.open(self._shape_file_path, 'r')
@@ -368,7 +378,7 @@ class Shapely2ESRI():
                 geom = LineString(data[0])
             else:
                 raise NotImplementedError("Unknown data type: " + str(dataType))
-            geom.properties = record['properties']
+            self._properties[fid] = record['properties']           
             self._records[fid] = geom
             fid += 1
         self._size = len(self._records)    
