@@ -152,13 +152,13 @@ def transitLineToShape(line):
 #---Static methods for casting shapely geometries to attachable geometries
 def castAsAttachable(geom):
     type = geom.type
-    
-    if type.lower() == 'point':
+    type_lower = type.lower()
+    if type_lower == 'point':
         vertices = list(geom.coords)
         return Point(vertices[0][0], vertices[0][1])
-    elif type.lower() == 'linestring':
+    elif type_lower == 'linestring':
         return LineString(list(geom.coords))
-    elif type.lower() == 'polygon':
+    elif type_lower == 'polygon':
         exterior = list(geom.exterior.coords)
         interiors = []
         for interior in geom.interiors:
@@ -344,7 +344,10 @@ class Shapely2ESRI():
         pass
     
     def _load_type(self, item):
-        return self.convert_geometry_to_index[item['geometry']['type'].upper()]
+        type = item['geometry']['type'].upper()
+        if type == 'LINESTRING':
+            type = "ARC"
+        return self.convert_geometry_to_index[type]
     
     def _load_properties(self, item):
         properties = item['properties']
@@ -375,7 +378,7 @@ class Shapely2ESRI():
             elif dataType == Shapely2ESRI._POINT:
                 geom = Point(data)
             elif dataType == Shapely2ESRI._ARC:
-                geom = LineString(data[0])
+                geom = LineString(data)
             else:
                 raise NotImplementedError("Unknown data type: " + str(dataType))
             self._properties[fid] = record['properties']           
