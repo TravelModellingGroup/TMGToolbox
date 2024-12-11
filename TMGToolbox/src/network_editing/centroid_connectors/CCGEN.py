@@ -421,8 +421,7 @@ class CCGEN(_m.Tool()):
                 try:
                     self._loadZoneShape(self.ZoneShapeFile, network)
                 except:
-                    raise
-                   #raise AttributeError("Zones shape file not found!")
+                    raise AttributeError("Zones shape file not found!")
               
                 #---4. Get feasible nodes
                 feasibleNodes = None
