@@ -199,9 +199,10 @@ def checkSegmentIntersection(coordA1, coordA2, coordB1, coordB2):
 #---Field class for storing data about DBF fields
 
 class StringField():    
+    _DEFAULT_STRING_SIZE = 32
     def __init__(self, name, length=50, decimals=0, default=""):
         self.name = str(name)
-        self.length = length
+        self.length = length if length is not None else StringField._DEFAULT_STRING_SIZE
         self.default = default
         self.type = 'STR'
         
@@ -241,8 +242,10 @@ class FloatField():
         return "%s (FLOAT)" %self.name
 
 class IntField():
-    
+    _DEFAULT_INT_SIZE = 10
     def _getMaxInt(self, length):
+        if length is None:
+            return 2147483647
         max = 0
         for i in range(0, length):
             max += 9 * pow(10, i)
@@ -253,7 +256,7 @@ class IntField():
     def __init__(self, name, length=8, decimals=0, default=0):
         self.max = self._getMaxInt(length)
         self.min = - (self.max - 1)
-        self.length = length
+        self.length = length if length is not None else IntField._DEFAULT_INT_SIZE
         self.default = default
         self.name = str(name)
         self.type = 'INT'
