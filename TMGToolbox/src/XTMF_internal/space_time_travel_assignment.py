@@ -78,6 +78,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
     TollWeight = _m.Attribute(float)
     LinkCost = _m.Attribute(float)
     TrafficClasses = _m.Attribute(str)
+    NumberOfLanes = _m.Attribute(str)
 
     def __init__(self):
         self._tracker = _util.ProgressTracker(self.number_of_tasks)
@@ -125,6 +126,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         PerformanceFlag,
         RunTitle,
         TrafficClasses,
+        NumberOfLanes,
     ):
         print("Starting STTA...")
         # ---1 Set up Scenario
@@ -148,7 +150,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         Parameters = json.loads(TrafficClasses)
         for tc in Parameters["TrafficClasses"]:
             tc["TollWeightList"] = [float(x) for x in tc["TollWeightList"].split(",")]
-
+        number_of_lanes_attribute = None if not NumberOfLanes or NumberOfLanes == "" else NumberOfLanes
         try:
             self._execute(
                 Scenario,
@@ -169,6 +171,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 PerformanceFlag,
                 RunTitle,
                 Parameters,
+                number_of_lanes_attribute,
             )
             print("STTA complete.")
         except Exception as e:
@@ -194,6 +197,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         PerformanceFlag,
         RunTitle,
         Parameters,
+        number_of_lanes_attribute,
     ):
         for tc in Parameters["TrafficClasses"]:
             if len(tc["TollWeightList"]) != len(IntervalLengthList):
@@ -289,6 +293,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                             LinkComponentAttribute,
                             StartIndex,
                             timeResultAttributeList,
+                            number_of_lanes_attribute,
                         )
                         report = self._tracker.runTool(trafficAssignmentTool, stta_spec, scenario=Scenario)
                         checked = self._load_stopping_criteria(report)
@@ -588,6 +593,7 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
         LinkComponentAttribute,
         StartIndex,
         timeResultAttributeList,
+        num_lanes_attribute
     ):
         if PerformanceFlag == True:
             number_of_processors = multiprocessing.cpu_count()
@@ -627,6 +633,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                 "normalized_gap": NormalizedGap,
             },
         }
+
+        if num_lanes_attribute is not None:
+            STTA_spec["variable_topology"] = { 'link_number_of_lanes': num_lanes_attribute}
         
         def convert_bound(bound_str):
             return None if bound_str == "None" else float(bound_str)
