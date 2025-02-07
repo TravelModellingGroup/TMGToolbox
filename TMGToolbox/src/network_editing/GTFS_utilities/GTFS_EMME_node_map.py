@@ -160,12 +160,15 @@ class GTFStoEmmeMap(_m.Tool()):
     def _LoadStopsShp(self):
         stops = {}
         with _geo.Shapely2ESRI(self.FileName, 'r') as reader:
+            loaded = 0
             for point in reader.readThrough():
-                id = str(point.properties['stop_id'])
-                lat = float(point.properties['stop_lat'])
-                lon = float(point.properties['stop_lon'])
+                properties = reader.get_properties_by_fid(loaded)
+                id = str(properties['stop_id'])
+                lat = float(properties['stop_lat'])
+                lon = float(properties['stop_lon'])
 
                 stops[id] = [lon,lat]
+                loaded += 1
 
         return stops
 

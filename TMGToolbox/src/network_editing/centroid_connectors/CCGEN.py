@@ -78,6 +78,11 @@ _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _spindex = _MODELLER.module('tmg.common.spatial_index')
 # import six library for python2 to python3 conversion
+from os import path
+from itertools import combinations
+import inspect
+import numpy
+import math
 import six 
 # initalize python3 types
 _util.initalizeModellerTypes(_m)
@@ -416,7 +421,7 @@ class CCGEN(_m.Tool()):
                 try:
                     self._loadZoneShape(self.ZoneShapeFile, network)
                 except:
-                   raise AttributeError("Zones shape file not found!")
+                    raise AttributeError("Zones shape file not found!")
               
                 #---4. Get feasible nodes
                 feasibleNodes = None
@@ -550,7 +555,8 @@ class CCGEN(_m.Tool()):
             idLabel = self.ShapefileZoneAttributeId
             
             for poly in reader.readThrough():
-                zone = network.node(poly[idLabel])
+                zone_number = reader.get_properties_by_geomerty(poly)[idLabel]
+                zone = network.node(zone_number)
                 if zone is not None:
                     if not zone.is_centroid:
                         _m.logbook_write("Corresponding network node for zone shape '%s' is not a zone!" %poly[idLabel])
@@ -1141,7 +1147,7 @@ class CCGEN(_m.Tool()):
         idealAngle = 2 * math.pi / len(configuration)
         
         iter = bearings.__iter__()
-        prevB = iter.next()
+        prevB = next(iter)
         for B in iter:
             a = B - prevB
             if a < 0:

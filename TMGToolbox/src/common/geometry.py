@@ -152,13 +152,13 @@ def transitLineToShape(line):
 #---Static methods for casting shapely geometries to attachable geometries
 def castAsAttachable(geom):
     type = geom.type
-    
-    if type.lower() == 'point':
+    type_lower = type.lower()
+    if type_lower == 'point':
         vertices = list(geom.coords)
         return Point(vertices[0][0], vertices[0][1])
-    elif type.lower() == 'linestring':
+    elif type_lower == 'linestring':
         return LineString(list(geom.coords))
-    elif type.lower() == 'polygon':
+    elif type_lower == 'polygon':
         exterior = list(geom.exterior.coords)
         interiors = []
         for interior in geom.interiors:
@@ -199,9 +199,10 @@ def checkSegmentIntersection(coordA1, coordA2, coordB1, coordB2):
 #---Field class for storing data about DBF fields
 
 class StringField():    
+    _DEFAULT_STRING_SIZE = 32
     def __init__(self, name, length=50, decimals=0, default=""):
         self.name = str(name)
-        self.length = length
+        self.length = length if length is not None else StringField._DEFAULT_STRING_SIZE
         self.default = default
         self.type = 'STR'
         
@@ -241,8 +242,10 @@ class FloatField():
         return "%s (FLOAT)" %self.name
 
 class IntField():
-    
+    _DEFAULT_INT_SIZE = 10
     def _getMaxInt(self, length):
+        if length is None:
+            return 2147483647
         max = 0
         for i in range(0, length):
             max += 9 * pow(10, i)
@@ -253,7 +256,7 @@ class IntField():
     def __init__(self, name, length=8, decimals=0, default=0):
         self.max = self._getMaxInt(length)
         self.min = - (self.max - 1)
-        self.length = length
+        self.length = length if length is not None else IntField._DEFAULT_INT_SIZE
         self.default = default
         self.name = str(name)
         self.type = 'INT'
@@ -319,6 +322,7 @@ class Shapely2ESRI():
         self._shape_file_path = filepath
         self._records = {}
         self._fields = {}
+        self._properties = {}
         if mode[0].lower() == 'w':
             self._sf = None
             self._canread = False
@@ -343,11 +347,23 @@ class Shapely2ESRI():
         pass
     
     def _load_type(self, item):
-        return self.convert_geometry_to_index[item['geometry']['type'].upper()]
+        type = item['geometry']['type'].upper()
+        if type == 'LINESTRING':
+            type = "ARC"
+        return self.convert_geometry_to_index[type]
     
     def _load_properties(self, item):
         properties = item['properties']
         
+        return None
+
+    def get_properties_by_fid(self, fid):
+        return self._properties[fid]
+
+    def get_properties_by_geomerty(self, geom):
+        for fid, geometry in self._records.items():
+            if geometry is geom:
+                return self._properties[fid]
         return None
        
     def _load(self):
@@ -365,10 +381,10 @@ class Shapely2ESRI():
             elif dataType == Shapely2ESRI._POINT:
                 geom = Point(data)
             elif dataType == Shapely2ESRI._ARC:
-                geom = LineString(data[0])
+                geom = LineString(data)
             else:
                 raise NotImplementedError("Unknown data type: " + str(dataType))
-            geom.properties = record['properties']
+            self._properties[fid] = record['properties']           
             self._records[fid] = geom
             fid += 1
         self._size = len(self._records)    

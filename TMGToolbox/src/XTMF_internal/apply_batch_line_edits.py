@@ -175,41 +175,36 @@ class ApplyBatchLineEdits(_m.Tool()):
                 print(msg)
                 return
 
-            instructionData = {}
+            instructionData = []
             
             for num, line in enumerate(reader):
                 cells = line.strip().split(self.COMMA)
                 
-                filter = cells[filterCol]
-                if cells[headwayCol]:
-                    hdw = cells[headwayCol]
-                else:
-                    hdw = 1 # if the headway column is left blank, carry forward a factor of 1
-                if cells[speedCol]:
-                    spd = cells[speedCol]
-                else:
-                    spd = 1
-                instructionData[filter] = (float(hdw),float(spd))
+                line_filter = cells[filterCol]
+                # if the column is left blank, carry forward a factor of 1
+                headway = cells[headwayCol] if cells[headwayCol] else 1.0
+                speed = cells[speedCol] if cells[speedCol] else 1.0
+                instructionData.append((str(line_filter),float(headway),float(speed)))
         
         return instructionData
 
     def _ApplyLineChanges(self, inputData):
-        for filter, factors in six.iteritems(inputData):
-            if factors[0] != 1:
+        for (line_filter, headway, speed) in inputData:
+            if headway != 1:
                 spec = {
                     "type": "NETWORK_CALCULATION",
-                    "expression": str(factors[0]) + "*hdw",
+                    "expression": str(headway) + "*hdw",
                     "result": "hdw",
                     "selections": {
-                        "transit_line": filter}}
+                        "transit_line": line_filter}}
                 netCalc(spec, self.Scenario)
-            if factors[1] != 1:
+            if speed != 1:
                 spec = {
                     "type": "NETWORK_CALCULATION",
-                    "expression": str(factors[1]) + "*speed",
+                    "expression": str(speed) + "*speed",
                     "result": "speed",
                     "selections": {
-                        "transit_line": filter}}
+                        "transit_line": line_filter}}
                 netCalc(spec, self.Scenario)
 
     @_m.method(return_type=_m.TupleType)

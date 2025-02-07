@@ -440,36 +440,47 @@ class RemoveExtraNodes(_m.Tool()):
                 self._segmentAggregators[attName] = funcName
                 self._nodeAggregators[attName] = funcName
         
-        for key in six.iterkeys(self._linkAggregators):
-            if key.endswith("_l"):
-                newKey = key.replace("_l", "")
-                val = self._linkAggregators.pop(key)
-                self._linkAggregators[newKey] = val
-        
-        for key in six.iterkeys(self._segmentAggregators):
-            if key.endswith("_s"):
-                newKey = key.replace("_s", "")
-                val = self._segmentAggregators.pop(key)
-                self._segmentAggregators[newKey] = val
-        
-        for key in six.iterkeys(self._nodeAggregators):
-            if key.endswith("_n"):
-                newKey = key.replace("_n", "")
-                val = self._nodeAggregators.pop(key)
-                self._nodeAggregators[newKey] = val
-        
-        for att, funcName in six.iteritems(self._linkAggregators):
-            if funcName == 'avg_by_length':
-                self._linkAggregators[att] = self.AVERAGE_BY_LENGTH_LINKS
-            else:
-                self._linkAggregators[att] = _editing.NAMED_AGGREGATORS[funcName]
-        for att, funcName in six.iteritems(self._segmentAggregators):
-            if funcName == 'avg_by_length':
-                self._segmentAggregators[att] = self.AVERAGE_BY_LENGTH_SEGMENTS
-            else:
-                self._segmentAggregators[att] = _editing.NAMED_AGGREGATORS[funcName]
-        for att, funcName in six.iteritems(self._nodeAggregators):
-            self._nodeAggregators[att] = _editing.NAMED_AGGREGATORS[funcName]
+        def fix_key_end(dictionary, end_sequency):
+            to_change = []
+            for key in six.iterkeys(dictionary):
+                if key.endswith(end_sequency):
+                    to_change.append(key)
+            for key in to_change:
+                newKey = key.replace(end_sequency, "")
+                val = dictionary.pop(key)
+                dictionary[newKey] = val
+
+        fix_key_end(self._linkAggregators, "_l")
+        fix_key_end(self._segmentAggregators, "_s")
+        fix_key_end(self._nodeAggregators, "_n")
+
+        def assign_function(dictionary, func_name, func_type):
+            to_change = []
+            for att, funcName in six.iteritems(dictionary):
+                if funcName == func_name:
+                    to_change.append((att, func_type))
+                else:
+                    try:
+                        to_change.append((att, _editing.NAMED_AGGREGATORS[funcName]))
+                    except KeyError as ke:
+                        print("Error assigning function: %s from _editing" %funcName)
+                        print(dictionary)
+                        raise
+            
+
+            for key, to_assign in to_change:
+                try:
+                    dictionary[key] = to_assign
+                except KeyError as ke:
+                    print("Error assigning function: %s" %key)
+                    print(dictionary)
+                    raise
+            
+
+        assign_function(self._linkAggregators, 'avg_by_length', self.AVERAGE_BY_LENGTH_LINKS)
+        assign_function(self._segmentAggregators, 'avg_by_length', self.AVERAGE_BY_LENGTH_LINKS)
+        # This one should only set the func type to the _editing.NAMED_AGGREGATORS.
+        assign_function(self._nodeAggregators, None, None)
     
     def _GetCandidateNodes(self, network):
         

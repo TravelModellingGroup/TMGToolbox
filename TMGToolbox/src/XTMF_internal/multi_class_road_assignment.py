@@ -105,6 +105,7 @@ class MultiClassRoadAssignment(_m.Tool()):
     ResultAttributes = _m.Attribute(str)
     xtmf_AnalysisAttributes = _m.Attribute(str)
     xtmf_AnalysisAttributesMatrixId = _m.Attribute(str)
+    xtmf_AnalysisSelectedLinkVolumes = _m.Attribute(str)
     xtmf_AggregationOperator = _m.Attribute(str)
     xtmf_LowerBound = _m.Attribute(str)
     xtmf_UpperBound = _m.Attribute(str)
@@ -168,6 +169,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         ResultAttributes,
         xtmf_AnalysisAttributes,
         xtmf_AnalysisAttributesMatrixId,
+        xtmf_AnalysisSelectedLinkVolumes,
         xtmf_AggregationOperator,
         xtmf_LowerBound,
         xtmf_UpperBound,
@@ -197,6 +199,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         self.LinkTollAttributeId = [x for x in LinkTollAttributeId.split(",")]
         AnalysisAttributes = [x for x in xtmf_AnalysisAttributes.split("|")]
         AnalysisAttributesMatrixId = [x for x in xtmf_AnalysisAttributesMatrixId.split("|")]
+        AnalysisSelectedLinkVolumes = [x for x in xtmf_AnalysisSelectedLinkVolumes.split("|")]
         operators = [x for x in xtmf_AggregationOperator.split("|")]
         lowerBounds = [x for x in xtmf_LowerBound.split("|")]
         upperBounds = [x for x in xtmf_UpperBound.split("|")]
@@ -205,6 +208,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         mulitplyPathValue = [x for x in xtmf_MultiplyPathPropByValue.split("|")]
         self.ClassAnalysisAttributes = []
         self.ClassAnalysisAttributesMatrix = []
+        self.ClassAnalysisSelectedLinkVolumes = []
         self.ClassAnalysisOperators = []
         self.ClassAnalysisLowerBounds = []
         self.ClassAnalysisUpperBounds = []
@@ -215,6 +219,7 @@ class MultiClassRoadAssignment(_m.Tool()):
         for i in range(len(self.Demand_List)):
             self.ClassAnalysisAttributes.append([x for x in AnalysisAttributes[i].split(",")])
             self.ClassAnalysisAttributesMatrix.append([x for x in AnalysisAttributesMatrixId[i].split(",")])
+            self.ClassAnalysisSelectedLinkVolumes.append([x for x in AnalysisSelectedLinkVolumes[i].split(",")])
             self.ClassAnalysisOperators.append([x for x in operators[i].split(",")])
             self.ClassAnalysisLowerBounds.append([x for x in lowerBounds[i].split(",")])
             self.ClassAnalysisUpperBounds.append([x for x in upperBounds[i].split(",")])
@@ -228,6 +233,9 @@ class MultiClassRoadAssignment(_m.Tool()):
                 if self.ClassAnalysisAttributesMatrix[i][j] == "mf0" or self.ClassAnalysisAttributesMatrix[i][j] == "":
                     # make mf0 matrices None for better use in spec
                     self.ClassAnalysisAttributesMatrix[i][j] = None
+                if self.ClassAnalysisSelectedLinkVolumes[i][j] == "":
+                    # make mf0 matrices None for better use in spec
+                    self.ClassAnalysisSelectedLinkVolumes[i][j] = None
                 try:
                     self.ClassAnalysisLowerBounds[i][j] = float(self.ClassAnalysisLowerBounds[i][j])
                     self.ClassAnalysisUpperBounds[i][j] = float(self.ClassAnalysisUpperBounds[i][j])
@@ -391,6 +399,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             attributeDefined = False
                             allAttributes = []
                             allMatrices = []
+                            selectedLinkVolumes = []
                             operators = []
                             lowerBounds = []
                             upperBounds = []
@@ -401,6 +410,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                             for i in range(len(self.Demand_List)):
                                 allAttributes.append([])
                                 allMatrices.append([])
+                                selectedLinkVolumes.append([])
                                 operators.append([])
                                 lowerBounds.append([])
                                 upperBounds.append([])
@@ -411,6 +421,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     _m.logbook_write("Cost matrix defined for class %s" % self.ClassNames[i])
                                     allAttributes[i].append(costAttribute[i].id)
                                     allMatrices[i].append(self.CostMatrixId[i])
+                                    selectedLinkVolumes[i].append(None)
                                     operators[i].append("+")
                                     lowerBounds[i].append(None)
                                     upperBounds[i].append(None)
@@ -424,6 +435,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     _m.logbook_write("Toll matrix defined for class %s" % self.ClassNames[i])
                                     allAttributes[i].append(self.LinkTollAttributeId[i])
                                     allMatrices[i].append(self.TollsMatrixId[i])
+                                    selectedLinkVolumes[i].append(None)
                                     operators[i].append("+")
                                     lowerBounds[i].append(None)
                                     upperBounds[i].append(None)
@@ -438,6 +450,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                         _m.logbook_write("Additional matrix for attribute %s defined for class %s" % (self.ClassAnalysisAttributes[i][j], self.ClassNames[i]))
                                         allAttributes[i].append(self.ClassAnalysisAttributes[i][j])
                                         allMatrices[i].append(self.ClassAnalysisAttributesMatrix[i][j])
+                                        selectedLinkVolumes[i].append(self.ClassAnalysisSelectedLinkVolumes[i][j])
                                         operators[i].append(self.ClassAnalysisOperators[i][j])
                                         lowerBounds[i].append(self.ClassAnalysisLowerBounds[i][j])
                                         upperBounds[i].append(self.ClassAnalysisUpperBounds[i][j])
@@ -470,6 +483,7 @@ class MultiClassRoadAssignment(_m.Tool()):
                                     self.normGap,
                                     self.PerformanceFlag,
                                     self.TimesMatrixId,
+                                    selectedLinkVolumes
                                 )
                                 report = self._tracker.runTool(trafficAssignmentTool, spec, scenario=self.Scenario)
                                 assignmentComplete = True

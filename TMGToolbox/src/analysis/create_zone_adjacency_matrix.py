@@ -164,7 +164,7 @@ class CreateZoneAdjacencyMatrix(_m.Tool()):
             if not self.ZoneIdFiledName in reader.getFieldNames():
                 raise IOError("Cannot find zone id field '%s' in zone boundary shapefile '%s'." %(self.ZoneIdFiledName, self.ZoneBoundariesFile))
             for feature in reader.readThrough():
-                zoneId = feature.properties[self.ZoneIdFiledName] #this is the zoneId integer
+                zoneId = reader.get_properties_by_fid(loaded)[self.ZoneIdFiledName] #this is the zoneId integer
                 zone = network.node(zoneId)
                 if zone is None or not zone.is_centroid:
                     _m.logbook_write("Could not find a valid zone '%s' in network" %zoneId)
