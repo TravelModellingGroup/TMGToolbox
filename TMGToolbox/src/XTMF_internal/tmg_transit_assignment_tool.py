@@ -730,6 +730,8 @@ class TransitAssignmentTool(_m.Tool()):
                     continue
 
                 segment_number = segment.number
+                if segment.transit_time_func == 0:
+                    raise Exception("Transit Time Function is not defined for segment %s." % segment.id)
                 segment.transit_time_func = self.stsu_ttf_map[segment.transit_time_func]
                 time = segment.link[self.AutoTimeAttributeId]
                 
