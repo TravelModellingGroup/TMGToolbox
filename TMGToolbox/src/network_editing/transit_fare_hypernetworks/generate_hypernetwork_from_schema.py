@@ -1435,6 +1435,10 @@ class FBTNFromSchema(_m.Tool()):
             
             count = 0
             changed = {}
+            if groupNumber not in linesIdexedByGroup:
+                _m.logbook_write("No lines found for group %s" %groupId)
+                print("No lines found for group %s" %groupId)
+                return
             for line in linesIdexedByGroup[groupNumber]:
                 for segment in line.segments(False):
                     segment[self.SegmentFareAttributeId] += segment.link.length * cost
