@@ -500,7 +500,11 @@ class CreateTimePeriodNetworks(_m.Tool()):
             
             #Calc line speed
             sumTimes = 0
-            for dep, arr in line.trips: sumTimes += arr - dep
+            for dep, arr in line.trips: 
+                # Deal with the case where the trip crosses midnight
+                if dep > arr:
+                    arr = arr + 24 * 3600.0
+                sumTimes += arr - dep
             avgTime = sumTimes / len(line.trips) / 3600.0 #Convert from seconds to hours
             length = sum([seg.link.length for seg in line.segments()]) #Given in km
             speed = length / avgTime #km/hr
