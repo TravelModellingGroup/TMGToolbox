@@ -1257,14 +1257,14 @@ class TransitAssignmentTool(_m.Tool()):
             for segment in line.segments():
                 volume = float(segment.voltr)
                 congestionTerm = self._CalculateSegmentCost(volume, capacity, segment)
-                # we don't want dwell time included in @ccost so that it is
-                # exclusively the congestion penalty from congested assignment.
                 next_segment = line.segment(i + 1)
                 next_base_dwell_time = float(next_segment.base_dwell_time)
                 next_dwell_time = float(next_segment.dwell_time)
-                baseTime = float(segment.uncongested_time) - next_base_dwell_time
-                segment.transit_time = (baseTime + next_dwell_time) * (1 + congestionTerm)
-                segment["@ccost"] = segment.transit_time - baseTime - (next_dwell_time - next_base_dwell_time) * congestionTerm
+                # segment.uncongested_time includes next_base_dwell_time, so we need to subtract it out
+                uncongested_link_time = float(segment.uncongested_time) - next_base_dwell_time
+                segment.transit_time = (uncongested_link_time + next_dwell_time) * (1 + congestionTerm)
+                # Transit time includes the congestion from the final iteration, including from the dwell time
+                segment["@ccost"] = segment.transit_time - uncongested_link_time - next_dwell_time
                 i += 1
         attributeMapping = self._AttributeMapping()
         attributeMapping["TRANSIT_SEGMENT"]["@ccost"] = "@ccost"
