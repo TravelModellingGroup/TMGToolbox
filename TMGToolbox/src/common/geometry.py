@@ -74,6 +74,10 @@ class LineString(_geo.LineString, _attachable):
         root = super(LineString, self)
         self._atts = {}
         root.__init__(coordinates)
+        self._hash = int(coordinates[0][0])
+
+    def __hash__(self):
+        return self._hash
 
 class Polygon(_geo.Polygon, _attachable):
     def __init__(self, shell=None, holes=None):
@@ -392,6 +396,8 @@ class Shapely2ESRI():
         self._fields ['FID'] = IntField('FID') # Add FID field
         for (name, typeInfo) in self._sf.schema['properties'].items():
             typeParts = typeInfo.split(':')
+            if len(typeParts) < 2:
+                continue
             if typeParts[0] == 'int':
                 field = IntField(name, int(typeParts[1]))
             elif typeParts[0] == 'float':

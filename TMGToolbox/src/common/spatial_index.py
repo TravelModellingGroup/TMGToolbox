@@ -454,20 +454,23 @@ class GridIndex():
             - obj: The object to insert. Must be hashable (e.g. no lists)
             - coordinates: List of (x,y) tuples corresponding to the vertices of the line
         '''
+        try:
+            for p0, p1 in _util.iterpairs(coordinates):
+                x0, y0 = p0
+                x1, y1 = p1
 
-        for p0, p1 in _util.iterpairs(coordinates):
-            x0, y0 = p0
-            x1, y1 = p1
+                self._check_x(x0)
+                self._check_x(x1)
+                self._check_y(y0)
+                self._check_y(y1)
 
-            self._check_x(x0)
-            self._check_x(x1)
-            self._check_y(y0)
-            self._check_y(y1)
-
-            addresses = self._index_line_segment(x0, y0, x1, y1)
-            for col, row in addresses:
-                self._grid[col, row].add(obj)
-            self._addressbook[obj] = addresses
+                addresses = self._index_line_segment(x0, y0, x1, y1)
+                for col, row in addresses:
+                    self._grid[col, row].add(obj)
+                self._addressbook[obj] = addresses
+        except:
+            print(obj)
+            raise
 
     def insertbox(self, obj, minx, miny, maxx, maxy):
         '''
