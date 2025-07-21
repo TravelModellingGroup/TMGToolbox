@@ -84,6 +84,7 @@ import inspect
 import numpy
 import math
 import six 
+from operator import itemgetter
 # initalize python3 types
 _util.initalizeModellerTypes(_m)
 
@@ -392,18 +393,15 @@ class CCGEN(_m.Tool()):
                     self._applyInfeasibleLinkFilter(flagAttr.id)
                 
                 network = self.Scenario.get_network() # Get the network once.
-                print("got the network")
                 
                 #---1. Load the zones file
                 zonesToProcess = None #nodes
                 if self.ZonesFile is None or self.ZonesFile == "":
                     zonesToProcess = self._getUnconnectedZones(network)
                     _m.logbook_write("Selected %s unconnected zones already in the network" %len(zonesToProcess))
-                    print("unconnected zones found")
                 else:
                     zonesToProcess = self._loadZonesToBeAdded(self.ZonesFile, network)
                     _m.logbook_write("Loaded new zones from file '%s'" %self.ZonesFile)
-                    print("found zones file")
                 self._tracker.completeTask() # TASK 1
                 
                 if len(zonesToProcess) == 0:
@@ -412,22 +410,18 @@ class CCGEN(_m.Tool()):
                 
                 #---2. Create temporary zone attributes in the network
                 network.create_attribute('NODE', '_geometry', None) # For zones, stores the boundaries. For nodes, stores the point geometry.
-                print("node geometry att created")
                 network.create_attribute('NODE', '_candidateNodes', None) # Stores a mapping of candidateNode -> distance from centroid 
-                print("candidatenode att created")
                 
                 #---3. Load the boundary and zones files 
                 self._tracker.startProcess(2)
                 if self.BoundaryFile is not None and self.BoundaryFile != "":
                     self._loadBoundaryFile(self.BoundaryFile)
-                    print("Boundaries shapefile loaded")
                 else:
                     self._Boundaries = None
                 self._tracker.completeSubtask() 
                 
                 try:
                     self._loadZoneShape(self.ZoneShapeFile, network)
-                    print("Zones shapefile loaded")
                 except:
                     raise AttributeError("Zones shape file not found!")
               
@@ -437,7 +431,6 @@ class CCGEN(_m.Tool()):
                     feasibleNodes, nFeasibleNodes = {2 : self._getFeasibleNodesGreedy,
                                      1 : self._getFeasibleNodesReluctant}[self.NodeExcluderOption](network, flagAttr.id)
                     _m.logbook_write("%s nodes were selected as feasible in the network." %nFeasibleNodes)
-                    print("Filtered and indexed feasible nodes")
                 self._tracker.completeTask() # TASK 3
                 
                 #---5. Process new zones
@@ -458,13 +451,12 @@ class CCGEN(_m.Tool()):
                 zonesHandled = 0
                 errors = 0
                 self._tracker.startProcess(len(zonesToProcess)) # TASK 4
-                print("Processing zones")
                 for zone in zonesToProcess: #{1
                     try:
                         #{
                         atts = self._HANDLE_ZONE(zone, feasibleNodes, network)
                         zonesHandled += 1
-                        print(f"handled {zonesHandled} zones")
+                        print("handled " + zone.id + " zone")
                         
                         if self.DoSummaryReport:
                             summaryReport.addZoneData(atts)
@@ -556,7 +548,6 @@ class CCGEN(_m.Tool()):
             
             self._Boundaries = spatialIndex
             
-        print("Loaded and indexed boundaries.")
         _m.logbook_write("Boundary file loaded: '%s'" %filename)
     
     def _loadZoneShape(self, filename, network):
@@ -731,36 +722,35 @@ class CCGEN(_m.Tool()):
     #####################################################################################################################
     
     def _HANDLE_ZONE(self, zone, feasibleNodes, network):
-        
+    
         '''
         First, get all of the nodes within the search radius of the zone.
         Then, remove all those nodes which create connectors that cross boundaries.
         Finally, truncate the size of the set of candidate nodes.
         '''
         self._getCandidateNodes(zone, feasibleNodes)
-        print("got candidate nodes")
 
         #get node number for adding virtual nodes
         next_node = float('inf')
-        for node in zone._candidateNodes:
-            #only get numbers from non-virtual nodes
-            try:
+        #only get numbers from non-virtual nodes
+        try:
+            for node in zone._candidateNodes:
+        
                 if node.number < next_node:
                     next_node = node.number
-            except:
-                pass
             #TODO: fix?
+        except:
+            pass
+           #TODO: fix?
         if next_node == float('inf'):
             next_node = 20000
         searchSetSize = len(zone._candidateNodes)
         
         self._removeCrossBoundaryConnectors(zone)
         boundedSetSize = len(zone._candidateNodes)
-        print("removed cross boundary connectors")
         
         self._truncateCandidateSet(zone)
         finalSetSize = len(zone._candidateNodes)
-        print("truncated candidate nodes")
 
         
         if len(zone._candidateNodes) < 1:
@@ -790,7 +780,6 @@ class CCGEN(_m.Tool()):
                             index = index -1
             except:
                 pass
-        print("got link type")
 
         try:
             most_common_type = type_list[0][0]
@@ -799,7 +788,6 @@ class CCGEN(_m.Tool()):
 
 
         distanceMatrix = self._calculateDistanceMatrix(zone)
-        print("calculated distance matrix")
         
         maxUtil = - float('inf') #Negative infinity
         bestConfig = None
@@ -814,7 +802,6 @@ class CCGEN(_m.Tool()):
             if util > maxUtil:
                 bestConfig = [node]
                 maxUtil = util
-        print("checked for single connector case")
            
         
         # The number of connectors goes from 2 to the lesser of the size of the set of
@@ -830,7 +817,6 @@ class CCGEN(_m.Tool()):
 
                     maxUtil = util
                     maxComponents = dict([(key, tuple[1]) for (key, tuple) in six.iteritems(utilComponents)])
-        print("calculating number of connectors")
         
 
         for node in bestConfig:
@@ -869,7 +855,6 @@ class CCGEN(_m.Tool()):
             inConnector.data2 = 40.0
             inConnector.data3 = 9999
             inConnector.type = most_common_type
-        print("creating connector")
         
         if len(utils) == 0:
             utils = [- float('inf')]
@@ -884,7 +869,6 @@ class CCGEN(_m.Tool()):
                 'meanUtil' : numpy.mean(utils),
                 'medianUtil' : numpy.median(utils),
                 'sDevUtil' : numpy.std(utils)}
-        print("getting utility statistics")
         
         for (key, value) in six.iteritems(maxComponents):
             atts[key] = value
@@ -1116,8 +1100,9 @@ class CCGEN(_m.Tool()):
         sorter = [(dist, node) for (node, dist) in zone._candidateNodes.items()]            
         sorter.sort() # List of tuples get sorted by their first element
         
-        while len(sorter) > self.MaxCandidates:
-            q = sorter.pop()
+        sorter.sort(key = itemgetter(0)) # List of tuples get sorted by their first elemen
+        # while len(sorter) > self.MaxCandidates:
+        #     q = sorter.pop()
         
         zone._candidateNodes = dict((node, dist) for dist, node in sorter)
         
