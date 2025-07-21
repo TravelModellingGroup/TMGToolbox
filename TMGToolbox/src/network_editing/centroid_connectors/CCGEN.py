@@ -85,6 +85,8 @@ import numpy
 import math
 import six 
 from operator import itemgetter
+import heapq
+
 # initalize python3 types
 _util.initalizeModellerTypes(_m)
 
@@ -448,22 +450,21 @@ class CCGEN(_m.Tool()):
                 if self.DoFullReport:
                     fullReport = FullReport(self.FullReportFile)
                     
-                zonesHandled = 0
                 errors = 0
                 self._tracker.startProcess(len(zonesToProcess)) # TASK 4
+                zonesHandled = 0
                 for zone in zonesToProcess: #{1
+                    
                     try:
-                        #{
+                        print("Processing zone " + zone.id)
                         atts = self._HANDLE_ZONE(zone, feasibleNodes, network)
-                        zonesHandled += 1
-                        print("handled " + zone.id + " zone")
                         
                         if self.DoSummaryReport:
                             summaryReport.addZoneData(atts)
                         
                         if self.DoFullReport:
                             fullReport.addZoneData(zone, atts)
-                        #}
+                        zonesHandled += 1
                     except ObjectProcessingError as ope:
                         if self.ErrorHandlingOption == 2:
                             errors += 1
@@ -728,11 +729,13 @@ class CCGEN(_m.Tool()):
         Then, remove all those nodes which create connectors that cross boundaries.
         Finally, truncate the size of the set of candidate nodes.
         '''
+        
         self._getCandidateNodes(zone, feasibleNodes)
 
         #get node number for adding virtual nodes
         next_node = float('inf')
         #only get numbers from non-virtual nodes
+        
         try:
             for node in zone._candidateNodes:
         
@@ -744,11 +747,11 @@ class CCGEN(_m.Tool()):
            #TODO: fix?
         if next_node == float('inf'):
             next_node = 20000
+
         searchSetSize = len(zone._candidateNodes)
-        
         self._removeCrossBoundaryConnectors(zone)
+
         boundedSetSize = len(zone._candidateNodes)
-        
         self._truncateCandidateSet(zone)
         finalSetSize = len(zone._candidateNodes)
 
@@ -1057,14 +1060,9 @@ class CCGEN(_m.Tool()):
             dist = self._measureDistance(node, zone)
             if dist < self.SearchRadius/1000: # compare distance (in km) to SearchRadius (in m)
                 candidateNodes[node] = dist
-        try:
-            for node in feasibleNodes.nearestToPoint(zone.x, zone.y):
-                dist = self._measureDistance(node, zone)
-                if dist < minDistance: 
-                    minDistance = dist
-                    closestNode = node
-        except IndexError: #Expected if the zone is outside the bounds of the feasible node set
-            pass 
+            if dist < minDistance: 
+                minDistance = dist
+                closestNode = node
         #if no nodes are found within the search radius, select closest node
         if len(candidateNodes) == 0 and closestNode is not None:
             candidateNodes[closestNode] = minDistance
@@ -1091,20 +1089,13 @@ class CCGEN(_m.Tool()):
     def _truncateCandidateSet(self, zone):
         '''
         Truncates the set of candidate nodes to the maximum set size by
-        removing the farthest candidates.
+        keeping only the closest candidates (lowest distances).
         '''
-        
         if len(zone._candidateNodes) <= self.MaxCandidates:
             return
-        
-        sorter = [(dist, node) for (node, dist) in zone._candidateNodes.items()]            
-        sorter.sort() # List of tuples get sorted by their first element
-        
-        sorter.sort(key = itemgetter(0)) # List of tuples get sorted by their first elemen
-        # while len(sorter) > self.MaxCandidates:
-        #     q = sorter.pop()
-        
-        zone._candidateNodes = dict((node, dist) for dist, node in sorter)
+        # Use heapq.nsmallest for efficiency
+        closest = heapq.nsmallest(self.MaxCandidates, zone._candidateNodes.items(), key=lambda item: item[1])
+        zone._candidateNodes = dict(closest)
         
     
     #-----Utility Metric Functions--------------------------------------------------------------------------
