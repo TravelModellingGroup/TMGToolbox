@@ -95,12 +95,12 @@ class MergeFunctions(_m.Tool()):
     # Editing is not an option after 4.4.5
     if EMME_VERSION < (4,4,5):
         OPTIONS_LIST = [(EDIT_OPTION, "EDIT - Launch an editor GUI to resolve conflicts manually."),
-                  (RAISE_OPTION, "RAISE - Raise an error if any conflicsts are detected."),
+                  (RAISE_OPTION, "RAISE - Raise an error if any conflicts are detected."),
                   (PRESERVE_OPTION, "PRESERVE - Preserve functional definitions from the current Emme project."),
                   (OVERWRITE_OPTION, "OVERWRITE - Overwrite functional definitions from the function file.")]
     else:
         OPTIONS_LIST = [(OVERWRITE_OPTION, "OVERWRITE - Overwrite functional definitions from the function file."),
-                  (RAISE_OPTION, "RAISE - Raise an error if any conflicsts are detected."),
+                  (RAISE_OPTION, "RAISE - Raise an error if any conflicts are detected."),
                   (PRESERVE_OPTION, "PRESERVE - Preserve functional definitions from the current Emme project."),
                   ]
     
