@@ -129,7 +129,7 @@ class ImportNetworkPackage(m.Tool()):
 
         pb.add_checkbox(
             tool_attribute_name='SkipMergingFunctions', label="Skip the merging of functions?",
-            note="Set as TRUE to unchange the functional definitions in current Emmebank."
+            note="Set as TRUE to not change the functional definitions in current Emmebank."
         )
 
         pb.add_select(
