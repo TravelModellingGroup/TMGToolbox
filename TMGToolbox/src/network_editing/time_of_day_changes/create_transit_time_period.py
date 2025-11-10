@@ -460,6 +460,11 @@ class CreateTimePeriodNetworks(_m.Tool()):
         if altData is not None:
             for k, v in [x for x in six.iteritems(altData)]: #check if any headways or speeds are zero. Allow those lines to be deletable
                 if v[0] == 0 or v[1] == 0:
+                    # If one is not zero, then we should warn the user
+                    if v[0] != 0:
+                        print("WARNING: '" + k + "' has a headway set in the Alt File but the speed was set to 0. The service table record will be applied for both speed and headway, if no records are found during the time period it will be deleted.")
+                    if v[1] != 0:
+                        print("WARNING: '" + k + "' has a speed set in the Alt File but the headway was set to 0. The service table record will be applied for both speed and headway, if no records are found during the time period then it will be deleted.")
                     del altData[k]
                 #if v[0] == 9999: #prep an unused line for deletion
                 #    toDelete.add(k)
