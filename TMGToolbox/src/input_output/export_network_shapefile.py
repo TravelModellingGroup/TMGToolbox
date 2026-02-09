@@ -24,6 +24,7 @@ _MODELLER = _m.Modeller()  # Instantiate Modeller once.
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 _exportShapefile = _MODELLER.tool('inro.emme.data.network.export_network_as_shapefile')
 _util = _MODELLER.module('tmg.common.utilities')
+_util.initalizeModellerTypes(_m)
 
 class ExportNetworkAsShapefile(_m.Tool()):
     version = '0.0.1'
