@@ -246,13 +246,13 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                     timeDependentTimeAttributeLists = []
                     timeDependentCostAttributeLists = []
                     timeDependentLinkTollAttributeLists = []
+                    start_index = 1
                     for tc in Parameters["TrafficClasses"]:
                         timeDependentVolumeAttributeLists.append(self._create_time_dependent_attribute_list(tc["VolumeAttribute"], IntervalLengthList, tc["AttributeStartIndex"]))
-                        timeDependentTimeAttributeLists.append(self._create_time_dependent_attribute_list("ltime", IntervalLengthList, tc["AttributeStartIndex"]))
-                        timeDependentCostAttributeLists.append(self._create_time_dependent_attribute_list("lkcst", IntervalLengthList, tc["AttributeStartIndex"]))
+                        timeDependentCostAttributeLists.append(self._create_time_dependent_attribute_list("lkcst", IntervalLengthList, start_index))
                         timeDependentLinkTollAttributeLists.append(self._create_time_dependent_attribute_list(tc["LinkTollAttributeID"], IntervalLengthList, tc["AttributeStartIndex"]))
+                        start_index += len(IntervalLengthList)
                     volumeAttributeLists = self._create_volume_attribute(Scenario, timeDependentVolumeAttributeLists)
-                    timeAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentTimeAttributeLists, tempAttributeList, "LINK", "traffic")
                     costAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentCostAttributeLists, tempAttributeList, "LINK", "traffic")
                     tollAttributeLists = self._createTimeDependentAttributeLists(Scenario, timeDependentLinkTollAttributeLists, tempAttributeList, "LINK", "traffic", is_temp_attribute=False)
                     linkComponentAttributeList = []
@@ -462,17 +462,25 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
 
         return transit_traffic_attribute_list
 
+
     def _create_temp_attribute(self, Scenario, attribute_id, attribute_type, description=None, default_value=0.0, assignment_type=None):
         """
         Creates a temporary extra attribute in a given Scenario
         """
         ATTRIBUTE_TYPES = ["NODE", "LINK", "TURN", "TRANSIT_LINE", "TRANSIT_SEGMENT"]
         attribute_type = str(attribute_type).upper()
+        def attribute_length(name):
+            # If the name starts with '@' return the length, otherwise add one.
+            if name.startswith("@"):
+                return len(name)
+            else:
+                return len(name) + 1
+                
         # check if the type provided is correct
         if attribute_type not in ATTRIBUTE_TYPES:
             raise TypeError("Attribute type '%s' provided is not recognized." % attribute_type)
-        if len(attribute_id) > 18:
-            raise ValueError("Attribute id '%s' can only be 19 characters long with no spaces plus no '@'." % attribute_id)
+        if attribute_length(attribute_id) >= 20:
+            raise ValueError("Attribute id '%s' can only be 19 characters long and start with a '@'." % attribute_id)
         prefix = str(attribute_id)
         attrib_id = ""
         if assignment_type == "transit":
@@ -530,9 +538,9 @@ class SpaceTimeTrafficAssignmentTool(_m.Tool()):
                     applied_toll_factor_list.append(toll_weight_list)
         return applied_toll_factor_list
 
-    def _createTimeDependentAttributeLists(self, Scenario, timeDependentTimeAttributeLists, tempAttributeList, attribute_type, assignment_type, is_temp_attribute=True):
+    def _createTimeDependentAttributeLists(self, Scenario, timeDependentAttributeLists, tempAttributeList, attribute_type, assignment_type, is_temp_attribute=True):
         timeAttributeLists = []
-        for time_dependent_attribute_list in timeDependentTimeAttributeLists:
+        for time_dependent_attribute_list in timeDependentAttributeLists:
             time_attribute_list = []
             for time_attribute in time_dependent_attribute_list:
                 attribute = self._create_temp_attribute(Scenario, time_attribute, attribute_type, default_value=0.0, assignment_type=assignment_type)
