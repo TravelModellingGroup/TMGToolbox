@@ -28,6 +28,7 @@ from os import path
 
 import inro.modeller as m
 import six
+from inro.emme.database.scenario import Scenario
 
 mm = m.Modeller()
 _util = mm.module('tmg.common.utilities')
@@ -47,7 +48,7 @@ _util.initalizeModellerTypes(m)
 
 
 class ExportNetworkPackage(m.Tool()):
-    version = '1.2.3'
+    version = '1.2.4'
     tool_run_msg = ""
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
@@ -143,7 +144,11 @@ class ExportNetworkPackage(m.Tool()):
         return self.ExportAllFlag
 
     def __call__(self, scenario_number, ExportFile, export_attributes):
-        self.Scenario = mm.emmebank.scenario(scenario_number)
+        if isinstance(scenario_number, Scenario):
+            self.Scenario = scenario_number
+        else:
+            self.Scenario = mm.emmebank.scenario(scenario_number)
+
         if self.Scenario is None:
             raise Exception('Scenario %s was not found!' % scenario_number)
 
@@ -395,7 +400,7 @@ class ExportNetworkPackage(m.Tool()):
 
     def _write_info_file(self, fp):
         with open(fp, 'w') as writer:
-            bank = mm.emmebank
+            bank = self.Scenario.emmebank
             lines = [
                 str(bank.title), str(bank.path), '%s - %s' % (self.Scenario, self.Scenario.title),
                 datetime.now().strftime('%Y-%m-%d %H:%M'), self.ExportMetadata
