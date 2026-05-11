@@ -31,6 +31,7 @@ from numpy import array
 from numpy import min as nmin
 from numpy import max as nmax
 from shapely import geometry as _geo
+from shapely import Polygon
 import math
 
 import inro.modeller as _m
@@ -502,8 +503,14 @@ class GridIndex():
         '''
         Inserts a Shapely LineString object.
         '''
-
-        self.insertpline(linestring, linestring.coords)
+        if hasattr(linestring, 'geoms'):
+            for geom in linestring.geoms:
+                if isinstance(geom, Polygon):
+                     self.insertPolygon(geom)
+                else:
+                    self.insertpline(geom, geom.coords)
+        else:
+            self.insertpline(linestring, linestring.coords)
 
     def insertLink(self, link):
         '''

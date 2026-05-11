@@ -1095,8 +1095,8 @@ class CCGEN(_m.Tool()):
         if len(zone._candidateNodes) <= self.MaxCandidates:
             return
         
-        sorter = [(dist, node) for (node, dist) in zone._candidateNodes.items()]            
-        sorter.sort() # List of tuples get sorted by their first element
+        sorter = [(dist, node) for (node, dist) in zone._candidateNodes.items()]
+        sorter = sorted(sorter, key=lambda x: x[0]) # Sort by distance, with closest nodes first)
         
         while len(sorter) > self.MaxCandidates:
             q = sorter.pop()
