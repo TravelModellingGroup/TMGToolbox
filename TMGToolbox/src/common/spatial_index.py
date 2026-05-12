@@ -27,17 +27,23 @@ TODO LIST:
 
 '''
 
+
+import inro.modeller as _m
+from copy import copy
+import math
+_MODELLER = _m.Modeller()
+_util = _MODELLER.module('tmg.common.utilities')
+
 from numpy import array
 from numpy import min as nmin
 from numpy import max as nmax
 from shapely import geometry as _geo
-from shapely import Polygon
-import math
 
-import inro.modeller as _m
-from copy import copy
-_MODELLER = _m.Modeller()
-_util = _MODELLER.module('tmg.common.utilities')
+if _util.getEmmeVersion(tuple) >= (2024,0,0):
+    from shapely import Polygon
+else:
+    from shapely.geometry import Polygon
+
 # import six library for python2 to python3 conversion
 import six 
 from six.moves import xrange
