@@ -33,6 +33,7 @@ from copy import copy
 import math
 _MODELLER = _m.Modeller()
 _util = _MODELLER.module('tmg.common.utilities')
+_geometry = _MODELLER.module('tmg.common.geometry')
 
 from numpy import array
 from numpy import min as nmin
