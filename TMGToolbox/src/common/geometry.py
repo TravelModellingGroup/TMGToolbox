@@ -63,11 +63,20 @@ class _attachable():
     def __contains__(self, key):
         return key in self._atts
     
+   
 class Point(_geo.Point, _attachable):
     def __init__(self, *args):
         root = super(Point, self)
         self._atts = {}
         root.__init__(args)
+
+    def __hash__(self):
+        return hash(self.root.x) + hash(self.root.y)
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return False
+        return self.root.x == other.root.x and self.root.y == other.root.y
 
 class LineString(_geo.LineString, _attachable):
     def __init__(self, coordinates=None):
@@ -75,11 +84,35 @@ class LineString(_geo.LineString, _attachable):
         self._atts = {}
         root.__init__(coordinates)
 
+    def __hash__(self):
+        acc = 0
+        for coord in self.coords:
+            acc += hash(coord)
+        return acc
+
+    def __eq__(self, other):
+        for coord1, coord2 in zip(self.coords, other.coords):
+            if coord1 != coord2:
+                return False
+        return True
+
 class Polygon(_geo.Polygon, _attachable):
     def __init__(self, shell=None, holes=None):
         root = super(Polygon, self)
         self._atts = {}
         root.__init__(shell, holes)
+
+    def __hash__(self):
+        acc = 0
+        for coord in self.exterior.coords:
+            acc += hash(coord)
+        return acc
+
+    def __eq__(self, other):
+        for coord1, coord2 in zip(self.exterior.coords, other.exterior.coords):
+            if coord1 != coord2:
+                return False
+        return True
 
 class MultiPoint(_geo.MultiPoint, _attachable):
     def __init__(self, points=None):
@@ -87,17 +120,60 @@ class MultiPoint(_geo.MultiPoint, _attachable):
         self._atts = {}
         root.__init__(points)
 
+    def __hash__(self):
+        acc = 0
+        for geo in self.geoms:
+                acc += hash(geo.x) + hash(geo.y)
+        return acc
+
+    def __eq__(self, other):
+        for geo1, geo2 in zip(self.geoms, other.geoms):
+            for coord1, coord2 in zip(self.coords, other.coords):
+                if coord1 != coord2:
+                    return False
+        return True
+
 class MultiLineString(_geo.MultiLineString, _attachable):
     def __init__(self, lines=None):
         root = super(MultiLineString, self)
         self._atts = {}
         root.__init__(lines)
 
+    def __hash__(self):
+        acc = 0
+        for geo in self.geoms:
+            for coord in geo.coords:
+                acc += hash(coord)
+            
+        return acc
+
+    def __eq__(self, other):
+        for geo1, geo2 in zip(self.geoms, other.geoms):
+            for coord1, coord2 in zip(self.coords, other.coords):
+                if coord1 != coord2:
+                    return False
+        return True
+
 class MultiPolygon(_geo.MultiPolygon, _attachable):
     def __init__(self, polygons=None, context_type='polygons'):
         root = super(MultiPolygon, self)
         self._atts = {}
         root.__init__(polygons, context_type)
+
+    def __hash__(self):
+        acc = 0
+        for geo in self.geoms:
+            for coord in geo.exterior.coords:
+                acc += hash(coord)
+            
+        return acc
+
+    def __eq__(self, other):
+        for geo1, geo2 in zip(self.geoms, other.geoms):
+            for coord1, coord2 in zip(self.exterior.coords, other.exterior.coords):
+                if coord1 != coord2:
+                    return False
+        return True
 
 class GeometryCollection(_geo.GeometryCollection, _attachable):
     def __init__(self):
