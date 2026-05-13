@@ -513,11 +513,11 @@ class GridIndex():
         if hasattr(linestring, 'geoms'):
             for geom in linestring.geoms:
                 if isinstance(geom, Polygon):
-                     self.insertPolygon(geom)
+                     self.insertPolygon(_geometry.Polygon(geom))
                 else:
-                    self.insertpline(geom, geom.coords)
+                    self.insertpline(_geometry.LineString(geom), geom.coords)
         else:
-            self.insertpline(linestring, linestring.coords)
+            self.insertpline(_geometry.LineString(linestring), linestring.coords)
 
     def insertLink(self, link):
         '''
