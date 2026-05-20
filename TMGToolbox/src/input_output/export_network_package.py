@@ -48,7 +48,7 @@ _util.initalizeModellerTypes(m)
 
 
 class ExportNetworkPackage(m.Tool()):
-    version = '1.2.4'
+    version = '1.2.5'
     tool_run_msg = ""
     number_of_tasks = 11  # For progress reporting, enter the integer number of tasks here
 
@@ -198,7 +198,7 @@ class ExportNetworkPackage(m.Tool()):
             with zipfile.ZipFile(self.ExportFile, 'w', zipfile.ZIP_DEFLATED) as zf, self._temp_file() as temp_folder:
                 version_file = path.join(temp_folder, 'version.txt')
                 with open(version_file, 'w') as writer:
-                    writer.write("%s\n%s" % (str(5.0), _util.getEmmeVersion(returnType=str)))
+                    writer.write("%s\n%s" % (str(5.1), _util.getEmmeVersion(returnType=str)))
                 zf.write(version_file, arcname='version.txt')
 
                 info_path = path.join(temp_folder, 'info.txt')
@@ -373,6 +373,12 @@ class ExportNetworkPackage(m.Tool()):
         aux_transit = _pdu.load_link_dataframe(self.Scenario)[aux_result_attributes]
         aux_transit.to_csv(aux_transit_filepath)
         zf.write(aux_transit_filepath, arcname=path.basename(aux_transit_filepath))
+
+        initial_and_final_boardings_path = path.join(temp_folder, 'initial_and_final_boardings.csv')
+        result_attributes = ['initial_boardings', 'final_alightings']
+        aux_transit = _pdu.load_node_dataframe(self.Scenario)[result_attributes]
+        aux_transit.to_csv(initial_and_final_boardings_path)
+        zf.write(initial_and_final_boardings_path, arcname=path.basename(initial_and_final_boardings_path))
 
     @contextmanager
     def _temp_file(self):
