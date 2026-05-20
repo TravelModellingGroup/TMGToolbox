@@ -58,6 +58,7 @@ class ComponentContainer(object):
         self.traffic_results_files = None
         self.transit_results_files = None
         self.aux_transit_results_file = None
+        self.initial_final_boardings_file = None
 
     def reset(self):
         self.mode_file = None
@@ -73,10 +74,11 @@ class ComponentContainer(object):
 
         self.traffic_results_files = None
         self.transit_results_files = None
+        self.initial_final_boardings_file = None
 
 
 class ImportNetworkPackage(m.Tool()):
-    version = '1.2.3'
+    version = '1.2.5'
     tool_run_msg = ""
     number_of_tasks = 9  # For progress reporting, enter the integer number of tasks here
 
@@ -715,6 +717,27 @@ class ImportNetworkPackage(m.Tool()):
                     tables.append(table)
             scenario.set_attribute_values('LINK', aux_attribute_names, [index] + tables)
 
+        # Check to see if we have our initial and final boardings.
+        if self._components.initial_final_boardings_file is not None:
+            infi_filename = self._components.initial_final_boardings_file
+            zf.extract(infi_filename,temp_folder)
+            infi_filename = _path.join(temp_folder, infi_filename)
+
+            aux_attribute_names = ['initial_boardings', 'final_alightings']
+            index, _ = scenario.get_attribute_values('NODE', ['data1'])
+
+            tables = []
+            with _util.tempExtraAttributeMANAGER(scenario, 'NODE', returnId=True) as temp_attribute:
+                column_labels = {0:  'i_node'}
+                for i, attribute_name in enumerate(aux_attribute_names):
+                    column_labels[i + 1] = temp_attribute
+                    import_attributes(infi_filename, ',', column_labels, scenario=scenario)
+                    del column_labels[i + 1]
+
+                    _, table = scenario.get_attribute_values('NODE', [temp_attribute])
+                    tables.append(table)
+            scenario.set_attribute_values('NODE', aux_attribute_names, [index] + tables)
+
     @contextmanager
     def _temp_file(self):
         foldername = _tf.mkdtemp()
@@ -760,6 +783,7 @@ class ImportNetworkPackage(m.Tool()):
                     self._components.traffic_results_files = s, s2
                 self._components.transit_results_files = self._getZipOriginalString(processed, contents, 'segment_results.csv')
                 self._components.aux_transit_results_file = self._getZipOriginalString(processed, contents, 'aux_transit_results.csv')
+                self._components.initial_final_boardings_file = self._getZipOriginalString(processed, contents, 'initial_and_final_boardings.csv')
                 self._components.attribute_header_file = self._getZipOriginalString(processed, contents, "exatts.241")
                 return NWPversion
 
