@@ -32,6 +32,7 @@ import sys as _sys
 import traceback as _tb
 import subprocess as _sp
 import six
+import codecs
 from six.moves import range
 
 if six.PY2:
@@ -1406,3 +1407,19 @@ def open_csv_writer(file_path):
     else:
         with open(file_path, "wb") as csvfile:
             yield csv.writer(csvfile, delimiter=",")
+
+def open_safe_reader(path):
+    """Open a text file for reading with BOM markers removed."""
+    _BOM_ENCODINGS = [
+        (codecs.BOM_UTF32_BE, 'utf-32'),
+        (codecs.BOM_UTF32_LE, 'utf-32'),
+        (codecs.BOM_UTF16_BE, 'utf-16'),
+        (codecs.BOM_UTF16_LE, 'utf-16'),
+        (codecs.BOM_UTF8,     'utf-8-sig'),
+    ]
+    with open(path, 'rb') as f:
+        raw = f.read(4)
+    for bom, encoding in _BOM_ENCODINGS:
+        if raw.startswith(bom):
+            return open(path, encoding=encoding)
+    return open(path, encoding='utf-8')

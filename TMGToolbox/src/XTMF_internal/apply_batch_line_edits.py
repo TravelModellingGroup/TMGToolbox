@@ -153,7 +153,7 @@ class ApplyBatchLineEdits(_m.Tool()):
         return atts 
 
     def _LoadFile(self, fileName):
-        with open(fileName) as reader:
+        with _util.open_safe_reader(fileName) as reader:
             header = reader.readline()
             cells = header.strip().split(self.COMMA)
             
