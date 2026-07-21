@@ -48,6 +48,7 @@ _util = _MODELLER.module('tmg.common.utilities')
 _tmgTPB = _MODELLER.module('tmg.common.TMG_tool_page_builder')
 # import six library for python2 to python3 conversion
 import six 
+import codecs
 # initalize python3 types
 _util.initalizeModellerTypes(_m)
 
@@ -310,6 +311,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
             
         return atts 
     
+    
     def _ParseIntTime(self, i):
         try:
             hours = i / 100
@@ -348,7 +350,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         badIds = set()
 
         if self.TransitServiceTableFile:
-            with open(self.TransitServiceTableFile) as reader:
+            with _util.open_safe_reader(self.TransitServiceTableFile) as reader:
                 header = reader.readline()
                 cells = header.strip().split(self.COMMA)
             
@@ -386,7 +388,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
         
         badIds = set()
         if self.AggTypeSelectionFile:
-            with open(self.AggTypeSelectionFile) as reader:
+            with _util.open_safe_reader(self.AggTypeSelectionFile) as reader:
                 header = reader.readline()
                 cells = header.strip().split(self.COMMA)
             
@@ -416,7 +418,7 @@ class CreateTimePeriodNetworks(_m.Tool()):
     def _LoadAltFile(self, fileNames):
         altData = {}
         for fileName in fileNames:
-            with open(fileName) as reader:
+            with _util.open_safe_reader(fileName) as reader:
                 header = reader.readline()
                 cells = header.strip().split(self.COMMA)
             
@@ -553,52 +555,3 @@ class CreateTimePeriodNetworks(_m.Tool()):
     @_m.method(return_type=six.text_type)
     def tool_run_msg_status(self):
         return self.tool_run_msg
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
