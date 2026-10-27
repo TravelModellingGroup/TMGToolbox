@@ -379,9 +379,6 @@ class ImportNetworkPackage(m.Tool()):
         self.tool_run_msg = ""
         self.TRACKER.reset()
 
-        if self.ScenarioId < 1:
-            raise Exception("Scenario '%s' is not a valid scenario" % self.ScenarioId)
-
         if self.NetworkPackageFile is None:
             raise IOError("Import file not specified")
 
